@@ -26,7 +26,7 @@ echo '
   icon = "'$ETC'/icon/Loading.png"
 
   [[text]]
-  summary = """'$(iw dev wlan0 link)'"""
+  summary = """'"$(iw dev wlan0 link)"'"""
 
 [[group]]
   [[picker]]

@@ -446,7 +446,7 @@ Update() {
   """
 
   [[text]]
-  desc = """'$(cat $TEMP/$link_vers 2>/dev/null)'"""
+  desc = """'"$(cat $TEMP/$link_vers 2>/dev/null)"'"""
   [[text.rows]]
   photo = "'$ETC'/icon/tool-tree.jpg"
   '
