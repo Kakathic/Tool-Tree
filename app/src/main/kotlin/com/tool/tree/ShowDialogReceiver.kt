@@ -123,11 +123,15 @@ class ShowDialogReceiver : BroadcastReceiver() {
             countdownBtnView = dialogWrap.dialog.findViewById(R.id.btn_cancel)
             countdownBaseLabel = cancelText
         } else {
-            // Không có script lẫn trang -> chỉ là thông báo, chỉ hiện 1 nút xác nhận duy nhất,
-            // đếm ngược hiện luôn trên nút đó. Bấm nút hoặc hết giờ đều chỉ đóng dialog.
+            // Không có script lẫn trang -> chỉ là thông báo, chỉ hiện 1 nút xác nhận duy nhất
+            // (dùng đúng nút có sẵn của layout dialog_alert, không phải nút Xác nhận màu xanh
+            // của dialog_confirm). alert() không tự set text nút theo "confirmText" như confirm()
+            // nên phải gán tay để nhãn tùy chỉnh (nếu có) vẫn được áp dụng. Đếm ngược hiện luôn
+            // trên nút đó. Bấm nút hoặc hết giờ đều chỉ đóng dialog.
             dialogWrap = DialogHelper.alert(activity, title, message, null)
             dialogWrap.setCancelable(!force)
             countdownBtnView = dialogWrap.dialog.findViewById(R.id.btn_confirm)
+            countdownBtnView?.text = confirmText
             countdownBaseLabel = confirmText
         }
 
