@@ -106,6 +106,7 @@ echo '
     name = "cover_data_app"
     type = "text"
     options-sh = "'$pathsh' search_apk | sort"
+    desc = "'$string_text_1': Project/'$PTSH'"
     required = true
     multiple = true
 
