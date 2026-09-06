@@ -37,13 +37,10 @@ class ListItemGroup(context: Context,
 
     // Thế 1 item THẬT vào ĐÚNG vị trí của khung placeholder ĐẦU TIÊN (nếu còn) rồi gỡ khung đó -
     // giữ item xuất hiện đúng chỗ thay vì luôn nối sau các placeholder còn lại. Hết placeholder
-    // thì quay về hành vi thêm cuối như addView() thường. Bật LayoutTransition để item mới
-    // fade-in mượt thay vì hiện đột ngột (giống cơ chế load-after).
+    // thì quay về hành vi thêm cuối như addView() thường. KHÔNG bật LayoutTransition ở đây - item
+    // thật hiện ra ngay, không fade-in (khác với load-after ở addView(item, atIndex) bên dưới).
     fun addViewReplacingPlaceholder(item: ListItemView): ListItemGroup {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
-        if (content.layoutTransition == null) {
-            content.layoutTransition = LayoutTransition()
-        }
         val placeholder = if (placeholderViews.isNotEmpty()) placeholderViews.removeAt(0) else null
         if (placeholder != null) {
             val at = content.indexOfChild(placeholder)
