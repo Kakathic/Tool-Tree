@@ -7,6 +7,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.animation.LinearInterpolator
 import android.widget.Toast
 import com.tool.tree.R
 import com.omarea.common.ui.DialogHelper
@@ -175,7 +176,7 @@ class PageLayoutRender(private val mContext: Context,
 
     // process = true: hiện sẵn "count" khung skeleton/placeholder ngay từ đầu cho trang đỡ trống -
     // gọi lúc mới dựng rootGroup, TRƯỚC KHI có item thật nào (xem ActionListFragment.setupProgressiveRoot()).
-    // Mỗi khung tự nhấp nháy nhẹ (pulsing alpha) để báo hiệu đang tải.
+    // Mỗi khung có 1 dải sáng (shimmer) quét ngang liên tục để báo hiệu đang tải.
     fun addLoadingPlaceholders(count: Int) {
         if (count <= 0) return
         val views = (0 until count).map { createSkeletonView() }
@@ -188,14 +189,27 @@ class PageLayoutRender(private val mContext: Context,
         rootGroup.clearPlaceholders()
     }
 
+    // Shimmer: kr_skeleton_shimmer là 1 View phủ toàn bộ thẻ, nền là gradient trong suốt-sáng-
+    // trong suốt (kr_skeleton_shimmer_gradient.xml). Animator dịch nó từ -width (ngoài mép trái,
+    // ẩn hoàn toàn) sang +width (ngoài mép phải) liên tục - FrameLayout cha (clipToOutline=true)
+    // tự cắt phần tràn ra ngoài thẻ, tạo cảm giác dải sáng lướt qua card. Phải đợi layout xong
+    // mới biết width thật của thẻ nên dùng post{} thay vì tạo animator ngay lúc inflate.
     private fun createSkeletonView(): View {
         val view = LayoutInflater.from(mContext).inflate(R.layout.kr_skeleton_list_item, null, false)
-        val anim = ObjectAnimator.ofFloat(view, "alpha", 1f, 0.4f, 1f).apply {
-            duration = 900
-            repeatCount = ObjectAnimator.INFINITE
-            start()
+        val shimmer = view.findViewById<View>(R.id.kr_skeleton_shimmer)
+        shimmer?.post {
+            val width = shimmer.width
+            if (width > 0) {
+                shimmer.translationX = -width.toFloat()
+                val anim = ObjectAnimator.ofFloat(shimmer, View.TRANSLATION_X, -width.toFloat(), width.toFloat()).apply {
+                    duration = 1200
+                    repeatCount = ObjectAnimator.INFINITE
+                    interpolator = LinearInterpolator()
+                    start()
+                }
+                view.tag = anim
+            }
         }
-        view.tag = anim
         return view
     }
 

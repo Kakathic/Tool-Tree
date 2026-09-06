@@ -8,44 +8,60 @@
     android:orientation="vertical"
     android:paddingTop="16dp">
 
-    <!-- Hàng nội dung mang background bo góc "krscript_item_ripple_inactive" (radius 10dp,
-         màu cardBg) - CÙNG background với @android:id/content của kr_group_list_item.xml -
-         để khung skeleton trông giống 1 thẻ (card) như item thật, thay vì 1 hàng phẳng không nền. -->
-    <LinearLayout
+    <!-- FrameLayout mang background bo góc "krscript_item_ripple_inactive" (radius 10dp, màu
+         cardBg) - CÙNG background với @android:id/content của kr_group_list_item.xml - để khung
+         skeleton trông giống 1 thẻ (card) như item thật. clipToOutline=true để dải sáng shimmer
+         (view phủ bên dưới) bị cắt theo đúng góc bo của background, không tràn ra ngoài. -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
         android:background="@drawable/krscript_item_ripple_inactive"
-        android:minHeight="?android:attr/listPreferredItemHeight"
-        android:paddingTop="15dp"
-        android:paddingBottom="10dp">
-
-        <View
-            android:id="@+id/kr_skeleton_icon"
-            android:layout_width="35dp"
-            android:layout_height="35dp"
-            android:layout_marginStart="14dp"
-            android:background="@drawable/kr_skeleton_block_bg" />
+        android:clipToOutline="true">
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="18dp"
-            android:layout_marginEnd="16dp"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:minHeight="?android:attr/listPreferredItemHeight"
+            android:paddingTop="15dp"
+            android:paddingBottom="10dp">
 
             <View
-                android:layout_width="150dp"
-                android:layout_height="14dp"
+                android:id="@+id/kr_skeleton_icon"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
+                android:layout_marginStart="14dp"
                 android:background="@drawable/kr_skeleton_block_bg" />
 
-            <View
-                android:layout_width="100dp"
-                android:layout_height="10dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/kr_skeleton_block_bg" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="18dp"
+                android:layout_marginEnd="16dp"
+                android:orientation="vertical">
+
+                <View
+                    android:layout_width="150dp"
+                    android:layout_height="14dp"
+                    android:background="@drawable/kr_skeleton_block_bg" />
+
+                <View
+                    android:layout_width="100dp"
+                    android:layout_height="10dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/kr_skeleton_block_bg" />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
+
+        <!-- Dải sáng shimmer - phủ TOÀN BỘ thẻ (match_parent), ban đầu đứng yên; được
+             PageLayoutRender.createSkeletonView() animate translationX liên tục để quét ngang
+             qua thẻ, xem kr_skeleton_shimmer_gradient.xml. -->
+        <View
+            android:id="@+id/kr_skeleton_shimmer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/kr_skeleton_shimmer_gradient" />
+    </FrameLayout>
 </LinearLayout>

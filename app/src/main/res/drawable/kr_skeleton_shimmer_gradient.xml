@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dải sáng quét (shimmer): trong suốt -> sáng nhẹ -> trong suốt, quét ngang qua thẻ skeleton.
+     Xem PageLayoutRender.createSkeletonView() - View dùng drawable này được translationX liên
+     tục từ ngoài mép trái sang ngoài mép phải thẻ, tạo hiệu ứng ánh sáng lướt qua thay vì
+     nhấp nháy alpha như trước. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:type="linear"
+        android:angle="0"
+        android:startColor="#00FFFFFF"
+        android:centerColor="#40FFFFFF"
+        android:endColor="#00FFFFFF" />
+</shape>
