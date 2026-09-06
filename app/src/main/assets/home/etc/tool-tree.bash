@@ -396,7 +396,7 @@ Update() {
     if [ "$(glog gg_trans_ver)" == 1 ]; then
     slog gg_trans_ver 0
     else
-    slog gg_trans_ver 1
+    transai -c && slog gg_trans_ver 1 || showbanner -y "error" -t "Gemini" -m "'$warn_gemini_text'"
     fi
     """
     
