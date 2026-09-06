@@ -139,6 +139,17 @@ class PageConfigReader {
             if (shellResult != "error") {
                 val (target, fieldKey, _) = triple
                 when (target) {
+                    // ClickableNode phải đứng TRƯỚC NodeInfoBase (ClickableNode là subtype) để case
+                    // "icon" (icon-sh) được xử lý - đồng thời lặp lại title/desc/summary vì nhánh
+                    // NodeInfoBase bên dưới không còn được chạm tới với target là ClickableNode.
+                    is ClickableNode -> when (fieldKey) {
+                        "title" -> target.title = shellResult
+                        "desc" -> target.desc = shellResult
+                        "summary" -> target.summary = shellResult
+                        "icon" -> target.iconPath = shellResult
+                        "photo" -> target.photoPath = shellResult
+                        "bg" -> target.bgPath = shellResult
+                    }
                     is NodeInfoBase -> when (fieldKey) {
                         "title" -> target.title = shellResult
                         "desc" -> target.desc = shellResult
@@ -512,18 +523,30 @@ class PageConfigReader {
             tomlGet(table, "max-sdk", "sdk-max")?.let { maxSdkVersion = it.trim().toIntOrNull() ?: maxSdkVersion }
             tomlGet(table, "target-sdk", "sdk-target")?.let { targetSdkVersion = it.trim().toIntOrNull() ?: targetSdkVersion }
             tomlGet(table, "icon", "icon-path")?.let { iconPath = it.trim() }
+            tomlGet(table, "icon-sh")?.let {
+                iconSh = it.trim()
+                registerDynamicString(this, "icon", iconSh)
+            }
             tomlGet(table, "icon-gif-num", "icon-gif_num")?.let { iconGifNum = it.trim().toIntOrNull() ?: iconGifNum }
             tomlGet(table, "icon-gif-time", "icon-gif_time")?.let { iconGifTime = it.trim().toIntOrNull() ?: iconGifTime }
             tomlGet(table, "icon-gif-autoplay", "icon-gif_autoplay")?.let { iconGifAutoplay = tomlTruthy(it) }
             tomlGet(table, "icon-gif-loop", "icon-gif-loop-count", "icon-gif_loop_count")?.let { iconGifLoopCount = it.trim().toIntOrNull() ?: iconGifLoopCount }
             tomlGet(table, "logo", "logo-path")?.let { logoPath = it.trim() }
             tomlGet(table, "photo", "photo-path")?.let { photoPath = it.trim() }
+            tomlGet(table, "photo-sh")?.let {
+                photoSh = it.trim()
+                registerDynamicString(this, "photo", photoSh)
+            }
             tomlGet(table, "photo-real-size", "photo-original-size")?.let { photoRealSize = tomlTruthy(it, "real-size", "original-size") }
             tomlGet(table, "photo-gif-num", "gif-num", "gif_num")?.let { photoGifNum = it.trim().toIntOrNull() ?: photoGifNum }
             tomlGet(table, "photo-gif-time", "gif-time", "gif_time")?.let { photoGifTime = it.trim().toIntOrNull() ?: photoGifTime }
             tomlGet(table, "photo-gif-autoplay", "gif-autoplay", "gif_autoplay")?.let { photoGifAutoplay = tomlTruthy(it) }
             tomlGet(table, "photo-gif-loop", "photo-gif-loop-count", "gif-loop", "gif-loop-count", "gif_loop_count")?.let { photoGifLoopCount = it.trim().toIntOrNull() ?: photoGifLoopCount }
             tomlGet(table, "bg", "bg-path")?.let { bgPath = it.trim() }
+            tomlGet(table, "bg-sh")?.let {
+                bgSh = it.trim()
+                registerDynamicString(this, "bg", bgSh)
+            }
             tomlGet(table, "allow-shortcut")?.let { allowShortcut = tomlTruthy(it, "allow", "allow-shortcut") }
             if (key.isNotEmpty() && key.startsWith("@") && allowShortcut == null) {
                 allowShortcut = false
@@ -901,12 +924,14 @@ class PageConfigReader {
         tomlGet(table, "link", "href")?.let { row.link = it }
         tomlGet(table, "activity", "a", "intent")?.let { row.activity = it }
         tomlGet(table, "photo", "photo-path")?.let { row.photo = it.trim() }
+        tomlGet(table, "photo-sh")?.let { row.photoSh = it.trim() }
         tomlGet(table, "photo-real-size", "photo-original-size")?.let { row.photoRealSize = tomlTruthy(it, "real-size", "original-size") }
         tomlGet(table, "photo-gif-num", "gif-num", "gif_num")?.let { row.photoGifNum = it.trim().toIntOrNull() ?: row.photoGifNum }
         tomlGet(table, "photo-gif-time", "gif-time", "gif_time")?.let { row.photoGifTime = it.trim().toIntOrNull() ?: row.photoGifTime }
         tomlGet(table, "photo-gif-autoplay", "gif-autoplay", "gif_autoplay")?.let { row.photoGifAutoplay = tomlTruthy(it) }
         tomlGet(table, "photo-gif-loop", "photo-gif-loop-count", "gif-loop", "gif-loop-count", "gif_loop_count")?.let { row.photoGifLoopCount = it.trim().toIntOrNull() ?: row.photoGifLoopCount }
         tomlGet(table, "icon", "icon-path")?.let { row.icon = it.trim() }
+        tomlGet(table, "icon-sh")?.let { row.iconSh = it.trim() }
         tomlGet(table, "icon-position", "icon-pos")?.let {
             val p = it.trim().lowercase(getDefault())
             row.iconPosition = when (p) {

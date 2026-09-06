@@ -81,9 +81,11 @@ class IconPathAnalysis {
         return null
     }
 
-    fun loadtextPhoto(context: Context, row: TextNode.TextRow, pageDir: String): Drawable? {
-        if (row.photo.isEmpty()) return null
-        val paths = splitMultiPaths(row.photo)
+    // photoPath truyền tường minh (thay vì đọc row.photo trực tiếp) để hỗ trợ cả photo tĩnh và
+    // photo-sh động - row vẫn cần để đọc photoGifNum/photoGifTime (không đổi theo -sh).
+    fun loadtextPhoto(context: Context, photoPath: String, row: TextNode.TextRow, pageDir: String): Drawable? {
+        if (photoPath.isEmpty()) return null
+        val paths = splitMultiPaths(photoPath)
         if (paths.isEmpty()) return null
         if (paths.size > 1) {
             loadAnimatedFromPaths(context, pageDir, paths, row.photoGifTime)?.let { return it }

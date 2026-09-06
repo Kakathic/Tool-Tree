@@ -54,6 +54,9 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         // 点击后执行的脚本
         internal var onClickScript: String = ""
         internal var photo: String = ""
+        // "photo-sh": script trả về đường dẫn photo động cho row - gộp batch cùng text-sh/icon-sh
+        // trong RowsRenderHelper.bind() mỗi lần render (không cache, giống text-sh).
+        internal var photoSh: String = ""
         // Nếu true: hiện ảnh (photo) đúng kích thước thật, căn giữa, không kéo dãn full chiều ngang
         internal var photoRealSize: Boolean = false
         // Nếu > 0: photo là hoạt ảnh (gif-style), số khung hình cần nạp (photo_1.png, photo_2.png, ...)
@@ -68,6 +71,8 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         // Ảnh nhỏ hiển thị NGAY CẠNH chữ (inline, cùng dòng) - khác với "photo" (khối ảnh riêng,
         // full chiều rộng, nằm dưới toàn bộ rows). "" = không có icon.
         internal var icon: String = ""
+        // "icon-sh": script trả về đường dẫn icon inline động cho row - cùng cơ chế batch với photo-sh.
+        internal var iconSh: String = ""
         // Vị trí icon so với chữ: "before" (trước chữ) hoặc "after" (sau chữ)
         internal var iconPosition: String = "before"
         // Kích thước icon (đơn vị dp) - 0 = tự động lấy kích thước gần bằng cỡ chữ hiện tại

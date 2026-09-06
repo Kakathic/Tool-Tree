@@ -107,23 +107,39 @@ object RowsRenderHelper {
             }
         }
 
-        // Gộp toàn bộ shell "sh" (dynamic text) của mọi row trong LẦN bind() NÀY thành 1 lệnh
-        // executeMultipleResultRoot() duy nhất, thay vì N lệnh executeResultRoot() riêng lẻ tuần
-        // tự. bind() có thể chạy lại nhiều lần (RecyclerView cuộn/rebind, sau khi bấm 1 toggle
-        // khiến toàn bộ rows được vẽ lại) nên việc gộp này áp dụng lại mỗi lần bind(), không chỉ 1
-        // lần lúc load trang.
-        val dynamicTextResults: Map<Int, String> = run {
+        // Gộp toàn bộ shell "sh" của mọi row trong LẦN bind() NÀY thành 1 lệnh
+        // executeMultipleResultRoot() duy nhất (text-sh + icon-sh + photo-sh cùng lúc), thay vì
+        // nhiều lệnh executeResultRoot() riêng lẻ tuần tự. bind() có thể chạy lại nhiều lần
+        // (RecyclerView cuộn/rebind, sau khi bấm 1 toggle khiến toàn bộ rows được vẽ lại) nên việc
+        // gộp này áp dụng lại mỗi lần bind(), không chỉ 1 lần lúc load trang - do đó icon-sh/photo-sh
+        // của row KHÔNG cache như icon-sh/photo-sh cấp node (chạy lại mỗi lần rows được vẽ lại).
+        val dynamicTextResults: Map<Int, String>
+        val dynamicIconResults: Map<Int, String>
+        val dynamicPhotoResults: Map<Int, String>
+        run {
             val scripts = LinkedHashMap<String, String>()
             rows.forEachIndexed { index, row ->
-                if (row.dynamicTextSh.isNotEmpty()) {
-                    scripts["$index"] = row.dynamicTextSh
+                if (row.dynamicTextSh.isNotEmpty()) scripts["text:$index"] = row.dynamicTextSh
+                if (row.iconSh.isNotEmpty()) scripts["icon:$index"] = row.iconSh
+                if (row.photoSh.isNotEmpty()) scripts["photo:$index"] = row.photoSh
+            }
+            val results = if (scripts.isEmpty()) emptyMap() else ScriptEnvironmen.executeMultipleResultRoot(context, scripts, config)
+            val textMap = HashMap<Int, String>()
+            val iconMap = HashMap<Int, String>()
+            val photoMap = HashMap<Int, String>()
+            results.forEach { (key, value) ->
+                val sepIndex = key.indexOf(':')
+                val prefix = key.substring(0, sepIndex)
+                val index = key.substring(sepIndex + 1).toInt()
+                when (prefix) {
+                    "text" -> textMap[index] = value
+                    "icon" -> iconMap[index] = value
+                    "photo" -> photoMap[index] = value
                 }
             }
-            if (scripts.isEmpty()) {
-                emptyMap()
-            } else {
-                ScriptEnvironmen.executeMultipleResultRoot(context, scripts, config).mapKeys { it.key.toInt() }
-            }
+            dynamicTextResults = textMap
+            dynamicIconResults = iconMap
+            dynamicPhotoResults = photoMap
         }
 
         for ((rowIndex, row) in rows.withIndex()) {
@@ -187,9 +203,11 @@ object RowsRenderHelper {
             }
 
             // Row có "icon" (ảnh nhỏ inline, khác "photo" khối riêng): nạp ảnh trước để biết có
-            // ghép được hay không, quyết định cách dựng "text" bên dưới.
-            val hasIcon = !isToggle && row.icon.isNotEmpty()
-            val rowIconDrawableRaw = if (hasIcon) buildRowIconDrawable(context, row, config) else null
+            // ghép được hay không, quyết định cách dựng "text" bên dưới. Nếu có "icon-sh": dùng
+            // kết quả shell đã gộp sẵn ở trên (dynamicIconResults) thay cho row.icon tĩnh.
+            val effectiveIcon = if (row.iconSh.isNotEmpty()) (dynamicIconResults[rowIndex] ?: "") else row.icon
+            val hasIcon = !isToggle && effectiveIcon.isNotEmpty()
+            val rowIconDrawableRaw = if (hasIcon) buildRowIconDrawable(context, effectiveIcon, row.iconSize, config) else null
             val showIcon = rowIconDrawableRaw != null
 
             // Row dạng toggle (checkbox/switch nhỏ): chèn thêm 1 ký tự placeholder ở cuối (sau
@@ -226,8 +244,9 @@ object RowsRenderHelper {
 
             if (extraIconView != null) {
                 extraIconView.visibility = View.GONE
-                if (row.photo.isNotEmpty()) {
-                    IconPathAnalysis().loadtextPhoto(context, row, config.pageConfigDir)?.run {
+                val effectivePhoto = if (row.photoSh.isNotEmpty()) (dynamicPhotoResults[rowIndex] ?: "") else row.photo
+                if (effectivePhoto.isNotEmpty()) {
+                    IconPathAnalysis().loadtextPhoto(context, effectivePhoto, row, config.pageConfigDir)?.run {
                         extraIconView.setImageDrawable(this)
                         extraIconView.visibility = View.VISIBLE
                         applyPhotoRealSize(extraIconView, row.photoRealSize)
@@ -615,14 +634,15 @@ object RowsRenderHelper {
         return (dp * context.resources.displayMetrics.density).toInt()
     }
 
-    // Nạp + dựng drawable cho field "icon" của row (ảnh nhỏ inline cạnh chữ) - kích thước lấy
-    // theo "icon-size" (dp) nếu có khai báo, ngược lại mặc định 18dp (xấp xỉ 1 dòng chữ cỡ vừa).
+    // Nạp + dựng drawable cho icon inline cạnh chữ của row - kích thước lấy theo "icon-size" (dp)
+    // nếu có khai báo, ngược lại mặc định 18dp (xấp xỉ 1 dòng chữ cỡ vừa). iconPath truyền tường
+    // minh (thay vì đọc row.icon trực tiếp) để hỗ trợ cả icon tĩnh và icon-sh động.
     // Trả về null nếu không có icon hoặc không nạp được ảnh (ảnh lỗi/không tồn tại).
-    private fun buildRowIconDrawable(context: Context, row: TextNode.TextRow, config: NodeInfoBase): Drawable? {
-        val loaded = IconPathAnalysis().loadRowIcon(context, row.icon, config.pageConfigDir) ?: return null
+    private fun buildRowIconDrawable(context: Context, iconPath: String, iconSize: Int, config: NodeInfoBase): Drawable? {
+        val loaded = IconPathAnalysis().loadRowIcon(context, iconPath, config.pageConfigDir) ?: return null
         val density = context.resources.displayMetrics.density
         val defaultDp = 18
-        val size = ((if (row.iconSize > 0) row.iconSize else defaultDp) * density).toInt()
+        val size = ((if (iconSize > 0) iconSize else defaultDp) * density).toInt()
         val drawable = loaded.mutate()
         drawable.setBounds(0, 0, size, size)
         return drawable

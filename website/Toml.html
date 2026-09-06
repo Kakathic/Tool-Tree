@@ -518,8 +518,10 @@ All text fields accept <code>@string/...</code> references.</p>
 <table class="tbl">
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Description</th></tr>
 <tr><td class="field-name">icon</td><td>icon-path</td><td class="field-type">String</td><td>Icon path shown on the left of the item</td></tr>
+<tr><td class="field-name">icon-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the icon path dynamically. Runs during parse (batched with title-sh/desc-sh/summary-sh); overrides <code>icon</code></td></tr>
 <tr><td class="field-name">logo</td><td>logo-path</td><td class="field-type">String</td><td>Large icon used when creating a shortcut (different from small <code>icon</code>)</td></tr>
 <tr><td class="field-name">photo</td><td>photo-path</td><td class="field-type">String</td><td>Large image shown in the detail dialog</td></tr>
+<tr><td class="field-name">photo-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the photo path dynamically. Runs during parse (batched with title-sh/icon-sh/...); overrides <code>photo</code></td></tr>
 <tr><td class="field-name">photo-real-size</td><td>photo-original-size</td><td class="field-type">Bool</td><td>true: show image at its real size, no stretching</td></tr>
 <tr><td class="field-name">photo-gif-num</td><td>gif-num, gif_num</td><td class="field-type">Int</td><td>&gt;0: image is an animated GIF (photo_1.png, photo_2.png...)</td></tr>
 <tr><td class="field-name">photo-gif-time</td><td>gif-time, gif_time</td><td class="field-type">Int</td><td>Time per frame (ms; default 300)</td></tr>
@@ -530,6 +532,7 @@ All text fields accept <code>@string/...</code> references.</p>
 <tr><td class="field-name">icon-gif-autoplay</td><td>icon-gif_autoplay</td><td class="field-type">Bool</td><td>Auto-play icon GIF</td></tr>
 <tr><td class="field-name">icon-gif-loop</td><td>icon-gif-loop-count</td><td class="field-type">Int</td><td>Loop count for the icon GIF</td></tr>
 <tr><td class="field-name">bg</td><td>bg-path</td><td class="field-type">String</td><td>Background image for the item/dialog</td></tr>
+<tr><td class="field-name">bg-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the background image path dynamically. Runs during parse (batched); overrides <code>bg</code></td></tr>
 <tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Lock the item (no interaction allowed). <code>true</code>/<code>1</code> = locked; or the format <code>"state|message"</code>, e.g. <code>lock = "1|Requires root"</code> - the message is shown when the user clicks the locked item</td></tr>
 <tr><td class="field-name">lock-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that checks the lock state dynamically (returns <code>"1"</code> = locked)</td></tr>
 <tr><td class="field-name">min-sdk</td><td>sdk-min</td><td class="field-type">Int</td><td>Minimum Android SDK version</td></tr>
@@ -1017,12 +1020,14 @@ italic = true
 <tr><td class="field-name">link</td><td>href</td><td class="field-type">String</td><td>""</td><td>URL to open on click</td></tr>
 <tr><td class="field-name">activity</td><td>a, intent</td><td class="field-type">String</td><td>""</td><td>Intent to open on click</td></tr>
 <tr><td class="field-name">photo</td><td>photo-path</td><td class="field-type">String</td><td>""</td><td>Large image (own line, separate from text)</td></tr>
+<tr><td class="field-name">photo-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the row's photo path dynamically. Re-runs every time the rows are re-rendered (batched with text-sh/icon-sh, NOT cached - unlike node-level photo-sh); overrides <code>photo</code></td></tr>
 <tr><td class="field-name">photo-real-size</td><td>photo-original-size</td><td class="field-type">Bool</td><td>false</td><td>Show image at real size</td></tr>
 <tr><td class="field-name">photo-gif-num</td><td>gif-num</td><td class="field-type">Int</td><td>0</td><td>&gt;0: image is animated (photo_1.png...)</td></tr>
 <tr><td class="field-name">photo-gif-time</td><td>gif-time</td><td class="field-type">Int</td><td>300</td><td>Time per frame (ms)</td></tr>
 <tr><td class="field-name">photo-gif-autoplay</td><td>gif-autoplay</td><td class="field-type">Bool</td><td>true</td><td>Auto-play the GIF</td></tr>
 <tr><td class="field-name">photo-gif-loop</td><td>photo-gif-loop-count, gif-loop, gif-loop-count</td><td class="field-type">Int</td><td>0</td><td>Loop count (0=infinite)</td></tr>
 <tr><td class="field-name">icon</td><td>icon-path</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> INLINE small icon (same line, different from photo)</td></tr>
+<tr><td class="field-name">icon-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the row's inline icon path dynamically. Re-runs every time the rows are re-rendered (batched with text-sh/photo-sh, NOT cached); overrides <code>icon</code></td></tr>
 <tr><td class="field-name">icon-position</td><td>icon-pos</td><td class="field-type">String</td><td>before</td><td><code>before</code> / <code>after</code> the text</td></tr>
 <tr><td class="field-name">icon-size</td><td>-</td><td class="field-type">Int</td><td>0</td><td>Icon size (dp)</td></tr>
 <tr><td class="field-name">script</td><td>run</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script to run when the row is clicked</td></tr>
@@ -1453,6 +1458,11 @@ depend-value = "folder"
 <tr><td class="field-name">set / setstate / script</td><td>ActionNode, SwitchNode, PickerNode, DownloadNode, PageMenuOption, TextRow (toggle)</td><td>Set new state on user interaction</td></tr>
 <tr><td class="field-name">lock / lock-state</td><td>ClickableNode, PageNode, PageMenuOption</td><td>Check lock state (static, or "state|message" format)</td></tr>
 <tr><td class="field-name">lock-sh</td><td>ClickableNode (page, action, switch, picker, download, editor)</td><td>Check lock state dynamically (returns "1" = locked)</td></tr>
+<tr><td class="field-name">icon-sh</td><td>ClickableNode (page, action, switch, picker, download, editor)</td><td>Produce icon path dynamically - runs during parse, batched with title-sh/desc-sh/summary-sh</td></tr>
+<tr><td class="field-name">photo-sh</td><td>ClickableNode (page, action, switch, picker, download, editor)</td><td>Produce photo path dynamically - runs during parse, batched with the other node-level -sh fields</td></tr>
+<tr><td class="field-name">bg-sh</td><td>ClickableNode (page, action, switch, picker, download, editor)</td><td>Produce background image path dynamically - runs during parse, batched</td></tr>
+<tr><td class="field-name">icon-sh (row)</td><td>TextRow</td><td>Produce row's inline icon path dynamically - re-runs every render (batched with text-sh/photo-sh of the row, not cached)</td></tr>
+<tr><td class="field-name">photo-sh (row)</td><td>TextRow</td><td>Produce row's photo path dynamically - re-runs every render (batched, not cached)</td></tr>
 <tr><td class="field-name">url-sh</td><td>DownloadNode</td><td>Produce download URL dynamically - runs once on first tap, cached into <code>url</code> for the rest of that page visit</td></tr>
 <tr><td class="field-name">support / visible</td><td>All nodes, row, param</td><td>Hide/show (accepts shell too)</td></tr>
 </table>
