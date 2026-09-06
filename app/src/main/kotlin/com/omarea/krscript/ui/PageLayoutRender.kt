@@ -99,13 +99,23 @@ class PageLayoutRender(private val mContext: Context,
         }
     }
 
+    // load-after: GroupNode -> view group tương ứng, điền cho MỌI group kể cả group rỗng ban
+    // đầu (có thể toàn bộ con đều bị hoãn) - dùng để chèn thêm mục vào group SAU KHI trang đã
+    // render xong (xem insertNode()). groupParentMap/attachedGroups dùng để tự add view group
+    // con vào đúng chỗ nếu group đó đang rỗng (chưa từng addView vào parent lúc build ban đầu).
+    private val groupViewMap = HashMap<GroupNode, ListItemGroup>()
+    private val groupParentMap = HashMap<GroupNode, ListItemGroup>()
+    private val attachedGroups = HashSet<GroupNode>()
+
     private fun mapConfigList(parent: ListItemGroup, actionInfos: ArrayList<NodeInfoBase>) {
         for (index in 0 until actionInfos.size) {
             renderNode(parent, actionInfos[index])
         }
     }
 
-    private fun renderNode(parent: ListItemGroup, it: NodeInfoBase) {
+    // atIndex >= 0: chèn view vào ĐÚNG vị trí đó thay vì thêm cuối - dùng cho tính năng
+    // load-after (xem insertNode()). Mặc định (-1) giữ nguyên hành vi thêm cuối như cũ.
+    private fun renderNode(parent: ListItemGroup, it: NodeInfoBase, atIndex: Int = -1) {
         try {
             var uiRender: ListItemView? = null
             if (it is PageNode) {
@@ -124,8 +134,11 @@ class PageLayoutRender(private val mContext: Context,
                 uiRender = createEditorItem(it)
             } else if (it is GroupNode) {
                 val subGroup = createItemGroup(it)
+                groupViewMap[it] = subGroup
+                groupParentMap[it] = parent
                 if (it.children.isNotEmpty()) {
                     parent.addView(subGroup)
+                    attachedGroups.add(it)
                     mapConfigList(subGroup, it.children)
                 }
             }
@@ -135,7 +148,11 @@ class PageLayoutRender(private val mContext: Context,
                     uiRender.setOnClickListener(this.onItemClickListener)
                     uiRender.setOnLongClickListener(this.onItemLongClickListener)
                 }
-                parent.addView(uiRender)
+                if (atIndex >= 0) {
+                    parent.addView(uiRender, atIndex)
+                } else {
+                    parent.addView(uiRender)
+                }
             }
         } catch (ex: Exception) {
             Toast.makeText(mContext, it.title + "Interface rendering error" + ex.message, Toast.LENGTH_SHORT).show()
@@ -147,6 +164,31 @@ class PageLayoutRender(private val mContext: Context,
     fun appendNode(node: NodeInfoBase) {
         itemConfigList.add(node)
         renderNode(rootGroup, node)
+    }
+
+    // load-after: chèn 1 mục ĐÃ BUILD XONG vào ĐÚNG vị trí "index" - group = null nghĩa là
+    // chèn vào danh sách gốc trang, ngược lại chèn vào đúng group đó (tự add group vào parent
+    // nếu group đang rỗng/chưa từng hiện) - xem ActionListFragment.appendLateItem().
+    fun insertNode(group: GroupNode?, node: NodeInfoBase, index: Int) {
+        if (group == null) {
+            val at = index.coerceIn(0, itemConfigList.size)
+            itemConfigList.add(at, node)
+            renderNode(rootGroup, node, at)
+            return
+        }
+        val subGroup = groupViewMap[group] ?: return
+        val at = index.coerceIn(0, group.children.size)
+        group.children.add(at, node)
+        if (!attachedGroups.contains(group)) {
+            // LƯU Ý: group này ban đầu HOÀN TOÀN RỖNG (mọi con đều load-after) nên chưa từng
+            // add vào parent lúc render đầu. Gắn vào đây CHỈ append cuối parent - KHÔNG giữ
+            // đúng vị trí gốc của bản thân group đó trong trang/group cha (giới hạn đã biết,
+            // khác với việc chèn ĐÚNG vị trí cho node bên trong 1 group đã hiện sẵn ở trên).
+            val parentView = groupParentMap[group] ?: return
+            parentView.addView(subGroup)
+            attachedGroups.add(group)
+        }
+        renderNode(subGroup, node, at)
     }
 
     private fun createTextItem(node: TextNode): ListItemView {

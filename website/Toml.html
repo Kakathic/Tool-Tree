@@ -458,7 +458,7 @@ title = "Battery"
 </table>
 </div>
 <p>Example: <code>readonly = "test -f /sdcard/lock &amp;&amp; echo 1"</code> - the parser runs that command, and if it returns <code>"1"</code> then readonly = true.</p>
-<div class="callout warn"><strong>Note:</strong> where the shell result only decides <em>layout</em> (<code>support</code>/<code>visible</code> of nodes and params, <code>show</code> of actions), the script runs immediately during parsing. Deferred fields - switch/picker/toggle <code>get</code>, row <code>support</code>, and all <code>*-sh</code> dynamic strings (title-sh, desc-sh, summary-sh, warn-sh) - are queued into <em>pending states</em> and batched at the end (see <a href="#pending-states">section 20</a>).</div>
+<div class="callout warn"><strong>Note:</strong> where the shell result only decides <em>layout</em> (<code>support</code>/<code>visible</code> of nodes and params, <code>show</code> of actions), the script runs immediately during parsing. Deferred fields - switch/picker/toggle <code>get</code>, row <code>support</code>, and all <code>*-sh</code> dynamic strings (title-sh, desc-sh, summary-sh, warn-sh) - are queued into <em>pending states</em> and batched at the end (see <a href="#pending-states">section 20</a>). An expensive shell here (e.g. <code>support-sh</code>) still delays the whole page - mark that one entry <code>load-after = true</code> to build it AFTER the page has already loaded (see section 4.1).</div>
 
 <h3>2.6. String resource references</h3>
 <p>Any text field (<code>title</code>, <code>desc</code>, <code>summary</code> ...) may include a reference to the app's string resources via <code>@string/name</code> or <code>@string:name</code>. The parser resolves these automatically. If the resource is not found, the original string is kept.</p>
@@ -509,6 +509,7 @@ All text fields accept <code>@string/...</code> references.</p>
 <tr><td class="field-name">summary-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that produces summary dynamically</td></tr>
 <tr><td class="field-name">key</td><td>index, id</td><td class="field-type">String</td><td>auto UUID</td><td>Unique ID. Required for Desktop shortcuts. If key starts with <code>@</code>, <code>allowShortcut</code> defaults to false</td></tr>
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>true</td><td>Hide/show this node. Accepts <code>true</code>/<code>false</code> or a <span class="badge shell">shell</span> returning <code>"1"</code></td></tr>
+<tr><td class="field-name">load-after</td><td>-</td><td class="field-type">Bool</td><td>false</td><td>true: this entry is NOT built with the rest of the page - it is built and inserted (at its ORIGINAL position in the file, inside its group if any) AFTER the page has already finished loading/showing. Use for a slow-to-resolve entry (e.g. expensive <code>support-sh</code>) that would otherwise delay the whole page. Bool only (no shell)</td></tr>
 </table>
 </div>
 

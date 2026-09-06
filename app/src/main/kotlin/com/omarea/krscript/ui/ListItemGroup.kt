@@ -21,6 +21,15 @@ class ListItemGroup(context: Context,
         return this
     }
 
+    // load-after: chèn vào ĐÚNG vị trí atIndex thay vì thêm cuối - xem PageLayoutRender.insertNode().
+    fun addView(item: ListItemView, atIndex: Int): ListItemGroup {
+        val content = layout.findViewById<ViewGroup>(android.R.id.content)
+        val at = atIndex.coerceIn(0, children.size)
+        content.addView(item.getView(), at)
+        children.add(at, item)
+        return this
+    }
+
     fun triggerActionByKey(key: String): Boolean {
         for (child in this.children) {
             if (child is ListItemClickable && child.key.equals(key)) {

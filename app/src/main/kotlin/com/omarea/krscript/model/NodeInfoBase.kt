@@ -34,4 +34,10 @@ open class NodeInfoBase(val currentPageConfigPath: String) : Serializable {
     var summary: String = ""
     // 摘要信息(脚本)
     var summarySh: String = ""
+
+    // load-after = true: mục này không build/hiện cùng lượt tải trang ban đầu, mà được build
+    // và chèn vào ĐÚNG vị trí gốc trong danh sách (root hoặc trong group chứa nó) SAU KHI trang
+    // đã tải xong (không chặn trang hiện ra) - xem PageConfigReader.buildDeferredNodes() và
+    // ActionPage.startDeferredLoadIfNeeded().
+    var loadAfter: Boolean = false
 }

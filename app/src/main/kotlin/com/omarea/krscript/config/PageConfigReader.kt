@@ -200,6 +200,24 @@ class PageConfigReader {
     val menuIcon: ClickableNode? get() = collectedMenuIcon
     val fabIcon: ClickableNode? get() = collectedFabIcon
 
+    // ========== load-after: hoãn build 1 số mục tới SAU KHI trang đã tải xong ==========
+    // Ghi lại đủ thông tin để build lại ĐÚNG NHƯ LÚC PARSE bình thường ở buildDeferredNodes():
+    // loại node, bảng TOML gốc, group cha (null = ở gốc trang), và "insertIndex" = vị trí ĐÚNG
+    // như trong file cấu hình gốc (tính bằng số mục ĐÃ build thành công của cùng container tại
+    // thời điểm gặp entry này - xem tomlChildren()).
+    private class DeferredEntry(val type: String, val table: TomlTable, val group: GroupNode?, val insertIndex: Int)
+    private val deferredEntries = ArrayList<DeferredEntry>()
+
+    /** true nếu trang có ít nhất 1 mục load-after=true - dùng để biết có cần chạy buildDeferredNodes() không. */
+    val hasDeferredEntries: Boolean get() = deferredEntries.isNotEmpty()
+
+    /** Kết quả build 1 mục hoãn: group cha (null = gốc trang), node đã build xong, và "index" là
+     * vị trí CHÈN THỰC TẾ đã bù trừ theo thứ tự các mục hoãn khác cùng container (xem buildDeferredNodes()) -
+     * bên gọi cần chèn các kết quả này ĐÚNG THEO THỨ TỰ TRẢ VỀ để index không bị lệch. */
+    class DeferredNodeResult(val group: GroupNode?, val node: NodeInfoBase, val index: Int)
+
+    private fun isLoadAfter(table: TomlTable): Boolean = tomlTruthy(tomlGet(table, "load-after"))
+
     private fun menuGroupOptionsToml(table: TomlTable, isFab: Boolean): ArrayList<PageMenuOption> {
         val handler = tomlGet(table, "handler", "handler-sh").orEmpty()
         tomlGet(table, "icon", "icon-path")?.trim()?.takeIf { it.isNotEmpty() }?.let { path ->
@@ -374,6 +392,13 @@ class PageConfigReader {
                 onNodeReady?.invoke(null, done, total)
                 continue
             }
+            if (isLoadAfter(entry.table)) {
+                // Chưa build ngay - ghi nhớ container + vị trí gốc, build sau ở buildDeferredNodes().
+                val targetList = currentGroup?.children ?: result
+                deferredEntries.add(DeferredEntry(entry.type, entry.table, currentGroup, targetList.size))
+                onNodeReady?.invoke(null, done, total)
+                continue
+            }
             val node = tomlBuildNode(entry.type, entry.table)
             if (currentGroup != null) {
                 node?.let { currentGroup!!.children.add(it) }
@@ -385,6 +410,29 @@ class PageConfigReader {
         }
         closeCurrentGroup(done)
         return result
+    }
+
+    /**
+     * Build các mục bị hoãn (load-after=true) - gọi SAU KHI trang đã hiển thị xong (xem
+     * ActionPage.startDeferredLoadIfNeeded()). Build lại ĐÚNG NHƯ tomlBuildNode() bình thường
+     * (support-sh/title-sh/switch-picker state/...), rồi resolvePendingStates() riêng 1 lượt
+     * cho các mục này (KHÔNG ảnh hưởng lượt resolve đã chạy xong lúc tải trang ban đầu).
+     * "index" trong kết quả trả về đã bù trừ đúng theo thứ tự gốc trong file cấu hình - bên
+     * gọi cần chèn tuần tự ĐÚNG THEO THỨ TỰ trả về (không đảo thứ tự) để vị trí chính xác.
+     */
+    fun buildDeferredNodes(): ArrayList<DeferredNodeResult> {
+        val builtResults = ArrayList<DeferredNodeResult>()
+        val insertedCountPerContainer = HashMap<GroupNode?, Int>()
+        for (entry in deferredEntries) {
+            val node = tomlBuildNode(entry.type, entry.table) ?: continue
+            val extra = insertedCountPerContainer[entry.group] ?: 0
+            val finalIndex = entry.insertIndex + extra
+            insertedCountPerContainer[entry.group] = extra + 1
+            builtResults.add(DeferredNodeResult(entry.group, node, finalIndex))
+        }
+        resolvePendingStates()
+        deferredEntries.clear()
+        return builtResults
     }
 
     private fun tomlBuildNode(type: String, table: TomlTable): NodeInfoBase? {
@@ -452,6 +500,7 @@ class PageConfigReader {
         if (nodeInfoBase.summary.isEmpty()) {
             tomlGet(table, "summary")?.let { nodeInfoBase.summary = StringResRef.resolve(context, it) }
         }
+        tomlGet(table, "load-after")?.let { nodeInfoBase.loadAfter = tomlTruthy(it) }
         return nodeInfoBase
     }
 

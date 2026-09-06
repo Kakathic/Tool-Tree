@@ -29,6 +29,11 @@ class PageConfigSh(private var activity: Activity, private var pageConfigSh: Str
     val menuIcon: ClickableNode? get() = lastReader?.menuIcon
     val fabIcon: ClickableNode? get() = lastReader?.fabIcon
 
+    // load-after: xem PageConfigReader.hasDeferredEntries/buildDeferredNodes().
+    val hasDeferredEntries: Boolean get() = lastReader?.hasDeferredEntries ?: false
+    fun buildDeferredNodes(): ArrayList<PageConfigReader.DeferredNodeResult> =
+        lastReader?.buildDeferredNodes() ?: ArrayList()
+
     // Nhận diện nội dung TOML inline khi dòng 1 hoặc dòng 2 (bỏ qua dòng trống) là
     // header bắt đầu bằng "[[toml]]" (marker đánh dấu inline TOML, tuỳ chọn - dùng khi
     // nội dung không mở đầu bằng [[group]], vd chỉ có [[action]]/[[page]] đứng lẻ) hoặc

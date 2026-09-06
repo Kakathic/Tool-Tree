@@ -90,6 +90,11 @@ class ActionPage : AppCompatActivity() {
     private var loadPageJob: Job? = null
     private var spinnerLoadJob: Job? = null
     private var lockCheckJob: Job? = null
+    // load-after: builder gọi PageConfigReader/PageConfigSh.buildDeferredNodes() của lượt tải
+    // GẦN NHẤT - null nếu trang không có mục nào bị hoãn. Tiêu thụ (set null) ngay khi bắt đầu
+    // chạy ở startDeferredLoadIfNeeded() để không chạy lặp lại nếu tryAutoShowActions() được
+    // gọi nhiều lần. Xem PageConfigReader.DeferredNodeResult.
+    private var pendingDeferredBuilder: (() -> ArrayList<PageConfigReader.DeferredNodeResult>)? = null
     // Tránh chạy lại checkPageLock khi onResume() gọi lại trong lúc vẫn đang đợi.
     private var lockCheckStarted = false
 
@@ -662,6 +667,7 @@ class ActionPage : AppCompatActivity() {
     private fun loadPageConfig(showLoading: Boolean = true) {
         val config = currentPageConfig ?: return
 
+        pendingDeferredBuilder = null
         loadPageJob?.cancel()
         progressBarDialog.setCancelCallback {
             loadPageJob?.cancel()
@@ -731,6 +737,7 @@ class ActionPage : AppCompatActivity() {
                 loadedAutoShowActions = shReader.autoShowActions
                 loadedMenuIcon = shReader.menuIcon
                 loadedFabIcon = shReader.fabIcon
+                if (shReader.hasDeferredEntries) pendingDeferredBuilder = { shReader.buildDeferredNodes() }
             }
             if (items == null && config.pageConfigPath.isNotEmpty()) {
                 val reader = PageConfigReader(applicationContext, config.pageConfigPath, config.pageConfigDir)
@@ -740,6 +747,7 @@ class ActionPage : AppCompatActivity() {
                 loadedAutoShowActions = reader.autoShowActions
                 loadedMenuIcon = reader.menuIcon
                 loadedFabIcon = reader.fabIcon
+                if (reader.hasDeferredEntries) pendingDeferredBuilder = { reader.buildDeferredNodes() }
             }
             config.pageMenuOptions = loadedMenuOptions
             config.headerActions = loadedHeaderActions
@@ -813,11 +821,34 @@ class ActionPage : AppCompatActivity() {
     private fun tryAutoShowActions() {
         stopFabSpinIfPending()
         if (autoShowTriggered) return
+        startDeferredLoadIfNeeded()
         val toShow = currentPageConfig?.autoShowActions?.filter { it.show }.orEmpty()
         if (toShow.isEmpty()) return
         autoShowTriggered = true
         val fragment = supportFragmentManager.findFragmentById(R.id.main_list) as? ActionListFragment ?: return
         toShow.forEach { fragment.onActionClick(it, Runnable {}, true) }
+    }
+
+    // load-after: đây là mốc "trang đã tải xong thật sự" (giống tryAutoShowActions ở trên) -
+    // build các mục bị hoãn ở 1 coroutine IO riêng (không chặn UI đã hiện), xong thì chèn vào
+    // đúng vị trí trong danh sách/group đang hiển thị. Tự tiêu thụ (set null) NGAY để không
+    // chạy lặp nếu hàm này được gọi lại.
+    private fun startDeferredLoadIfNeeded() {
+        val builder = pendingDeferredBuilder ?: return
+        pendingDeferredBuilder = null
+        lifecycleScope.launch(Dispatchers.IO) {
+            val results: ArrayList<PageConfigReader.DeferredNodeResult> = try { builder() } catch (_: Exception) { ArrayList() }
+            if (!isActive) return@launch
+            results.forEach { result -> try { prewarmNodeImages(result.node) } catch (_: Exception) {} }
+            withContext(Dispatchers.Main) {
+                if (isFinishing || isDestroyed) return@withContext
+                val fragment = supportFragmentManager.findFragmentById(R.id.main_list) as? ActionListFragment ?: return@withContext
+                results.forEach { fragment.appendLateItem(it.group, it.node, it.index) }
+                if (results.isNotEmpty()) {
+                    invalidateOptionsMenu()
+                }
+            }
+        }
     }
 
     private fun buildAutoRunTask(): AutoRunTask? {

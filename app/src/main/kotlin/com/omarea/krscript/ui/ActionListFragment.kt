@@ -180,6 +180,14 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         triggerAction(autoRunTask)
     }
 
+    // load-after: chèn 1 mục bị hoãn (đã build xong) vào ĐÚNG vị trí sau khi trang đã tải xong -
+    // xem ActionPage.startDeferredLoadIfNeeded()/PageConfigReader.buildDeferredNodes(). Gọi này
+    // luôn diễn ra SAU tryAutoShowActions() nên renderInterface()/pageLayoutRender chắc chắn đã
+    // dựng xong (không cần hàng đợi như appendProgressiveItem).
+    fun appendLateItem(group: GroupNode?, node: NodeInfoBase, index: Int) {
+        pageLayoutRender?.insertNode(group, node, index)
+    }
+
     fun updateData(
         newItems: List<NodeInfoBase>,
         actionHandler: KrScriptActionHandler?,
