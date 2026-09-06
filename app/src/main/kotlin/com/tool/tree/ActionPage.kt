@@ -769,17 +769,21 @@ class ActionPage : AppCompatActivity() {
                         ScriptEnvironmen.executeResultRoot(this@ActionPage, config.loadSuccess, config)
                     }
                     progressBarDialog.hideDialog()
+                    val hasDeferredLoad = pendingDeferredBuilder != null
                     if (useProgressiveLoad) {
                         progressiveFragment?.finishProgressiveList()
                         actionsLoaded = true
-                        hideLoadProgress()
+                        if (!hasDeferredLoad) hideLoadProgress()
                         tryAutoShowActions()
                     } else if (showLoading) {
                         loadProgressBar.apply {
                             isIndeterminate = true
                             visibility = View.VISIBLE
                         }
-                        updateActionList(items, showLoading) { hideLoadProgress(); tryAutoShowActions() }
+                        updateActionList(items, showLoading) {
+                            if (!hasDeferredLoad) hideLoadProgress()
+                            tryAutoShowActions()
+                        }
                     } else {
                         updateActionList(items, showLoading) { tryAutoShowActions() }
                     }
@@ -820,8 +824,8 @@ class ActionPage : AppCompatActivity() {
     // [[group.action]] show=true: tự mở dialog 1 lần khi vào trang (không lặp khi reload).
     private fun tryAutoShowActions() {
         stopFabSpinIfPending()
-        if (autoShowTriggered) return
         startDeferredLoadIfNeeded()
+        if (autoShowTriggered) return
         val toShow = currentPageConfig?.autoShowActions?.filter { it.show }.orEmpty()
         if (toShow.isEmpty()) return
         autoShowTriggered = true
@@ -832,7 +836,9 @@ class ActionPage : AppCompatActivity() {
     // load-after: đây là mốc "trang đã tải xong thật sự" (giống tryAutoShowActions ở trên) -
     // build các mục bị hoãn ở 1 coroutine IO riêng (không chặn UI đã hiện), xong thì chèn vào
     // đúng vị trí trong danh sách/group đang hiển thị. Tự tiêu thụ (set null) NGAY để không
-    // chạy lặp nếu hàm này được gọi lại.
+    // chạy lặp nếu hàm này được gọi lại. Có load-after thì thanh tiến trình (loadProgressBar)
+    // CHƯA bị ẩn ở khối withContext(Main) phía trên (xem hasDeferredLoad) - nên hàm này chịu
+    // trách nhiệm ẩn nó ở đây, SAU KHI load-after đã tải và chèn xong hết mục.
     private fun startDeferredLoadIfNeeded() {
         val builder = pendingDeferredBuilder ?: return
         pendingDeferredBuilder = null
@@ -842,6 +848,7 @@ class ActionPage : AppCompatActivity() {
             results.forEach { result -> try { prewarmNodeImages(result.node) } catch (_: Exception) {} }
             withContext(Dispatchers.Main) {
                 if (isFinishing || isDestroyed) return@withContext
+                hideLoadProgress()
                 val fragment = supportFragmentManager.findFragmentById(R.id.main_list) as? ActionListFragment ?: return@withContext
                 results.forEach { fragment.appendLateItem(it.group, it.node, it.index) }
                 if (results.isNotEmpty()) {
