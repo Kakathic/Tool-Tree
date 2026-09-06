@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
 import android.widget.TextView
 import android.widget.Toast
 import com.omarea.common.ui.CurrentActivityHolder
@@ -136,17 +135,22 @@ class ShowDialogReceiver : BroadcastReceiver() {
         }
 
         if (countdownSeconds > 0) {
-            val deadlineElapsedMs = SystemClock.elapsedRealtime() + countdownSeconds * 1000L
+            // Đếm bằng 1 biến số nguyên giảm dần mỗi giây (không tính theo hiệu SystemClock),
+            // để tránh lệch làm nút nhảy hụt số (ví dụ hiện "(8)" thay vì "(9)" ở giây đầu do
+            // Handler trễ vài chục ms rồi bị làm tròn xuống). Giây đầu tiên (0 -> 1s) vẫn hiện
+            // nhãn trơn (không số) như lúc mới mở dialog, sau đó mới bắt đầu đếm lùi từ
+            // (countdownSeconds - 1) xuống 1, rồi tự đóng đúng vào giây thứ countdownSeconds.
+            var remaining = countdownSeconds - 1
             val tick = object : Runnable {
                 override fun run() {
                     if (!dialogWrap.isShowing) return
-                    val remaining = ((deadlineElapsedMs - SystemClock.elapsedRealtime()) / 1000L).toInt()
                     if (remaining <= 0) {
                         // Hết giờ -> tự đóng, KHÔNG chạy script/mở trang (coi như Hủy bỏ).
                         dialogWrap.dismiss()
                         return
                     }
                     countdownBtnView?.text = "$countdownBaseLabel ($remaining)"
+                    remaining--
                     handler.postDelayed(this, 1000L)
                 }
             }
