@@ -13,7 +13,7 @@ if [ -d "$1" ] && [ -f "$fileprop" ]; then
 fi
 
 if [ "$(glog "transai_text_$id")" == 1 ]; then
-  if ! transai -c; then
+  if ! transai -c &>/dev/null; then
   source language 2>/dev/null
   showbanner -y "error" -t "$name" -m "$warn_gemini_text"
   else
