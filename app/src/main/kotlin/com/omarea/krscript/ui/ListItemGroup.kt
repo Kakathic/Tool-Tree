@@ -1,5 +1,6 @@
 package com.omarea.krscript.ui
 
+import android.animation.LayoutTransition
 import android.content.Context
 import android.view.ViewGroup
 import com.tool.tree.R
@@ -26,8 +27,15 @@ class ListItemGroup(context: Context,
     }
 
     // load-after: chèn vào ĐÚNG vị trí atIndex thay vì thêm cuối - xem PageLayoutRender.insertNode().
+    // Overload này CHỈ được gọi từ luồng chèn load-after (không dùng lúc build trang lần đầu),
+    // nên bật LayoutTransition ngay tại đây: các item phía dưới tự động animate trượt xuống
+    // nhường chỗ, còn item mới thì tự fade-in (mặc định của LayoutTransition) - không ảnh hưởng
+    // gì tới addView() thường ở trên.
     fun addView(item: ListItemView, atIndex: Int): ListItemGroup {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
+        if (content.layoutTransition == null) {
+            content.layoutTransition = LayoutTransition()
+        }
         val at = atIndex.coerceIn(0, children.size)
         content.addView(item.getView(), at)
         children.add(at, item)
