@@ -98,12 +98,20 @@ class IconPathAnalysis {
         return null
     }
 
-    // Nạp ảnh nhỏ inline (field "icon" của row) - chỉ lấy 1 khung hình tĩnh (không hỗ trợ hoạt
-    // ảnh/nhiều đường dẫn như photo, vì icon dùng để ghép cố định cạnh chữ qua ImageSpan).
-    fun loadRowIcon(context: Context, iconPath: String, pageDir: String): Drawable? {
+    // Nạp ảnh nhỏ inline (field "icon" của row) - ghép cố định cạnh chữ qua ImageSpan. Hỗ trợ hoạt
+    // ảnh giống loadIcon(): danh sách nhiều path tường minh ("a.png|b.png") HOẶC icon-gif-num (frames
+    // đặt tên icon_1.png, icon_2.png...). Việc CHẠY animation (start/stop, callback invalidate) do
+    // bên gọi tự lo (xem GifPlaybackHelper.bindToTextView() trong RowsRenderHelper) vì AnimationDrawable
+    // gắn trong ImageSpan không tự chạy như khi gắn vào ImageView.
+    fun loadRowIcon(context: Context, iconPath: String, pageDir: String, gifNum: Int = 0, gifTime: Int = 300): Drawable? {
         if (iconPath.isEmpty()) return null
         val paths = splitMultiPaths(iconPath)
         if (paths.isEmpty()) return null
+        if (paths.size > 1) {
+            loadAnimatedFromPaths(context, pageDir, paths, gifTime)?.let { return it }
+        } else if (gifNum > 0) {
+            loadAnimatedFrames(context, pageDir, paths[0], gifNum, gifTime)?.let { return it }
+        }
         decodeBitmap(context, pageDir, paths[0])?.let {
             return bitmap2Drawable(it)
         }

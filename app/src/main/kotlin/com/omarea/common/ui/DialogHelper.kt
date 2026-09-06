@@ -233,10 +233,11 @@ class DialogHelper {
                     message: String = "",
                     contentView: View? = null,
                     onConfirm: DialogButton? = null,
-                    onCancel: DialogButton? = null): DialogWrap {
+                    onCancel: DialogButton? = null,
+                    cancelable: Boolean = true): DialogWrap {
             val view = getCustomDialogView(context, R.layout.dialog_confirm, title, message, contentView)
 
-            val dialog = customDialog(context, view)
+            val dialog = customDialog(context, view, cancelable)
 
             val btnConfirm = view.findViewById<TextView?>(R.id.btn_confirm)
             if (onConfirm != null) {

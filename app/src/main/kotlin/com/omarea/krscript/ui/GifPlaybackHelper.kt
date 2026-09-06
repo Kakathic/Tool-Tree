@@ -1,7 +1,10 @@
 package com.omarea.krscript.ui
 
 import android.graphics.drawable.AnimationDrawable
+import android.graphics.drawable.Drawable
+import android.os.SystemClock
 import android.widget.ImageView
+import android.widget.TextView
 
 // Điều khiển việc phát hoạt ảnh kiểu GIF (AnimationDrawable) cho ImageView,
 // dùng chung cho ListItemClickable (icon/photo) và ListItemText (photo trong dòng text).
@@ -34,6 +37,39 @@ object GifPlaybackHelper {
                 } else {
                     startWithLoopLimit(imageView, drawable, loopCount)
                 }
+            }
+        }
+    }
+
+    // Gắn hoạt ảnh cho icon inline (ImageSpan trong TextView) - KHÁC ImageView vì AnimationDrawable
+    // gắn trong Span không tự nhận invalidate/schedule của View chứa nó, phải tự set Callback trỏ
+    // về TextView (invalidateDrawable -> textView.invalidate(); schedule/unschedule -> post/removeCallbacks
+    // của chính TextView đó) thì animation mới tự chạy được.
+    // KHÔNG hỗ trợ bấm-để-phát (autoplay=false chỉ hiện khung đầu, đứng yên) - icon nằm trong Span,
+    // không có vùng bấm riêng để bắt sự kiện như ImageView.
+    fun bindToTextView(textView: TextView, drawable: AnimationDrawable, autoplay: Boolean, loopCount: Int) {
+        drawable.callback = object : Drawable.Callback {
+            override fun invalidateDrawable(who: Drawable) {
+                textView.invalidate()
+            }
+            override fun scheduleDrawable(who: Drawable, what: Runnable, whenMs: Long) {
+                textView.postDelayed(what, whenMs - SystemClock.uptimeMillis())
+            }
+            override fun unscheduleDrawable(who: Drawable, what: Runnable) {
+                textView.removeCallbacks(what)
+            }
+        }
+        if (!autoplay) return
+        drawable.stop()
+        drawable.start()
+        if (loopCount > 0) {
+            var totalDuration = 0L
+            for (i in 0 until drawable.numberOfFrames) {
+                totalDuration += drawable.getDuration(i)
+            }
+            val stopAfterMs = totalDuration * loopCount
+            if (stopAfterMs > 0) {
+                textView.postDelayed({ drawable.stop() }, stopAfterMs)
             }
         }
     }

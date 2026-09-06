@@ -77,6 +77,15 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         internal var iconPosition: String = "before"
         // Kích thước icon (đơn vị dp) - 0 = tự động lấy kích thước gần bằng cỡ chữ hiện tại
         internal var iconSize: Int = 0
+        // Nếu > 0: icon inline là hoạt ảnh (gif-style), số khung hình cần nạp (icon_1.png, icon_2.png, ...)
+        internal var iconGifNum: Int = 0
+        // Thời gian hiển thị mỗi khung hình (mili giây)
+        internal var iconGifTime: Int = 300
+        // true (mặc định): tự chạy hoạt ảnh; false: chỉ hiện khung đầu (KHÔNG hỗ trợ bấm-để-phát
+        // như icon/photo cấp node - icon inline nằm trong Span, không có vùng bấm riêng)
+        internal var iconGifAutoplay: Boolean = true
+        // Số vòng lặp tối đa (<=0: lặp vô hạn, mặc định)
+        internal var iconGifLoopCount: Int = 0
         // "" (mặc định) = không phải toggle; "checkbox" hoặc "switch"
         internal var toggle: String = ""
         // Trạng thái bật/tắt hiện tại (được resolveBoolOrShell tại lúc parse trang - xem "checked")

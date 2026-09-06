@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.graphics.drawable.AnimationDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.text.Layout
@@ -49,6 +50,12 @@ object RowsRenderHelper {
         }
 
         rowsView.text = ""
+        // Dừng các icon inline đang chạy hoạt ảnh từ LẦN bind() TRƯỚC (nếu có) - tránh chồng
+        // callback/schedule cũ lên rowsView khi RecyclerView rebind lại (xem cuối hàm: lưu lại
+        // danh sách animation mới vào rowsView.tag để lần bind() kế tiếp dừng đúng các drawable này).
+        @Suppress("UNCHECKED_CAST")
+        (rowsView.tag as? MutableList<AnimationDrawable>)?.forEach { it.stop() }
+        val animatedRowIcons = ArrayList<AnimationDrawable>()
         // LinkMovementMethod mặc định: bấm bất kỳ đâu trên dòng (kể cả vùng trống do canh lề)
         // cũng tính là bấm trúng ClickableSpan của dòng đó. Dùng bản tuỳ chỉnh bên dưới để chỉ
         // nhận chạm trong vùng chữ/icon thực sự được vẽ.
@@ -207,7 +214,7 @@ object RowsRenderHelper {
             // kết quả shell đã gộp sẵn ở trên (dynamicIconResults) thay cho row.icon tĩnh.
             val effectiveIcon = if (row.iconSh.isNotEmpty()) (dynamicIconResults[rowIndex] ?: "") else row.icon
             val hasIcon = !isToggle && effectiveIcon.isNotEmpty()
-            val rowIconDrawableRaw = if (hasIcon) buildRowIconDrawable(context, effectiveIcon, row.iconSize, config) else null
+            val rowIconDrawableRaw = if (hasIcon) buildRowIconDrawable(context, effectiveIcon, row, config) else null
             val showIcon = rowIconDrawableRaw != null
 
             // Row dạng toggle (checkbox/switch nhỏ): chèn thêm 1 ký tự placeholder ở cuối (sau
@@ -240,6 +247,10 @@ object RowsRenderHelper {
                 rowIconDrawable = rowIconDrawableRaw
                 val iconIndex = if (row.iconPosition == "before") 0 else length - 1
                 spannableString.setSpan(VerticalCenterImageSpan(rowIconDrawable), iconIndex, iconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                if (rowIconDrawable is AnimationDrawable) {
+                    GifPlaybackHelper.bindToTextView(rowsView, rowIconDrawable, row.iconGifAutoplay, row.iconGifLoopCount)
+                    animatedRowIcons.add(rowIconDrawable)
+                }
             }
 
             if (extraIconView != null) {
@@ -432,6 +443,7 @@ object RowsRenderHelper {
         rowsView.setOnLongClickListener {
             true
         }
+        rowsView.tag = animatedRowIcons
 
         if (needsRebindAfterLayout) {
             rowsView.post {
@@ -636,13 +648,14 @@ object RowsRenderHelper {
 
     // Nạp + dựng drawable cho icon inline cạnh chữ của row - kích thước lấy theo "icon-size" (dp)
     // nếu có khai báo, ngược lại mặc định 18dp (xấp xỉ 1 dòng chữ cỡ vừa). iconPath truyền tường
-    // minh (thay vì đọc row.icon trực tiếp) để hỗ trợ cả icon tĩnh và icon-sh động.
+    // minh (thay vì đọc row.icon trực tiếp) để hỗ trợ cả icon tĩnh và icon-sh động; các field gif
+    // (iconGifNum/iconGifTime) vẫn đọc từ row vì -sh chỉ thay path, không thay cấu hình gif.
     // Trả về null nếu không có icon hoặc không nạp được ảnh (ảnh lỗi/không tồn tại).
-    private fun buildRowIconDrawable(context: Context, iconPath: String, iconSize: Int, config: NodeInfoBase): Drawable? {
-        val loaded = IconPathAnalysis().loadRowIcon(context, iconPath, config.pageConfigDir) ?: return null
+    private fun buildRowIconDrawable(context: Context, iconPath: String, row: TextNode.TextRow, config: NodeInfoBase): Drawable? {
+        val loaded = IconPathAnalysis().loadRowIcon(context, iconPath, config.pageConfigDir, row.iconGifNum, row.iconGifTime) ?: return null
         val density = context.resources.displayMetrics.density
         val defaultDp = 18
-        val size = ((if (iconSize > 0) iconSize else defaultDp) * density).toInt()
+        val size = ((if (row.iconSize > 0) row.iconSize else defaultDp) * density).toInt()
         val drawable = loaded.mutate()
         drawable.setBounds(0, 0, size, size)
         return drawable

@@ -940,6 +940,10 @@ class PageConfigReader {
             }
         }
         tomlGet(table, "icon-size")?.let { row.iconSize = it.trim().toIntOrNull() ?: row.iconSize }
+        tomlGet(table, "icon-gif-num", "icon-gif_num")?.let { row.iconGifNum = it.trim().toIntOrNull() ?: row.iconGifNum }
+        tomlGet(table, "icon-gif-time", "icon-gif_time")?.let { row.iconGifTime = it.trim().toIntOrNull() ?: row.iconGifTime }
+        tomlGet(table, "icon-gif-autoplay", "icon-gif_autoplay")?.let { row.iconGifAutoplay = tomlTruthy(it) }
+        tomlGet(table, "icon-gif-loop", "icon-gif-loop-count", "icon-gif_loop_count")?.let { row.iconGifLoopCount = it.trim().toIntOrNull() ?: row.iconGifLoopCount }
         tomlGet(table, "script", "run")?.let { row.onClickScript = it }
         tomlGet(table, "sh", "text-sh")?.let { row.dynamicTextSh = it }
         // Toggle nhỏ (checkbox / switch) lồng trong dòng text

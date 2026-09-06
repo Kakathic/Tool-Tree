@@ -156,6 +156,13 @@
                 <action android:name="${applicationId}.broadcast.BANNER" />
             </intent-filter>
         </receiver>
+        <receiver android:name=".ShowDialogReceiver"
+                  android:enabled="true"
+                  android:exported="true">
+            <intent-filter>
+                <action android:name="${applicationId}.broadcast.SHOWDIALOG" />
+            </intent-filter>
+        </receiver>
         <service
             android:name=".WakeLockService"
             android:enabled="true"
