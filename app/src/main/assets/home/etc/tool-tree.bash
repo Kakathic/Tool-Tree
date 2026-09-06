@@ -306,6 +306,8 @@ Info() {
         auto_trans
         echo "exit:[restart]"
         exit
+      else
+      echo "'$warn_gemini_text'" >&2
       fi
     else
       slog language_kkts "$state"
