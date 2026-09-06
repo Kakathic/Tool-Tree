@@ -14,6 +14,10 @@ class ListItemGroup(context: Context,
                 config) {
     protected var children = ArrayList<ListItemView>()
 
+    // load-after: số view thực tế đã có trong group này - dùng để ghi lại "vị trí đúng" của 1
+    // group con đang rỗng (xem PageLayoutRender.renderNode()/insertNode()).
+    val childCount: Int get() = children.size
+
     fun addView(item: ListItemView): ListItemGroup {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         content.addView(item.getView())

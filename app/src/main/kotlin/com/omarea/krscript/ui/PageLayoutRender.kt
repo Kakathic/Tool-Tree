@@ -103,8 +103,11 @@ class PageLayoutRender(private val mContext: Context,
     // đầu (có thể toàn bộ con đều bị hoãn) - dùng để chèn thêm mục vào group SAU KHI trang đã
     // render xong (xem insertNode()). groupParentMap/attachedGroups dùng để tự add view group
     // con vào đúng chỗ nếu group đó đang rỗng (chưa từng addView vào parent lúc build ban đầu).
+    // groupInsertIndexMap: vị trí THỰC (số view đã có trong parent) tại đúng lúc gặp group rỗng
+    // đó - dùng để attach group vào ĐÚNG chỗ thay vì luôn nối cuối parent.
     private val groupViewMap = HashMap<GroupNode, ListItemGroup>()
     private val groupParentMap = HashMap<GroupNode, ListItemGroup>()
+    private val groupInsertIndexMap = HashMap<GroupNode, Int>()
     private val attachedGroups = HashSet<GroupNode>()
 
     private fun mapConfigList(parent: ListItemGroup, actionInfos: ArrayList<NodeInfoBase>) {
@@ -140,6 +143,10 @@ class PageLayoutRender(private val mContext: Context,
                     parent.addView(subGroup)
                     attachedGroups.add(it)
                     mapConfigList(subGroup, it.children)
+                } else {
+                    // load-after: group đang rỗng (toàn bộ con chờ load-after) - ghi lại đúng vị
+                    // trí hiện tại của parent để insertNode() attach group này vào ĐÚNG CHỖ.
+                    groupInsertIndexMap[it] = parent.childCount
                 }
             }
 
@@ -166,26 +173,40 @@ class PageLayoutRender(private val mContext: Context,
         renderNode(rootGroup, node)
     }
 
+    // load-after: quy đổi "index" trong itemConfigList (model, gồm cả group rỗng chưa từng
+    // hiện view) sang vị trí view THẬT trong rootGroup - group rỗng nào chưa có trong
+    // attachedGroups (chưa từng addView) thì không được tính vào vị trí thật.
+    private fun realRootViewIndex(modelIndex: Int): Int {
+        var realIndex = 0
+        for (i in 0 until modelIndex) {
+            val existing = itemConfigList[i]
+            if (existing is GroupNode && !attachedGroups.contains(existing)) continue
+            realIndex++
+        }
+        return realIndex
+    }
+
     // load-after: chèn 1 mục ĐÃ BUILD XONG vào ĐÚNG vị trí "index" - group = null nghĩa là
     // chèn vào danh sách gốc trang, ngược lại chèn vào đúng group đó (tự add group vào parent
     // nếu group đang rỗng/chưa từng hiện) - xem ActionListFragment.appendLateItem().
     fun insertNode(group: GroupNode?, node: NodeInfoBase, index: Int) {
         if (group == null) {
             val at = index.coerceIn(0, itemConfigList.size)
+            val realAt = realRootViewIndex(at)
             itemConfigList.add(at, node)
-            renderNode(rootGroup, node, at)
+            renderNode(rootGroup, node, realAt)
             return
         }
         val subGroup = groupViewMap[group] ?: return
         val at = index.coerceIn(0, group.children.size)
         group.children.add(at, node)
         if (!attachedGroups.contains(group)) {
-            // LƯU Ý: group này ban đầu HOÀN TOÀN RỖNG (mọi con đều load-after) nên chưa từng
-            // add vào parent lúc render đầu. Gắn vào đây CHỈ append cuối parent - KHÔNG giữ
-            // đúng vị trí gốc của bản thân group đó trong trang/group cha (giới hạn đã biết,
-            // khác với việc chèn ĐÚNG vị trí cho node bên trong 1 group đã hiện sẵn ở trên).
+            // load-after: group này ban đầu HOÀN TOÀN RỖNG (mọi con đều load-after) nên chưa
+            // từng add vào parent lúc render đầu - attach vào ĐÚNG vị trí gốc đã ghi lại ở
+            // groupInsertIndexMap (xem renderNode()), không còn luôn nối cuối parent nữa.
             val parentView = groupParentMap[group] ?: return
-            parentView.addView(subGroup)
+            val atGroupIndex = groupInsertIndexMap[group] ?: parentView.childCount
+            parentView.addView(subGroup, atGroupIndex)
             attachedGroups.add(group)
         }
         renderNode(subGroup, node, at)
