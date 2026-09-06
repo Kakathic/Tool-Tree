@@ -1,0 +1,87 @@
+#!/data/data/com.tool.tree/files/home/bin/bash
+show_help(){
+echo "Use: showdialog -t|--title 'Hello' -m|--message 'Hi there'"
+echo
+echo "-t|--title: dialog title"
+echo "-m|--message: description text (required)"
+echo "-s|--script: script to run when Confirm is tapped, e.g. 'echo 1'"
+echo "-o|--config: config file path for the page to open when Confirm is tapped"
+echo "-e|--config-sh: command that generates the config for the page to open when Confirm is tapped"
+echo "-c|--confirm: confirm button label"
+echo "-n|--cancel: cancel button label"
+echo "-g|--countdown: seconds before the dialog auto-closes, default 5"
+echo "-f|--force: block outside tap / Back button, must tap a button to dismiss"
+echo "-a|--am: run the am command right away instead of just printing it"
+}
+if [[ $# -eq 0 || "$1" != -* ]]; then
+show_help >&2
+exit 1
+fi
+TITLE= MESSAGE= SCRIPT= CONFIG= CONFIGSH= CONFIRM= CANCEL= COUNTDOWN=5 FORCE= AMON=
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -t|--title)
+      TITLE="$2"
+      shift 2
+      ;;
+    -m|--message)
+      MESSAGE="$2"
+      shift 2
+      ;;
+    -s|--script)
+      SCRIPT="$2"
+      shift 2
+      ;;
+    -o|--config)
+      CONFIG="$2"
+      shift 2
+      ;;
+    -e|--config-sh)
+      CONFIGSH="$2"
+      shift 2
+      ;;
+    -c|--confirm)
+      CONFIRM="$2"
+      shift 2
+      ;;
+    -n|--cancel)
+      CANCEL="$2"
+      shift 2
+      ;;
+    -g|--countdown)
+      COUNTDOWN="$2"
+      shift 2
+      ;;
+    -f|--force)
+      FORCE=1
+      shift
+      ;;
+    -a|--am)
+      AMON=1
+      shift
+      ;;
+    -h|--help)
+      show_help
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+# Defaults
+CMDs="broadcast -n com.tool.tree/com.tool.tree.ShowDialogReceiver -a com.tool.tree.broadcast.SHOWDIALOG "
+[ "$TITLE" ] && CMDs+="--es title \"$TITLE\" "
+[ "$MESSAGE" ] && CMDs+="--es desc \"$MESSAGE\" "
+[ "$SCRIPT" ] && CMDs+="--es script \"$SCRIPT\" "
+[ "$CONFIG" ] && CMDs+="--es config \"$CONFIG\" "
+[ "$CONFIGSH" ] && CMDs+="--es config-sh \"$CONFIGSH\" "
+[ "$CONFIRM" ] && CMDs+="--es confirm \"$CONFIRM\" "
+[ "$CANCEL" ] && CMDs+="--es cancel \"$CANCEL\" "
+[ "$COUNTDOWN" ] && CMDs+="--ei countdown \"$COUNTDOWN\" "
+[ "$FORCE" == 1 ] && CMDs+="--ez force true "
+if [ "$AMON" == 1 ] || [ -z "$shell_progres" ]; then
+    eval "am $CMDs" &>/dev/null
+else
+    echo "am:[$CMDs]"
+fi
