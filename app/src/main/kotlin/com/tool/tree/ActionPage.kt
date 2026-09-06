@@ -806,7 +806,9 @@ class ActionPage : AppCompatActivity() {
         when (node) {
             is TextNode -> {
                 node.rows.forEach { row ->
-                    try { iconPathAnalysis.loadtextPhoto(this, row, node.pageConfigDir) } catch (_: Exception) {}
+                    // Prewarm chỉ cache bản TĨNH (row.photo) - photo-sh (nếu có) được resolve
+                    // lúc render thật (RowsRenderHelper.bind()), không chạy lại shell ở đây.
+                    try { iconPathAnalysis.loadtextPhoto(this, row.photo, row, node.pageConfigDir) } catch (_: Exception) {}
                 }
             }
             is GroupNode -> {
