@@ -307,6 +307,7 @@ Info() {
         echo "exit:[restart]"
         exit
       else
+      echo
       echo "'$warn_gemini_text'" >&2
       fi
     else
