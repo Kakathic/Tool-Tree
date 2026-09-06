@@ -1,29 +1,47 @@
 #!/data/data/com.tool.tree/files/home/bin/bash
+
 if [ "$1" == '-b' ]; then
   backup_text=1
   shift
 fi
+
 if [[ "$1" = "-h" || "$1" = "--help" ]]; then
     echo "Usage:"
     echo "  trans -b \"hello world\""
     echo "  echo \"hello\" | trans -b"
     exit 1
 fi
+
 shift
+
 if [ "$#" -gt 0 ]; then
     TEXT="$*"
 else
     TEXT="$(timeout 5 cat)"
 fi
+
 [ -z "$TEXT" ] && exit 0
+
 RESULT="$(curl -s -G -L \
   "https://api.mymemory.translated.net/get" \
   --data-urlencode "q=${TEXT}" \
   --data-urlencode "langpair=en|$LANGUAGE"
 )"
+
 OUT="$(echo "$RESULT" | jq -r '.responseData.translatedText? // ""' 2>/dev/null)"
-if [ -z "$OUT" ]; then
-    [ "$backup_text" == 1 ] && printf '%s\n' "$TEXT"
+
+# Kích hoạt backup
+if [ "$(echo "$OUT" | grep -cm1 -i '500 CHARS')" == 1 ]; then
+OUT=
+fi
+
+if [ -z "$OUT" ] && [ "$backup_text" == 1 ]; then
+backup=1
+fi
+
+if [ "$backup" == 1 ]; then
+    printf '%s\n' "$TEXT"
     exit 0
 fi
+
 printf '%s\n' "$OUT"

@@ -155,6 +155,7 @@ home() {
   
   [[group]]
   title = "'$google_text'"
+  
   [[download]]
   title = "'$latest_update_text'"
   auto-finish = true
