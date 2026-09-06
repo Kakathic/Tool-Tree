@@ -151,7 +151,7 @@ home() {
   
   [[menu]]
   [[menu.items]]
-  title = "Change log"
+  title = "'$changelog_text'"
   script = "cat '$MPAT'/changelog.txt | trans -b"
   
   [[group]]

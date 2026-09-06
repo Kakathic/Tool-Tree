@@ -10,6 +10,7 @@ description="ROM quick patch tool"
 
 # default
 latest_update_text="New update"
+changelog_text="Change log"
 google_text="Currently using a translation tool"
 project_text="Project"
 save_text="Save to:"
@@ -111,6 +112,7 @@ case "$LANGUAGE-$COUNTRY" in
     name="Bản vá ROM"
     description="Công cụ vá nhanh ROM"
     project_text="Dự án"
+    changelog_text="Nhật ký thay đổi"
     latest_update_text="Cập nhật mới"
     save_text="Lưu ở:"
     default_text="Mặc định"
