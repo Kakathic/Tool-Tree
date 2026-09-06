@@ -41,7 +41,7 @@ echo '
   if [ "$(glog transai_text_'$id')" == 1 ]; then
   slog transai_text_'$id' 0
   else
-  transai -c && slog transai_text_'$id' 1 || showbanner -t "Gemini" -m "$(transai -c 2>&1)" -y error
+  transai -c && slog transai_text_'$id' 1 || showbanner -y "error" -t "Gemini" -m "$warn_gemini_text"
   fi
   """
   '
