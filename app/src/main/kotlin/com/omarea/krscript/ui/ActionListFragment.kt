@@ -35,7 +35,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
     companion object {
         // process = true: số khung skeleton hiện sẵn ngay từ đầu trong lúc chờ item thật build
         // xong - xem setupProgressiveRoot()/appendProgressiveItem().
-        private const val PROGRESSIVE_PLACEHOLDER_COUNT = 2
+        private const val PROGRESSIVE_PLACEHOLDER_COUNT = 1
 
         fun create(
                 actionInfos: ArrayList<NodeInfoBase>?,
