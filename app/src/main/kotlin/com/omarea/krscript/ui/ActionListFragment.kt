@@ -33,6 +33,10 @@ import kotlinx.coroutines.*
 
 class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.OnItemClickListener {
     companion object {
+        // process = true: số khung skeleton hiện sẵn ngay từ đầu trong lúc chờ item thật build
+        // xong - xem setupProgressiveRoot()/appendProgressiveItem().
+        private const val PROGRESSIVE_PLACEHOLDER_COUNT = 6
+
         fun create(
                 actionInfos: ArrayList<NodeInfoBase>?,
                 krScriptActionHandler: KrScriptActionHandler? = null,
@@ -139,8 +143,10 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         onRendered?.invoke()
     }
 
-    // Dựng rootGroup RỖNG (chưa có mục nào) cho chế độ process = true, rồi bơm ngay các
-    // mục đã lỡ đến trước đó (pendingProgressiveItems) nếu có.
+    // Dựng rootGroup RỖNG (chưa có mục nào) cho chế độ process = true, hiện sẵn vài khung
+    // skeleton cho đỡ trống trang rồi mới bơm ngay các mục đã lỡ đến trước đó
+    // (pendingProgressiveItems) nếu có - mỗi mục sẽ thế chỗ 1 khung skeleton (xem
+    // PageLayoutRender.appendNode()).
     private fun setupProgressiveRoot() {
         val context = context ?: return
         val currentActionInfos = actionInfos ?: ArrayList()
@@ -150,6 +156,8 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         val rootView = (this.view?.findViewById<ScrollView?>(R.id.kr_content))
         rootView?.removeAllViews()
         rootView?.addView(layout)
+
+        pageLayoutRender?.addLoadingPlaceholders(PROGRESSIVE_PLACEHOLDER_COUNT)
 
         if (pendingProgressiveItems.isNotEmpty()) {
             val queued = ArrayList(pendingProgressiveItems)
@@ -172,9 +180,11 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
     // Gọi khi ActionPage đã build xong TOÀN BỘ trang (mọi mục đã appendProgressiveItem).
     // resolvePendingStates() ở PageConfigReader lúc này cũng đã chạy xong nên trạng thái
     // thật của switch/picker đã có sẵn trên model - làm mới hiển thị (không dựng lại view)
-    // rồi mới chạy autoRunTask như luồng tải trang bình thường.
+    // rồi mới chạy autoRunTask như luồng tải trang bình thường. Gỡ nốt khung skeleton còn dư
+    // (trang có ít item thật hơn số khung đã hiện sẵn ban đầu).
     fun finishProgressiveList() {
         if (::rootGroup.isInitialized) {
+            pageLayoutRender?.clearLoadingPlaceholders()
             rootGroup.triggerUpdate()
         }
         triggerAction(autoRunTask)

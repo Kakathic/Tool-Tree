@@ -1,9 +1,12 @@
 package com.omarea.krscript.ui
 
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
 import android.widget.Toast
 import com.tool.tree.R
 import com.omarea.common.ui.DialogHelper
@@ -118,7 +121,9 @@ class PageLayoutRender(private val mContext: Context,
 
     // atIndex >= 0: chèn view vào ĐÚNG vị trí đó thay vì thêm cuối - dùng cho tính năng
     // load-after (xem insertNode()). Mặc định (-1) giữ nguyên hành vi thêm cuối như cũ.
-    private fun renderNode(parent: ListItemGroup, it: NodeInfoBase, atIndex: Int = -1) {
+    // replacePlaceholder: dùng cho process = true (xem appendNode()) - item build xong sẽ thế
+    // chỗ 1 khung skeleton đang chờ thay vì luôn nối cuối cùng.
+    private fun renderNode(parent: ListItemGroup, it: NodeInfoBase, atIndex: Int = -1, replacePlaceholder: Boolean = false) {
         try {
             var uiRender: ListItemView? = null
             if (it is PageNode) {
@@ -140,7 +145,7 @@ class PageLayoutRender(private val mContext: Context,
                 groupViewMap[it] = subGroup
                 groupParentMap[it] = parent
                 if (it.children.isNotEmpty()) {
-                    parent.addView(subGroup)
+                    if (replacePlaceholder) parent.addViewReplacingPlaceholder(subGroup) else parent.addView(subGroup)
                     attachedGroups.add(it)
                     mapConfigList(subGroup, it.children)
                 } else {
@@ -157,6 +162,8 @@ class PageLayoutRender(private val mContext: Context,
                 }
                 if (atIndex >= 0) {
                     parent.addView(uiRender, atIndex)
+                } else if (replacePlaceholder) {
+                    parent.addViewReplacingPlaceholder(uiRender)
                 } else {
                     parent.addView(uiRender)
                 }
@@ -166,11 +173,38 @@ class PageLayoutRender(private val mContext: Context,
         }
     }
 
+    // process = true: hiện sẵn "count" khung skeleton/placeholder ngay từ đầu cho trang đỡ trống -
+    // gọi lúc mới dựng rootGroup, TRƯỚC KHI có item thật nào (xem ActionListFragment.setupProgressiveRoot()).
+    // Mỗi khung tự nhấp nháy nhẹ (pulsing alpha) để báo hiệu đang tải.
+    fun addLoadingPlaceholders(count: Int) {
+        if (count <= 0) return
+        val views = (0 until count).map { createSkeletonView() }
+        rootGroup.addPlaceholders(views)
+    }
+
+    // Gỡ hết khung skeleton còn dư (trang có ít item thật hơn số khung đã hiện) - gọi khi trang
+    // process = true đã build xong toàn bộ (xem ActionListFragment.finishProgressiveList()).
+    fun clearLoadingPlaceholders() {
+        rootGroup.clearPlaceholders()
+    }
+
+    private fun createSkeletonView(): View {
+        val view = LayoutInflater.from(mContext).inflate(R.layout.kr_skeleton_list_item, null, false)
+        val anim = ObjectAnimator.ofFloat(view, "alpha", 1f, 0.4f, 1f).apply {
+            duration = 900
+            repeatCount = ObjectAnimator.INFINITE
+            start()
+        }
+        view.tag = anim
+        return view
+    }
+
     // Dùng cho chế độ process = true: thêm NGAY 1 mục mới vào cuối danh sách gốc (rootGroup)
     // mà không dựng lại các mục đã hiện trước đó - xem ActionListFragment.appendProgressiveItem.
+    // Item mới sẽ thế chỗ 1 khung skeleton đang chờ (nếu còn) - xem addLoadingPlaceholders().
     fun appendNode(node: NodeInfoBase) {
         itemConfigList.add(node)
-        renderNode(rootGroup, node)
+        renderNode(rootGroup, node, replacePlaceholder = true)
     }
 
     // load-after: quy đổi "index" trong itemConfigList (model, gồm cả group rỗng chưa từng
