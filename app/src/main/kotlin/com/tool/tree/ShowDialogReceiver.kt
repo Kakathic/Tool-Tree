@@ -44,11 +44,15 @@ import java.io.File
  * Ưu tiên "config" nếu đường dẫn tồn tại thật trên máy, không thì dùng "config-sh". Nếu vừa có
  * "script" vừa có "config"/"config-sh" -> chạy script trước, mở trang ngay sau đó (không đợi
  * script chạy xong).
- * Extra "countdown" (số nguyên, giây, tùy chọn): tự đóng dialog sau chừng đó giây. Đếm ngược
- * hiện ngay trên nhãn nút Hủy bỏ, dạng "Hủy bỏ (n)". Hết giờ = tự đóng dialog, coi như bấm Hủy
- * bỏ - KHÔNG chạy script/mở trang. Bỏ trống hoặc <= 0 -> không tự đóng.
+ * Extra "countdown" (số nguyên, giây, tùy chọn): tự đóng dialog sau chừng đó giây. Nếu có
+ * "script" hoặc "config"/"config-sh" (có hành động thật để chạy) -> dialog có đủ 2 nút, đếm
+ * ngược hiện trên nhãn nút Hủy bỏ, dạng "Hủy bỏ (n)". Nếu KHÔNG có cả script và trang (chỉ để
+ * thông báo) -> dialog chỉ hiện 1 nút xác nhận duy nhất, đếm ngược hiện luôn trên nút đó, dạng
+ * "Xác nhận (n)". Hết giờ = tự đóng dialog, coi như bấm Hủy bỏ - KHÔNG chạy script/mở trang. Bỏ
+ * trống hoặc <= 0 -> không tự đóng.
  * Extra "force" (boolean, --ez, tùy chọn, mặc định false): true -> chặn bấm ra ngoài dialog và
- * nút Back để thoát, bắt buộc phải bấm 1 trong 2 nút mới đóng được.
+ * nút Back để thoát, bắt buộc phải bấm nút (Xác nhận/Hủy bỏ, hoặc nút xác nhận duy nhất nếu
+ * không có script/trang) mới đóng được.
  *
  * Nếu app đang ở background (không có Activity foreground) -> tự rơi về hiện Toast thường
  * (trường hợp này KHÔNG hỗ trợ nút Xác nhận/Hủy bỏ, script/trang sẽ KHÔNG được chạy/mở).
@@ -85,31 +89,50 @@ class ShowDialogReceiver : BroadcastReceiver() {
         val countdownSeconds = intent.getIntExtra("countdown", 0)
         val force = intent.getBooleanExtra("force", false)
 
+        // Có hành động thật (script và/hoặc trang) hay chỉ là dialog thông báo đơn thuần.
+        val hasConfigPage = (!config.isNullOrEmpty() && File(config).isFile) || !configSh.isNullOrEmpty()
+        val hasAction = !script.isNullOrEmpty() || hasConfigPage
+
         val handler = Handler(Looper.getMainLooper())
-        // Giữ tham chiếu Runnable đếm ngược để hủy kịp thời ngay khi người dùng tự bấm 1 trong
-        // 2 nút trước khi hết giờ - tránh việc nó vẫn chạy ngầm rồi đóng nhầm 1 dialog KHÁC nếu
+        // Giữ tham chiếu Runnable đếm ngược để hủy kịp thời ngay khi người dùng tự bấm nút
+        // trước khi hết giờ - tránh việc nó vẫn chạy ngầm rồi đóng nhầm 1 dialog KHÁC nếu
         // dialog cũ đã bị thay bởi 1 lượt gọi showdialog mới sau đó.
         var countdownRunnable: Runnable? = null
 
-        val onConfirm = DialogHelper.DialogButton(confirmText, Runnable {
-            countdownRunnable?.let { handler.removeCallbacks(it) }
-            if (!script.isNullOrEmpty()) {
-                runConfirmScript(activity, title, script)
-            }
-            openConfigPageIfAny(activity, config, configSh)
-        })
-        val onCancel = DialogHelper.DialogButton(cancelText, Runnable {
-            countdownRunnable?.let { handler.removeCallbacks(it) }
-        })
+        val dialogWrap: DialogHelper.DialogWrap
+        val countdownBtnView: TextView?
+        val countdownBaseLabel: String
 
-        val dialogWrap = DialogHelper.confirm(
-            activity, title, message, null, onConfirm, onCancel,
-            cancelable = !force
-        )
+        if (hasAction) {
+            // Có script/trang để chạy -> giữ đủ 2 nút Xác nhận/Hủy bỏ, đếm ngược trên nút Hủy bỏ.
+            val onConfirm = DialogHelper.DialogButton(confirmText, Runnable {
+                countdownRunnable?.let { handler.removeCallbacks(it) }
+                if (!script.isNullOrEmpty()) {
+                    runConfirmScript(activity, title, script)
+                }
+                openConfigPageIfAny(activity, config, configSh)
+            })
+            val onCancel = DialogHelper.DialogButton(cancelText, Runnable {
+                countdownRunnable?.let { handler.removeCallbacks(it) }
+            })
+
+            dialogWrap = DialogHelper.confirm(
+                activity, title, message, null, onConfirm, onCancel,
+                cancelable = !force
+            )
+            countdownBtnView = dialogWrap.dialog.findViewById(R.id.btn_cancel)
+            countdownBaseLabel = cancelText
+        } else {
+            // Không có script lẫn trang -> chỉ là thông báo, chỉ hiện 1 nút xác nhận duy nhất,
+            // đếm ngược hiện luôn trên nút đó. Bấm nút hoặc hết giờ đều chỉ đóng dialog.
+            dialogWrap = DialogHelper.alert(activity, title, message, null)
+            dialogWrap.setCancelable(!force)
+            countdownBtnView = dialogWrap.dialog.findViewById(R.id.btn_confirm)
+            countdownBaseLabel = confirmText
+        }
 
         if (countdownSeconds > 0) {
             val deadlineElapsedMs = SystemClock.elapsedRealtime() + countdownSeconds * 1000L
-            val cancelBtnView = dialogWrap.dialog.findViewById<TextView>(R.id.btn_cancel)
             val tick = object : Runnable {
                 override fun run() {
                     if (!dialogWrap.isShowing) return
@@ -119,7 +142,7 @@ class ShowDialogReceiver : BroadcastReceiver() {
                         dialogWrap.dismiss()
                         return
                     }
-                    cancelBtnView?.text = "$cancelText ($remaining)"
+                    countdownBtnView?.text = "$countdownBaseLabel ($remaining)"
                     handler.postDelayed(this, 1000L)
                 }
             }
