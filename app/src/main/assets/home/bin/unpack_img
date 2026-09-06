@@ -250,14 +250,14 @@ if [ "$NODECO" != 1 ] && [ -f "$file_img" ] && [ "$dang_file" != "unknow" ] && [
     elif [ "$dang_file" == 'vbmeta' ] || [ "$dang_file" == 'vbmeta_system' ]; then
         cp -f "$file_img" "$in_name"
         if [ "$PTVBMETA" == 1 ]; then
-            magiskboot hexpatch "$in_name/${file_img##*/}" 0000000000000000617662746F6F6C20 0000000200000000617662746F6F6C20 2>&1
+            magiskboot hexpatch "$in_name/${file_img##*/}" 0000000000000000617662746F6F6C20 0000000200000000617662746F6F6C20 2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
             echo
         elif [ "$PTVBMETA" == 2 ]; then
-            magiskboot hexpatch "$in_name/${file_img##*/}" 00000000000000007665726966792000 00000000000000007665726966790000 2>&1
+            magiskboot hexpatch "$in_name/${file_img##*/}" 00000000000000007665726966792000 00000000000000007665726966790000 2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
             echo
         elif [ "$PTVBMETA" == 3 ]; then
-            magiskboot hexpatch "$in_name/${file_img##*/}" 0000000000000000617662746F6F6C20 0000000200000000617662746F6F6C20 2>&1
-            magiskboot hexpatch "$in_name/${file_img##*/}" 00000000000000007665726966792000 00000000000000007665726966790000 2>&1
+            magiskboot hexpatch "$in_name/${file_img##*/}" 0000000000000000617662746F6F6C20 0000000200000000617662746F6F6C20 2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            magiskboot hexpatch "$in_name/${file_img##*/}" 00000000000000007665726966792000 00000000000000007665726966790000 2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
             echo
         fi
         
