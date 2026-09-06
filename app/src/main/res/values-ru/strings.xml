@@ -1,4 +1,6 @@
 <resources>
+    <string name="processing">Обработка...</string>
+    <string name="completed">Готово</string>
     <string name="please_wait">Пожалуйста, подождите</string>
     <string name="title_activity_action_page">Страница функций</string>
     <string name="about_title">О приложении</string>
@@ -12,6 +14,10 @@
     <string name="btn_send">Готово</string>
     <string name="toast_invalid_number">Пожалуйста, введите число</string>
     <string name="toast_out_of_range">Число должно быть в диапазоне от %1$d до %2$d</string>
+    <string name="action_done_select">Готово</string>
+    <string name="msg_multiple_select_mode">Коснитесь элементов для множественного выбора, затем нажмите Готово</string>
+    <string name="msg_nothing_selected">Пожалуйста, выберите хотя бы один элемент</string>
+    <string name="msg_path_home_not_found">Папка не найдена: %1$s. Вместо неё показана /sdcard</string>
     <string name="copy_success">Копирование выполнено успешно</string>
     <string name="pop_before_start">Запуск приложения…</string>
     <string name="pop_started">Приложение запущено</string>
@@ -48,6 +54,7 @@
     <string name="turn_off_wakelock">Выключить WakeLock</string>
     <string name="turn_on_wakelock">Включить WakeLock</string>
     <string name="msg_folder_mode">Нажмите и удерживайте, чтобы выбрать папку</string>
+    <string name="msg_file_extension_required">Требуемый тип файла: %1$s</string>
     <string name="dialog_title_select_directory">Вы хотите выбрать эту папку?</string>
     <string name="dialog_title_select_file">Вы хотите выбрать этот файл?</string>
     <string name="no_files_in_directory">Папка пуста и не содержит файлов!</string>
@@ -72,6 +79,9 @@
     <string name="kr_shell_finish_error">Выполнение завершено, но произошла ошибка</string>
     <string name="script_losted">Отсутствуют ресурсы скрипта</string>
     <string name="btn_copy_output">Копировать</string>
+    <string name="hint_shell_input">Введите текст и отправьте его в скрипт</string>
+    <string name="btn_send_input">Отправить</string>
+    <string name="input_send_fail">Не удалось отправить, скрипт уже завершён</string>
     <string name="copy_fail">Копирование не удалось</string>
     <string name="do_not_empty">Не может быть пустым</string>
     <string name="kr_param_options_load">Загрузка списка</string>
@@ -85,8 +95,23 @@
     <string name="kr_download_create_success">Загрузка файла начата</string>
     <string name="kr_download_confirm">Загрузить этот файл?</string>
     <string name="kr_download_completed">Файл успешно загружен</string>
+    <string name="kr_banner_confirm">Подтвердить</string>
+    <string name="kr_banner_cancel">Отмена</string>
+    <string name="kr_download_error">Ошибка загрузки</string>
+    <string name="kr_download_paused">Загрузка приостановлена</string>
+    <string name="kr_download_paused_tap">Приостановлено — нажмите, чтобы продолжить</string>
+    <string name="kr_download_retrying">Повторная попытка...</string>
+    <string name="kr_download_pause">Пауза</string>
+    <string name="kr_download_resume">Продолжить</string>
+    <string name="kr_download_cancel">Отмена</string>
+    <string name="kr_download_execute_wait">Выполнение скрипта…</string>
+    <string name="kr_download_execute_success">Успешно</string>
+    <string name="kr_download_execute_fail">Ошибка</string>
+    <string name="kr_download_cancel_confirm_title">Отменить загрузку?</string>
+    <string name="kr_download_cancel_confirm_message">Загруженные данные будут удалены.</string>
     <string name="kr_color_picker">Выбор цвета</string>
     <string name="kr_invalid_color">Недопустимое значение цвета. Поддерживается только формат вида #ff88aa00</string>
+    <string name="kr_expand_fullscreen">Развернуть в полноэкранный редактор</string>
     <string name="kr_duplicate_param_name">Ошибка конфигурации: повторяющееся имя параметра \"%1$s\" - будет показан только первый</string>
     <string name="kr_shortcut_create_fail">Не удалось создать ярлык</string>
     <string name="kr_shortcut_create_success">Запрос на создание ярлыка отправлен</string>
@@ -98,6 +123,7 @@
     <string name="kr_script_task_running">Выполнение начато</string>
     <string name="kr_script_task_has_error">Произошла ошибка</string>
     <string name="kr_script_task_finished">Задача завершена</string>
+    <string name="kr_task_notify_copy_empty">Пока нет журнала для копирования</string>
     <string name="kr_bg_task_start_desc">Вы можете просматривать прогресс и логи задачи через центр системных уведомлений</string>
     <string name="kr_slice_script_result">Результат скрипта</string>
     <string name="kr_slice_activity_fail">Не удалось открыть Activity~</string>
@@ -111,12 +137,14 @@
     <string name="kr_auto_run_item_losted">Указанный элемент не существует</string>
     <string name="kr_hidden_task_running">Слишком быстро! Предыдущее действие ещё не завершено</string>
     <string name="kr_lock_message">Эта функция заблокирована</string>
+    <string name="kr_lock_title">Заблокировано</string>
     <string name="kr_sdk_too_low">Версия системы слишком низкая</string>
     <string name="kr_sdk_overtop">Версия системы слишком высокая</string>
     <string formatted="false" name="kr_sdk_message">Эта функция работает только на системах с SDK от %d до %d</string>
     <string name="kr_sdk_discrepancy">Несоответствие версии системы</string>
     <string formatted="false" name="kr_sdk_discrepancy_message">Эта функция работает только на системах с SDK %d</string>
     <string name="picker_not_item">Нет доступных вариантов</string>
+    <string name="kr_more_options">Больше опций</string>
     <string name="picker_select_none">Ничего не выбрано</string>
     <string name="theme_system_default">Стандартный интерфейс</string>
     <string name="theme_light">Светлый режим</string>
@@ -134,5 +162,27 @@
     <string name="options_text">Параметры</string>
     <string name="save_text">Сохранить в</string>
     <string name="remove_text">Удалять</string>
+    <string name="editor_file_missing">Не указан путь к файлу</string>
+    <string name="editor_hint_empty">Пустой файл</string>
+    <string name="editor_hint_new_file">Этот файл ещё не существует — он будет создан при сохранении</string>
+    <string name="editor_unsaved_title">Несохранённые изменения</string>
+    <string name="editor_unsaved_message">В этом файле есть несохранённые изменения. Сохранить перед выходом?</string>
+    <string name="editor_save">Сохранить</string>
+    <string name="editor_discard">Не сохранять</string>
+    <string name="editor_saving">Сохранение…</string>
+    <string name="editor_save_success">Файл сохранён</string>
+    <string name="editor_save_fail">Не удалось сохранить файл</string>
+    <string name="editor_toggle_wrap">Перенос по словам</string>
+    <string name="editor_run_test">Тестовый запуск</string>
+    <string name="editor_exit">Выход</string>
+    <string name="editor_undo">Отменить</string>
+    <string name="editor_redo">Повторить</string>
+    <string name="loading_data">Загрузка данных...</string>
+    <string name="debug_text_network">Пожалуйста, подключитесь к интернету и попробуйте снова!</string>
+    <string name="debug_text_version">Текущая версия</string>
+    <string name="debug_text_delay">Пробный период закончился, приложение остановлено.</string>
+    <string name="debug_text_notes">Переключиться в режим отладки</string>
+    <string name="debug_text_quit">Если приложение не пройдёт этапы тестирования, оно перестанет работать.</string>
+    <string name="check_time">Общее время</string>
     
 </resources>

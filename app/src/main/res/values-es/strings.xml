@@ -49,6 +49,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="turn_off_wakelock">Desactivar WakeLock</string>
     <string name="turn_on_wakelock">Activar WakeLock</string>
     <string name="msg_folder_mode">Mantén pulsado para seleccionar una carpeta</string>
+    <string name="msg_file_extension_required">Tipo de archivo requerido: %1$s</string>
     <string name="dialog_title_select_directory">¿Quieres seleccionar esta carpeta?</string>
     <string name="dialog_title_select_file">¿Quieres seleccionar este archivo?</string>
     <string name="no_files_in_directory">La carpeta está vacía y no contiene archivos</string>
@@ -97,12 +98,23 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="kr_download_create_success">Descarga del archivo iniciada</string>
     <string name="kr_download_confirm">¿Descargar el archivo?</string>
     <string name="kr_download_completed">Archivo descargado correctamente</string>
+    <string name="kr_banner_confirm">Confirmar</string>
+    <string name="kr_banner_cancel">Cancelar</string>
     <string name="kr_download_error">Error al descargar el archivo</string>
+    <string name="kr_download_paused">Descarga en pausa</string>
+    <string name="kr_download_paused_tap">En pausa: toca para reanudar</string>
+    <string name="kr_download_retrying">Reintentando...</string>
+    <string name="kr_download_pause">Pausar</string>
+    <string name="kr_download_resume">Reanudar</string>
+    <string name="kr_download_cancel">Cancelar</string>
     <string name="kr_download_execute_wait">Ejecutando script…</string>
     <string name="kr_download_execute_success">Éxito</string>
     <string name="kr_download_execute_fail">Fallido</string>
+    <string name="kr_download_cancel_confirm_title">¿Cancelar la descarga?</string>
+    <string name="kr_download_cancel_confirm_message">Los datos descargados se descartarán.</string>
     <string name="kr_color_picker">Selecciona un color</string>
     <string name="kr_invalid_color">Valor de color no válido. Solo se admiten formatos como #ff88aa00</string>
+    <string name="kr_expand_fullscreen">Expandir al editor de pantalla completa</string>
     <string name="kr_duplicate_param_name">Error de configuración: nombre de parámetro duplicado \"%1$s\" - solo se mostrará el primero</string>
     <string name="kr_shortcut_create_fail">Error al crear el acceso directo</string>
     <string name="kr_shortcut_create_success">Se ha enviado la solicitud de creación del acceso directo</string>
@@ -114,6 +126,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="kr_script_task_running">Ejecución iniciada</string>
     <string name="kr_script_task_has_error">Se ha producido un error</string>
     <string name="kr_script_task_finished">Tarea finalizada</string>
+    <string name="kr_task_notify_copy_empty">Aún no hay registro para copiar</string>
     <string name="kr_bg_task_start_desc">Puedes ver el progreso y los registros de la tarea desde el centro de notificaciones del sistema</string>
     <string name="kr_slice_script_result">Resultado del script</string>
     <string name="kr_slice_activity_fail">No se puede abrir la actividad~</string>
@@ -127,12 +140,14 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="kr_auto_run_item_losted">Falta el elemento especificado</string>
     <string name="kr_hidden_task_running">¡Demasiado rápido! La operación anterior aún no ha finalizado</string>
     <string name="kr_lock_message">Esta función está bloqueada</string>
+    <string name="kr_lock_title">Bloqueado</string>
     <string name="kr_sdk_too_low">La versión del sistema es demasiado antigua</string>
     <string name="kr_sdk_overtop">La versión del sistema es demasiado reciente</string>
     <string formatted="false" name="kr_sdk_message">Esta función solo funciona en sistemas con SDK entre %d y %d</string>
     <string name="kr_sdk_discrepancy">Discrepancia de versión del sistema</string>
     <string formatted="false" name="kr_sdk_discrepancy_message">Esta función solo funciona en sistemas con SDK %d</string>
     <string name="picker_not_item">No hay opciones disponibles</string>
+    <string name="kr_more_options">Más opciones</string>
     <string name="picker_select_none">No se ha seleccionado ningún elemento</string>
     <string name="theme_system_default">Predeterminado del sistema</string>
     <string name="theme_light">Modo claro</string>

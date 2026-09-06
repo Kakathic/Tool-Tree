@@ -46,6 +46,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="turn_off_wakelock">Matikan WakeLock</string>
     <string name="turn_on_wakelock">Aktifkan WakeLock</string>
     <string name="msg_folder_mode">Tekan dan tahan untuk memilih folder</string>
+    <string name="msg_file_extension_required">Jenis berkas yang diperlukan: %1$s</string>
     <string name="dialog_title_select_directory">Apakah Anda ingin memilih folder ini?</string>
     <string name="dialog_title_select_file">Apakah Anda ingin memilih berkas ini?</string>
     <string name="no_files_in_directory">Folder kosong dan tidak ada berkas!</string>
@@ -93,8 +94,23 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="kr_download_create_success">Mulai mengunduh berkas</string>
     <string name="kr_download_confirm">Unduh berkas ini?</string>
     <string name="kr_download_completed">Unduh berkas berhasil</string>
+    <string name="kr_banner_confirm">Konfirmasi</string>
+    <string name="kr_banner_cancel">Batal</string>
+    <string name="kr_download_error">Unduhan gagal</string>
+    <string name="kr_download_paused">Unduhan dijeda</string>
+    <string name="kr_download_paused_tap">Dijeda – ketuk untuk melanjutkan</string>
+    <string name="kr_download_retrying">Mencoba lagi...</string>
+    <string name="kr_download_pause">Jeda</string>
+    <string name="kr_download_resume">Lanjutkan</string>
+    <string name="kr_download_cancel">Batal</string>
+    <string name="kr_download_execute_wait">Menjalankan skrip…</string>
+    <string name="kr_download_execute_success">Berhasil</string>
+    <string name="kr_download_execute_fail">Gagal</string>
+    <string name="kr_download_cancel_confirm_title">Batalkan unduhan?</string>
+    <string name="kr_download_cancel_confirm_message">Data yang telah diunduh akan dihapus.</string>
     <string name="kr_color_picker">Pilih warna</string>
     <string name="kr_invalid_color">Nilai warna tidak valid. Hanya mendukung format seperti #ff88aa00</string>
+    <string name="kr_expand_fullscreen">Perluas ke editor layar penuh</string>
     <string name="kr_duplicate_param_name">Kesalahan konfigurasi: nama parameter duplikat \"%1$s\" - hanya yang pertama yang akan ditampilkan</string>
     <string name="kr_shortcut_create_fail">Gagal membuat pintasan</string>
     <string name="kr_shortcut_create_success">Permintaan pembuatan pintasan telah dikirim</string>
@@ -120,12 +136,14 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="kr_auto_run_item_losted">Item yang ditentukan tidak ada</string>
     <string name="kr_hidden_task_running">Terlalu cepat! Operasi sebelumnya belum selesai</string>
     <string name="kr_lock_message">Fitur ini telah terkunci</string>
+    <string name="kr_lock_title">Terkunci</string>
     <string name="kr_sdk_too_low">Versi sistem terlalu rendah</string>
     <string name="kr_sdk_overtop">Versi sistem terlalu tinggi</string>
     <string formatted="false" name="kr_sdk_message">Fitur ini hanya berjalan pada sistem dengan SDK dari %d hingga %d</string>
     <string name="kr_sdk_discrepancy">Versi sistem tidak cocok</string>
     <string formatted="false" name="kr_sdk_discrepancy_message">Fitur ini hanya berjalan pada sistem dengan SDK %d</string>
     <string name="picker_not_item">Tidak ada pilihan</string>
+    <string name="kr_more_options">Opsi lainnya</string>
     <string name="picker_select_none">Belum ada item yang dipilih</string>
     <string name="theme_system_default">Sistem (default)</string>
     <string name="theme_light">Mode terang</string>
