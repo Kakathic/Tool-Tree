@@ -13,6 +13,10 @@ if [ -d "$1" ] && [ -f "$fileprop" ]; then
 fi
 
 if [ "$(glog "transai_text_$id")" == 1 ]; then
+  if ! transai -c; then
+  source language 2>/dev/null
+  showbanner -y "error" -t "$name" -m "$warn_gemini_text"
+  else
   stringlg="$(sed -n '/# default/,/# other languages/{ /# default/d; /# other languages/q; p; }' "$fileprop")"
   sum_mm="$(checksum "$fileprop")"
   if [ "$sum_mm" != "$(glog "sum_$id")" ] || [ ! -f "$1/auto.bash" ]; then
@@ -20,4 +24,5 @@ if [ "$(glog "transai_text_$id")" == 1 ]; then
   slog "sum_$id" "$sum_mm"
   fi
   [ -f "$1/auto.bash" ] && source "$1/auto.bash"
+  fi
 fi
