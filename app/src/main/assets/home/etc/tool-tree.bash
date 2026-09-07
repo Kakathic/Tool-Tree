@@ -332,15 +332,14 @@ Info() {
 }
 
 Getlog() {
-  if checkonline; then
+if checkonline; then
   url_ver="https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/Version.md"
   if [ "$(glog gg_trans_ver)" == 1 ]; then
-  xem "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=7 {printf "Version:%s", $0}' | transai -b
+  [ -f $TMP/logver_trans.txt ] && cat $TMP/logver_trans.txt || xem "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=7 {printf "Version:%s", $0}' | transai -b | tee $TMP/logver_trans.txt
   else
-  xem "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=7 {printf "Version:%s", $0}'
+  [ -f $TMP/logver.txt ] && cat $TMP/logver.txt || xem "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=7 {printf "Version:%s", $0}' | tee $TMP/logver.txt
   fi
-  # end
-  fi
+fi
 }
 
 Update() {
@@ -359,13 +358,6 @@ Update() {
   else
   transai -c && slog gg_trans_ver 1 || showbanner -y "error" -t "Gemini" -m "'$warn_gemini_text'"
   fi
-  """
-  
-  [[menu.items]]
-  title = "'$share_text'"
-  silent = true
-  script = """
-  echo "am:[start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT https://Kakathic.github.io/Tool-Tree]"
   """
   
   [[menu.items]]
