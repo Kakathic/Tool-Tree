@@ -35,7 +35,7 @@ if checkonline; then
   if [ -f $TMP/update ] && [ "$1" == "boot" ]; then
   showdialog -a -t "$update_text" \
   -m "$update_text_6, $websize" \
-  -g 15 \
+  -g 15 -f 1 \
   -s "taive '$url_dowload' '$TMP/Tool-Tree.apk' 2>&1 && openfile '$TMP/Tool-Tree.apk' || killtree '$load_text_2'"
   else
   [ -f $TMP/update ] && echo 1
