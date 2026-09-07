@@ -12,8 +12,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.net.toUri
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.omarea.common.model.SelectItem
 import com.omarea.common.ui.DialogFullScreen
@@ -688,47 +686,8 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // dialogView, chỉ đúng cho dialog TOÀN MÀN HÌNH (root match_parent) -
                             // còn root của kr_dialog_params_small.xml là wrap_content (card nổi
                             // giữa màn hình, không chạm mép nào) nên bị phình to/lệch vị trí nếu
-                            // cộng thêm padding này.
-                            //
-                            // Riêng bàn phím (ime): customDialog() đã chuyển window sang
-                            // edge-to-edge nên hệ thống không tự resize cửa sổ theo bàn phím nữa,
-                            // cần tự đẩy lên khi bị che. LƯU Ý: phải đẩy WINDOW (window.attributes.y),
-                            // KHÔNG đẩy view con bằng translationY - vì window vẫn giữ nguyên
-                            // kích thước/vị trí gốc, đẩy view con ra khỏi biên window sẽ bị chính
-                            // window đó clip mất phần vượt ra ngoài (bị cắt ở mép trên). Đẩy cả
-                            // window thì toàn bộ nội dung di chuyển theo, không bị clip.
-                            // Tạo dialog TRƯỚC rồi mới gắn listener (không thể tham chiếu biến
-                            // "dialog" ngay trong initializer của chính nó).
-                            val smallDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
-                            var baseWindowY: Int? = null
-                            ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
-                                val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-                                val window = smallDialog?.window
-                                if (window != null) {
-                                    val attrs = window.attributes
-                                    if (baseWindowY == null) baseWindowY = attrs.y
-                                    var newY = baseWindowY!!
-                                    if (imeBottom > 0) {
-                                        val location = IntArray(2)
-                                        v.getLocationOnScreen(location)
-                                        val gapPx = (8 * resources.displayMetrics.density).toInt()
-                                        val viewBottomOnScreen = location[1] + v.height
-                                        val keyboardTop = v.rootView.height - imeBottom
-                                        val overlap = viewBottomOnScreen - keyboardTop + gapPx
-                                        if (overlap > 0) {
-                                            newY -= overlap
-                                        }
-                                    }
-                                    if (attrs.y != newY) {
-                                        attrs.y = newY
-                                        window.attributes = attrs
-                                    }
-                                }
-                                insets
-                            }
-                            ViewCompat.requestApplyInsets(dialogView)
-
-                            smallDialog
+                            // cộng thêm padding này (đúng kiểu lỗi bố cục đã gặp trước đây).
+                            DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
                         }
                         if (isLongList) {
                             if (cancelable) {
