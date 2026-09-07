@@ -568,6 +568,16 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         }
     }
 
+    // Bàn phím (ime) đẩy nội dung dialog lên hơi quá đà so với cần thiết - trừ bớt 1
+    // khoảng nhỏ (extraGapDp) khỏi phần ime.bottom trước khi cộng vào padding, để 2 nút
+    // Hủy/Xác nhận không bị đẩy lên cao hơn mức cần. Dùng chung cho cả 2 loại dialog
+    // tham số (kr_dialog_params.xml và kr_dialog_params_small.xml).
+    private fun imeBottomPx(insets: WindowInsetsCompat, extraGapDp: Int = 8): Int {
+        val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+        val extraGapPx = (extraGapDp * resources.displayMetrics.density).toInt()
+        return (ime - extraGapPx).coerceAtLeast(0)
+    }
+
     private fun actionExecute(action: ActionNode, onExit: Runnable, isAutoShow: Boolean = false) {
         val script = action.setState ?: return
 
@@ -678,7 +688,31 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                 .setView(dialogView).setCancelable(cancelable).create().apply {
                                     setCanceledOnTouchOutside(cancelable)
                                     show()
-                                    window?.let { DialogHelper.applyEdgeToEdge(it, darkMode, dialogView) }
+                                    window?.let {
+                                        DialogHelper.applyEdgeToEdge(it, darkMode, dialogView)
+
+                                        // applyEdgeToEdge() ở trên đã gắn sẵn 1 listener cộng
+                                        // nguyên phần ime.bottom vào padding - đẩy 2 nút lên hơi
+                                        // quá cao. Ghi đè lại bằng listener riêng ở đây (không sửa
+                                        // applyEdgeToEdge() dùng chung vì DialogFullScreen.kt cũng
+                                        // đang dùng hàm đó), giữ nguyên phần systemBars, chỉ trừ
+                                        // bớt 8dp ở phần ime qua imeBottomPx().
+                                        val basePaddingLeft = dialogView.paddingLeft
+                                        val basePaddingTop = dialogView.paddingTop
+                                        val basePaddingRight = dialogView.paddingRight
+                                        val basePaddingBottom = dialogView.paddingBottom
+                                        ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
+                                            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                                            v.setPadding(
+                                                basePaddingLeft + systemBars.left,
+                                                basePaddingTop + systemBars.top,
+                                                basePaddingRight + systemBars.right,
+                                                basePaddingBottom + systemBars.bottom + imeBottomPx(insets)
+                                            )
+                                            insets
+                                        }
+                                        ViewCompat.requestApplyInsets(dialogView)
+                                    }
                                 }
                         } else {
                             // Nhánh <=4 mục dùng chung DialogHelper.customDialog() - nền blur (+
@@ -696,11 +730,12 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // không còn tự resize cửa sổ theo bàn phím nữa - phải tự lắng nghe
                             // inset ime rồi cộng thêm vào paddingBottom, KHÔNG dùng chung
                             // applyEdgeToEdge() vì hàm đó cộng cả padding system bars (lý do nêu
-                            // trên). Chỉ cộng thêm phần ime.bottom vào padding gốc, không ghi đè.
+                            // trên). Chỉ cộng thêm phần ime.bottom (đã trừ bớt 8dp qua
+                            // imeBottomPx() - xem lý do ở nhánh isLongList bên trên) vào padding
+                            // gốc, không ghi đè các cạnh khác.
                             val basePaddingBottom = dialogView.paddingBottom
                             ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
-                                val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-                                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + ime.bottom)
+                                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + imeBottomPx(insets))
                                 insets
                             }
                             ViewCompat.requestApplyInsets(dialogView)
