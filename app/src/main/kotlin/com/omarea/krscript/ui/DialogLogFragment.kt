@@ -396,8 +396,10 @@ class DialogLogFragment : DialogFragment() {
 
     private fun copyLogToClipboard() {
         runCatching {
+            val text = currentHandler?.getLogText(excludeFinishLine = true)
+                ?: binding.shellOutput.text.toString()
             val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("text", binding.shellOutput.text.toString())
+            val clip = ClipData.newPlainText("text", text)
             clipboard.setPrimaryClip(clip)
             Toast.makeText(requireContext(), getString(R.string.copy_success), Toast.LENGTH_SHORT).show()
         }.onFailure {
@@ -519,6 +521,11 @@ class DialogLogFragment : DialogFragment() {
         private val logBuffer = SpannableStringBuilder()
         private var lineStart = 0
         private var pendingOverwrite = false
+
+        // Dòng trạng thái kết thúc (thành công/lỗi) được tự thêm vào logBuffer trong onExit().
+        // Lưu độ dài của nó để copyLogToClipboard có thể loại trừ khi cần.
+        private var hasFinishLine = false
+        private var finishLineLength = 0
 
         private var uiAppliedLength = 0
         private var uiInvalidFrom = Int.MAX_VALUE
@@ -815,6 +822,21 @@ class DialogLogFragment : DialogFragment() {
             return (dp * context.resources.displayMetrics.density).toInt()
         }
 
+        /**
+         * Lấy nội dung log hiện tại. Nếu [excludeFinishLine] = true và log đã kết thúc (đã có
+         * dòng trạng thái thành công/lỗi tự thêm ở onExit), dòng đó sẽ được loại bỏ khỏi kết quả.
+         */
+        fun getLogText(excludeFinishLine: Boolean): String {
+            synchronized(logBuffer) {
+                val full = logBuffer.toString()
+                return if (excludeFinishLine && hasFinishLine && full.length >= finishLineLength) {
+                    full.substring(0, full.length - finishLineLength)
+                } else {
+                    full
+                }
+            }
+        }
+
         fun release() {
             notificationHandler.removeCallbacks(updateNotificationRunnable)
             logViewRef.clear()
@@ -1103,6 +1125,8 @@ class DialogLogFragment : DialogFragment() {
                 uiAppliedLength = 0
                 uiInvalidFrom = Int.MAX_VALUE
                 logBuffer.clear()
+                hasFinishLine = false
+                finishLineLength = 0
             }
             logViewRef.get()?.post {
                 val tv = logViewRef.get() ?: return@post
@@ -1169,7 +1193,10 @@ class DialogLogFragment : DialogFragment() {
             }
             
             val finishColor = if (success) endColor else errorColor
-            updateLogWithColor("\n" + finishText, finishColor, pushToNotification = false)
+            val finishLine = "\n" + finishText
+            updateLogWithColor(finishLine, finishColor, pushToNotification = false)
+            hasFinishLine = true
+            finishLineLength = finishLine.length
 
             if (notificationMode) {
                 finishNotification(success, code)

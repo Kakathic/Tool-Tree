@@ -274,7 +274,6 @@ Info() {
   desc = "'$setting_text_2'"
   icon = "'$urlicon'/info.png"
   config-sh = "'$ETC'/tool-tree.bash Update"
-  process = true
   
   [[group]]
   [[page]]
