@@ -1,5 +1,6 @@
 # Kakathic
 
+source language 2>/dev/null
 if checkonline; then
 
   if [ ! -f $TMP/update ]; then
@@ -22,18 +23,22 @@ if checkonline; then
     if [[ "$websum" != "$filesum" ]]; then
     if [[ "$url_dowload" ]]; then
     echo "$url_dowload" > $TMP/update
-    echo "$websize" > $TMP/size
-    echo 1
+    echo "$sizes_text: $websize" > $TMP/size
     fi
-    fi
-    
-    if [ -f $TMP/update ] && [ "$1" == "boot" ]; then
-    showdialog -t "$update_text" -m "$update_text_6" \
-    -g 15 -s "taive '$url_dowload' '$TMP/Tool-Tree.apk' 2>&1 && openfile '$TMP/Tool-Tree.apk' || killtree '$load_text_2'"
     fi
     
   else
-    echo 1
+    url_dowload="$(cat $TMP/update)"
+    websize="$sizes_text: $(cat $TMP/size)"
+  fi
+
+  if [ -f $TMP/update ] && [ "$1" == "boot" ]; then
+  showdialog -a -t "$update_text" \
+  -m "$update_text_6, $websize" \
+  -g 15 \
+  -s "taive '$url_dowload' '$TMP/Tool-Tree.apk' 2>&1 && openfile '$TMP/Tool-Tree.apk' || killtree '$load_text_2'"
+  else
+  [ -f $TMP/update ] && echo 1
   fi
 
 fi

@@ -335,9 +335,9 @@ Getlog() {
 if checkonline; then
   url_ver="https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/Version.md"
   if [ "$(glog gg_trans_ver)" == 1 ]; then
-  [ -f $TMP/logver_trans.txt ] && cat $TMP/logver_trans.txt || xem "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=7 {printf "Version:%s", $0}' | transai -b | tee $TMP/logver_trans.txt
+  [ -f $TMP/logver_trans.txt ] && cat $TMP/logver_trans.txt || xem "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=5 {printf "Version:%s", $0}' | transai -b | tee $TMP/logver_trans.txt
   else
-  [ -f $TMP/logver.txt ] && cat $TMP/logver.txt || xem "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=7 {printf "Version:%s", $0}' | tee $TMP/logver.txt
+  [ -f $TMP/logver.txt ] && cat $TMP/logver.txt || xem "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=5 {printf "Version:%s", $0}' | tee $TMP/logver.txt
   fi
 fi
 }
@@ -398,7 +398,7 @@ Update() {
   [[group]]
   [[download]]
   title = "'$update_text'"
-  desc-sh = "echo \"'$sizes_text': $(cat $TMP/size)\""
+  desc-sh = "cat $TMP/size"
   icon = "'$urlicon'/update.png"
   support = "check_update"
   url-sh = "cat $TMP/update"
