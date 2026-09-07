@@ -138,11 +138,9 @@ class PageConfigReader {
             val shellResult = results["dynstr:$index"] ?: ""
             if (shellResult != "error") {
                 val (target, fieldKey, _) = triple
-                when (target) {
-                    // ClickableNode phải đứng TRƯỚC NodeInfoBase (ClickableNode là subtype) để case
-                    // "icon" (icon-sh) được xử lý - đồng thời lặp lại title/desc/summary vì nhánh
-                    // NodeInfoBase bên dưới không còn được chạm tới với target là ClickableNode.
-                    is ClickableNode -> when (fieldKey) {
+                when {
+                    target is RunnableNode && fieldKey == "warning" -> target.warning = shellResult
+                    target is ClickableNode -> when (fieldKey) {
                         "title" -> target.title = shellResult
                         "desc" -> target.desc = shellResult
                         "summary" -> target.summary = shellResult
@@ -150,13 +148,12 @@ class PageConfigReader {
                         "photo" -> target.photoPath = shellResult
                         "bg" -> target.bgPath = shellResult
                     }
-                    is NodeInfoBase -> when (fieldKey) {
+                    target is NodeInfoBase -> when (fieldKey) {
                         "title" -> target.title = shellResult
                         "desc" -> target.desc = shellResult
                         "summary" -> target.summary = shellResult
                     }
-                    is RunnableNode -> if (fieldKey == "warning") target.warning = shellResult
-                    is com.omarea.common.model.SelectItem -> if (fieldKey == "title") target.title = shellResult
+                    target is SelectItem && fieldKey == "title" -> target.title = shellResult
                 }
             }
         }
