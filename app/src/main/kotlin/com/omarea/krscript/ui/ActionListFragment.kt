@@ -679,24 +679,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                     setCanceledOnTouchOutside(cancelable)
                                     show()
                                     window?.let { DialogHelper.applyEdgeToEdge(it, darkMode, dialogView) }
-
-                                    // Riêng khoảng cách dưới 2 nút (bottom_actions, marginBottom
-                                    // 16dp mặc định trong kr_dialog_params.xml): khi bàn phím hiện,
-                                    // giảm còn 8dp; khi bàn phím ẩn, trả lại 16dp như cũ. Gắn
-                                    // listener riêng trên chính bottom_actions (không đụng listener
-                                    // padding của applyEdgeToEdge() ở trên - insets vẫn tự lan
-                                    // xuống view con bình thường).
-                                    val bottomActions = dialogView.findViewById<View>(R.id.bottom_actions)
-                                    val margin16Px = (16 * resources.displayMetrics.density).toInt()
-                                    val margin8Px = (8 * resources.displayMetrics.density).toInt()
-                                    ViewCompat.setOnApplyWindowInsetsListener(bottomActions) { v, insets ->
-                                        val imeVisible = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom > 0
-                                        val lp = v.layoutParams as ViewGroup.MarginLayoutParams
-                                        lp.bottomMargin = if (imeVisible) margin8Px else margin16Px
-                                        v.layoutParams = lp
-                                        insets
-                                    }
-                                    ViewCompat.requestApplyInsets(bottomActions)
                                 }
                         } else {
                             // Nhánh <=4 mục dùng chung DialogHelper.customDialog() - nền blur (+
@@ -706,41 +688,47 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // dialogView, chỉ đúng cho dialog TOÀN MÀN HÌNH (root match_parent) -
                             // còn root của kr_dialog_params_small.xml là wrap_content (card nổi
                             // giữa màn hình, không chạm mép nào) nên bị phình to/lệch vị trí nếu
-                            // cộng thêm padding này (đúng kiểu lỗi bố cục đã gặp trước đây).
+                            // cộng thêm padding này.
                             //
-                            // Riêng bàn phím (ime) vẫn cần xử lý để 2 nút Hủy/Xác nhận không bị
-                            // che khi gõ văn bản: customDialog() bên trong đã tự chuyển window
-                            // sang edge-to-edge (setDecorFitsSystemWindows(false)) nên hệ thống
-                            // không còn tự resize cửa sổ theo bàn phím nữa.
-                            //
-                            // ĐÃ THỬ (và bỏ): cộng ime.bottom vào paddingBottom của view - vì
-                            // view này wrap_content + center_vertical, phần đẩy lên thực tế chỉ
-                            // bằng NỬA padding cộng thêm (cơ chế centering chia đều không gian dư
-                            // ra cả 2 phía), nên trừ 8dp cố định không giải quyết được - tùy kích
-                            // thước dialog mà bị đẩy dư ra rất nhiều (thấy rõ khi dialog ngắn).
-                            //
-                            // Cách hiện tại: đo trực tiếp vị trí THẬT của dialog trên màn hình so
-                            // với mép trên bàn phím, dùng translationY đẩy lên ĐÚNG bằng phần bị
-                            // che + 8dp hở - không phụ thuộc cơ chế centering, không dư không thiếu.
+                            // Riêng bàn phím (ime): customDialog() đã chuyển window sang
+                            // edge-to-edge nên hệ thống không tự resize cửa sổ theo bàn phím nữa,
+                            // cần tự đẩy lên khi bị che. LƯU Ý: phải đẩy WINDOW (window.attributes.y),
+                            // KHÔNG đẩy view con bằng translationY - vì window vẫn giữ nguyên
+                            // kích thước/vị trí gốc, đẩy view con ra khỏi biên window sẽ bị chính
+                            // window đó clip mất phần vượt ra ngoài (bị cắt ở mép trên). Đẩy cả
+                            // window thì toàn bộ nội dung di chuyển theo, không bị clip.
+                            // Tạo dialog TRƯỚC rồi mới gắn listener (không thể tham chiếu biến
+                            // "dialog" ngay trong initializer của chính nó).
+                            val smallDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
+                            var baseWindowY: Int? = null
                             ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
                                 val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-                                v.translationY = 0f
-                                if (imeBottom > 0) {
-                                    val location = IntArray(2)
-                                    v.getLocationInWindow(location)
-                                    val gapPx = (8 * resources.displayMetrics.density).toInt()
-                                    val viewBottomOnScreen = location[1] + v.height
-                                    val keyboardTop = v.rootView.height - imeBottom
-                                    val overlap = viewBottomOnScreen - keyboardTop + gapPx
-                                    if (overlap > 0) {
-                                        v.translationY = -overlap.toFloat()
+                                val window = smallDialog?.window
+                                if (window != null) {
+                                    val attrs = window.attributes
+                                    if (baseWindowY == null) baseWindowY = attrs.y
+                                    var newY = baseWindowY!!
+                                    if (imeBottom > 0) {
+                                        val location = IntArray(2)
+                                        v.getLocationOnScreen(location)
+                                        val gapPx = (8 * resources.displayMetrics.density).toInt()
+                                        val viewBottomOnScreen = location[1] + v.height
+                                        val keyboardTop = v.rootView.height - imeBottom
+                                        val overlap = viewBottomOnScreen - keyboardTop + gapPx
+                                        if (overlap > 0) {
+                                            newY -= overlap
+                                        }
+                                    }
+                                    if (attrs.y != newY) {
+                                        attrs.y = newY
+                                        window.attributes = attrs
                                     }
                                 }
                                 insets
                             }
                             ViewCompat.requestApplyInsets(dialogView)
 
-                            DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
+                            smallDialog
                         }
                         if (isLongList) {
                             if (cancelable) {
