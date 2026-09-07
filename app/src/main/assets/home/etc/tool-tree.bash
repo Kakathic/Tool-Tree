@@ -317,6 +317,35 @@ Info() {
       exit
     fi
   """
+    
+  [[group]]
+  [[action]]
+  id = "chatgemini"
+  title = "Chat Gemini"
+  desc = "'$chat_gemini_text'"
+  icon = "'$urlicon'/chatai.png"
+  script = """
+  slog chatai_save "$chatai"
+  visible = "[ -z $(glog api_genmini) ] && echo 1"
+  [ "$chatai" ] && transai -m "$chatai"
+  """
+  
+  [[action.params]]
+  name = "models_genmini"
+  placeholder = "gemini-3.1-flash-lite"
+  title = "Models Gemini"
+  editable = true
+  label = "Models"
+  items = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
+  value-sh = "glog models_genmini \"gemini-3.1-flash-lite\""
+  
+  [[action.params]]
+  name = "chatai"
+  title = "'$doc_text'"
+  placeholder = "Hello Gemini"
+  type = "text"
+  required = true
+  value-sh = "glog chatai_save"
 
   [[group]]
   [[editor]]
