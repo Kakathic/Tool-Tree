@@ -568,16 +568,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         }
     }
 
-    // Bàn phím (ime) đẩy nội dung dialog lên hơi quá đà so với cần thiết - trừ bớt 1
-    // khoảng nhỏ (extraGapDp) khỏi phần ime.bottom trước khi cộng vào padding, để 2 nút
-    // Hủy/Xác nhận không bị đẩy lên cao hơn mức cần. Dùng chung cho cả 2 loại dialog
-    // tham số (kr_dialog_params.xml và kr_dialog_params_small.xml).
-    private fun imeBottomPx(insets: WindowInsetsCompat, extraGapDp: Int = 8): Int {
-        val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-        val extraGapPx = (extraGapDp * resources.displayMetrics.density).toInt()
-        return (ime - extraGapPx).coerceAtLeast(0)
-    }
-
     private fun actionExecute(action: ActionNode, onExit: Runnable, isAutoShow: Boolean = false) {
         val script = action.setState ?: return
 
@@ -688,31 +678,25 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                 .setView(dialogView).setCancelable(cancelable).create().apply {
                                     setCanceledOnTouchOutside(cancelable)
                                     show()
-                                    window?.let {
-                                        DialogHelper.applyEdgeToEdge(it, darkMode, dialogView)
+                                    window?.let { DialogHelper.applyEdgeToEdge(it, darkMode, dialogView) }
 
-                                        // applyEdgeToEdge() ở trên đã gắn sẵn 1 listener cộng
-                                        // nguyên phần ime.bottom vào padding - đẩy 2 nút lên hơi
-                                        // quá cao. Ghi đè lại bằng listener riêng ở đây (không sửa
-                                        // applyEdgeToEdge() dùng chung vì DialogFullScreen.kt cũng
-                                        // đang dùng hàm đó), giữ nguyên phần systemBars, chỉ trừ
-                                        // bớt 8dp ở phần ime qua imeBottomPx().
-                                        val basePaddingLeft = dialogView.paddingLeft
-                                        val basePaddingTop = dialogView.paddingTop
-                                        val basePaddingRight = dialogView.paddingRight
-                                        val basePaddingBottom = dialogView.paddingBottom
-                                        ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
-                                            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                                            v.setPadding(
-                                                basePaddingLeft + systemBars.left,
-                                                basePaddingTop + systemBars.top,
-                                                basePaddingRight + systemBars.right,
-                                                basePaddingBottom + systemBars.bottom + imeBottomPx(insets)
-                                            )
-                                            insets
-                                        }
-                                        ViewCompat.requestApplyInsets(dialogView)
+                                    // Riêng khoảng cách dưới 2 nút (bottom_actions, marginBottom
+                                    // 16dp mặc định trong kr_dialog_params.xml): khi bàn phím hiện,
+                                    // giảm còn 8dp; khi bàn phím ẩn, trả lại 16dp như cũ. Gắn
+                                    // listener riêng trên chính bottom_actions (không đụng listener
+                                    // padding của applyEdgeToEdge() ở trên - insets vẫn tự lan
+                                    // xuống view con bình thường).
+                                    val bottomActions = dialogView.findViewById<View>(R.id.bottom_actions)
+                                    val margin16Px = (16 * resources.displayMetrics.density).toInt()
+                                    val margin8Px = (8 * resources.displayMetrics.density).toInt()
+                                    ViewCompat.setOnApplyWindowInsetsListener(bottomActions) { v, insets ->
+                                        val imeVisible = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom > 0
+                                        val lp = v.layoutParams as ViewGroup.MarginLayoutParams
+                                        lp.bottomMargin = if (imeVisible) margin8Px else margin16Px
+                                        v.layoutParams = lp
+                                        insets
                                     }
+                                    ViewCompat.requestApplyInsets(bottomActions)
                                 }
                         } else {
                             // Nhánh <=4 mục dùng chung DialogHelper.customDialog() - nền blur (+
