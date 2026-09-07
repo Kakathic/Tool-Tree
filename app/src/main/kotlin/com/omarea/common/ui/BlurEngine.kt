@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.Shader
 import android.view.View
+import android.view.ViewTreeObserver
 import androidx.core.content.ContextCompat
 import com.tool.tree.R
 import com.tool.tree.ThemeModeState
@@ -20,20 +21,20 @@ class BlurEngine(private val targetView: View) {
     private var cachedBitmap: Bitmap? = null
     private var cachedCanvas: Canvas? = null
 
-    // ─── Cache BitmapShader ───────────────────────────────────────
-    // Tái sử dụng shader khi blurBitmap không đổi, tránh tạo object mỗi frame
-    // khi cuộn/vuốt (giảm GC pressure).
+    // Cache BitmapShader
     private var cachedShader: BitmapShader? = null
     private var cachedShaderBitmap: Bitmap? = null
 
-    // ─── Cache tint color ──────────────────────────────────────────
-    // Chỉ đọc resource 1 lần, cache lại đến khi dark/light mode đổi.
+    // Cache tint color
     private var cachedTintColor: Int = 0
     private var cachedTintColorForDark: Boolean? = null
 
-    // Tái sử dụng đối tượng để tránh tạo rác bộ nhớ (GC lag) khi vuốt/cuộn
     private val shaderPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shaderMatrix = Matrix()
+
+    // ─── LƯU REFERENCE CÁC LISTENER ĐỂ CHỐNG LEAK ──────────────────
+    private var preDrawListener: ViewTreeObserver.OnPreDrawListener? = null
+    private var attachListener: View.OnAttachStateChangeListener? = null
 
     fun setup() {
         if (cornerRadius > 0) {
@@ -43,7 +44,47 @@ class BlurEngine(private val targetView: View) {
             targetView.outlineProvider = null
             targetView.clipToOutline = false
         }
-        targetView.viewTreeObserver.addOnPreDrawListener(BlurPreDrawListener(this, targetView))
+
+        // 1. Gỡ PreDrawListener cũ nếu đã đăng ký trước đó
+        removePreDrawListener()
+
+        // 2. Tạo listener mới
+        val listener = BlurPreDrawListener(this, targetView)
+        preDrawListener = listener
+
+        // Chỉ add nếu View đang attached vào Window
+        if (targetView.isAttachedToWindow) {
+            targetView.viewTreeObserver.addOnPreDrawListener(listener)
+        }
+
+        // 3. Tự động lắng nghe trạng thái Attach/Detach để tháo/lắp listener
+        if (attachListener == null) {
+            attachListener = object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) {
+                    preDrawListener?.let {
+                        val observer = v.viewTreeObserver
+                        if (observer.isAlive) {
+                            observer.removeOnPreDrawListener(it)
+                            observer.addOnPreDrawListener(it)
+                        }
+                    }
+                }
+
+                override fun onViewDetachedFromWindow(v: View) {
+                    removePreDrawListener()
+                }
+            }
+            targetView.addOnAttachStateChangeListener(attachListener)
+        }
+    }
+
+    private fun removePreDrawListener() {
+        val listener = preDrawListener ?: return
+        val observer = targetView.viewTreeObserver
+        if (observer.isAlive) {
+            observer.removeOnPreDrawListener(listener)
+        }
+        preDrawListener = null
     }
 
     fun getUpdatedBlurBitmap(): Bitmap? {
@@ -54,7 +95,6 @@ class BlurEngine(private val targetView: View) {
             return null
         }
 
-        // Lấy RootView để tính toán tỷ lệ chính xác giữa màn hình và BlurBitmap
         val rootView = targetView.rootView
         if (rootView == null || rootView.width <= 0 || rootView.height <= 0) {
             return null
@@ -65,18 +105,15 @@ class BlurEngine(private val targetView: View) {
         val scaleX = blurBitmap.width.toFloat() / rootView.width
         val scaleY = blurBitmap.height.toFloat() / rootView.height
 
-        // Kích thước thực tế của vùng Blur trên View
         val w = (targetView.width * scaleX).toInt()
         val h = (targetView.height * scaleY).toInt()
 
         if (w <= 0 || h <= 0) return null
 
-        // Tọa độ thực tế của View trên màn hình (có thể nhận giá trị âm khi vuốt ra ngoài biên)
         val x = (location[0] * scaleX).toInt()
         val y = (location[1] * scaleY).toInt()
 
         try {
-            // Khởi tạo hoặc tái sử dụng cachedBitmap theo kích thước View
             var cached = cachedBitmap
             if (cached == null || cached.width != w || cached.height != h) {
                 if (cached != null && !cached.isRecycled) {
@@ -85,18 +122,16 @@ class BlurEngine(private val targetView: View) {
                 cached = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                 cachedBitmap = cached
                 cachedCanvas = Canvas(cached)
-                // Size đổi → shader cũ không dùng được nữa
                 cachedShader = null
                 cachedShaderBitmap = null
             }
 
             val canvas = cachedCanvas!!
-
-            // Xóa canvas cũ
             canvas.drawColor(0, PorterDuff.Mode.CLEAR)
 
-            // Tái sử dụng BitmapShader nếu cùng source bitmap
+            // Kiểm tra an toàn trước khi gán Shader
             if (cachedShaderBitmap !== blurBitmap || cachedShader == null) {
+                if (blurBitmap.isRecycled) return null
                 cachedShader = BitmapShader(blurBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
                 cachedShaderBitmap = blurBitmap
             }
@@ -108,7 +143,6 @@ class BlurEngine(private val targetView: View) {
             shaderPaint.shader = cachedShader
             canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), shaderPaint)
 
-            // Phủ lớp màu (Tint) lên trên lớp blur
             canvas.drawColor(getBlurTintColorCached())
 
             return cached
@@ -117,11 +151,6 @@ class BlurEngine(private val targetView: View) {
         }
     }
 
-    /**
-     * Cache tint color — chỉ đọc resource khi dark/light mode thay đổi.
-     * getBlurTintColor() gốc đọc ContextCompat.getColor() mỗi frame,
-     * dù giá trị chỉ đổi khi chuyển theme.
-     */
     private fun getBlurTintColorCached(): Int {
         val isDark = ThemeModeState.isDarkMode()
         if (cachedTintColorForDark != isDark) {
@@ -133,6 +162,16 @@ class BlurEngine(private val targetView: View) {
     }
 
     fun destroy() {
+        // 1. Tháo PreDrawListener khỏi ViewTreeObserver
+        removePreDrawListener()
+
+        // 2. Tháo OnAttachStateChangeListener
+        attachListener?.let {
+            targetView.removeOnAttachStateChangeListener(it)
+            attachListener = null
+        }
+
+        // 3. Giải phóng Bitmap cache & các đối tượng
         val cached = cachedBitmap
         if (cached != null && !cached.isRecycled) {
             cached.recycle()
@@ -155,21 +194,12 @@ class BlurEngine(private val targetView: View) {
         @JvmField
         var isPaused = false
 
-        /**
-         * Khi directbg=1: không chụp wallpaper, chụp màu background solid thay thế.
-         * Blur vẫn hoạt động bình thường (scale + RenderScript blur + tint)
-         * nhưng nguồn ảnh là màu nền thay vì ảnh wallpaper.
-         */
         @JvmField
         var isDirectBgMode = false
 
         @JvmField
         var DEFAULT_CORNER_RADIUS = 30.0f
 
-        /**
-         * Màu background hiện tại được dùng để tạo blur bitmap khi isDirectBgMode.
-         * Cập nhật bởi ThemeModeState trước khi gọi capture.
-         */
         @JvmField
         var directBgColor = 0xFF0f0f0f.toInt()
 
