@@ -331,86 +331,53 @@ Info() {
   '
 }
 
-Update() {
-  {
-  if [ ! -f $TMP/update ]; then
-  check_update
-  fi
-  if [ -f $TMP/update ]; then
-  url_dowload="$(cat $TMP/update)"
-  show_update=1
-  desc_xx="$sizes_text: $(cat $TMP/size)"
-  title_xx="$update_text"
-  elif [ "$(glog gg_beta)" == 1 ]; then
-  url_dowload="https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-beta.apk"
-  title_xx="$download_text beta"
-  show_update=1
-  fi
+Getlog() {
+  if checkonline; then
+  url_ver="https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/Version.md"
   if [ "$(glog gg_trans_ver)" == 1 ]; then
-    link_vers="version_transai.txt"
-    shum_vers="$(checksum $TEMP/version.txt)"
-    if [[ "$shum_vers" != "$(glog shum_vers)" ]]; then
-      transai "$(cat $TEMP/version.txt)" > $TEMP/$link_vers
-      if [ -n "$(cat $TEMP/$link_vers)" ]; then
-      slog shum_vers "$shum_vers"
-      fi
-    fi
+  taive -s "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=7 {printf "Version:%s", $0}' | transai -b
+  else
+  taive -s "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=7 {printf "Version:%s", $0}'
   fi
-  if [ -z "$link_vers" ]; then
-  link_vers="version.txt"
+  # end
   fi
-  } &>/dev/null
+}
+
+Update() {
   echo '
   [[group]]
   [[menu]]
-  handler = """
-  if [ "$menu_id" == "share" ]; then
-    echo "am:[start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT https://Kakathic.github.io/Tool-Tree]"
-  elif [ "$menu_id" == "data" ]; then
-    slog boot_ver_code 1
-    slog sum_onl_plugin 1
-    slog sum_moduls 1
+  [[menu.items]]
+  title = "Gemini"
+  get = "glog gg_trans_ver"
+  reload = true
+  silent = true
+  type = "checkbox"
+  script = """
+  if [ "$(glog gg_trans_ver)" == 1 ]; then
+  slog gg_trans_ver 0
+  else
+  transai -c && slog gg_trans_ver 1 || showbanner -y "error" -t "Gemini" -m "'$warn_gemini_text'"
   fi
   """
-    
-    [[menu.items]]
-    title = "'$download_text' beta"
-    get = "glog gg_beta"
-    reload = true
-    silent = true
-    type = "checkbox"
-    script = """
-    if [ "$(glog gg_beta)" == 1 ]; then
-    slog gg_beta 0
-    else
-    slog gg_beta 1
-    fi
-    """
-    
-    [[menu.items]]
-    title = "Gemini"
-    get = "glog gg_trans_ver"
-    reload = true
-    silent = true
-    type = "checkbox"
-    script = """
-    if [ "$(glog gg_trans_ver)" == 1 ]; then
-    slog gg_trans_ver 0
-    else
-    transai -c && slog gg_trans_ver 1 || showbanner -y "error" -t "Gemini" -m "'$warn_gemini_text'"
-    fi
-    """
-    
-    [[menu.items]]
-    key = "share"
-    title = "'$share_text'"
-    silent = true
-    
-    [[menu.items]]
-    key = "data"
-    auto-kill = true
-    silent = true
-    title = "'$reset_data_text'"
+  
+  [[menu.items]]
+  title = "'$share_text'"
+  silent = true
+  script = """
+  echo "am:[start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT https://Kakathic.github.io/Tool-Tree]"
+  """
+  
+  [[menu.items]]
+  auto-kill = true
+  silent = true
+  title = "'$reset_data_text'"
+  script = """
+  slog -d boot_ver_code
+  slog -d sum_onl_plugin
+  slog -d sum_moduls
+  slog -d sum_ver_boot
+  """
     
   [[group]]
   [[fab]]
@@ -438,22 +405,22 @@ Update() {
 
   [[group]]
   [[download]]
-  title = "'$title_xx'"
-  desc = "'$desc_xx'"
+  title = "'$update_text'"
+  desc-sh = "echo \"'$sizes_text': $(cat $TMP/size)\""
   icon = "'$urlicon'/update.png"
-  support = "'$show_update'"
-  url = "'$url_dowload'"
-  script = """
-  openfile "$state"
-  slog -d gg_beta
-  """
+  support = "check_update"
+  url-sh = "cat $TMP/update"
+  load-after = true
+  script = "openfile \"$state\""
 
   [[text]]
-  desc = """'"$(cat $TEMP/$link_vers 2>/dev/null)"'"""
+  load-after = true
+  desc-sh = """
+  '$ETC'/tool-tree.bash Getlog
+  """
   [[text.rows]]
   photo = "'$ETC'/icon/tool-tree.jpg"
   '
-
 }
 
 Project() {
