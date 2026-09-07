@@ -291,13 +291,19 @@ class PageLayoutRender(private val mContext: Context,
 
     private fun createDownloadItem(node: DownloadNode): ListItemView {
         val view = ListItemDownload(mContext, node)
-        // Re-bind view nếu có session đang hoạt động (trả lại trang không đóng tải).
-        // Chỉ tra theo url khi KHÔNG rỗng - tránh việc nhiều mục dùng "url-sh" chưa resolve
-        // (url = "" mặc định) bị dính chung 1 session (vd: lỗi) của mục khác ở trang khác.
-        if (node.url.isNotBlank()) {
-            DownloadTaskHelper.getSession(node.url)?.let { session ->
-                DownloadTaskHelper.bindView(session, view)
+        // Re-bind view nếu có session đang hoạt động (trả lại trang không đóng tải). Dùng
+        // findSessionForNode() thay vì tra thẳng theo node.url: mục "url-sh" khi trang được
+        // parse lại sẽ tạo ra instance DownloadNode MỚI với url = "" (giá trị đã resolve chỉ
+        // nằm trên instance cũ), nên phải có phương án tra theo "urlSh" (ổn định giữa các lần
+        // parse) mới tìm lại được session đang chạy ngầm - xem DownloadTaskHelper.findSessionForNode().
+        DownloadTaskHelper.findSessionForNode(node)?.let { session ->
+            if (node.url.isBlank() && session.url.isNotBlank()) {
+                // Khôi phục url đã resolve vào instance mới để các thao tác tiếp theo (tạm
+                // dừng/tiếp tục) dùng thẳng, không chạy lại "url-sh".
+                node.url = session.url
+                node.urlResolved = true
             }
+            DownloadTaskHelper.bindView(session, view)
         }
         return view
     }

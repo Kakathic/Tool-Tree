@@ -41,6 +41,7 @@ object DownloadTaskHelper {
     class Session(
         val id: String,
         val url: String,
+        val urlSh: String,
         val destFile: File,
         val title: String,
         val item: DownloadNode,
@@ -70,6 +71,19 @@ object DownloadTaskHelper {
 
     fun getSession(url: String): Session? = sessions[url]
 
+    // Tra session cho 1 DownloadNode khi dựng lại trang (PageLayoutRender.createDownloadItem).
+    // Ưu tiên tra theo "url" như getSession(); nếu rỗng (mục dùng "url-sh" và trang vừa được
+    // parse lại thành instance DownloadNode MỚI - url đã resolve trước đó chỉ nằm trên instance
+    // cũ, không còn giữ được) thì tra theo "urlSh" (chuỗi shell không đổi giữa các lần parse
+    // config) để tìm lại đúng session đang chạy ngầm.
+    fun findSessionForNode(node: DownloadNode): Session? {
+        if (node.url.isNotBlank()) return sessions[node.url]
+        if (node.urlSh.isNotBlank()) {
+            return sessions.values.firstOrNull { it.urlSh.isNotBlank() && it.urlSh == node.urlSh }
+        }
+        return null
+    }
+
     fun start(
         context: Context,
         scope: LifecycleCoroutineScope,
@@ -89,6 +103,7 @@ object DownloadTaskHelper {
             val session = Session(
                 id = UUID.randomUUID().toString(),
                 url = item.url,
+                urlSh = item.urlSh,
                 destFile = cachedFile,
                 title = item.title.ifEmpty { item.url.substringAfterLast('/').substringBefore('?') },
                 item = item,
@@ -115,6 +130,7 @@ object DownloadTaskHelper {
         val session = Session(
             id = UUID.randomUUID().toString(),
             url = item.url,
+            urlSh = item.urlSh,
             destFile = destFile,
             title = item.title.ifEmpty { item.url.substringAfterLast('/').substringBefore('?') },
             item = item,
