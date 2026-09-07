@@ -12,6 +12,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.omarea.common.model.SelectItem
 import com.omarea.common.ui.DialogFullScreen
@@ -686,8 +688,42 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // dialogView, chỉ đúng cho dialog TOÀN MÀN HÌNH (root match_parent) -
                             // còn root của kr_dialog_params_small.xml là wrap_content (card nổi
                             // giữa màn hình, không chạm mép nào) nên bị phình to/lệch vị trí nếu
-                            // cộng thêm padding này (đúng kiểu lỗi bố cục đã gặp trước đây).
-                            DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
+                            // cộng thêm padding này.
+                            //
+                            // Riêng bàn phím (ime): customDialog() đã chuyển window sang
+                            // edge-to-edge nên hệ thống không tự resize cửa sổ theo bàn phím nữa,
+                            // cần tự đẩy view lên khi bị che. LƯU Ý: style custom_alert_dialog có
+                            // windowIsFloating=false -> đây là window TOÀN MÀN HÌNH (khớp decor),
+                            // không phải window nổi wrap_content, nên set window.attributes.x/y
+                            // KHÔNG có tác dụng gì (đã thử, không đẩy) - phải đẩy trực tiếp view
+                            // bằng translationY. Đồng thời phải GIỚI HẠN mức đẩy tối đa = khoảng
+                            // cách từ mép trên view đến mép dưới status bar - nếu không, với dialog
+                            // ngắn/bàn phím to, overlap tính ra có thể lớn hơn khoảng trống phía
+                            // trên, đẩy view vượt lên trên status bar khiến phần tiêu đề bị trôi
+                            // ra ngoài vùng hiển thị (nhìn như bị cắt mất phần trên).
+                            val smallDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
+                            ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
+                                val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+                                val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
+                                v.translationY = 0f
+                                if (imeBottom > 0) {
+                                    val location = IntArray(2)
+                                    v.getLocationOnScreen(location)
+                                    val gapPx = (8 * resources.displayMetrics.density).toInt()
+                                    val viewTopOnScreen = location[1]
+                                    val viewBottomOnScreen = location[1] + v.height
+                                    val keyboardTop = v.rootView.height - imeBottom
+                                    val overlap = viewBottomOnScreen - keyboardTop + gapPx
+                                    if (overlap > 0) {
+                                        val maxUp = (viewTopOnScreen - statusBarTop - gapPx).coerceAtLeast(0)
+                                        v.translationY = -overlap.coerceAtMost(maxUp).toFloat()
+                                    }
+                                }
+                                insets
+                            }
+                            ViewCompat.requestApplyInsets(dialogView)
+
+                            smallDialog
                         }
                         if (isLongList) {
                             if (cancelable) {
