@@ -72,6 +72,7 @@
         android:layout_below="@id/top_bar"
         android:fillViewport="true"
         android:overScrollMode="never"
+        android:requiresFadingEdge="vertical"
         android:scrollbars="none">
 
         <LinearLayout
