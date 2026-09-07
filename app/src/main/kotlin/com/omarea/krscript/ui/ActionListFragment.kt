@@ -727,15 +727,31 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // Riêng bàn phím (ime) vẫn cần xử lý để 2 nút Hủy/Xác nhận không bị
                             // che khi gõ văn bản: customDialog() bên trong đã tự chuyển window
                             // sang edge-to-edge (setDecorFitsSystemWindows(false)) nên hệ thống
-                            // không còn tự resize cửa sổ theo bàn phím nữa - phải tự lắng nghe
-                            // inset ime rồi cộng thêm vào paddingBottom, KHÔNG dùng chung
-                            // applyEdgeToEdge() vì hàm đó cộng cả padding system bars (lý do nêu
-                            // trên). Chỉ cộng thêm phần ime.bottom (đã trừ bớt 8dp qua
-                            // imeBottomPx() - xem lý do ở nhánh isLongList bên trên) vào padding
-                            // gốc, không ghi đè các cạnh khác.
-                            val basePaddingBottom = dialogView.paddingBottom
+                            // không còn tự resize cửa sổ theo bàn phím nữa.
+                            //
+                            // ĐÃ THỬ (và bỏ): cộng ime.bottom vào paddingBottom của view - vì
+                            // view này wrap_content + center_vertical, phần đẩy lên thực tế chỉ
+                            // bằng NỬA padding cộng thêm (cơ chế centering chia đều không gian dư
+                            // ra cả 2 phía), nên trừ 8dp cố định không giải quyết được - tùy kích
+                            // thước dialog mà bị đẩy dư ra rất nhiều (thấy rõ khi dialog ngắn).
+                            //
+                            // Cách hiện tại: đo trực tiếp vị trí THẬT của dialog trên màn hình so
+                            // với mép trên bàn phím, dùng translationY đẩy lên ĐÚNG bằng phần bị
+                            // che + 8dp hở - không phụ thuộc cơ chế centering, không dư không thiếu.
                             ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
-                                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + imeBottomPx(insets))
+                                val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+                                v.translationY = 0f
+                                if (imeBottom > 0) {
+                                    val location = IntArray(2)
+                                    v.getLocationInWindow(location)
+                                    val gapPx = (8 * resources.displayMetrics.density).toInt()
+                                    val viewBottomOnScreen = location[1] + v.height
+                                    val keyboardTop = v.rootView.height - imeBottom
+                                    val overlap = viewBottomOnScreen - keyboardTop + gapPx
+                                    if (overlap > 0) {
+                                        v.translationY = -overlap.toFloat()
+                                    }
+                                }
                                 insets
                             }
                             ViewCompat.requestApplyInsets(dialogView)
