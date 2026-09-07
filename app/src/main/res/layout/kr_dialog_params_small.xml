@@ -46,10 +46,9 @@
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:fillViewport="true"
             android:overScrollMode="never"
-            android:scrollbars="none"
-            android:layout_weight="1"
-            android:fillViewport="true">
+            android:scrollbars="none">
 
             <LinearLayout
                 android:layout_width="match_parent"

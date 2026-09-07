@@ -324,9 +324,9 @@ Info() {
   title = "Chat Gemini"
   desc = "'$chat_gemini_text'"
   icon = "'$urlicon'/chatai.png"
+  visible = "[ -z \"$(glog api_genmini)\" ] || echo 1"
   script = """
   slog chatai_save "$chatai"
-  visible = "[ -z $(glog api_genmini) ] && echo 1"
   [ "$chatai" ] && transai -m "$chatai"
   """
   

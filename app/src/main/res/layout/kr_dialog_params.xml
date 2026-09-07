@@ -6,10 +6,12 @@
     android:clickable="true"
     android:focusable="true">
 
+    <!-- 1. Thanh tiêu đề cố định ở ĐỈNH -->
     <LinearLayout
         android:id="@+id/top_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
         android:orientation="vertical">
 
         <TextView
@@ -31,72 +33,78 @@
                 android:layout_height="match_parent"
                 android:layout_marginVertical="3dp"
                 android:adjustViewBounds="true"
-                android:src="@drawable/kr_param_warn"
-                android:contentDescription="@null" />
+                android:contentDescription="@null"
+                android:src="@drawable/kr_param_warn" />
         
             <TextView
                 android:id="@+id/warn"
                 style="@style/dialogWarn"
                 android:paddingStart="9dp" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/kr_rows"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="8dp"
-            android:visibility="gone"
-            style="@style/textSmall" />
-
-        <ImageView
-            android:id="@+id/kr_rows_photo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="8dp"
-            android:visibility="gone"
-            android:scaleType="fitCenter"
-            android:adjustViewBounds="true" />
     </LinearLayout>
 
-    <RelativeLayout
-        android:id="@+id/kr_params_container"
+    <!-- 2. Thanh nút bấm cố định ở ĐÁY (Tự dâng lên khi mở bàn phím) -->
+    <LinearLayout
+        android:id="@+id/bottom_actions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="16dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp">
+
+        <Button
+            android:id="@id/btn_cancel"
+            style="@style/dialogCancelBtn"
+            android:text="@string/btn_cancel" />
+
+        <Button
+            android:id="@id/btn_confirm"
+            style="@style/dialogConfirmBtn"
+            android:text="@string/btn_confirm" />
+    </LinearLayout>
+
+    <!-- 3. Khu vực cuộn nằm GIỮA top_bar và bottom_actions -->
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@+id/top_bar" >
-
-        <ScrollView
-            android:id="@+id/kr_params_center"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:requiresFadingEdge="vertical"
-            android:scrollbarSize="0dp"
-            android:overScrollMode="never"
-            android:layout_above="@+id/bottom_actions"
-            android:padding="16dp" />
+        android:layout_above="@id/bottom_actions"
+        android:layout_below="@id/top_bar"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:scrollbars="none">
 
         <LinearLayout
-            android:id="@+id/bottom_actions"
-            android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:paddingHorizontal="16dp"
-            android:layout_marginTop="0dp"
-            android:layout_marginBottom="16dp">
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp">
 
-            <Button
-                android:id="@id/btn_cancel"
-                style="@style/dialogCancelBtn"
-                android:text="@string/btn_cancel" />
+            <TextView
+                android:id="@+id/kr_rows"
+                style="@style/textSmall"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
 
-            <Button
-                android:id="@id/btn_confirm"
-                style="@style/dialogConfirmBtn"
-                android:text="@string/btn_confirm" />
+            <ImageView
+                android:id="@+id/kr_rows_photo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:visibility="gone" />
+
+            <FrameLayout
+                android:id="@+id/kr_params_center"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_marginTop="16dp" />
+
         </LinearLayout>
-    </RelativeLayout>
+    </ScrollView>
+
 </RelativeLayout>
