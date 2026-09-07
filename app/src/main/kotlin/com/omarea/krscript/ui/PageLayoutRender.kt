@@ -122,8 +122,8 @@ class PageLayoutRender(private val mContext: Context,
 
     // atIndex >= 0: chèn view vào ĐÚNG vị trí đó thay vì thêm cuối - dùng cho tính năng
     // load-after (xem insertNode()). Mặc định (-1) giữ nguyên hành vi thêm cuối như cũ.
-    // replacePlaceholder: dùng cho process = true (xem appendNode()) - item build xong sẽ thế
-    // chỗ 1 khung skeleton đang chờ thay vì luôn nối cuối cùng.
+    // replacePlaceholder: dùng cho process = true (xem appendNode()) - item build xong sẽ chèn
+    // vào ngay TRƯỚC ô loading (không xoá ô loading), ô loading tự bị đẩy xuống dưới cùng.
     private fun renderNode(parent: ListItemGroup, it: NodeInfoBase, atIndex: Int = -1, replacePlaceholder: Boolean = false) {
         try {
             var uiRender: ListItemView? = null
@@ -146,7 +146,7 @@ class PageLayoutRender(private val mContext: Context,
                 groupViewMap[it] = subGroup
                 groupParentMap[it] = parent
                 if (it.children.isNotEmpty()) {
-                    if (replacePlaceholder) parent.addViewReplacingPlaceholder(subGroup) else parent.addView(subGroup)
+                    if (replacePlaceholder) parent.addViewBeforePlaceholder(subGroup) else parent.addView(subGroup)
                     attachedGroups.add(it)
                     mapConfigList(subGroup, it.children)
                 } else {
@@ -164,7 +164,7 @@ class PageLayoutRender(private val mContext: Context,
                 if (atIndex >= 0) {
                     parent.addView(uiRender, atIndex)
                 } else if (replacePlaceholder) {
-                    parent.addViewReplacingPlaceholder(uiRender)
+                    parent.addViewBeforePlaceholder(uiRender)
                 } else {
                     parent.addView(uiRender)
                 }
@@ -213,9 +213,10 @@ class PageLayoutRender(private val mContext: Context,
         return view
     }
 
-    // Dùng cho chế độ process = true: thêm NGAY 1 mục mới vào cuối danh sách gốc (rootGroup)
-    // mà không dựng lại các mục đã hiện trước đó - xem ActionListFragment.appendProgressiveItem.
-    // Item mới sẽ thế chỗ 1 khung skeleton đang chờ (nếu còn) - xem addLoadingPlaceholders().
+    // Dùng cho chế độ process = true: thêm NGAY 1 mục mới vào rootGroup mà không dựng lại các
+    // mục đã hiện trước đó - xem ActionListFragment.appendProgressiveItem. Item mới được chèn
+    // ngay TRƯỚC ô loading (nếu còn) - xem addLoadingPlaceholders() - ô loading không bị xoá,
+    // tự trôi xuống dưới cùng cho tới khi cả trang tải xong.
     fun appendNode(node: NodeInfoBase) {
         itemConfigList.add(node)
         renderNode(rootGroup, node, replacePlaceholder = true)

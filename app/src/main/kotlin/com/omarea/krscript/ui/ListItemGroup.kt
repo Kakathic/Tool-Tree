@@ -35,17 +35,16 @@ class ListItemGroup(context: Context,
         }
     }
 
-    // Thế 1 item THẬT vào ĐÚNG vị trí của khung placeholder ĐẦU TIÊN (nếu còn) rồi gỡ khung đó -
-    // giữ item xuất hiện đúng chỗ thay vì luôn nối sau các placeholder còn lại. Hết placeholder
-    // thì quay về hành vi thêm cuối như addView() thường. KHÔNG bật LayoutTransition ở đây - item
-    // thật hiện ra ngay, không fade-in (khác với load-after ở addView(item, atIndex) bên dưới).
-    fun addViewReplacingPlaceholder(item: ListItemView): ListItemGroup {
+    // Chèn 1 item THẬT vào ngay TRƯỚC ô loading đầu tiên (nếu còn) - KHÔNG xoá ô loading, ô loading
+    // tự bị đẩy xuống dưới item vừa chèn và tiếp tục hiện tới khi trang tải xong hẳn (xem
+    // PageLayoutRender.appendNode()/ActionListFragment.finishProgressiveList() mới gọi
+    // clearPlaceholders() để gỡ hẳn). Hết ô loading thì quay về hành vi thêm cuối như addView()
+    // thường. KHÔNG bật LayoutTransition ở đây - item thật hiện ra ngay, không fade-in.
+    fun addViewBeforePlaceholder(item: ListItemView): ListItemGroup {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
-        val placeholder = if (placeholderViews.isNotEmpty()) placeholderViews.removeAt(0) else null
+        val placeholder = placeholderViews.firstOrNull()
         if (placeholder != null) {
             val at = content.indexOfChild(placeholder)
-            (placeholder.tag as? Animator)?.cancel()
-            content.removeView(placeholder)
             content.addView(item.getView(), if (at >= 0) at else content.childCount)
         } else {
             content.addView(item.getView())
