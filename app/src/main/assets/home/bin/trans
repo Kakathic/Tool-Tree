@@ -39,6 +39,8 @@ if [ -z "$OUT" ] && [ "$backup_text" == 1 ]; then
 backup=1
 fi
 
+[ "$LANGUAGE" == "en" ] && backup=1
+
 if [ "$backup" == 1 ]; then
     printf '%s\n' "$TEXT"
     exit 0
