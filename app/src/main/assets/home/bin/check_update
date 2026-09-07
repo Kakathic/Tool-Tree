@@ -29,7 +29,7 @@ if checkonline; then
     
   else
     url_dowload="$(cat $TMP/update)"
-    websize="$sizes_text: $(cat $TMP/size)"
+    websize="$(cat $TMP/size)"
   fi
 
   if [ -f $TMP/update ] && [ "$1" == "boot" ]; then
