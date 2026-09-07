@@ -12,6 +12,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.omarea.common.model.SelectItem
 import com.omarea.common.ui.DialogFullScreen
@@ -687,6 +689,22 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // còn root của kr_dialog_params_small.xml là wrap_content (card nổi
                             // giữa màn hình, không chạm mép nào) nên bị phình to/lệch vị trí nếu
                             // cộng thêm padding này (đúng kiểu lỗi bố cục đã gặp trước đây).
+                            //
+                            // Riêng bàn phím (ime) vẫn cần xử lý để 2 nút Hủy/Xác nhận không bị
+                            // che khi gõ văn bản: customDialog() bên trong đã tự chuyển window
+                            // sang edge-to-edge (setDecorFitsSystemWindows(false)) nên hệ thống
+                            // không còn tự resize cửa sổ theo bàn phím nữa - phải tự lắng nghe
+                            // inset ime rồi cộng thêm vào paddingBottom, KHÔNG dùng chung
+                            // applyEdgeToEdge() vì hàm đó cộng cả padding system bars (lý do nêu
+                            // trên). Chỉ cộng thêm phần ime.bottom vào padding gốc, không ghi đè.
+                            val basePaddingBottom = dialogView.paddingBottom
+                            ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
+                                val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+                                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + ime.bottom)
+                                insets
+                            }
+                            ViewCompat.requestApplyInsets(dialogView)
+
                             DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
                         }
                         if (isLongList) {
