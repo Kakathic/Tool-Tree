@@ -28,7 +28,6 @@ export ANDROID_MODEL="$({ANDROID_MODEL})"
 export ANDROID_ID="$({ANDROID_ID})"
 export ROOT=$({ROOT_PERMISSION})
 export ARCH=$({ARCH})
-export START_TIME="$(date +%s)"
 export HOME="$({TOOLKIT})"
 export TERMUX="$HOME/termux"
 export ETC="$HOME/etc"
@@ -46,6 +45,7 @@ export PIP_ROOT_USER_ACTION=ignore
 export COLORTERM=truecolor
 export PATH="$BIN:$TERMUX/bin:$TERMUX/py:$PATH"
 export TERM=xterm-256color
+export START_TIME="$(date +%s)"
 
 # export LD_LIBRARY_PATH="$LIB"
 export SDC="$(glog SDC $SDCARD_PATH/TREE 2>/dev/null)";
@@ -82,7 +82,7 @@ fi
 # Giới hạn cpu (dùng hex mask chọn nhân lớn cho Toybox)
 if command -v taskset &>/dev/null; then
     max_cpukkk="$(nproc --all 2>/dev/null)"
-    use_cpukkk="$(glog use_cpu $max_cpukkk)"
+    use_cpukkk="$(glog use_cpu $(( max_cpukkk / 2 )))"
     if [ -n "$use_cpukkk" ] && [ "$use_cpukkk" -lt $max_cpukkk ]; then
     maskkkk=$(( ((1 << use_cpukkk) - 1) << (max_cpukkk - use_cpukkk) ))
     taskset -p "$(printf "%x" $maskkkk)" $$ &>/dev/null

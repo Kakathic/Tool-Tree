@@ -2013,8 +2013,17 @@ Addon() {
     [[menu]]
     [[menu.items]]
     title = "'$download_text'"
-    link = "https://Kakathic.github.io/Tool-Tree/website/'$linkweb'"
+    reload = true
     silent = true
+    type = "checkbox"
+    get = "glog show_dows_add 1"
+    script = """
+    if [ "$(glog show_setting_add)" == 1 ]; then
+    slog show_dows_add 0
+    else
+    slog show_dows_add 1
+    fi
+    """
     
     [[menu.items]]
     title = "'$customize_text'"
@@ -2029,6 +2038,7 @@ Addon() {
     slog show_setting_add 1
     fi
     """
+    
     [[group]]
     [[fab]]
     handler = """
@@ -2057,6 +2067,7 @@ Addon() {
     script = """
     installadd "$state" "'${dirvad%/*}'"
     """'
+    
       if [ "$(glog show_setting_add)" == 1 ]; then
         echo '
         [[download.rows]]
@@ -2188,7 +2199,7 @@ Addon() {
         Homeadd
         fi
       elif [ -f "$dirvad/download.bash" ]; then
-        if [[ ! -f "$dirvad/hide" || "$(glog show_setting_add)" == 1 ]]; then
+        if [[ ! -f "$dirvad/hide" || "$(glog show_dows_add)" == 1 ]]; then
         Download
         fi
       fi
