@@ -13,8 +13,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.net.toUri
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.omarea.common.model.SelectItem
 import com.omarea.common.ui.DialogFullScreen
@@ -691,47 +690,20 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // giữa màn hình, không chạm mép nào) nên bị phình to/lệch vị trí nếu
                             // cộng thêm padding này.
                             //
-                            // Riêng bàn phím (ime): customDialog() đã chuyển window sang
-                            // edge-to-edge nên hệ thống không tự resize cửa sổ theo bàn phím nữa,
-                            // cần tự đẩy view lên khi bị che. LƯU Ý: style custom_alert_dialog có
-                            // windowIsFloating=false -> đây là window TOÀN MÀN HÌNH (khớp decor),
-                            // không phải window nổi wrap_content, nên set window.attributes.x/y
-                            // KHÔNG có tác dụng gì (đã thử, không đẩy) - phải đẩy trực tiếp view
-                            // bằng translationY. Đồng thời phải GIỚI HẠN mức đẩy tối đa = khoảng
-                            // cách từ mép trên view đến mép dưới status bar - nếu không, với dialog
-                            // ngắn/bàn phím to, overlap tính ra có thể lớn hơn khoảng trống phía
-                            // trên, đẩy view vượt lên trên status bar khiến phần tiêu đề bị trôi
-                            // ra ngoài vùng hiển thị (nhìn như bị cắt mất phần trên).
-                            //
-                            // NGOÀI RA: style custom_alert_dialog khai báo
-                            // windowSoftInputMode=adjustResize - một số ROM (MIUI/HyperOS...) vẫn
-                            // tự resize/pan window theo bàn phím dù đã setDecorFitsSystemWindows
-                            // (false), CỘNG DỒN với translationY tự viết bên dưới -> đẩy dư
-                            // (double), làm phần trên của card vượt lên bị cắt. Phải chủ động tắt
-                            // hẳn hành vi tự động này, chỉ để translationY tự viết điều khiển duy
-                            // nhất việc đẩy tránh bàn phím.
+                            // Bàn phím (ime): customDialog() mặc định chuyển MỌI dialog blur sang
+                            // edge-to-edge (setDecorFitsSystemWindows(false)), khiến hệ thống
+                            // không tự co cửa sổ theo bàn phím nữa. ĐÃ THỬ (và bỏ) nhiều cách tính
+                            // tay để tự đẩy view lên (cộng padding, translationY thô, translationY
+                            // có giới hạn, tắt adjustResize thủ công) - không cách nào ổn định
+                            // trên thực tế máy. Chuyển hẳn sang cơ chế GỐC của Android: tắt
+                            // edge-to-edge riêng cho dialog này, trả lại cho hệ thống tự co cửa sổ
+                            // (adjustResize) - ScrollView có sẵn trong kr_dialog_params_small.xml
+                            // sẽ tự cuộn khi cửa sổ bị co lại, không cần tự tính toán vị trí.
                             val smallDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
-                            smallDialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
-                            ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
-                                val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-                                val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
-                                v.translationY = 0f
-                                if (imeBottom > 0) {
-                                    val location = IntArray(2)
-                                    v.getLocationOnScreen(location)
-                                    val gapPx = (8 * resources.displayMetrics.density).toInt()
-                                    val viewTopOnScreen = location[1]
-                                    val viewBottomOnScreen = location[1] + v.height
-                                    val keyboardTop = v.rootView.height - imeBottom
-                                    val overlap = viewBottomOnScreen - keyboardTop + gapPx
-                                    if (overlap > 0) {
-                                        val maxUp = (viewTopOnScreen - statusBarTop - gapPx).coerceAtLeast(0)
-                                        v.translationY = -overlap.coerceAtMost(maxUp).toFloat()
-                                    }
-                                }
-                                insets
+                            smallDialog?.window?.let { window ->
+                                WindowCompat.setDecorFitsSystemWindows(window, true)
+                                window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
                             }
-                            ViewCompat.requestApplyInsets(dialogView)
 
                             smallDialog
                         }
