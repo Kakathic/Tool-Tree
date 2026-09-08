@@ -693,21 +693,37 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // chỉ dịch chuyển translationY đúng bằng phần đáy dialog bị bàn phím
                             // che (đo lại vị trí thật trên màn hình sau layout), không che thì
                             // không dịch.
-                            ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
-                                val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-                                v.post {
-                                    v.translationY = 0f
-                                    val location = IntArray(2)
-                                    v.getLocationOnScreen(location)
-                                    val screenHeight = v.resources.displayMetrics.heightPixels
-                                    val imeTop = screenHeight - ime.bottom
-                                    val viewBottom = location[1] + v.height
-                                    val overlap = viewBottom - imeTop
-                                    v.translationY = if (overlap > 0) -overlap.toFloat() else 0f
-                                }
-                                insets
-                            }
-                            ViewCompat.requestApplyInsets(dialogView)
+val basePaddingBottom = dialogView.paddingBottom
+
+ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
+    val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+    
+    v.post {
+        if (ime.bottom > 0) {
+            val location = IntArray(2)
+            v.getLocationOnScreen(location)
+            
+            // Tính mép dưới thực tế của View khi chưa cộng padding bàn phím
+            val currentImePadding = v.paddingBottom - basePaddingBottom
+            val viewBottom = location[1] + v.height - currentImePadding
+            
+            val screenHeight = v.resources.displayMetrics.heightPixels
+            val imeTop = screenHeight - ime.bottom
+            val overlap = viewBottom - imeTop
+
+            if (overlap > 0) {
+                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + overlap)
+            } else {
+                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom)
+            }
+        } else {
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom)
+        }
+    }
+    insets
+}
+ViewCompat.requestApplyInsets(dialogView)
+
 
                             DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
                         }
