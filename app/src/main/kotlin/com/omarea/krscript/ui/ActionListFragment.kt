@@ -12,8 +12,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.net.toUri
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.omarea.common.model.SelectItem
 import com.omarea.common.ui.DialogFullScreen
@@ -32,8 +30,6 @@ import com.omarea.krscript.model.*
 import com.omarea.krscript.shortcut.ActionShortcutManager
 import com.tool.tree.ThemeModeState
 import kotlinx.coroutines.*
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 
 class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.OnItemClickListener {
     companion object {
@@ -682,52 +678,17 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                     show()
                                     window?.let { DialogHelper.applyEdgeToEdge(it, darkMode, dialogView) }
                                 }
-} else {
-    // 1. Tạo dialog duy nhất 1 lần
-    val customDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable)
-    val dialog = customDialog.dialog
-
-    // 2. Phủ kín Window ra toàn màn hình + nền trong suốt (để translationY không bao giờ bị cắt/clip)
-    dialog.window?.apply {
-        setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-    }
-
-    // 3. Dịch chuyển nguyên khối Dialog bằng translationY khi bật bàn phím
-    ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
-        val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-
-        v.post {
-            if (imeBottom > 0) {
-                val screenHeight = v.resources.displayMetrics.heightPixels
-                val availableHeight = screenHeight - imeBottom
-
-                // Tọa độ Y mong muốn để Dialog nằm chính giữa khoảng trống bàn phím
-                val targetY = (availableHeight - v.height) / 2f
-                // Tọa độ Y gốc khi Dialog căn giữa toàn màn hình
-                val originalY = (screenHeight - v.height) / 2f
-
-                val shiftY = targetY - originalY
-
-                // Nếu bàn phím che Dialog thì đẩy lên
-                if (shiftY < 0) {
-                    v.translationY = shiftY
-                } else {
-                    v.translationY = 0f
-                }
-            } else {
-                v.translationY = 0f
-            }
-        }
-        insets
-    }
-
-    // Trả về đối tượng dialog cho biến val dialog bên ngoài
-    dialog
-}
-
-
-            
+                        } else {
+                            // Nhánh <=4 mục dùng chung DialogHelper.customDialog() - nền blur (+
+                            // vuốt lùi khi cancelable) đã được xử lý sẵn bên trong đó (xem
+                            // DialogHelper.customDialog()). KHÔNG gọi applyEdgeToEdge() ở đây:
+                            // hàm đó cộng thêm padding = kích thước status/navigation bar vào
+                            // dialogView, chỉ đúng cho dialog TOÀN MÀN HÌNH (root match_parent) -
+                            // còn root của kr_dialog_params_small.xml là wrap_content (card nổi
+                            // giữa màn hình, không chạm mép nào) nên bị phình to/lệch vị trí nếu
+                            // cộng thêm padding này (đúng kiểu lỗi bố cục đã gặp trước đây).
+                            DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
+                        }
                         if (isLongList) {
                             if (cancelable) {
                                 // Vuốt lùi để đóng - dùng chung 1 hàm với DialogFullScreen (xem
