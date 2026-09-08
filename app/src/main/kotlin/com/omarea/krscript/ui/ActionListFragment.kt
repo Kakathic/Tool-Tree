@@ -694,31 +694,35 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // che (đo lại vị trí thật trên màn hình sau layout), không che thì
                             // không dịch.
                             val basePaddingBottom = dialogView.paddingBottom
+                            var initialY = -1 // Lưu vị trí ban đầu của Dialog khi chưa mở bàn phím
                             
                             ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
                                 val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
                                 
                                 v.post {
                                     if (ime.bottom > 0) {
-                                        val location = IntArray(2)
-                                        v.getLocationOnScreen(location)
+                                        // Chỉ lấy tọa độ gốc 1 lần duy nhất lúc bàn phím bắt đầu xuất hiện
+                                        if (initialY == -1) {
+                                            val location = IntArray(2)
+                                            v.getLocationOnScreen(location)
+                                            initialY = location[1]
+                                        }
                                         
                                         val screenHeight = v.resources.displayMetrics.heightPixels
-                                        val imeTop = screenHeight - ime.bottom // Đỉnh của bàn phím
-                                        
+                                        val imeTop = screenHeight - ime.bottom
                                         val currentImePadding = v.paddingBottom - basePaddingBottom
-                                        val rawDialogHeight = v.height - currentImePadding // Chiều cao thực của Dialog
+                                        val rawDialogHeight = v.height - currentImePadding
                                         
-                                        // Tọa độ Y lý tưởng để Dialog nằm chính giữa khoảng trống phía trên bàn phím
+                                        // Tính Y lý tưởng dựa trên vị trí gốc initialY
                                         val targetY = (imeTop - rawDialogHeight) / 2
-                                        
-                                        // Tính số px cần đẩy lên
-                                        val shiftAmount = location[1] - targetY
-                                        
+                                        val shiftAmount = initialY - targetY
+                            
                                         if (shiftAmount > 0) {
                                             v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + shiftAmount)
                                         }
                                     } else {
+                                        // Reset lại khi tắt bàn phím
+                                        initialY = -1
                                         v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom)
                                     }
                                 }

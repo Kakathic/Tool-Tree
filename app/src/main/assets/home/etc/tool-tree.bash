@@ -429,7 +429,7 @@ Update() {
   icon = "'$urlicon'/update.png"
   support = "check_update"
   url-sh = "cat $TMP/update"
-  load-after = true
+  #load-after = true
   script = "openfile \"$state\""
 
   [[group]]
