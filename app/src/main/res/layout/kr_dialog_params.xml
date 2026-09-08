@@ -44,26 +44,31 @@
     </LinearLayout>
 
     <!-- 2. Thanh nút bấm cố định ở ĐÁY (Tự dâng lên khi mở bàn phím) -->
-    <LinearLayout
-        android:id="@+id/bottom_actions"
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_marginBottom="16dp"
-        android:orientation="horizontal"
-        android:paddingHorizontal="16dp">
-
-        <Button
-            android:id="@id/btn_cancel"
-            style="@style/dialogCancelBtn"
-            android:text="@string/btn_cancel" />
-
-        <Button
-            android:id="@id/btn_confirm"
-            style="@style/dialogConfirmBtn"
-            android:text="@string/btn_confirm" />
-    </LinearLayout>
-
+        android:layout_height="match_parent"
+        android:layout_below="@id/top_bar">
+        <LinearLayout
+            android:id="@+id/bottom_actions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp">
+    
+            <Button
+                android:id="@id/btn_cancel"
+                style="@style/dialogCancelBtn"
+                android:text="@string/btn_cancel" />
+    
+            <Button
+                android:id="@id/btn_confirm"
+                style="@style/dialogConfirmBtn"
+                android:text="@string/btn_confirm" />
+        </LinearLayout>
+    </RelativeLayout>
+    
     <!-- 3. Khu vực cuộn nằm GIỮA top_bar và bottom_actions -->
     <ScrollView
         android:layout_width="match_parent"

@@ -682,25 +682,29 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                 }
                         } else {
                             // Nhánh <=4 mục dùng chung DialogHelper.customDialog() - nền blur (+
-                            // vuốt lùi khi cancelable) đã được xử lý sẵn bên trong đó (xem
-                            // DialogHelper.customDialog()). KHÔNG gọi applyEdgeToEdge() ở đây:
-                            // hàm đó cộng thêm padding = kích thước status/navigation bar vào
-                            // dialogView, chỉ đúng cho dialog TOÀN MÀN HÌNH (root match_parent) -
-                            // còn root của kr_dialog_params_small.xml là wrap_content (card nổi
-                            // giữa màn hình, không chạm mép nào) nên bị phình to/lệch vị trí nếu
-                            // cộng thêm padding này (đúng kiểu lỗi bố cục đã gặp trước đây).
+                            // vuốt lùi khi cancelable) đã được xử lý sẵn bên trong đó. KHÔNG gọi
+                            // applyEdgeToEdge() ở đây vì root kr_dialog_params_small.xml là
+                            // wrap_content (card nổi giữa màn hình) chứ không phải toàn màn hình.
                             //
-                            // Riêng bàn phím (ime) vẫn cần xử lý để 2 nút Hủy/Xác nhận không bị
-                            // che khi gõ văn bản: customDialog() bên trong đã tự chuyển window
-                            // sang edge-to-edge (setDecorFitsSystemWindows(false)) nên hệ thống
-                            // không còn tự resize cửa sổ theo bàn phím nữa - phải tự lắng nghe
-                            // inset ime rồi cộng thêm vào paddingBottom, KHÔNG dùng chung
-                            // applyEdgeToEdge() vì hàm đó cộng cả padding system bars (lý do nêu
-                            // trên). Chỉ cộng thêm phần ime.bottom vào padding gốc, không ghi đè.
-                            val basePaddingBottom = dialogView.paddingBottom
+                            // Bàn phím (ime): trước đây cộng nguyên ime.bottom vào paddingBottom
+                            // để tránh che 2 nút Hủy/Xác nhận, nhưng root wrap_content + cửa sổ
+                            // canh giữa nên phần padding cộng thêm làm phình cả chiều cao đo được,
+                            // đẩy dialog lên gần đỉnh màn hình (quá cao). Sửa: không đổi padding,
+                            // chỉ dịch chuyển translationY đúng bằng phần đáy dialog bị bàn phím
+                            // che (đo lại vị trí thật trên màn hình sau layout), không che thì
+                            // không dịch.
                             ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
                                 val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-                                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + ime.bottom)
+                                v.post {
+                                    v.translationY = 0f
+                                    val location = IntArray(2)
+                                    v.getLocationOnScreen(location)
+                                    val screenHeight = v.resources.displayMetrics.heightPixels
+                                    val imeTop = screenHeight - ime.bottom
+                                    val viewBottom = location[1] + v.height
+                                    val overlap = viewBottom - imeTop
+                                    v.translationY = if (overlap > 0) -overlap.toFloat() else 0f
+                                }
                                 insets
                             }
                             ViewCompat.requestApplyInsets(dialogView)
