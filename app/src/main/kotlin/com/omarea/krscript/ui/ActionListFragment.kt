@@ -682,59 +682,52 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                     show()
                                     window?.let { DialogHelper.applyEdgeToEdge(it, darkMode, dialogView) }
                                 }
-                        } else {
-                            // Nhánh <=4 mục dùng chung DialogHelper.customDialog() - nền blur (+
-                            // vuốt lùi khi cancelable) đã được xử lý sẵn bên trong đó. KHÔNG gọi
-                            // applyEdgeToEdge() ở đây vì root kr_dialog_params_small.xml là
-                            // wrap_content (card nổi giữa màn hình) chứ không phải toàn màn hình.
-                            //
-                            // Bàn phím (ime): trước đây cộng nguyên ime.bottom vào paddingBottom
-                            // để tránh che 2 nút Hủy/Xác nhận, nhưng root wrap_content + cửa sổ
-                            // canh giữa nên phần padding cộng thêm làm phình cả chiều cao đo được,
-                            // đẩy dialog lên gần đỉnh màn hình (quá cao). Sửa: không đổi padding,
-                            // chỉ dịch chuyển translationY đúng bằng phần đáy dialog bị bàn phím
-                            // che (đo lại vị trí thật trên màn hình sau layout), không che thì
-                            // không dịch.
-val customDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable)
-val dialog = customDialog.dialog
+} else {
+    // 1. Tạo dialog duy nhất 1 lần
+    val customDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable)
+    val dialog = customDialog.dialog
 
-// 1. Phủ kín Window ra toàn màn hình + nền trong suốt (để translationY không bao giờ bị cắt/clip)
-dialog.window?.apply {
-    setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-    setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-}
+    // 2. Phủ kín Window ra toàn màn hình + nền trong suốt (để translationY không bao giờ bị cắt/clip)
+    dialog.window?.apply {
+        setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
 
-// 2. Dịch chuyển nguyên khối Dialog bằng translationY
-ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
-    val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+    // 3. Dịch chuyển nguyên khối Dialog bằng translationY khi bật bàn phím
+    ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
+        val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
 
-    v.post {
-        if (imeBottom > 0) {
-            val screenHeight = v.resources.displayMetrics.heightPixels
-            val availableHeight = screenHeight - imeBottom
+        v.post {
+            if (imeBottom > 0) {
+                val screenHeight = v.resources.displayMetrics.heightPixels
+                val availableHeight = screenHeight - imeBottom
 
-            // Tọa độ Y mong muốn để Dialog nằm chính giữa khoảng trống bàn phím
-            val targetY = (availableHeight - v.height) / 2f
-            // Tọa độ Y gốc khi Dialog căn giữa toàn màn hình
-            val originalY = (screenHeight - v.height) / 2f
+                // Tọa độ Y mong muốn để Dialog nằm chính giữa khoảng trống bàn phím
+                val targetY = (availableHeight - v.height) / 2f
+                // Tọa độ Y gốc khi Dialog căn giữa toàn màn hình
+                val originalY = (screenHeight - v.height) / 2f
 
-            val shiftY = targetY - originalY
+                val shiftY = targetY - originalY
 
-            // Nếu bàn phím che Dialog thì đẩy lên
-            if (shiftY < 0) {
-                v.translationY = shiftY
+                // Nếu bàn phím che Dialog thì đẩy lên
+                if (shiftY < 0) {
+                    v.translationY = shiftY
+                } else {
+                    v.translationY = 0f
+                }
             } else {
                 v.translationY = 0f
             }
-        } else {
-            v.translationY = 0f
         }
+        insets
     }
-    insets
+
+    // Trả về đối tượng dialog cho biến val dialog bên ngoài
+    dialog
 }
 
-                            DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
-                        }
+
+            
                         if (isLongList) {
                             if (cancelable) {
                                 // Vuốt lùi để đóng - dùng chung 1 hàm với DialogFullScreen (xem
