@@ -4,16 +4,17 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.net.toUri
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.omarea.common.model.SelectItem
 import com.omarea.common.ui.DialogFullScreen
@@ -691,18 +692,42 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // cộng thêm padding này.
                             //
                             // Bàn phím (ime): customDialog() mặc định chuyển MỌI dialog blur sang
-                            // edge-to-edge (setDecorFitsSystemWindows(false)), khiến hệ thống
-                            // không tự co cửa sổ theo bàn phím nữa. ĐÃ THỬ (và bỏ) nhiều cách tính
-                            // tay để tự đẩy view lên (cộng padding, translationY thô, translationY
-                            // có giới hạn, tắt adjustResize thủ công) - không cách nào ổn định
-                            // trên thực tế máy. Chuyển hẳn sang cơ chế GỐC của Android: tắt
-                            // edge-to-edge riêng cho dialog này, trả lại cho hệ thống tự co cửa sổ
-                            // (adjustResize) - ScrollView có sẵn trong kr_dialog_params_small.xml
-                            // sẽ tự cuộn khi cửa sổ bị co lại, không cần tự tính toán vị trí.
+                            // edge-to-edge (setDecorFitsSystemWindows(false)). ĐÃ THỬ (và bỏ) nhiều
+                            // cách tính tay để tự đẩy view lên (cộng padding, translationY thô,
+                            // translationY có giới hạn, tắt adjustResize thủ công, tắt edge-to-edge)
+                            // - không cách nào ổn định/gọn trên thực tế máy.
+                            //
+                            // Cách hiện tại: đặt softInputMode=adjustResize (không cần tắt
+                            // edge-to-edge) để hệ thống tự co cửa sổ theo bàn phím, không còn bị
+                            // che/cắt. Riêng phần co lại vẫn giữ nguyên gravity CENTER_VERTICAL gốc
+                            // của dialogView -> card bị canh giữa NGAY TRONG phần không gian còn
+                            // lại phía trên bàn phím, chia đôi khoảng trống ra cả trên lẫn dưới,
+                            // tạo khoảng hở lớn giữa card và bàn phím. Để khắc phục: theo dõi chiều
+                            // cao rootView (co lại khi bàn phím hiện) bằng GlobalLayoutListener,
+                            // khi phát hiện co (bàn phím hiện) thì đổi gravity của dialogView từ
+                            // giá trị gốc sang BOTTOM kèm margin nhỏ - neo sát bàn phím thay vì
+                            // canh giữa vùng còn lại; phục hồi gravity gốc khi bàn phím ẩn.
                             val smallDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
-                            smallDialog?.window?.let { window ->
-                                WindowCompat.setDecorFitsSystemWindows(window, true)
-                                window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+                            smallDialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+
+                            val dialogLayoutParams = dialogView.layoutParams as? FrameLayout.LayoutParams
+                            if (dialogLayoutParams != null) {
+                                val originalGravity = dialogLayoutParams.gravity
+                                val gapPx = (8 * resources.displayMetrics.density).toInt()
+                                val keyboardThresholdPx = (100 * resources.displayMetrics.density).toInt()
+                                var initialRootHeight = 0
+                                var isKeyboardShown = false
+                                dialogView.viewTreeObserver.addOnGlobalLayoutListener {
+                                    val currentRootHeight = dialogView.rootView.height
+                                    if (initialRootHeight == 0) initialRootHeight = currentRootHeight
+                                    val keyboardShown = (initialRootHeight - currentRootHeight) > keyboardThresholdPx
+                                    if (keyboardShown != isKeyboardShown) {
+                                        isKeyboardShown = keyboardShown
+                                        dialogLayoutParams.gravity = if (keyboardShown) Gravity.BOTTOM else originalGravity
+                                        dialogLayoutParams.bottomMargin = if (keyboardShown) gapPx else 0
+                                        dialogView.layoutParams = dialogLayoutParams
+                                    }
+                                }
                             }
 
                             smallDialog
