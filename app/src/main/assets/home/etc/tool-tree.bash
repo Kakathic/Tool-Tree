@@ -429,7 +429,6 @@ Update() {
   icon = "'$urlicon'/update.png"
   support = "check_update"
   url-sh = "cat $TMP/update"
-  #load-after = true
   script = "openfile \"$state\""
 
   [[group]]
@@ -690,9 +689,12 @@ Feature() {
   icon = "'$urlicon'/apikey.png"
   shell = "hidden"
   script = """
-    [ -z "$models_genmini" ] && slog -d models_genmini || slog models_genmini "$models_genmini"
-    [ -z "$api_genmini" ] || slog api_genmini "$(tokenenc "$api_genmini")"
-    transai -c || slog -d api_genmini
+  if [ -z "$models_genmini" ]; then
+  slog -d models_genmini
+  else
+  slog models_genmini "$models_genmini"
+  fi
+  transai -c
   """
   
   [[action.params-rows]]
