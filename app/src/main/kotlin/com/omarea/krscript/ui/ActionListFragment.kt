@@ -693,38 +693,35 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // chỉ dịch chuyển translationY đúng bằng phần đáy dialog bị bàn phím
                             // che (đo lại vị trí thật trên màn hình sau layout), không che thì
                             // không dịch.
+val basePaddingBottom = dialogView.paddingBottom
+var initialY = -1
+
 ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
     val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
     v.post {
         if (imeBottom > 0) {
-            val location = IntArray(2)
-            v.getLocationOnScreen(location)
-            
-            // Lấy tọa độ Y thực tế của Dialog trước khi bị trượt
-            val rawY = location[1] - v.translationY.toInt()
+            if (initialY == -1) {
+                val location = IntArray(2)
+                v.getLocationOnScreen(location)
+                initialY = location[1]
+            }
             val screenHeight = v.resources.displayMetrics.heightPixels
-            
             val imeTop = screenHeight - imeBottom
-            val viewBottom = rawY + v.height
-            val gap = (16 * v.resources.displayMetrics.density).toInt() // Khoảng hở 16dp với bàn phím
-            val overlap = (viewBottom - imeTop) + gap
+            val currentImePadding = v.paddingBottom - basePaddingBottom
+            val rawDialogHeight = v.height - currentImePadding
+            val targetY = (imeTop - rawDialogHeight) / 2
+            val shiftAmount = initialY - targetY
 
-            if (overlap > 0) {
-                // Giới hạn khoảng đẩy tối đa: Không cho đỉnh Dialog cách mép trên màn hình ít hơn 24dp
-                val safeMarginTop = (24 * v.resources.displayMetrics.density).toInt()
-                val maxAllowedShift = (rawY - safeMarginTop).coerceAtLeast(0)
-                
-                v.translationY = -minOf(overlap.toFloat(), maxAllowedShift.toFloat())
-            } else {
-                v.translationY = 0f
+            if (shiftAmount > 0) {
+                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + shiftAmount)
             }
         } else {
-            v.translationY = 0f
+            initialY = -1
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom)
         }
     }
     insets
 }
-ViewCompat.requestApplyInsets(dialogView)
 
                             DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
                         }
