@@ -703,18 +703,20 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                         val location = IntArray(2)
                                         v.getLocationOnScreen(location)
                                         
-                                        // Tính mép dưới thực tế của View khi chưa cộng padding bàn phím
-                                        val currentImePadding = v.paddingBottom - basePaddingBottom
-                                        val viewBottom = location[1] + v.height - currentImePadding
-                                        
                                         val screenHeight = v.resources.displayMetrics.heightPixels
-                                        val imeTop = screenHeight - ime.bottom
-                                        val overlap = viewBottom - imeTop
-                            
-                                        if (overlap > 0) {
-                                            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + overlap)
-                                        } else {
-                                            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom)
+                                        val imeTop = screenHeight - ime.bottom // Đỉnh của bàn phím
+                                        
+                                        val currentImePadding = v.paddingBottom - basePaddingBottom
+                                        val rawDialogHeight = v.height - currentImePadding // Chiều cao thực của Dialog
+                                        
+                                        // Tọa độ Y lý tưởng để Dialog nằm chính giữa khoảng trống phía trên bàn phím
+                                        val targetY = (imeTop - rawDialogHeight) / 2
+                                        
+                                        // Tính số px cần đẩy lên
+                                        val shiftAmount = location[1] - targetY
+                                        
+                                        if (shiftAmount > 0) {
+                                            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + shiftAmount)
                                         }
                                     } else {
                                         v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom)
@@ -723,7 +725,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                 insets
                             }
                             ViewCompat.requestApplyInsets(dialogView)
-
 
                             DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
                         }
