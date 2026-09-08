@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -701,7 +702,16 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // ngắn/bàn phím to, overlap tính ra có thể lớn hơn khoảng trống phía
                             // trên, đẩy view vượt lên trên status bar khiến phần tiêu đề bị trôi
                             // ra ngoài vùng hiển thị (nhìn như bị cắt mất phần trên).
+                            //
+                            // NGOÀI RA: style custom_alert_dialog khai báo
+                            // windowSoftInputMode=adjustResize - một số ROM (MIUI/HyperOS...) vẫn
+                            // tự resize/pan window theo bàn phím dù đã setDecorFitsSystemWindows
+                            // (false), CỘNG DỒN với translationY tự viết bên dưới -> đẩy dư
+                            // (double), làm phần trên của card vượt lên bị cắt. Phải chủ động tắt
+                            // hẳn hành vi tự động này, chỉ để translationY tự viết điều khiển duy
+                            // nhất việc đẩy tránh bàn phím.
                             val smallDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
+                            smallDialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
                             ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
                                 val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
                                 val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
