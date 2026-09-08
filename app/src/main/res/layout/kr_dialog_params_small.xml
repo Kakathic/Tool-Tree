@@ -4,6 +4,8 @@
     style="@style/dialogRoot"
     android:clickable="true"
     android:focusable="true"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
@@ -48,6 +50,7 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:fillViewport="true"
+            android:requiresFadingEdge="vertical"
             android:overScrollMode="never"
             android:scrollbars="none">
 
