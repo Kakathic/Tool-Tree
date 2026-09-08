@@ -2199,7 +2199,7 @@ Addon() {
         Homeadd
         fi
       elif [ -f "$dirvad/download.bash" ]; then
-        if [[ ! -f "$dirvad/hide" || "$(glog show_dows_add)" == 1 ]]; then
+        if [[ "$(glog show_dows_add)" == 1 ]]; then
         Download
         fi
       fi
