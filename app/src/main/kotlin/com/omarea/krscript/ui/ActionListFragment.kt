@@ -14,6 +14,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.omarea.common.model.SelectItem
 import com.omarea.common.ui.DialogFullScreen
@@ -692,44 +694,47 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             //
                             // Bàn phím (ime): customDialog() mặc định chuyển MỌI dialog blur sang
                             // edge-to-edge (setDecorFitsSystemWindows(false)). ĐÃ THỬ (và bỏ) nhiều
-                            // cách: cộng padding, translationY tính từ ime insets, tắt adjustResize
-                            // thủ công, tắt edge-to-edge, đổi gravity qua FrameLayout.LayoutParams
-                            // (giả định sai kiểu LayoutParams thực tế -> bị bỏ qua âm thầm), so sánh
-                            // rootView.height trước/sau (ROM này không đổi height() thật khi co, chỉ
-                            // điều chỉnh vùng hiển thị) - không cách nào hoạt động đúng trên máy.
+                            // cách: cộng padding, translationY tính từ ime insets (không giới hạn
+                            // rồi có giới hạn), tắt adjustResize thủ công, tắt edge-to-edge, đổi
+                            // gravity qua FrameLayout.LayoutParams (giả định sai kiểu LayoutParams
+                            // thực tế -> bị bỏ qua âm thầm), GlobalLayoutListener so sánh
+                            // rootView.height / getWindowVisibleDisplayFrame để tự phát hiện bàn
+                            // phím (không đáng tin - có lúc không kích hoạt được trên máy thực tế,
+                            // khiến hoàn toàn không đẩy).
                             //
-                            // Cách hiện tại, không phụ thuộc cách OS/ROM triển khai việc tránh bàn
-                            // phím (co cửa sổ thật hay chỉ điều chỉnh vùng hiển thị):
-                            // 1. setSoftInputMode(adjustResize): để hệ thống tự tránh bàn phím theo
-                            //    đúng chiều cao thật (đã xác nhận hết bị cắt/che).
-                            // 2. Card vẫn giữ gravity gốc (thường center) nên canh giữa NGAY TRONG
-                            //    phần còn lại phía trên bàn phím, để dư khoảng trống lớn bên dưới.
-                            //    Dùng getWindowVisibleDisplayFrame() để lấy đúng vùng MÀN HÌNH THỰC
-                            //    SỰ đang hiển thị (không bị che, bất kể OS xử lý bằng cách nào), so
-                            //    với vị trí thật của card (getLocationOnScreen) để suy ra khoảng dư
-                            //    thật, rồi dịch card xuống (translationY dương) đúng bằng phần dư
-                            //    đó, chỉ chừa lại 8dp.
+                            // Cách hiện tại: dùng lại đúng cơ chế trigger của bản gốc -
+                            // ViewCompat.setOnApplyWindowInsetsListener (CHẮC CHẮN được hệ thống
+                            // gọi mỗi khi bàn phím hiện/ẩn, đã xác nhận từ đầu) để biết CHÍNH XÁC
+                            // thời điểm cần xử lý, thay vì tự đoán qua so sánh kích thước. Kết hợp
+                            // setSoftInputMode(adjustResize) để hệ thống tự tránh bàn phím (không
+                            // còn bị cắt/che). Trong callback, dùng post{} để đợi hệ thống co/định
+                            // vị lại xong xuôi rồi mới đo vị trí thật (getLocationOnScreen) và vùng
+                            // hiển thị thật (getWindowVisibleDisplayFrame) - tránh đo giữa chừng lúc
+                            // layout chưa ổn định. Từ đó suy ra khoảng trống dư bên dưới card (do
+                            // gravity gốc canh giữa trong phần còn lại) và dịch card xuống
+                            // (translationY dương) đúng bằng phần dư, chỉ chừa lại 8dp.
                             val smallDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
                             smallDialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
                             val gapPx = (8 * resources.displayMetrics.density).toInt()
-                            val keyboardThresholdPx = (100 * resources.displayMetrics.density).toInt()
-                            var fullHeight = 0
-                            dialogView.viewTreeObserver.addOnGlobalLayoutListener {
-                                if (fullHeight == 0) fullHeight = dialogView.rootView.height
-                                val visibleFrame = Rect()
-                                dialogView.getWindowVisibleDisplayFrame(visibleFrame)
-                                val keyboardShown = (fullHeight - visibleFrame.bottom) > keyboardThresholdPx
-                                if (keyboardShown) {
-                                    val location = IntArray(2)
-                                    dialogView.getLocationOnScreen(location)
-                                    val viewBottom = location[1] + dialogView.height
-                                    val spaceBelow = visibleFrame.bottom - viewBottom
-                                    dialogView.translationY = (spaceBelow - gapPx).coerceAtLeast(0).toFloat()
+                            ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
+                                val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+                                if (imeBottom > 0) {
+                                    v.post {
+                                        val visibleFrame = Rect()
+                                        v.getWindowVisibleDisplayFrame(visibleFrame)
+                                        val location = IntArray(2)
+                                        v.getLocationOnScreen(location)
+                                        val viewBottom = location[1] + v.height
+                                        val spaceBelow = visibleFrame.bottom - viewBottom
+                                        v.translationY = (spaceBelow - gapPx).coerceAtLeast(0).toFloat()
+                                    }
                                 } else {
-                                    dialogView.translationY = 0f
+                                    v.translationY = 0f
                                 }
+                                insets
                             }
+                            ViewCompat.requestApplyInsets(dialogView)
 
                             smallDialog
                         }
