@@ -4,12 +4,10 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -693,40 +691,41 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             //
                             // Bàn phím (ime): customDialog() mặc định chuyển MỌI dialog blur sang
                             // edge-to-edge (setDecorFitsSystemWindows(false)). ĐÃ THỬ (và bỏ) nhiều
-                            // cách tính tay để tự đẩy view lên (cộng padding, translationY thô,
-                            // translationY có giới hạn, tắt adjustResize thủ công, tắt edge-to-edge)
-                            // - không cách nào ổn định/gọn trên thực tế máy.
+                            // cách: cộng padding, translationY tính từ ime insets, tắt adjustResize
+                            // thủ công, tắt edge-to-edge, đổi gravity qua FrameLayout.LayoutParams
+                            // (giả định sai kiểu LayoutParams thực tế -> bị bỏ qua âm thầm, không
+                            // đẩy gì cả) - không cách nào ổn định trên thực tế máy.
                             //
-                            // Cách hiện tại: đặt softInputMode=adjustResize (không cần tắt
-                            // edge-to-edge) để hệ thống tự co cửa sổ theo bàn phím, không còn bị
-                            // che/cắt. Riêng phần co lại vẫn giữ nguyên gravity CENTER_VERTICAL gốc
-                            // của dialogView -> card bị canh giữa NGAY TRONG phần không gian còn
-                            // lại phía trên bàn phím, chia đôi khoảng trống ra cả trên lẫn dưới,
-                            // tạo khoảng hở lớn giữa card và bàn phím. Để khắc phục: theo dõi chiều
-                            // cao rootView (co lại khi bàn phím hiện) bằng GlobalLayoutListener,
-                            // khi phát hiện co (bàn phím hiện) thì đổi gravity của dialogView từ
-                            // giá trị gốc sang BOTTOM kèm margin nhỏ - neo sát bàn phím thay vì
-                            // canh giữa vùng còn lại; phục hồi gravity gốc khi bàn phím ẩn.
+                            // Cách hiện tại, KHÔNG dựa vào bất kỳ giả định nào về cấu trúc/gravity
+                            // nội bộ của AlertDialog:
+                            // 1. setSoftInputMode(adjustResize): để HỆ THỐNG tự co cửa sổ theo
+                            //    đúng chiều cao bàn phím thật (đã xác nhận hết bị cắt/che).
+                            // 2. Sau khi co, card vẫn giữ gravity gốc (thường là center) nên bị
+                            //    canh giữa NGAY TRONG phần không gian còn lại phía trên bàn phím,
+                            //    để lại khoảng trống lớn bên dưới. Đo trực tiếp vị trí THẬT của
+                            //    card bằng getLocationInWindow (không bị ảnh hưởng bởi translationY
+                            //    đã áp trước đó nên luôn đo đúng) so với chiều cao rootView (đã co),
+                            //    từ đó suy ra khoảng trống thật còn dư bên dưới card, rồi dịch card
+                            //    xuống (translationY dương) đúng bằng phần dư đó, chỉ chừa lại 8dp.
+                            //    Không cần biết/đoán gravity hay loại LayoutParams đang dùng.
                             val smallDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
                             smallDialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
-                            val dialogLayoutParams = dialogView.layoutParams as? FrameLayout.LayoutParams
-                            if (dialogLayoutParams != null) {
-                                val originalGravity = dialogLayoutParams.gravity
-                                val gapPx = (8 * resources.displayMetrics.density).toInt()
-                                val keyboardThresholdPx = (100 * resources.displayMetrics.density).toInt()
-                                var initialRootHeight = 0
-                                var isKeyboardShown = false
-                                dialogView.viewTreeObserver.addOnGlobalLayoutListener {
-                                    val currentRootHeight = dialogView.rootView.height
-                                    if (initialRootHeight == 0) initialRootHeight = currentRootHeight
-                                    val keyboardShown = (initialRootHeight - currentRootHeight) > keyboardThresholdPx
-                                    if (keyboardShown != isKeyboardShown) {
-                                        isKeyboardShown = keyboardShown
-                                        dialogLayoutParams.gravity = if (keyboardShown) Gravity.BOTTOM else originalGravity
-                                        dialogLayoutParams.bottomMargin = if (keyboardShown) gapPx else 0
-                                        dialogView.layoutParams = dialogLayoutParams
-                                    }
+                            val gapPx = (8 * resources.displayMetrics.density).toInt()
+                            val keyboardThresholdPx = (100 * resources.displayMetrics.density).toInt()
+                            var initialRootHeight = 0
+                            dialogView.viewTreeObserver.addOnGlobalLayoutListener {
+                                val rootHeight = dialogView.rootView.height
+                                if (initialRootHeight == 0) initialRootHeight = rootHeight
+                                val keyboardShown = (initialRootHeight - rootHeight) > keyboardThresholdPx
+                                if (keyboardShown) {
+                                    val location = IntArray(2)
+                                    dialogView.getLocationInWindow(location)
+                                    val viewBottom = location[1] + dialogView.height
+                                    val spaceBelow = rootHeight - viewBottom
+                                    dialogView.translationY = (spaceBelow - gapPx).coerceAtLeast(0).toFloat()
+                                } else {
+                                    dialogView.translationY = 0f
                                 }
                             }
 
