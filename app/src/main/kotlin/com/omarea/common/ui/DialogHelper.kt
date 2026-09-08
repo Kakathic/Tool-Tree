@@ -434,20 +434,23 @@ class DialogHelper {
                 val basePaddingTop = contentView.paddingTop
                 val basePaddingRight = contentView.paddingRight
                 val basePaddingBottom = contentView.paddingBottom
-
+            
                 ViewCompat.setOnApplyWindowInsetsListener(contentView) { v, insets ->
                     val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
                     val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+                    val bottomInset = maxOf(systemBars.bottom, ime.bottom)
+                    
                     v.setPadding(
                         basePaddingLeft + systemBars.left,
                         basePaddingTop + systemBars.top,
                         basePaddingRight + systemBars.right,
-                        basePaddingBottom + systemBars.bottom + ime.bottom
+                        basePaddingBottom + bottomInset
                     )
                     insets
                 }
                 ViewCompat.requestApplyInsets(contentView)
             }
+
         }
         
         fun setWindowBlurBg(window: Window, activity: Activity) {
