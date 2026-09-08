@@ -32,6 +32,8 @@ import com.omarea.krscript.model.*
 import com.omarea.krscript.shortcut.ActionShortcutManager
 import com.tool.tree.ThemeModeState
 import kotlinx.coroutines.*
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 
 class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.OnItemClickListener {
     companion object {
