@@ -383,7 +383,7 @@ Update() {
   if [ "$(glog gg_trans_ver)" == 1 ]; then
   slog gg_trans_ver 0
   else
-  transai -c && slog gg_trans_ver 1 || showbanner -y "error" -t "Gemini" -m "'$warn_gemini_text'"
+  transai -c && slog gg_trans_ver 1 || showdialog -t "Gemini" -m "'$warn_gemini_text'" -g 15 -e "'$ETC'/tool-tree.bash Feature"
   fi
   """
   
@@ -721,8 +721,6 @@ Feature() {
     label = "Models"
     items = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
     value-sh = "glog models_genmini \"gemini-3.1-flash-lite\""
-    
-
   '
 }
 
