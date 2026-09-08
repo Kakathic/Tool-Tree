@@ -2018,7 +2018,7 @@ Addon() {
     type = "checkbox"
     get = "glog show_dows_add 1"
     script = """
-    if [ "$(glog show_setting_add)" == 1 ]; then
+    if [ "$(glog show_dows_add)" == 1 ]; then
     slog show_dows_add 0
     else
     slog show_dows_add 1
