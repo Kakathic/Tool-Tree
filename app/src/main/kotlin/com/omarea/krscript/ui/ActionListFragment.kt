@@ -2,13 +2,11 @@ package com.omarea.krscript.ui
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -690,53 +688,24 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // dialogView, chỉ đúng cho dialog TOÀN MÀN HÌNH (root match_parent) -
                             // còn root của kr_dialog_params_small.xml là wrap_content (card nổi
                             // giữa màn hình, không chạm mép nào) nên bị phình to/lệch vị trí nếu
-                            // cộng thêm padding này.
+                            // cộng thêm padding này (đúng kiểu lỗi bố cục đã gặp trước đây).
                             //
-                            // Bàn phím (ime): customDialog() mặc định chuyển MỌI dialog blur sang
-                            // edge-to-edge (setDecorFitsSystemWindows(false)). ĐÃ THỬ (và bỏ) nhiều
-                            // cách: cộng padding, translationY tính từ ime insets (không giới hạn
-                            // rồi có giới hạn), tắt adjustResize thủ công, tắt edge-to-edge, đổi
-                            // gravity qua FrameLayout.LayoutParams (giả định sai kiểu LayoutParams
-                            // thực tế -> bị bỏ qua âm thầm), GlobalLayoutListener so sánh
-                            // rootView.height / getWindowVisibleDisplayFrame để tự phát hiện bàn
-                            // phím (không đáng tin - có lúc không kích hoạt được trên máy thực tế,
-                            // khiến hoàn toàn không đẩy).
-                            //
-                            // Cách hiện tại: dùng lại đúng cơ chế trigger của bản gốc -
-                            // ViewCompat.setOnApplyWindowInsetsListener (CHẮC CHẮN được hệ thống
-                            // gọi mỗi khi bàn phím hiện/ẩn, đã xác nhận từ đầu) để biết CHÍNH XÁC
-                            // thời điểm cần xử lý, thay vì tự đoán qua so sánh kích thước. Kết hợp
-                            // setSoftInputMode(adjustResize) để hệ thống tự tránh bàn phím (không
-                            // còn bị cắt/che). Trong callback, dùng post{} để đợi hệ thống co/định
-                            // vị lại xong xuôi rồi mới đo vị trí thật (getLocationOnScreen) và vùng
-                            // hiển thị thật (getWindowVisibleDisplayFrame) - tránh đo giữa chừng lúc
-                            // layout chưa ổn định. Từ đó suy ra khoảng trống dư bên dưới card (do
-                            // gravity gốc canh giữa trong phần còn lại) và dịch card xuống
-                            // (translationY dương) đúng bằng phần dư, chỉ chừa lại 8dp.
-                            val smallDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
-                            smallDialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-
-                            val gapPx = (8 * resources.displayMetrics.density).toInt()
+                            // Riêng bàn phím (ime) vẫn cần xử lý để 2 nút Hủy/Xác nhận không bị
+                            // che khi gõ văn bản: customDialog() bên trong đã tự chuyển window
+                            // sang edge-to-edge (setDecorFitsSystemWindows(false)) nên hệ thống
+                            // không còn tự resize cửa sổ theo bàn phím nữa - phải tự lắng nghe
+                            // inset ime rồi cộng thêm vào paddingBottom, KHÔNG dùng chung
+                            // applyEdgeToEdge() vì hàm đó cộng cả padding system bars (lý do nêu
+                            // trên). Chỉ cộng thêm phần ime.bottom vào padding gốc, không ghi đè.
+                            val basePaddingBottom = dialogView.paddingBottom
                             ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
-                                val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-                                if (imeBottom > 0) {
-                                    v.post {
-                                        val visibleFrame = Rect()
-                                        v.getWindowVisibleDisplayFrame(visibleFrame)
-                                        val location = IntArray(2)
-                                        v.getLocationOnScreen(location)
-                                        val viewBottom = location[1] + v.height
-                                        val spaceBelow = visibleFrame.bottom - viewBottom
-                                        v.translationY = (spaceBelow - gapPx).coerceAtLeast(0).toFloat()
-                                    }
-                                } else {
-                                    v.translationY = 0f
-                                }
+                                val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+                                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + ime.bottom)
                                 insets
                             }
                             ViewCompat.requestApplyInsets(dialogView)
 
-                            smallDialog
+                            DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
                         }
                         if (isLongList) {
                             if (cancelable) {
