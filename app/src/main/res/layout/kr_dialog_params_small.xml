@@ -4,8 +4,6 @@
     style="@style/dialogRoot"
     android:clickable="true"
     android:focusable="true"
-    android:clipChildren="false"
-    android:clipToPadding="false"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">

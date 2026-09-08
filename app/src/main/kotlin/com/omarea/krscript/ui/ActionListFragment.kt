@@ -693,31 +693,39 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // chỉ dịch chuyển translationY đúng bằng phần đáy dialog bị bàn phím
                             // che (đo lại vị trí thật trên màn hình sau layout), không che thì
                             // không dịch.
-val basePaddingBottom = dialogView.paddingBottom
-var initialY = -1
+val customDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable)
+val dialog = customDialog.dialog
 
+// 1. Phủ kín Window ra toàn màn hình + nền trong suốt (để translationY không bao giờ bị cắt/clip)
+dialog.window?.apply {
+    setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+    setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+}
+
+// 2. Dịch chuyển nguyên khối Dialog bằng translationY
 ViewCompat.setOnApplyWindowInsetsListener(dialogView) { v, insets ->
     val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+
     v.post {
         if (imeBottom > 0) {
-            if (initialY == -1) {
-                val location = IntArray(2)
-                v.getLocationOnScreen(location)
-                initialY = location[1]
-            }
             val screenHeight = v.resources.displayMetrics.heightPixels
-            val imeTop = screenHeight - imeBottom
-            val currentImePadding = v.paddingBottom - basePaddingBottom
-            val rawDialogHeight = v.height - currentImePadding
-            val targetY = (imeTop - rawDialogHeight) / 2
-            val shiftAmount = initialY - targetY
+            val availableHeight = screenHeight - imeBottom
 
-            if (shiftAmount > 0) {
-                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom + shiftAmount)
+            // Tọa độ Y mong muốn để Dialog nằm chính giữa khoảng trống bàn phím
+            val targetY = (availableHeight - v.height) / 2f
+            // Tọa độ Y gốc khi Dialog căn giữa toàn màn hình
+            val originalY = (screenHeight - v.height) / 2f
+
+            val shiftY = targetY - originalY
+
+            // Nếu bàn phím che Dialog thì đẩy lên
+            if (shiftY < 0) {
+                v.translationY = shiftY
+            } else {
+                v.translationY = 0f
             }
         } else {
-            initialY = -1
-            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePaddingBottom)
+            v.translationY = 0f
         }
     }
     insets
