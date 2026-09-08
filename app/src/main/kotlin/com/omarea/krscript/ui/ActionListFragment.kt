@@ -2,6 +2,7 @@ package com.omarea.krscript.ui
 
 import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -693,36 +694,37 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             // edge-to-edge (setDecorFitsSystemWindows(false)). ĐÃ THỬ (và bỏ) nhiều
                             // cách: cộng padding, translationY tính từ ime insets, tắt adjustResize
                             // thủ công, tắt edge-to-edge, đổi gravity qua FrameLayout.LayoutParams
-                            // (giả định sai kiểu LayoutParams thực tế -> bị bỏ qua âm thầm, không
-                            // đẩy gì cả) - không cách nào ổn định trên thực tế máy.
+                            // (giả định sai kiểu LayoutParams thực tế -> bị bỏ qua âm thầm), so sánh
+                            // rootView.height trước/sau (ROM này không đổi height() thật khi co, chỉ
+                            // điều chỉnh vùng hiển thị) - không cách nào hoạt động đúng trên máy.
                             //
-                            // Cách hiện tại, KHÔNG dựa vào bất kỳ giả định nào về cấu trúc/gravity
-                            // nội bộ của AlertDialog:
-                            // 1. setSoftInputMode(adjustResize): để HỆ THỐNG tự co cửa sổ theo
-                            //    đúng chiều cao bàn phím thật (đã xác nhận hết bị cắt/che).
-                            // 2. Sau khi co, card vẫn giữ gravity gốc (thường là center) nên bị
-                            //    canh giữa NGAY TRONG phần không gian còn lại phía trên bàn phím,
-                            //    để lại khoảng trống lớn bên dưới. Đo trực tiếp vị trí THẬT của
-                            //    card bằng getLocationInWindow (không bị ảnh hưởng bởi translationY
-                            //    đã áp trước đó nên luôn đo đúng) so với chiều cao rootView (đã co),
-                            //    từ đó suy ra khoảng trống thật còn dư bên dưới card, rồi dịch card
-                            //    xuống (translationY dương) đúng bằng phần dư đó, chỉ chừa lại 8dp.
-                            //    Không cần biết/đoán gravity hay loại LayoutParams đang dùng.
+                            // Cách hiện tại, không phụ thuộc cách OS/ROM triển khai việc tránh bàn
+                            // phím (co cửa sổ thật hay chỉ điều chỉnh vùng hiển thị):
+                            // 1. setSoftInputMode(adjustResize): để hệ thống tự tránh bàn phím theo
+                            //    đúng chiều cao thật (đã xác nhận hết bị cắt/che).
+                            // 2. Card vẫn giữ gravity gốc (thường center) nên canh giữa NGAY TRONG
+                            //    phần còn lại phía trên bàn phím, để dư khoảng trống lớn bên dưới.
+                            //    Dùng getWindowVisibleDisplayFrame() để lấy đúng vùng MÀN HÌNH THỰC
+                            //    SỰ đang hiển thị (không bị che, bất kể OS xử lý bằng cách nào), so
+                            //    với vị trí thật của card (getLocationOnScreen) để suy ra khoảng dư
+                            //    thật, rồi dịch card xuống (translationY dương) đúng bằng phần dư
+                            //    đó, chỉ chừa lại 8dp.
                             val smallDialog = DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
                             smallDialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
                             val gapPx = (8 * resources.displayMetrics.density).toInt()
                             val keyboardThresholdPx = (100 * resources.displayMetrics.density).toInt()
-                            var initialRootHeight = 0
+                            var fullHeight = 0
                             dialogView.viewTreeObserver.addOnGlobalLayoutListener {
-                                val rootHeight = dialogView.rootView.height
-                                if (initialRootHeight == 0) initialRootHeight = rootHeight
-                                val keyboardShown = (initialRootHeight - rootHeight) > keyboardThresholdPx
+                                if (fullHeight == 0) fullHeight = dialogView.rootView.height
+                                val visibleFrame = Rect()
+                                dialogView.getWindowVisibleDisplayFrame(visibleFrame)
+                                val keyboardShown = (fullHeight - visibleFrame.bottom) > keyboardThresholdPx
                                 if (keyboardShown) {
                                     val location = IntArray(2)
-                                    dialogView.getLocationInWindow(location)
+                                    dialogView.getLocationOnScreen(location)
                                     val viewBottom = location[1] + dialogView.height
-                                    val spaceBelow = rootHeight - viewBottom
+                                    val spaceBelow = visibleFrame.bottom - viewBottom
                                     dialogView.translationY = (spaceBelow - gapPx).coerceAtLeast(0).toFloat()
                                 } else {
                                     dialogView.translationY = 0f
