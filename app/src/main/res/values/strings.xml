@@ -15,8 +15,8 @@
     <string name="tab_home">Home</string>
     <string name="tab_favorites">Favorites</string>
     <string name="tab_pages">Utilities</string>
-    <string name="tab_custom3">Application</string>
-    <string name="tab_custom4">Laboratory</string>
+    <string name="tab_custom3">Modules</string>
+    <string name="tab_custom4">Settings</string>
     <string name="copy_success">Copy successful</string>
     <string name="pio_starting">~•-•~</string>
     <string name="pop_before_start">Preparing to start the application…</string>

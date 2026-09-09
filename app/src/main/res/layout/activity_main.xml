@@ -35,9 +35,7 @@
             app:tabRippleColor="@android:color/transparent"
             app:tabGravity="fill"
             app:tabMode="fixed"
-            app:tabIndicatorHeight="0dp"
-            app:tabMaxWidth="0dp"
-            app:tabIndicatorFullWidth="false" />
+            app:tabIndicatorHeight="0dp" />
 
     </com.omarea.common.ui.BlurBottomBarLayout>
 
