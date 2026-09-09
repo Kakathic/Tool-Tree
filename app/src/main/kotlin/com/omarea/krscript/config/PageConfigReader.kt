@@ -89,6 +89,13 @@ class PageConfigReader {
     private val pendingPickerStates = ArrayList<Pair<PickerNode, String>>()
     private val pendingRowCheckedStates = ArrayList<Pair<TextNode.TextRow, String>>()
     private val pendingRowVisibleStates = ArrayList<Triple<ArrayList<TextNode.TextRow>, TextNode.TextRow, String>>()
+    // Checkbox trong [[menu]]/[[fab]]: giống pendingSwitchStates, đọc "get" NGAY LÚC PARSE (đồng
+    // bộ, gộp chung 1 lượt shell với switch/picker/... trong resolvePendingStates()) thay vì để
+    // option.checked mặc định false rồi đợi ActionPage.refreshCheckboxMenuStates() (bất đồng bộ,
+    // chạy SAU khi trang đã hiện) mới sửa lại. Trước đây nếu item có "reload = true" (recreate()
+    // sau khi bấm) thì đúng lúc trang tạo lại, mọi checkbox KHÁC (không phải mục vừa bấm) sẽ hiện
+    // sai (tắt) tạm thời nếu người dùng mở lại menu trước khi refresh bất đồng bộ kịp chạy xong.
+    private val pendingCheckboxStates = ArrayList<Pair<PageMenuOption, String>>()
 
     private val pendingDynamicStrings = ArrayList<Triple<Any, String, String>>()
 
@@ -101,7 +108,8 @@ class PageConfigReader {
     private fun resolvePendingStates() {
         if (pendingSwitchStates.isEmpty() && pendingPickerStates.isEmpty() &&
             pendingRowCheckedStates.isEmpty() && pendingRowVisibleStates.isEmpty() &&
-            pendingDynamicStrings.isEmpty() && pendingBoolShells.isEmpty()) return
+            pendingDynamicStrings.isEmpty() && pendingBoolShells.isEmpty() &&
+            pendingCheckboxStates.isEmpty()) return
 
         val scripts = LinkedHashMap<String, String>()
         pendingSwitchStates.forEachIndexed { index, pair -> scripts["switch:$index"] = pair.second }
@@ -110,6 +118,7 @@ class PageConfigReader {
         pendingRowVisibleStates.forEachIndexed { index, triple -> scripts["row-visible:$index"] = triple.third }
         pendingDynamicStrings.forEachIndexed { index, triple -> scripts["dynstr:$index"] = triple.third }
         pendingBoolShells.forEachIndexed { index, triple -> scripts["boolsh:$index"] = triple.third }
+        pendingCheckboxStates.forEachIndexed { index, pair -> scripts["checkbox:$index"] = pair.second }
 
         if (vitualRootNode == null) {
             vitualRootNode = NodeInfoBase(pageConfigAbsPath)
@@ -166,6 +175,11 @@ class PageConfigReader {
                 if (!result) (target as GroupNode).supported = false
             }
         }
+        // Checkbox [[menu]]/[[fab]]: cùng cách xử lý với pendingSwitchStates ở trên.
+        pendingCheckboxStates.forEachIndexed { index, pair ->
+            val shellResult = results["checkbox:$index"] ?: ""
+            pair.first.checked = shellResult != "error" && (shellResult == "1" || shellResult.lowercase(getDefault()) == "true")
+        }
 
         pendingSwitchStates.clear()
         pendingPickerStates.clear()
@@ -173,6 +187,7 @@ class PageConfigReader {
         pendingRowVisibleStates.clear()
         pendingDynamicStrings.clear()
         pendingBoolShells.clear()
+        pendingCheckboxStates.clear()
     }
 
     // "group" vẫn là container như cũ. Từ bản bỏ dot-notation: tất cả loại con
@@ -252,6 +267,13 @@ class PageConfigReader {
             }
             option.isFab = isFab
             assignUniqueMenuOptionKey(option, isFab)
+            // Đọc "get" NGAY LÚC PARSE (đồng bộ, gộp cùng resolvePendingStates()) để option.checked
+            // đúng ngay từ đầu, không phụ thuộc ActionPage.refreshCheckboxMenuStates() (bất đồng bộ,
+            // chạy sau khi trang đã hiện) - quan trọng với item có "reload = true" vì lúc đó TOÀN
+            // BỘ trang (kể cả checkbox khác không liên quan) bị parse lại từ đầu.
+            if (option.type == "checkbox" && option.checkedSh.isNotEmpty()) {
+                pendingCheckboxStates.add(option to option.checkedSh)
+            }
             result.add(option)
         }
         return result
