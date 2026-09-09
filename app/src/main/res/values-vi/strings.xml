@@ -74,7 +74,6 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="app_update_download_fail">Tải bản cập nhật thất bại</string>
     <string name="app_update_download_cancelled">Đã hủy tải bản cập nhật</string>
     <string name="app_update_sha256_mismatch">Tệp tải về không toàn vẹn (sai mã SHA-256)</string>
-    <string name="app_update_size">Dung lượng: %s</string>
     <string name="onloading">Đang tải dữ liệu…</string>
     <string name="kr_shell_completed">Thực thi script hoàn tất</string>
     <string name="kr_shell_finish_error">Thực thi đã kết thúc, phát hiện lỗi</string>

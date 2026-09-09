@@ -29,13 +29,6 @@
             android:breakStrategy="simple"
             style="@style/dialogDesc"
             android:text="@string/app_update_desc" />
-        <!-- Dung lượng file apk (lấy từ API) - chỉ hiện khi biết kích thước, xem
-             DialogAppUpdate.onViewCreated() -->
-        <TextView
-            android:id="@+id/update_size"
-            android:breakStrategy="simple"
-            style="@style/dialogDesc"
-            android:visibility="gone" />
     </LinearLayout>
 
     <RelativeLayout
@@ -93,7 +86,7 @@
             android:layout_height="match_parent"
             android:layout_above="@id/bottom_actions"
             android:layout_marginTop="8dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="8dp"
             android:layout_marginHorizontal="16dp" />
 
     </RelativeLayout>

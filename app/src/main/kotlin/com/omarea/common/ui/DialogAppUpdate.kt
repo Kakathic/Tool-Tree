@@ -65,7 +65,7 @@ class DialogAppUpdate(
     private lateinit var progressBar: ProgressBar
     private lateinit var btnCancel: Button
     private lateinit var btnConfirm: Button
-    private lateinit var sizeText: TextView
+    private lateinit var titleText: TextView
 
     private var activeDownload: DownloadState? = null
     private var readyToInstall = false
@@ -81,13 +81,11 @@ class DialogAppUpdate(
         progressBar = view.findViewById(R.id.update_progress)
         btnCancel = view.findViewById(R.id.btn_cancel)
         btnConfirm = view.findViewById(R.id.btn_confirm)
-        sizeText = view.findViewById(R.id.update_size)
+        titleText = view.findViewById(R.id.update_title)
 
+        // Gộp dung lượng vào ngay dòng tiêu đề - "Cập nhật mới | 8 MB" - chỉ khi biết kích thước.
         if (apkSize != null && apkSize > 0) {
-            sizeText.text = activity.getString(R.string.app_update_size, formatFileSize(apkSize))
-            sizeText.visibility = View.VISIBLE
-        } else {
-            sizeText.visibility = View.GONE
+            titleText.text = activity.getString(R.string.app_update_title) + " | " + formatFileSize(apkSize)
         }
 
         val apkFileName = fileName?.takeIf { it.isNotEmpty() }
