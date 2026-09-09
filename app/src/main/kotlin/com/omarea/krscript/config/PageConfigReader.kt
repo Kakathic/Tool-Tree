@@ -187,6 +187,14 @@ class PageConfigReader {
     /** Danh sách menu 3 chấm + fab gom được sau khi readConfigXml()/readConfigToml() chạy xong. */
     val pageMenuOptions: ArrayList<PageMenuOption> get() = collectedMenuOptions
 
+    // Theo dõi key TỰ SINH (không khai "key"/"index"/"id" trong TOML) đã dùng trong TOÀN TRANG
+    // (cả [[menu]] lẫn [[fab]], vì cả 2 dùng chung collectedMenuOptions + cùng 1 cơ chế
+    // state/menu_id = option.key lúc click - xem ActionPage.menuItemExecuteSilent()). Dùng để
+    // phát hiện 2 item vô tình trùng key (thường do trùng title, hoặc cùng để trống) rồi tự thêm
+    // hậu tố phân biệt - xem assignUniqueMenuOptionKey(). Key khai TƯỜNG MINH trong TOML không bị
+    // đụng vào dù trùng, vì đó có thể là chủ đích của người viết config.
+    private val usedMenuOptionKeys = HashMap<String, Int>()
+
     // "action" bên dưới và ActionPage.onCreateOptionsMenu().
     private val collectedHeaderActions = ArrayList<ActionNode>()
     /** Danh sách group.action có menu = true, gom được sau khi đọc xong toàn bộ trang. */
@@ -243,9 +251,28 @@ class PageConfigReader {
                 option.script = handler
             }
             option.isFab = isFab
+            assignUniqueMenuOptionKey(option, isFab)
             result.add(option)
         }
         return result
+    }
+
+    // Đảm bảo option.key không trùng với item nào KHÁC trong toàn trang khi TOML không tự khai
+    // "key"/"index"/"id" (option.key còn trống lúc vào đây - xem pageMenuOptionToml()). 2 item
+    // trùng key sẽ dùng chung state/menu_id lúc click (ActionPage.menuItemExecuteSilent) và có
+    // thể ảnh hưởng lẫn nhau dù là checkbox độc lập trên UI. Item đầu tiên gặp 1 title (hoặc rỗng
+    // title) vẫn giữ nguyên key cũ (title, hoặc "menu"/"fab" nếu không có title) để không phá vỡ
+    // config đang chạy đúng; chỉ item TRÙNG kế tiếp mới bị thêm hậu tố "#menu2"/"#fab2"...
+    private fun assignUniqueMenuOptionKey(option: PageMenuOption, isFab: Boolean) {
+        if (option.key.isNotEmpty()) return
+        val prefix = if (isFab) "fab" else "menu"
+        val baseKey = option.title.ifEmpty { prefix }
+        // Dùng "?: 0" thay vì Map.getOrDefault() - getOrDefault() là default method của
+        // java.util.Map (API 24+), gọi trực tiếp trên HashMap có thể NoSuchMethodError ở máy
+        // Android cũ nếu app chưa bật core library desugaring.
+        val seen = usedMenuOptionKeys[baseKey] ?: 0
+        usedMenuOptionKeys[baseKey] = seen + 1
+        option.key = if (seen == 0) baseKey else "$baseKey#$prefix${seen + 1}"
     }
 
     private fun tomlGet(table: TomlTable, vararg keys: String): String? {
@@ -667,7 +694,10 @@ class PageConfigReader {
         if (option.title.isEmpty()) {
             tomlGet(table, "title", "text")?.let { option.title = StringResRef.resolve(context, it) }
         }
-        if (option.key.isEmpty()) option.key = option.title
+        // Không tự gán option.key = title ở đây nữa - nếu TOML không khai "key"/"index"/"id",
+        // option.key còn TRỐNG khi trả về, để menuGroupOptionsToml() gọi
+        // assignUniqueMenuOptionKey() sinh key đảm bảo không trùng trong toàn trang (xem khai báo
+        // usedMenuOptionKeys).
         return option
     }
 
