@@ -2092,7 +2092,7 @@ Addon() {
   
     # Load index
     if [ -f "$dirvad/index.bash" ]; then
-    pagesh='config-sh = "MPAT='$dirvad' '$dirvad'/index.bash home"'
+    pagesh='config-sh = "'$dirvad'/index.bash home '$dirvad'"'
     elif [ -f "$dirvad/index.toml" ]; then
     pagesh='config = "'$dirvad'/index.toml"'
     else
@@ -2100,7 +2100,7 @@ Addon() {
     fi
   
     if [ -f "$dirvad/before-load.bash" ]; then
-    beforesh='before-load = "MPAT='$dirvad' '$dirvad'/before-load.bash"'
+    beforesh='before-load = "'$dirvad'/before-load.bash '$dirvad'"'
     fi
   
     if [ "$(glog show_setting_add)" == 1 ]; then
@@ -2135,8 +2135,8 @@ Addon() {
       '
     fi
     
-      # Danh sách Add-on
-      echo '
+    # Danh sách Add-on
+    echo '
       [[group]]
       [[page]]
       title = "'$name'"
@@ -2149,7 +2149,7 @@ Addon() {
       '$beforesh'
       '"$hinde_add"'
       '"$delete_add"'
-      '
+    '
   }
 
   Vips() {

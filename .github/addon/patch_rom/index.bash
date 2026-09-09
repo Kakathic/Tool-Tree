@@ -131,9 +131,9 @@ echo '
 home() {
 
   [ -z "$google_text" ] && google_text="$version_text: $version"
-  # Điền dữ liệu mặc định
 
   (
+  # Điền dữ liệu mặc định
   if [ -z "$(glog ime_color_dark)" ]; then
     slog ime_dimen '<dimen name="input_method_seek_bar_margin">6.5999756dp</dimen>
   <dimen name="input_bottom_height">45.599976dp</dimen>
@@ -161,7 +161,7 @@ home() {
   title = "'$latest_update_text'"
   auto-finish = true
   icon = "'$MPAT'/icon.png"
-  support = "[ -f '$MPAT'/update ] && echo 1"
+  support = "add_check '$MPAT'"
   url-sh = "cat '$MPAT'/update"
   script = "installadd $state '${MPAT%/*}'"
 

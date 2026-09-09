@@ -1,13 +1,14 @@
 # Kakathic
-
 # Kiểm tra cập nhật mới và cập nhật
-if [ ! -f $1/update ] && [ ! -f $1/zcheck ]; then
-  if checkonline; then
-    source "$1/download.bash"
-    sumcek="$(xem https://api.github.com/repos/Kakathic/Tool-Tree/releases/tags/V1 | jq -r --arg name "${url##*/}" '.assets[] | select(.name == $name) | .digest' | cut -d: -f2)"
-    if [[ "$sumcek" != "$(glog sumcek_patch_rom)" ]]; then
-    echo "$url" > $1/update
+source "$1/download.bash"
+
+if [ ! -f "$1/update" ] && [ ! -f "$1/zcheck" ]; then
+    sumcek="$(xem 'https://api.github.com/repos/Kakathic/Tool-Tree/releases/tags/V1' | jq -r --arg name "${url##*/}" '.assets[] | select(.name == $name and .digest != null) | .digest // empty' | cut -d: -f2)"
+    if [[ "$sumcek" != "$(glog "sumcek_$id")" ]] && [[ -n "$sumcek" ]]; then
+    echo "$url" > "$1/update"
+    echo 1
     fi
-  fi
-  echo > $1/zcheck
+    echo > "$1/zcheck"
+else
+    [ -f "$1/update" ] && echo 1
 fi

@@ -5,6 +5,7 @@ author=Kakathic
 version=3.6
 versionCode=361
 shortcut=true
+process=true
 root=false
 description="ROM quick patch tool"
 
