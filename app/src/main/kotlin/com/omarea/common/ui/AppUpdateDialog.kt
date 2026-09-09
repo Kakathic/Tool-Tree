@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -71,6 +72,13 @@ class AppUpdateDialog {
             // giữ lại để dọn dẹp (hủy tải + destroy WebView) cho các trường hợp dialog.dismiss()
             // được gọi trực tiếp trong code (nút Hủy, hoặc sau khi tải xong).
             val dialog = DialogHelper.customDialog(activity, view, false)
+            // Dialog full màn hình để WebView hiện nội dung cập nhật rộng/cao hơn (thay vì 1
+            // dialog nhỏ giữa màn hình) - layout dialog_app_update.xml cũng đã đổi để khớp
+            // (WebView giãn theo layout_weight thay vì cao cố định 220dp trong ScrollView).
+            dialog.dialog.window?.setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
 
             // Lượt tải apk đang chạy (null nếu chưa bấm Xác nhận / đã xong / đã hủy)
             var activeDownload: DownloadState? = null

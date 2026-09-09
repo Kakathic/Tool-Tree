@@ -15,11 +15,4 @@
         android:title=""
         android:visible="true"
         app:showAsAction="ifRoom" />
-    <item
-        android:id="@+id/option_menu_update"
-        android:orderInCategory="100"
-        android:title="@string/app_update_title"
-        android:visible="false"
-        app:showAsAction="always"
-        app:actionLayout="@layout/toolbar_update_badge" />
 </menu>

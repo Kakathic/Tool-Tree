@@ -16,6 +16,8 @@ import java.net.URL
  * - Lấy file apk đầu tiên trong "assets": .assets[0].browser_download_url
  * - Lấy sha256 do GitHub tính sẵn: .assets[0].digest (dạng "sha256:<hex>")
  * - So sánh với sha256 của file apk đang cài trên máy - khác nhau thì coi là có bản mới.
+ * - Link xem log/nội dung cập nhật (đưa vào AppUpdateInfo.changelogUrl) luôn là trang cố định
+ *   CHANGELOG_URL bên dưới, không lấy từ html_url của GitHub.
  *
  * Lưu ý: trường "digest" chỉ có khi GitHub đã tính xong checksum cho asset (có thể rỗng/null với
  * asset vừa upload) - trường hợp đó bỏ qua, coi như không có cập nhật.
@@ -28,6 +30,9 @@ object AppUpdateChecker {
     private const val API_LATEST = "https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest"
     private const val API_BETA = "https://api.github.com/repos/Kakathic/Tool-Tree/releases/tags/beta"
     private const val ASSET_BETA_FLAG = "beta"
+    // Trang xem log/nội dung cập nhật hiện trong WebView của AppUpdateDialog - dùng trang này
+    // thay vì html_url (link trang release) của GitHub.
+    private const val CHANGELOG_URL = "https://kakathic.github.io/Tool-Tree/Version.html"
 
     /**
      * Hàm chặn (blocking) - PHẢI gọi từ thread nền / coroutine IO, không gọi trên main thread.
@@ -49,7 +54,7 @@ object AppUpdateChecker {
             val remoteSha256 = firstAsset.optString("digest")
                 .substringAfter(":", "")
                 .takeIf { it.isNotEmpty() } ?: return null
-            val changelogUrl = release.optString("html_url")
+            val changelogUrl = CHANGELOG_URL
 
             val currentApk = File(activity.applicationInfo.sourceDir)
             val localSha256 = FileSha256().getFileSha256(currentApk)

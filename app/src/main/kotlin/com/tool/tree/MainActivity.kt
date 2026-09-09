@@ -12,7 +12,6 @@ import android.text.style.SuperscriptSpan
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import android.widget.TextView
@@ -21,6 +20,7 @@ import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import android.widget.ListPopupWindow
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.tabs.TabLayout
 import com.omarea.common.shared.FilePathResolver
@@ -52,9 +52,10 @@ class MainActivity : AppCompatActivity() {
     private var openedSubPage = false
     private var isFavoritesTab = false
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
-    // Bản cập nhật mới nhất tìm được (từ SplashActivity) - điều khiển hiện/ẩn icon + dấu chấm đỏ
-    // trên toolbar. null = không có bản mới -> ẩn icon.
+    // Bản cập nhật mới nhất tìm được (từ SplashActivity) - điều khiển hiện/ẩn icon cập nhật
+    // (kèm dấu chấm đỏ) ở navigationIcon bên trái toolbar. null = không có bản mới -> ẩn icon.
     private var pendingUpdateInfo: AppUpdateInfo? = null
+    private lateinit var toolbar: Toolbar
 
     private val ACTION_FILE_PATH_CHOOSER = 65400
     private val ACTION_FILE_PATH_CHOOSER_INNER = 65300
@@ -66,7 +67,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setSupportActionBar(findViewById<Toolbar>(R.id.toolbar))
+        toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
 
         val versionName = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "1.0.0"
         setAppTitleWithVersion(versionName)
@@ -120,13 +122,28 @@ class MainActivity : AppCompatActivity() {
         else
             intent.getSerializableExtra("pendingUpdate") as? AppUpdateInfo
 
-        // Icon + dấu chấm đỏ trên toolbar hiện theo biến này bất kể người dùng đã từng bấm Hủy
-        // bỏ hay chưa - chỉ việc TỰ ĐỘNG hiện dialog mới bị chặn lại theo trạng thái đã lưu.
+        // Icon (kèm dấu chấm đỏ) ở navigationIcon bên trái toolbar hiện theo biến này bất kể
+        // người dùng đã từng bấm Hủy bỏ hay chưa - chỉ việc TỰ ĐỘNG hiện dialog mới bị chặn lại
+        // theo trạng thái đã lưu.
         pendingUpdateInfo = updateInfo
-        invalidateOptionsMenu()
+        updateToolbarUpdateIcon()
 
         if (updateInfo != null && !AppUpdateConfig(this).isDismissed(updateInfo.sha256)) {
             showUpdateDialog(updateInfo)
+        }
+    }
+
+    // Icon cập nhật đặt ở navigationIcon (bên trái toolbar) thay vì action item bên phải - hiện
+    // khi có bản mới (kèm dấu chấm đỏ ghép sẵn trong ic_update_badge), ẩn khi không có.
+    private fun updateToolbarUpdateIcon() {
+        if (pendingUpdateInfo != null) {
+            toolbar.navigationIcon = ContextCompat.getDrawable(this, R.drawable.ic_update_badge)
+            toolbar.setNavigationOnClickListener {
+                pendingUpdateInfo?.let { showUpdateDialog(it) }
+            }
+        } else {
+            toolbar.navigationIcon = null
+            toolbar.setNavigationOnClickListener(null)
         }
     }
 
@@ -432,22 +449,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main, menu)
-        menu.findItem(R.id.option_menu_update)?.actionView
-            ?.findViewById<View>(R.id.update_icon_btn)?.setOnClickListener {
-                pendingUpdateInfo?.let { showUpdateDialog(it) }
-            }
         return true
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.option_menu_reboot)?.isEnabled = hasRoot
-
-        val updateItem = menu.findItem(R.id.option_menu_update)
-        val hasUpdate = pendingUpdateInfo != null
-        updateItem?.isVisible = hasUpdate
-        updateItem?.actionView?.findViewById<View>(R.id.update_red_dot)?.visibility =
-            if (hasUpdate) View.VISIBLE else View.GONE
-
         return super.onPrepareOptionsMenu(menu)
     }
 
