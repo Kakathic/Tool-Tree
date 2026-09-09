@@ -20,12 +20,11 @@ import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import android.widget.ListPopupWindow
 import androidx.appcompat.widget.Toolbar
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.tabs.TabLayout
 import com.omarea.common.shared.FilePathResolver
 import com.omarea.common.shell.KeepShellPublic
-import com.omarea.common.ui.AppUpdateDialog
+import com.omarea.common.ui.DialogAppUpdate
 import com.omarea.common.ui.DialogHelper
 import com.omarea.krscript.config.PageConfigReader
 import com.omarea.krscript.config.PageConfigSh
@@ -53,7 +52,8 @@ class MainActivity : AppCompatActivity() {
     private var isFavoritesTab = false
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
     // Bản cập nhật mới nhất tìm được (từ SplashActivity) - điều khiển hiện/ẩn icon cập nhật
-    // (kèm dấu chấm đỏ) ở navigationIcon bên trái toolbar. null = không có bản mới -> ẩn icon.
+    // (kèm dấu chấm đỏ) ở menu item option_menu_update, bên trái icon nguồn. null = không có
+    // bản mới -> ẩn icon.
     private var pendingUpdateInfo: AppUpdateInfo? = null
     private lateinit var toolbar: Toolbar
 
@@ -122,39 +122,25 @@ class MainActivity : AppCompatActivity() {
         else
             intent.getSerializableExtra("pendingUpdate") as? AppUpdateInfo
 
-        // Icon (kèm dấu chấm đỏ) ở navigationIcon bên trái toolbar hiện theo biến này bất kể
-        // người dùng đã từng bấm Hủy bỏ hay chưa - chỉ việc TỰ ĐỘNG hiện dialog mới bị chặn lại
-        // theo trạng thái đã lưu.
+        // Icon (kèm dấu chấm đỏ) ở option_menu_update hiện theo biến này bất kể người dùng đã
+        // từng bấm Hủy bỏ hay chưa - chỉ việc TỰ ĐỘNG hiện dialog mới bị chặn lại theo trạng
+        // thái đã lưu.
         pendingUpdateInfo = updateInfo
-        updateToolbarUpdateIcon()
+        invalidateOptionsMenu()
 
         if (updateInfo != null && !AppUpdateConfig(this).isDismissed(updateInfo.sha256)) {
             showUpdateDialog(updateInfo)
         }
     }
 
-    // Icon cập nhật đặt ở navigationIcon (bên trái toolbar) thay vì action item bên phải - hiện
-    // khi có bản mới (kèm dấu chấm đỏ ghép sẵn trong ic_update_badge), ẩn khi không có.
-    private fun updateToolbarUpdateIcon() {
-        if (pendingUpdateInfo != null) {
-            toolbar.navigationIcon = ContextCompat.getDrawable(this, R.drawable.ic_update_badge)
-            toolbar.setNavigationOnClickListener {
-                pendingUpdateInfo?.let { showUpdateDialog(it) }
-            }
-        } else {
-            toolbar.navigationIcon = null
-            toolbar.setNavigationOnClickListener(null)
-        }
-    }
-
     private fun showUpdateDialog(updateInfo: AppUpdateInfo) {
-        AppUpdateDialog.show(
-            activity = this,
+        DialogAppUpdate(
+            darkMode = ThemeModeState.isDarkMode(),
             apkUrl = updateInfo.apkUrl,
             changelogUrl = updateInfo.changelogUrl,
             expectedSha256 = updateInfo.sha256,
             onCancel = { AppUpdateConfig(this).setDismissedSha256(updateInfo.sha256) }
-        )
+        ).show(supportFragmentManager, "app_update")
     }
 
     private fun setAppTitleWithVersion(versionName: String) {
@@ -454,11 +440,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.option_menu_reboot)?.isEnabled = hasRoot
+        // Icon cập nhật (kèm dấu chấm đỏ ghép sẵn trong ic_update_badge) chỉ hiện khi có bản
+        // mới - nằm bên trái, sát cạnh icon nguồn (xem order trong res/menu/main.xml).
+        menu.findItem(R.id.option_menu_update)?.isVisible = pendingUpdateInfo != null
         return super.onPrepareOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.option_menu_update -> { pendingUpdateInfo?.let { showUpdateDialog(it) }; true }
             R.id.option_menu_info -> { showSettingsDialog(); true }
             R.id.option_menu_reboot -> { DialogPower(this).showPowerMenu(); true }
             else -> super.onOptionsItemSelected(item)
