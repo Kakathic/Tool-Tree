@@ -2092,7 +2092,7 @@ Addon() {
   
     # Load index
     if [ -f "$dirvad/index.bash" ]; then
-    pagesh='config-sh = "'$dirvad'/index.bash home '$dirvad'"'
+    pagesh='config-sh = "'$dirvad'/index.bash home"'
     elif [ -f "$dirvad/index.toml" ]; then
     pagesh='config = "'$dirvad'/index.toml"'
     else
