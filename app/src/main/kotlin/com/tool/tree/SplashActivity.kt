@@ -59,6 +59,17 @@ class SplashActivity : AppCompatActivity() {
 
         ShellExecutor.setTmpDir(cacheDir.absolutePath)
 
+        // Khởi tạo + xoay logo NGAY từ đầu, TRƯỚC nhánh fast-path bên dưới - để mọi trường hợp
+        // (kể cả fast-path) đều có phản hồi hình ảnh trong lúc chờ loadTabsThenHome() (bao gồm
+        // cả lúc check update timeout tới 8s), không bị đứng hình. gotoHome() sẽ cancel() đúng
+        // lúc chuyển sang MainActivity.
+        logoAnimator = ObjectAnimator.ofFloat(binding.startLogoXml, "rotation", 0f, 360f).apply {
+            duration = 3000
+            repeatCount = ObjectAnimator.INFINITE
+            interpolator = LinearInterpolator()
+            start()
+        }
+
         if (ScriptEnvironmen.isInited() && isTaskRoot &&
             !intent.getBooleanExtra("force_reset", false)) {
             loadTabsThenHome()
@@ -75,14 +86,6 @@ class SplashActivity : AppCompatActivity() {
         } else {
             checkPermissionsNextStep()
         }
-
-        logoAnimator = ObjectAnimator.ofFloat(binding.startLogoXml, "rotation", 0f, 360f).apply {
-            duration = 3000
-            repeatCount = ObjectAnimator.INFINITE
-            interpolator = LinearInterpolator()
-            start()
-        }
-
     }
 
     private fun showAgreementDialog() {
