@@ -2,43 +2,36 @@
 
 source language 2>/dev/null
 if checkonline; then
-
-  if [ ! -f $TMP/update ]; then
-
-    link_url="https://api.github.com/repos/Kakathic/Tool-Tree/releases"
-    
-    if [ "$(unzip -qp "$PATH_APK" assets/beta 2>/dev/null)" == 1 ]; then
-    websums="$(xem $link_url/tags/beta)"
-    tagname="${PACKAGE_VERSION_NAME//./}"
+    if [ ! -f $TMP/update ]; then
+        link_url="https://api.github.com/repos/Kakathic/Tool-Tree/releases"
+        if [ "$(unzip -qp "$PATH_APK" assets/beta 2>/dev/null)" == 1 ]; then
+            websums="$(xem $link_url/tags/beta)"
+            tagname="${PACKAGE_VERSION_NAME//./}"
+            else
+            websums="$(xem $link_url/latest)"
+            tagname="$(echo "$websums" | jq -r '.tag_name // empty' | sed -e 's|\.||g' -e 's|V||')"
+        fi
+        websum="$(echo "$websums" | jq -r '.assets[0].digest // empty' | cut -d: -f2)"
+        websize="$(echo "$websums" | jq -r '.assets[0].size' | coverbyte)"
+        filesum="$(checksum "$PATH_APK")"
+        url_dowload="$(echo "$websums" | jq -r ".assets[0].browser_download_url // empty")"
+        if [[ "$websum" != "$filesum" ]]; then
+            if [[ "$url_dowload" ]]; then
+            echo "$url_dowload" > $TMP/update
+            echo "$sizes_text: $websize" > $TMP/size
+            fi
+        fi
     else
-    websums="$(xem $link_url/latest)"
-    tagname="$(echo "$websums" | jq -r '.tag_name // empty' | sed -e 's|\.||g' -e 's|V||')"
+        url_dowload="$(cat $TMP/update)"
+        websize="$(cat $TMP/size)"
     fi
-    
-    websum="$(echo "$websums" | jq -r '.assets[0].digest // empty' | cut -d: -f2)"
-    websize="$(echo "$websums" | jq -r '.assets[0].size' | coverbyte)"
-    filesum="$(checksum "$PATH_APK")"
-    url_dowload="$(echo "$websums" | jq -r ".assets[0].browser_download_url // empty")"
-    
-    if [[ "$websum" != "$filesum" ]]; then
-    if [[ "$url_dowload" ]]; then
-    echo "$url_dowload" > $TMP/update
-    echo "$sizes_text: $websize" > $TMP/size
+    if [ -f $TMP/update ] && [ "$1" == "boot" ]; then
+        sleep 2
+        showdialog -a -t "$update_text" \
+        -m "$update_text_6, $websize" \
+        -g 15 -f \
+        -s "taive '$url_dowload' '$TMP/Tool-Tree.apk' 2>&1 && openfile '$TMP/Tool-Tree.apk' || killtree '$load_text_2'"
+        else
+        [ -f $TMP/update ] && echo 1
     fi
-    fi
-    
-  else
-    url_dowload="$(cat $TMP/update)"
-    websize="$(cat $TMP/size)"
-  fi
-
-  if [ -f $TMP/update ] && [ "$1" == "boot" ]; then
-  showdialog -a -t "$update_text" \
-  -m "$update_text_6, $websize" \
-  -g 15 -f \
-  -s "taive '$url_dowload' '$TMP/Tool-Tree.apk' 2>&1 && openfile '$TMP/Tool-Tree.apk' || killtree '$load_text_2'"
-  else
-  [ -f $TMP/update ] && echo 1
-  fi
-
 fi

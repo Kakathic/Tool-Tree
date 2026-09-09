@@ -165,6 +165,10 @@ home() {
   url-sh = "cat '$MPAT'/update"
   script = "installadd $state '${MPAT%/*}'"
 
+    [[download.rows]]
+    text-sh = ""
+    line = true
+
   [[group]]
   [[page]]
   title = "'$title_quick'"

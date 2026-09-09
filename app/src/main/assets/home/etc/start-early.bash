@@ -5,10 +5,7 @@
 find "$TMPDIR" -maxdepth 1 ! -path "$TMPDIR" ! -name '*.log' -exec rm -rf {} +
 rm -fr $TEMP/documents $TEMP/kr_download_* $START_DIR/icons/*
 
-{
-sleep 2
-check_update boot
-} &
+check_update boot &
 
 {
 # Cấp quyền tự động nếu đã root

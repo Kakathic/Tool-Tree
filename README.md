@@ -55,8 +55,8 @@ amlogic, apk, apex, capex, squashfs, ...
 | Topic | Summary |
 |------|------|
 | [User Guide](https://Kakathic.github.io/Tool-Tree/website/Guide.html) | Beginner's guide, no-root |
-| [Version Changelog](https://Kakathic.github.io/Tool-Tree/Version.html) | View the change log across versions |
-| [Add-on Development](https://Kakathic.github.io/Tool-Tree/website/Instruct.html) | Basic add-on creation guide |
+| [Changelog](https://Kakathic.github.io/Tool-Tree/Version.html) | View the change log across versions |
+| [Development](https://Kakathic.github.io/Tool-Tree/website/Instruct.html) | Basic add-on creation guide |
 | [Information](https://Kakathic.github.io/Tool-Tree/website/Information.html) | Project developer information |
 | [TOML Guide](https://Kakathic.github.io/Tool-Tree/website/Toml.html) | TOML configuration guide |
 
