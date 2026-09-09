@@ -25,7 +25,7 @@ if checkonline; then
         url_dowload="$(cat $TMP/update)"
         websize="$(cat $TMP/size)"
     fi
-    if [ -f $TMP/update ] && [ "$1" == "boot" ]; then
+    if [ -f $TMP/update ] && [ "$1" == "boot2" ]; then
         sleep 2
         showdialog -a -t "$update_text" \
         -m "$update_text_6, $websize" \
