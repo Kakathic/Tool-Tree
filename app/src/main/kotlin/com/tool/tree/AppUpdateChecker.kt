@@ -55,6 +55,7 @@ object AppUpdateChecker {
                 .substringAfter(":", "")
                 .takeIf { it.isNotEmpty() } ?: return null
             val changelogUrl = CHANGELOG_URL
+            val apkSize = firstAsset.optLong("size", -1)
 
             val currentApk = File(activity.applicationInfo.sourceDir)
             val localSha256 = FileSha256().getFileSha256(currentApk)
@@ -64,7 +65,7 @@ object AppUpdateChecker {
                 return null
             }
 
-            AppUpdateInfo(apkUrl, changelogUrl, remoteSha256)
+            AppUpdateInfo(apkUrl, changelogUrl, remoteSha256, apkSize)
         } catch (_: Exception) {
             null
         }

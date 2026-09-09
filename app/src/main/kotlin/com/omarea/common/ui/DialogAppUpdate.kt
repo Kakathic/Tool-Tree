@@ -13,6 +13,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import com.omarea.common.shared.FileSha256
 import com.tool.tree.OpenFileActivity
@@ -43,6 +44,9 @@ class DialogAppUpdate(
     private val fileName: String? = null,
     // sha256 lấy từ API, dùng để kiểm tra toàn vẹn file apk sau khi tải xong. Bỏ qua nếu null.
     private val expectedSha256: String? = null,
+    // Dung lượng file apk (byte) lấy từ API - null/<=0 nếu không xác định được, khi đó ẩn dòng
+    // hiển thị dung lượng.
+    private val apkSize: Long? = null,
     // Gọi khi người dùng bấm Hủy bỏ LÚC CHƯA TẢI (từ chối hẳn bản cập nhật này).
     private val onCancel: (() -> Unit)? = null
 ) : DialogFullScreen(R.layout.dialog_app_update, darkMode) {
@@ -61,6 +65,7 @@ class DialogAppUpdate(
     private lateinit var progressBar: ProgressBar
     private lateinit var btnCancel: Button
     private lateinit var btnConfirm: Button
+    private lateinit var sizeText: TextView
 
     private var activeDownload: DownloadState? = null
     private var readyToInstall = false
@@ -76,6 +81,14 @@ class DialogAppUpdate(
         progressBar = view.findViewById(R.id.update_progress)
         btnCancel = view.findViewById(R.id.btn_cancel)
         btnConfirm = view.findViewById(R.id.btn_confirm)
+        sizeText = view.findViewById(R.id.update_size)
+
+        if (apkSize != null && apkSize > 0) {
+            sizeText.text = activity.getString(R.string.app_update_size, formatFileSize(apkSize))
+            sizeText.visibility = View.VISIBLE
+        } else {
+            sizeText.visibility = View.GONE
+        }
 
         val apkFileName = fileName?.takeIf { it.isNotEmpty() }
             ?: apkUrl.substringAfterLast('/').substringBefore('?')
@@ -100,7 +113,7 @@ class DialogAppUpdate(
                     progressBar.progress = newProgress
                     progressBar.visibility = View.VISIBLE
                 } else {
-                    progressBar.visibility = View.GONE
+                    progressBar.visibility = View.INVISIBLE
                 }
             }
         }
@@ -116,7 +129,7 @@ class DialogAppUpdate(
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 if (activeDownload == null) {
-                    progressBar.visibility = View.GONE
+                    progressBar.visibility = View.INVISIBLE
                 }
             }
         }
@@ -191,7 +204,7 @@ class DialogAppUpdate(
                     when {
                         error != null -> {
                             destFile.delete()
-                            progressBar.visibility = View.GONE
+                            progressBar.visibility = View.INVISIBLE
                             btnConfirm.visibility = View.VISIBLE
                             Toast.makeText(
                                 activity,
@@ -201,7 +214,7 @@ class DialogAppUpdate(
                         }
                         hashMismatch -> {
                             destFile.delete()
-                            progressBar.visibility = View.GONE
+                            progressBar.visibility = View.INVISIBLE
                             btnConfirm.visibility = View.VISIBLE
                             Toast.makeText(
                                 activity,
@@ -230,7 +243,7 @@ class DialogAppUpdate(
                     state.connection?.disconnect()
                 } catch (_: Exception) {
                 }
-                progressBar.visibility = View.GONE
+                progressBar.visibility = View.INVISIBLE
                 btnConfirm.visibility = View.VISIBLE
                 Toast.makeText(
                     activity,
@@ -261,6 +274,13 @@ class DialogAppUpdate(
         } catch (_: Exception) {
         }
         super.onDismiss(dialog)
+    }
+
+    // Định dạng dung lượng file (byte) thành chuỗi dễ đọc - "12.3 MB" (dùng MB cho mọi kích
+    // thước apk thực tế, không cần xử lý GB).
+    private fun formatFileSize(bytes: Long): String {
+        val mb = bytes / (1024.0 * 1024.0)
+        return String.format("%.1f MB", mb)
     }
 
     // Mở file apk vừa tải bằng OpenFileActivity có sẵn để kích hoạt cài đặt.

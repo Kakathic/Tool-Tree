@@ -10,5 +10,8 @@ import java.io.Serializable
 class AppUpdateInfo(
     val apkUrl: String,
     val changelogUrl: String,
-    val sha256: String
+    val sha256: String,
+    // Dung lượng file apk (byte), lấy từ field "size" của GitHub release asset. -1 nếu không
+    // xác định được.
+    val apkSize: Long = -1
 ) : Serializable

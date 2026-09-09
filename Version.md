@@ -1,7 +1,5 @@
 # [Tool-Tree](https://Kakathic.github.io/Tool-Tree)
 
-+ **[Download](https://github.com/Kakathic/Tool-Tree/releases/latest)**
-
 **Version: 1.6.0 (5-9-2026)**
 
 + Language update
