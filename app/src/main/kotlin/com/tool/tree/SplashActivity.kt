@@ -31,9 +31,11 @@ import com.omarea.krscript.model.PageNode
 import com.omarea.krscript.model.SilentShellOutputHandler
 import com.tool.tree.databinding.ActivitySplashBinding
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedReader
 import java.io.DataOutputStream
 import java.io.File
@@ -189,6 +191,13 @@ class SplashActivity : AppCompatActivity() {
             val config = KrScriptConfig()
             config.init(this@SplashActivity)
 
+            // Kiểm tra cập nhật song song với việc tải data tab - có giới hạn thời gian chờ để
+            // không làm chậm khởi động app nếu mạng yếu/GitHub không phản hồi. Dialog cập nhật
+            // KHÔNG hiện ở đây, chỉ chuyển kết quả cho MainActivity hiện khi vào màn hình chính.
+            val updateInfoDeferred = async {
+                withTimeoutOrNull(8000) { AppUpdateChecker.fetchUpdateInfo(this@SplashActivity) }
+            }
+
             val favorites = getItems(config.getFavoriteConfig())
             val pages = getItems(config.getPageListConfig())
             val tab3Items = getItems(config.getCustomTab3Config())
@@ -197,15 +206,20 @@ class SplashActivity : AppCompatActivity() {
             if (!isActive) return@launch
 
             val preloaded = MainTabsPreloadedData(favorites, pages, tab3Items, tab4Items)
+            val updateInfo = try {
+                updateInfoDeferred.await()
+            } catch (_: Exception) {
+                null
+            }
 
             withContext(Dispatchers.Main) {
                 if (!isActive || isFinishing || isDestroyed) return@withContext
-                gotoHome(preloaded)
+                gotoHome(preloaded, updateInfo)
             }
         }
     }
 
-    private fun gotoHome(preloadedTabs: MainTabsPreloadedData? = null) {
+    private fun gotoHome(preloadedTabs: MainTabsPreloadedData? = null, updateInfo: AppUpdateInfo? = null) {
         logoAnimator?.cancel()
         logoAnimator = null
 
@@ -215,6 +229,7 @@ class SplashActivity : AppCompatActivity() {
             else
                 Intent(this, MainActivity::class.java).apply {
                     if (preloadedTabs != null) putExtra("preloadedTabs", preloadedTabs)
+                    if (updateInfo != null) putExtra("pendingUpdate", updateInfo)
                 }
         startActivity(targetIntent)
         finish()

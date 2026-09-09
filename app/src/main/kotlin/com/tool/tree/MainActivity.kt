@@ -12,6 +12,7 @@ import android.text.style.SuperscriptSpan
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import android.widget.TextView
@@ -24,6 +25,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.tabs.TabLayout
 import com.omarea.common.shared.FilePathResolver
 import com.omarea.common.shell.KeepShellPublic
+import com.omarea.common.ui.AppUpdateDialog
 import com.omarea.common.ui.DialogHelper
 import com.omarea.krscript.config.PageConfigReader
 import com.omarea.krscript.config.PageConfigSh
@@ -50,6 +52,9 @@ class MainActivity : AppCompatActivity() {
     private var openedSubPage = false
     private var isFavoritesTab = false
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
+    // Bản cập nhật mới nhất tìm được (từ SplashActivity) - điều khiển hiện/ẩn icon + dấu chấm đỏ
+    // trên toolbar. null = không có bản mới -> ẩn icon.
+    private var pendingUpdateInfo: AppUpdateInfo? = null
 
     private val ACTION_FILE_PATH_CHOOSER = 65400
     private val ACTION_FILE_PATH_CHOOSER_INNER = 65300
@@ -83,6 +88,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         handleResumeNotificationIntent(intent)
+        showPendingUpdateIfAny()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -100,6 +106,38 @@ class MainActivity : AppCompatActivity() {
         if (notificationId == -1) return
 
         DialogLogFragment.resume(notificationId)?.show(supportFragmentManager, "")
+    }
+
+    /**
+     * SplashActivity kiểm tra cập nhật song song lúc tải data (AppUpdateChecker.fetchUpdateInfo)
+     * và chuyển kết quả qua Intent extra "pendingUpdate" nếu có bản mới - ở đây chỉ cần hiện
+     * dialog, không cần gọi mạng lại.
+     */
+    private fun showPendingUpdateIfAny() {
+        @Suppress("DEPRECATION")
+        val updateInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            intent.getSerializableExtra("pendingUpdate", AppUpdateInfo::class.java)
+        else
+            intent.getSerializableExtra("pendingUpdate") as? AppUpdateInfo
+
+        // Icon + dấu chấm đỏ trên toolbar hiện theo biến này bất kể người dùng đã từng bấm Hủy
+        // bỏ hay chưa - chỉ việc TỰ ĐỘNG hiện dialog mới bị chặn lại theo trạng thái đã lưu.
+        pendingUpdateInfo = updateInfo
+        invalidateOptionsMenu()
+
+        if (updateInfo != null && !AppUpdateConfig(this).isDismissed(updateInfo.sha256)) {
+            showUpdateDialog(updateInfo)
+        }
+    }
+
+    private fun showUpdateDialog(updateInfo: AppUpdateInfo) {
+        AppUpdateDialog.show(
+            activity = this,
+            apkUrl = updateInfo.apkUrl,
+            changelogUrl = updateInfo.changelogUrl,
+            expectedSha256 = updateInfo.sha256,
+            onCancel = { AppUpdateConfig(this).setDismissedSha256(updateInfo.sha256) }
+        )
     }
 
     private fun setAppTitleWithVersion(versionName: String) {
@@ -394,11 +432,22 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main, menu)
+        menu.findItem(R.id.option_menu_update)?.actionView
+            ?.findViewById<View>(R.id.update_icon_btn)?.setOnClickListener {
+                pendingUpdateInfo?.let { showUpdateDialog(it) }
+            }
         return true
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.option_menu_reboot)?.isEnabled = hasRoot
+
+        val updateItem = menu.findItem(R.id.option_menu_update)
+        val hasUpdate = pendingUpdateInfo != null
+        updateItem?.isVisible = hasUpdate
+        updateItem?.actionView?.findViewById<View>(R.id.update_red_dot)?.visibility =
+            if (hasUpdate) View.VISIBLE else View.GONE
+
         return super.onPrepareOptionsMenu(menu)
     }
 

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:overScrollMode="never"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:alpha="0.9"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/krscript_item_ripple_kon"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/update_title"
+                android:breakStrategy="simple"
+                style="@style/dialogTitle"
+                android:text="@string/app_update_title" />
+            <TextView
+                android:id="@+id/update_desc"
+                android:breakStrategy="simple"
+                style="@style/dialogDesc"
+                android:text="@string/app_update_desc" />
+
+            <!-- Nội dung cập nhật, tải từ trang html online -->
+            <WebView
+                android:id="@+id/update_webview"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginHorizontal="16dp" />
+
+            <!-- Đường kẻ phân cách -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="16dp"
+                android:background="?android:attr/listDivider" />
+
+            <!-- Thanh tiến trình: tải trang html khi mở dialog, tiến trình tải apk khi bấm xác nhận -->
+            <ProgressBar
+                android:id="@+id/update_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginHorizontal="16dp"
+                android:max="100"
+                android:progress="0"
+                android:indeterminate="true"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/update_btn_group"
+                android:layout_margin="16dp"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <Button
+                    android:id="@+id/btn_cancel"
+                    style="@style/dialogCancelBtn"
+                    android:text="@string/btn_cancel" />
+                <Button
+                    android:id="@+id/btn_confirm"
+                    style="@style/dialogConfirmBtn"
+                    android:text="@string/app_update_btn_confirm" />
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
