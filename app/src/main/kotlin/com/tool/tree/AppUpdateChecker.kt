@@ -33,6 +33,9 @@ object AppUpdateChecker {
     // Trang xem log/nội dung cập nhật hiện trong WebView của AppUpdateDialog - dùng trang này
     // thay vì html_url (link trang release) của GitHub.
     private const val CHANGELOG_URL = "https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/Version.md"
+    // Tên file apk cache CỐ ĐỊNH (không suy theo URL nữa) - dùng chung cho mọi bản, nơi DUY NHẤT
+    // khai báo giá trị này (AppUpdateInfo.apkFileName lấy từ đây, DialogAppUpdate dùng lại).
+    private const val APK_FILE_NAME = "Tool-Tree.apk"
 
     /**
      * Hàm chặn (blocking) - PHẢI gọi từ thread nền / coroutine IO, không gọi trên main thread.
@@ -59,13 +62,26 @@ object AppUpdateChecker {
 
             val currentApk = File(activity.applicationInfo.sourceDir)
             val localSha256 = FileSha256().getFileSha256(currentApk)
+            val cachedApk = File(activity.cacheDir, APK_FILE_NAME)
 
-            // Không xác định được sha256 file hiện tại, hoặc trùng với bản trên GitHub -> bỏ qua
+            // App đang cài đã khớp sha256 với bản mới nhất trên GitHub -> đã cập nhật xong, xoá
+            // file cache (nếu còn) vì không cần nữa, không hiện dialog cập nhật
             if (localSha256 != null && localSha256.equals(remoteSha256, ignoreCase = true)) {
+                if (cachedApk.exists()) cachedApk.delete()
                 return null
             }
 
-            AppUpdateInfo(apkUrl, changelogUrl, remoteSha256, apkSize)
+            // Còn cần cập nhật - nếu đã có file tải sẵn từ lần trước (tải về nhưng chưa cài), so
+            // sha256 với bản online: khớp thì GIỮ LẠI (DialogAppUpdate sẽ cho cài luôn, không tải
+            // lại) - khác thì XOÁ (bản online đã đổi mới hơn kể từ lần tải trước)
+            if (cachedApk.exists()) {
+                val cachedSha256 = FileSha256().getFileSha256(cachedApk)
+                if (cachedSha256 == null || !cachedSha256.equals(remoteSha256, ignoreCase = true)) {
+                    cachedApk.delete()
+                }
+            }
+
+            AppUpdateInfo(apkUrl, changelogUrl, remoteSha256, apkSize, APK_FILE_NAME)
         } catch (_: Exception) {
             null
         }

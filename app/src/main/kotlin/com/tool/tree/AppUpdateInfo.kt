@@ -13,5 +13,9 @@ class AppUpdateInfo(
     val sha256: String,
     // Dung lượng file apk (byte), lấy từ field "size" của GitHub release asset. -1 nếu không
     // xác định được.
-    val apkSize: Long = -1
+    val apkSize: Long = -1,
+    // Tên file apk cố định dùng khi cache ở activity.cacheDir ("Tool-Tree.apk", xem
+    // AppUpdateChecker.APK_FILE_NAME) - khai báo 1 chỗ duy nhất để khớp tuyệt đối với tên file
+    // AppUpdateChecker dùng khi kiểm tra/dọn cache cũ.
+    val apkFileName: String
 ) : Serializable
