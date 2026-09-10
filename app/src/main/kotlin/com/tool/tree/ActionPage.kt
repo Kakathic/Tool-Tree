@@ -1289,7 +1289,7 @@ class ActionPage : AppCompatActivity() {
         if (isTaskRoot) {
             try {
                 val am = getSystemService(ACTIVITY_SERVICE) as ActivityManager
-                am.appTasks.find { it.taskInfo.id == taskId }?.setExcludeFromRecents(true)
+                am.appTasks.find { it.taskInfo?.id == taskId }?.setExcludeFromRecents(true)
             } catch (_: Exception) {}
         }
     }
