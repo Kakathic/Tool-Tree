@@ -26,16 +26,16 @@
         android:background="@drawable/krscript_item_ripple_in"
         android:layout_alignParentBottom="true" >
 
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/tabLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
-            app:tabBackground="@android:color/transparent"
-            app:tabRippleColor="@android:color/transparent"
-            app:tabGravity="fill"
-            app:tabMode="fixed"
-            app:tabIndicatorHeight="0dp" />
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:tabBackground="@null"
+        app:tabRippleColor="@null"
+        app:tabGravity="fill"
+        app:tabMode="fixed"
+        app:tabIndicatorHeight="0dp" />
 
     </com.omarea.common.ui.BlurBottomBarLayout>
 
