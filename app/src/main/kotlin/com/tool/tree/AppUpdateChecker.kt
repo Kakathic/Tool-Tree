@@ -32,7 +32,7 @@ object AppUpdateChecker {
     private const val ASSET_BETA_FLAG = "beta"
     // Trang xem log/nội dung cập nhật hiện trong WebView của AppUpdateDialog - dùng trang này
     // thay vì html_url (link trang release) của GitHub.
-    private const val CHANGELOG_URL = "https://kakathic.github.io/Tool-Tree/Version.html"
+    private const val CHANGELOG_URL = "https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/Version.md"
 
     /**
      * Hàm chặn (blocking) - PHẢI gọi từ thread nền / coroutine IO, không gọi trên main thread.

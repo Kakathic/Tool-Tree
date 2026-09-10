@@ -2,15 +2,10 @@ package com.omarea.common.ui
 
 import android.content.DialogInterface
 import android.content.Intent
-import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.webkit.WebChromeClient
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -28,8 +23,9 @@ import java.net.URL
  * (thay cho AppUpdateDialog.kt cũ dùng DialogHelper.customDialog thủ công), đồng bộ style +
  * vuốt-để-đóng/edge-to-edge với các dialog full-screen khác trong app.
  *
- * - Hiển thị nội dung cập nhật bằng WebView tải từ [changelogUrl] (html online).
- * - Thanh tiến trình phía trên 2 nút dùng chung: tiến trình tải trang khi mới mở dialog,
+ * - Hiển thị nội dung cập nhật bằng TEXT thuần, tải từ [changelogUrl] (vd: Version.md raw trên
+ *   GitHub) - không dùng WebView (bỏ chi phí khởi tạo engine WebView lần đầu, tránh chậm).
+ * - Thanh tiến trình phía trên 2 nút dùng chung: tiến trình tải nội dung text khi mới mở dialog,
  *   tiến trình tải file apk sau khi bấm Xác nhận.
  * - Khi đang tải apk: ẩn nút Xác nhận, nút Hủy bỏ chiếm trọn hàng nút.
  * - Không thể đóng dialog bằng vuốt / back / chạm ra ngoài (isCancelable = false) - CHỈ bấm nút
@@ -61,7 +57,7 @@ class DialogAppUpdate(
         isCancelable = false
     }
 
-    private lateinit var webView: WebView
+    private lateinit var contentText: TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var btnCancel: Button
     private lateinit var btnConfirm: Button
@@ -77,7 +73,7 @@ class DialogAppUpdate(
 
         val activity = requireActivity()
 
-        webView = view.findViewById(R.id.update_webview)
+        contentText = view.findViewById(R.id.update_content)
         progressBar = view.findViewById(R.id.update_progress)
         btnCancel = view.findViewById(R.id.btn_cancel)
         btnConfirm = view.findViewById(R.id.btn_confirm)
@@ -94,47 +90,22 @@ class DialogAppUpdate(
             ?: "app_update.apk"
         destFile = File(activity.cacheDir, apkFileName)
 
-        // --- WebView hiển thị nội dung cập nhật, chỉ để xem, không cấp quyền chạy script hệ thống ---
-        val settings = webView.settings
-        settings.javaScriptEnabled = true
-        settings.domStorageEnabled = true
-        settings.cacheMode = WebSettings.LOAD_DEFAULT
-        settings.blockNetworkImage = false
-        settings.loadsImagesAutomatically = true
-
-        webView.webChromeClient = object : WebChromeClient() {
-            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                super.onProgressChanged(view, newProgress)
-                if (activeDownload != null) return // đang tải apk, không để tiến trình web ghi đè
-                if (newProgress < 100) {
-                    progressBar.isIndeterminate = false
-                    progressBar.progress = newProgress
-                    progressBar.visibility = View.VISIBLE
-                } else {
-                    progressBar.visibility = View.INVISIBLE
-                }
-            }
-        }
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                if (activeDownload == null) {
-                    progressBar.isIndeterminate = true
-                    progressBar.visibility = View.VISIBLE
-                }
-            }
-
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                if (activeDownload == null) {
-                    progressBar.visibility = View.INVISIBLE
-                }
-            }
-        }
+        // --- Tải nội dung cập nhật (text thuần) chạy nền, không chặn nút bấm ---
         if (changelogUrl.isNotEmpty()) {
-            webView.loadUrl(changelogUrl)
-        } else {
-            webView.visibility = View.GONE
+            progressBar.isIndeterminate = true
+            progressBar.visibility = View.VISIBLE
+
+            val thread = Thread {
+                val (text, _) = fetchTextContent(changelogUrl)
+                mainHandler.post {
+                    if (activeDownload == null) {
+                        progressBar.visibility = View.INVISIBLE
+                    }
+                    contentText.text = text ?: activity.getString(R.string.app_update_changelog_fail)
+                }
+            }
+            thread.isDaemon = true
+            thread.start()
         }
 
         // Nếu trước đó đã tải xong đúng file này rồi thì cho cài lại ngay, không bắt tải lại từ
@@ -264,13 +235,6 @@ class DialogAppUpdate(
             }
         }
         activeDownload = null
-        try {
-            if (::webView.isInitialized) {
-                webView.stopLoading()
-                webView.destroy()
-            }
-        } catch (_: Exception) {
-        }
         super.onDismiss(dialog)
     }
 
@@ -279,6 +243,30 @@ class DialogAppUpdate(
     private fun formatFileSize(bytes: Long): String {
         val mb = bytes / (1024.0 * 1024.0)
         return String.format("%.1f MB", mb)
+    }
+
+    // Tải nội dung text thuần (vd: Version.md raw) qua HttpURLConnection - trả về
+    // Pair(nộiDung, null) nếu thành công, hoặc Pair(null, lỗi) nếu thất bại.
+    private fun fetchTextContent(url: String): Pair<String?, String?> {
+        var connection: HttpURLConnection? = null
+        return try {
+            connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 10000
+                readTimeout = 10000
+                instanceFollowRedirects = true
+            }
+            connection.connect()
+            val responseCode = connection.responseCode
+            if (responseCode !in 200..299) {
+                return Pair(null, "HTTP $responseCode")
+            }
+            val text = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            Pair(text, null)
+        } catch (ex: Exception) {
+            Pair(null, "" + ex.message)
+        } finally {
+            connection?.disconnect()
+        }
     }
 
     // Mở file apk vừa tải bằng OpenFileActivity có sẵn để kích hoạt cài đặt.

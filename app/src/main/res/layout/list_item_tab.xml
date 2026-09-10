@@ -10,8 +10,8 @@
 
     <ImageView
         android:id="@+id/ItemIcon"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
+        android:layout_width="25dp"
+        android:layout_height="25dp"
         android:layout_gravity="center_horizontal"
         android:scaleType="fitCenter"
         app:tint="?android:colorAccent" />
