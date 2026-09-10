@@ -108,7 +108,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="kr_download_error">Tải tệp thất bại</string>
     <string name="kr_download_paused">Tạm dừng tải</string>
     <string name="kr_download_paused_tap">Đã tạm dừng – nhấn để tiếp tục</string>
-    <string name="kr_download_retrying">Đang thử lại…</string>
+    <string name="kr_download_retrying">Đang thử kết nối lại…</string>
     <string name="kr_download_pause">Tạm dừng</string>
     <string name="kr_download_resume">Tiếp tục</string>
     <string name="kr_download_cancel">Hủy bỏ</string>

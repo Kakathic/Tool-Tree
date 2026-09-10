@@ -88,6 +88,10 @@ class ActionPage : AppCompatActivity() {
     private var menuCheckboxRefreshing = false
     private var checkboxRefreshJob: Job? = null
     private var loadPageJob: Job? = null
+    // Gộp các yêu cầu loadPageConfig() gọi CHỒNG LẤN khi 1 lượt tải trang trước đó chưa xong
+    // (vd nhiều mục [[download]] cùng dùng reload=true, hoàn tất gần như đồng thời) thành ĐÚNG
+    // 1 lần tải lại sau khi job hiện tại xong - xem loadPageConfig().
+    private var pendingReloadWhileLoading = false
     private var spinnerLoadJob: Job? = null
     private var lockCheckJob: Job? = null
     // load-after: builder gọi PageConfigReader/PageConfigSh.buildDeferredNodes() của lượt tải
@@ -667,8 +671,20 @@ class ActionPage : AppCompatActivity() {
     private fun loadPageConfig(showLoading: Boolean = true) {
         val config = currentPageConfig ?: return
 
+        // Nhiều mục hoàn tất gần như đồng thời (vd 2+ [[download]] cùng dùng reload=true) có
+        // thể gọi loadPageConfig() liên tiếp trong lúc 1 lượt tải trang trước đó CHƯA XONG.
+        // Trước đây luôn cancel() job cũ rồi chạy job mới ngay -> nhiều lượt tải trang chồng
+        // lấn, có thể cắt ngang beforeRead/afterRead (script root không đảm bảo idempotent)
+        // giữa chừng, hoặc để dở progressive list/dialog loading. Giờ: nếu đang có 1 lượt tải
+        // trang chạy dở, KHÔNG huỷ nó - chỉ đánh dấu "cần tải lại sau" rồi return; khi job hiện
+        // tại xong sẽ tự gọi lại đúng 1 lần (dedupe nhiều yêu cầu chồng lấn thành 1 lần tải lại
+        // duy nhất, trạng thái cuối vẫn phản ánh đủ mọi thay đổi).
+        if (loadPageJob?.isActive == true) {
+            pendingReloadWhileLoading = true
+            return
+        }
+
         pendingDeferredBuilder = null
-        loadPageJob?.cancel()
         progressBarDialog.setCancelCallback {
             loadPageJob?.cancel()
             finish()
@@ -796,6 +812,13 @@ class ActionPage : AppCompatActivity() {
                     handleLoadError(config)
                     hideLoadProgress()
                     progressBarDialog.hideDialog()
+                }
+            }
+
+            if (pendingReloadWhileLoading) {
+                pendingReloadWhileLoading = false
+                withContext(Dispatchers.Main) {
+                    if (!isFinishing && !isDestroyed) loadPageConfig(true)
                 }
             }
         }
