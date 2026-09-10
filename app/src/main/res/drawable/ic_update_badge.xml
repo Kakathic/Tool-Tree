@@ -2,11 +2,11 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@drawable/ic_update" />
     <item
-        android:width="8dp"
-        android:height="8dp"
+        android:width="7dp"
+        android:height="7dp"
         android:gravity="top|end"
-        android:right="4dp"
-        android:top="4dp">
+        android:right="6dp"
+        android:top="0dp">
         <shape android:shape="oval">
             <solid android:color="@color/banner_error" />
         </shape>
