@@ -100,6 +100,7 @@ class DialogAppUpdate(
         if (changelogUrl.isNotEmpty()) {
             progressBar.isIndeterminate = true
             progressBar.visibility = View.VISIBLE
+            contentText.text = activity.getString(R.string.onloading)
 
             val thread = Thread {
                 val (text, _) = fetchTextContent(changelogUrl)
