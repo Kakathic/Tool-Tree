@@ -19,6 +19,7 @@
     <color name="colorParseDark">#20605f5f</color>
     
     <color name="colorAccent">#0dbda2</color>
+    <color name="tabIconBadgeBg">#330dbda2</color>
     <color name="colorPrimary">#64CDB6</color>
     <color name="colorPrimaryDark">#30C7B6</color>
     <color name="warning">#FFB300</color>

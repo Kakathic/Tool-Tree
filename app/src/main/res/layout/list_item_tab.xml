@@ -8,13 +8,22 @@
     android:paddingTop="12dp"
     android:paddingBottom="8dp">
 
-    <ImageView
-        android:id="@+id/ItemIcon"
-        android:layout_width="25dp"
-        android:layout_height="25dp"
+    <FrameLayout
+        android:id="@+id/IconBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:scaleType="fitCenter"
-        app:tint="?android:colorAccent" />
+        android:background="@drawable/tab_icon_badge_bg"
+        android:paddingVertical="6dp">
+
+        <ImageView
+            android:id="@+id/ItemIcon"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_gravity="center"
+            android:scaleType="fitCenter"
+            app:tint="?android:colorAccent" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/ItemTitle"

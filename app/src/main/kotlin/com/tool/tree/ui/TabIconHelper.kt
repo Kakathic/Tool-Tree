@@ -18,11 +18,21 @@ class TabIconHelper(
     fun createTabView(text: String, drawable: Drawable, isFirst: Boolean): View {
         val layout = View.inflate(activity, R.layout.list_item_tab, null)
     
+        val iconBadge = layout.findViewById<View>(R.id.IconBadge)
         val imageView = layout.findViewById<ImageView>(R.id.ItemIcon)
         val textView = layout.findViewById<TextView>(R.id.ItemTitle)
     
         textView.text = text
         imageView.setImageDrawable(drawable)
+
+        // Độ rộng ô bo màu phía sau icon = đúng độ rộng chữ bên dưới (đo trực tiếp bằng Paint
+        // của TextView, không cần đợi layout xong) - không nhỏ hơn kích thước icon (24dp) để
+        // icon luôn nằm gọn trong ô kể cả với nhãn rất ngắn.
+        val textWidthPx = textView.paint.measureText(text).toInt()
+        val iconMinWidthPx = (24 * activity.resources.displayMetrics.density).toInt()
+        iconBadge.layoutParams = iconBadge.layoutParams.apply {
+            width = maxOf(textWidthPx, iconMinWidthPx)
+        }
     
         // XÓA ĐOẠN NÀY:
         // val size = (20 * activity.resources.displayMetrics.density).toInt()
