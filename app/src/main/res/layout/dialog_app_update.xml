@@ -1,9 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Cấu trúc giống kr_dialog_params.xml: KHÔNG còn khối "hộp vuông" bo góc bọc riêng
-  (krscript_item_ripple_kon) - tiêu đề cố định ở đỉnh (top_bar), nút bấm cố định ở đáy
-  (bottom_actions), nội dung text giãn lấp khoảng giữa 2 khối đó và tự cuộn bên trong.
--->
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -11,7 +6,6 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- 1. Thanh tiêu đề cố định ở ĐỈNH -->
     <LinearLayout
         android:id="@+id/top_bar"
         android:layout_width="match_parent"
@@ -36,7 +30,6 @@
         android:layout_height="match_parent"
         android:layout_below="@id/top_bar">
 
-        <!-- 2. Khối cố định ở ĐÁY: tiến trình + 2 nút -->
         <LinearLayout
             android:id="@+id/bottom_actions"
             android:layout_width="match_parent"
@@ -45,9 +38,6 @@
             android:layout_marginBottom="16dp"
             android:orientation="vertical">
 
-            <!-- Thanh tiến trình: tải nội dung text khi mở dialog, tiến trình tải apk khi bấm
-                 xác nhận. Mặc định INVISIBLE (không phải GONE) để luôn giữ chỗ cố định - ẩn/hiện
-                 không làm xê dịch layout (vị trí nội dung/nút bấm không đổi). -->
             <ProgressBar
                 android:id="@+id/update_progress"
                 style="?android:attr/progressBarStyleHorizontal"
@@ -74,13 +64,10 @@
                 <Button
                     android:id="@+id/btn_confirm"
                     style="@style/dialogConfirmBtn"
-                    android:text="@string/app_update_btn_confirm" />
+                    android:text="@string/btn_confirm" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- 3. Nội dung cập nhật, tải TEXT thuần từ Version.md online (xem
-             AppUpdateChecker.CHANGELOG_URL) - nằm GIỮA top_bar và bottom_actions, tự cuộn bên
-             trong ScrollView -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -95,6 +82,8 @@
                 android:id="@+id/update_content"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textIsSelectable="true"
+                android:textSize="12sp"
                 android:layout_marginHorizontal="16dp" />
         </ScrollView>
 

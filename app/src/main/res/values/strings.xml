@@ -82,7 +82,6 @@ If you agree, press the confirm button to continue."</string>
     <string name="btn_execute">Execute</string>
     <string name="app_update_title">New update</string>
     <string name="app_update_desc">A new version is available, would you like to update the app?</string>
-    <string name="app_update_btn_confirm">Confirm</string>
     <string name="app_update_btn_install">Install</string>
     <string name="app_update_download_fail">Failed to download the update</string>
     <string name="app_update_download_cancelled">Update download cancelled</string>

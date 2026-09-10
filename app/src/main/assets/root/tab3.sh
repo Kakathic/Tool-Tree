@@ -1,1 +1,1 @@
-exec $ETC/tool-tree.bash Addon
+exec $ETC/tool-tree.bash Project
