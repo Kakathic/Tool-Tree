@@ -29,8 +29,10 @@ import java.net.URL
  * - Thanh tiến trình phía trên 2 nút dùng chung: tiến trình tải nội dung text khi mới mở dialog,
  *   tiến trình tải file apk sau khi bấm Xác nhận.
  * - Khi đang tải apk: ẩn nút Xác nhận, nút Hủy bỏ chiếm trọn hàng nút.
- * - Không thể đóng dialog bằng vuốt / back / chạm ra ngoài (isCancelable = false) - CHỈ bấm nút
- *   Hủy bỏ mới thoát được.
+ * - Cho phép đóng dialog bằng vuốt lùi / back / chạm ra ngoài (giống các dialog full-screen
+ *   khác). Nếu đang tải apk mà dialog bị đóng theo cách này thì lượt tải KHÔNG bị hủy - vẫn
+ *   tiếp tục chạy ngầm cho đến khi xong rồi tự mở trình cài đặt; chỉ bấm nút Hủy bỏ mới thật sự
+ *   ngắt lượt tải đang chạy.
  * - Nếu file apk đã tồn tại sẵn trong cache (từ lần tải trước) thì cho cài lại ngay, không bắt
  *   tải lại từ đầu - không kiểm tra sha256 (chỉ cần tải về không lỗi là cho phép cài).
  * - Tải xong: dùng OpenFileActivity mở file apk, kích hoạt trình cài đặt hệ thống.
@@ -57,8 +59,12 @@ class DialogAppUpdate(
     }
 
     init {
-        isCancelable = false
+        isCancelable = true
     }
+
+    // true khi dialog đang tự đóng để tiến hành cài đặt (đã có/vừa tải xong apk hợp lệ) - dùng
+    // để onDismiss() không hiểu nhầm thành người dùng hủy cập nhật.
+    private var closingToInstall = false
 
     private lateinit var contentText: TextView
     private lateinit var progressBar: ProgressBar
@@ -125,6 +131,7 @@ class DialogAppUpdate(
 
             if (readyToInstall) {
                 // Đã có sẵn file hợp lệ - cài luôn, không tải lại
+                closingToInstall = true
                 dismiss()
                 openApk(activity, destFile)
                 return@setOnClickListener
@@ -161,10 +168,16 @@ class DialogAppUpdate(
                         return@post
                     }
                     if (activeDownload === state) activeDownload = null
+
+                    // Dialog có thể đã bị vuốt/back đóng từ trước trong lúc lượt tải này vẫn
+                    // chạy ngầm - khi đó fragment không còn gắn (isAdded = false) nên bỏ qua
+                    // phần cập nhật UI, chỉ xử lý kết quả tải (xóa file lỗi / mở trình cài đặt).
                     if (error != null) {
                         destFile.delete()
-                        progressBar.visibility = View.INVISIBLE
-                        btnConfirm.visibility = View.VISIBLE
+                        if (isAdded) {
+                            progressBar.visibility = View.INVISIBLE
+                            btnConfirm.visibility = View.VISIBLE
+                        }
                         Toast.makeText(
                             activity,
                             activity.getString(R.string.app_update_download_fail) + ": " + error,
@@ -172,7 +185,8 @@ class DialogAppUpdate(
                         ).show()
                     } else {
                         // Tải về không lỗi -> cho phép cài luôn, không kiểm tra sha256
-                        dismiss()
+                        closingToInstall = true
+                        if (isAdded) dismiss()
                         openApk(activity, destFile)
                     }
                 }
@@ -199,21 +213,22 @@ class DialogAppUpdate(
                     Toast.LENGTH_SHORT
                 ).show()
             } else {
-                onCancel?.invoke()
+                // Không đang tải - onDismiss() bên dưới sẽ tự gọi onCancel khi dialog đóng
                 dismiss()
             }
         }
     }
 
+    // Gọi khi dialog đóng bằng BẤT KỲ cách nào (nút Hủy bỏ lúc không tải, vuốt lùi, back,
+    // chạm ra ngoài, hoặc tự dismiss() để cài đặt).
+    // - Nếu đang tải apk: KHÔNG hủy lượt tải - để nó tiếp tục chạy ngầm, tự mở trình cài đặt khi
+    //   xong (xem mainHandler.post ở trên).
+    // - onCancel chỉ được gọi khi đóng lúc không có lượt tải nào đang chạy VÀ không phải do
+    //   chuẩn bị cài đặt (closingToInstall) - tức người dùng thực sự từ chối bản cập nhật.
     override fun onDismiss(dialog: DialogInterface) {
-        activeDownload?.let { state ->
-            state.cancelled = true
-            try {
-                state.connection?.disconnect()
-            } catch (_: Exception) {
-            }
+        if (!closingToInstall && activeDownload == null) {
+            onCancel?.invoke()
         }
-        activeDownload = null
         super.onDismiss(dialog)
     }
 

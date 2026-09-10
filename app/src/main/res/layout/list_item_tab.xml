@@ -10,7 +10,7 @@
 
     <FrameLayout
         android:id="@+id/IconBadge"
-        android:layout_width="100dp"
+        android:layout_width="50dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:paddingVertical="6dp">
