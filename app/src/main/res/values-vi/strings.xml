@@ -10,6 +10,8 @@
     <string name="tab_home">Trang chủ</string>
     <string name="tab_favorites">Yêu thích</string>
     <string name="tab_pages">Tiện ích</string>
+    <string name="tab_custom3">Add-on</string>
+    <string name="tab_custom4">Cài đặt</string>
     <string name="copy_success">Sao chép thành công</string>
     <string name="pop_before_start">Đang khởi động ứng dụng…</string>
     <string name="pop_started">Khởi động ứng dụng</string>
