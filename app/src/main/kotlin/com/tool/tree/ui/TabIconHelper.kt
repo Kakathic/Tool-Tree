@@ -25,18 +25,9 @@ class TabIconHelper(
         textView.text = text
         imageView.setImageDrawable(drawable)
 
-        // Độ rộng ô bo màu phía sau icon = đúng độ rộng chữ bên dưới (đo trực tiếp bằng Paint
-        // của TextView, không cần đợi layout xong) - không nhỏ hơn kích thước icon (24dp) để
-        // icon luôn nằm gọn trong ô kể cả với nhãn rất ngắn.
-        val textWidthPx = textView.paint.measureText(text).toInt()
-        val iconMinWidthPx = (24 * activity.resources.displayMetrics.density).toInt()
-        iconBadge.layoutParams = iconBadge.layoutParams.apply {
-            width = maxOf(textWidthPx, iconMinWidthPx)
-        }
-    
-        // XÓA ĐOẠN NÀY:
-        // val size = (20 * activity.resources.displayMetrics.density).toInt()
-        // imageView.layoutParams.width = size ...
+        // Ô bo màu phía sau icon (kích thước cố định, xem layout list_item_tab.xml) CHỈ hiện ở
+        // tab đang được chọn - tab chưa chọn không có nền (background = null).
+        iconBadge.setBackgroundResource(if (isFirst) R.drawable.tab_icon_badge_bg else 0)
     
         layout.alpha = if (isFirst) 1f else 0.3f
         views.add(layout)
@@ -45,7 +36,10 @@ class TabIconHelper(
 
     fun updateHighlight(tabLayout: TabLayout, position: Int) {
         for (i in 0 until tabLayout.tabCount) {
-            tabLayout.getTabAt(i)?.customView?.alpha = if (i == position) 1f else 0.3f
+            val tabView = tabLayout.getTabAt(i)?.customView ?: continue
+            tabView.alpha = if (i == position) 1f else 0.3f
+            tabView.findViewById<View>(R.id.IconBadge)
+                ?.setBackgroundResource(if (i == position) R.drawable.tab_icon_badge_bg else 0)
         }
     }
 }
