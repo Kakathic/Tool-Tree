@@ -138,6 +138,7 @@ class MainActivity : AppCompatActivity() {
             darkMode = ThemeModeState.isDarkMode(),
             apkUrl = updateInfo.apkUrl,
             changelogUrl = updateInfo.changelogUrl,
+            fileName = updateInfo.apkFileName,
             apkSize = updateInfo.apkSize,
             onCancel = { AppUpdateConfig(this).setDismissedSha256(updateInfo.sha256) }
         ).show(supportFragmentManager, "app_update")
@@ -295,6 +296,15 @@ class MainActivity : AppCompatActivity() {
         binding.viewPager.setOnPageChangeListener(object : SwipePager.OnPageChangeListener {
             override fun onPageSelected(position: Int) {
                 binding.tabLayout.getTabAt(position)?.select()
+            }
+
+            // Đổi độ sáng icon NGAY khi vuốt qua quá nửa trang (không đợi settle xong hẳn mới
+            // đổi như onPageSelected). CHỈ gọi updateHighlight() (chỉ đổi alpha icon) - KHÔNG
+            // gọi tab.select() ở đây, vì .select() sẽ kích hoạt luôn setCurrentItem() ép chuyển
+            // trang trong onTabSelected() bên trên, xung đột với thao tác kéo tay đang diễn ra.
+            override fun onPageScrolled(position: Int, offset: Float) {
+                val highlightPosition = if (offset > 0.5f) position + 1 else position
+                tabHelper.updateHighlight(binding.tabLayout, highlightPosition)
             }
         })
     }

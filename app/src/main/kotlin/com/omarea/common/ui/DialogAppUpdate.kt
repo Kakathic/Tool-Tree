@@ -39,7 +39,10 @@ class DialogAppUpdate(
     darkMode: Boolean,
     private val apkUrl: String,
     private val changelogUrl: String,
-    private val fileName: String? = null,
+    // Tên file dùng khi cache ở cacheDir - LUÔN lấy từ AppUpdateInfo.apkFileName (tính sẵn, 1
+    // chỗ duy nhất trong AppUpdateChecker) để khớp đúng với file mà AppUpdateChecker giữ lại /
+    // dọn dẹp ở mỗi lần khởi động app - không tự suy tên riêng ở đây nữa.
+    private val fileName: String,
     // Dung lượng file apk (byte) lấy từ API - null/<=0 nếu không xác định được, khi đó ẩn dòng
     // hiển thị dung lượng.
     private val apkSize: Long? = null,
@@ -80,16 +83,12 @@ class DialogAppUpdate(
         btnConfirm = view.findViewById(R.id.btn_confirm)
         titleText = view.findViewById(R.id.update_title)
 
-        // Gộp dung lượng vào ngay dòng tiêu đề - "Cập nhật mới | 8 MB" - chỉ khi biết kích thước.
+        // Gộp dung lượng vào ngay dòng tiêu đề - "Tên app | 8 MB" - chỉ khi biết kích thước.
         if (apkSize != null && apkSize > 0) {
-            titleText.text = activity.getString(R.string.app_update_title) + " | " + formatFileSize(apkSize)
+            titleText.text = activity.getString(R.string.app_name) + " | " + formatFileSize(apkSize)
         }
 
-        val apkFileName = fileName?.takeIf { it.isNotEmpty() }
-            ?: apkUrl.substringAfterLast('/').substringBefore('?')
-                .takeIf { it.endsWith(".apk", true) }
-            ?: "app_update.apk"
-        destFile = File(activity.cacheDir, apkFileName)
+        destFile = File(activity.cacheDir, fileName)
 
         // --- Tải nội dung cập nhật (text thuần) chạy nền, không chặn nút bấm ---
         if (changelogUrl.isNotEmpty()) {
