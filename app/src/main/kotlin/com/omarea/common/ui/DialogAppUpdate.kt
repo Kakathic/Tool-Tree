@@ -19,20 +19,6 @@ import java.io.RandomAccessFile
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * Dialog thông báo có phiên bản ứng dụng mới - dạng full-screen kế thừa DialogFullScreen
- * (thay cho AppUpdateDialog.kt cũ dùng DialogHelper.customDialog thủ công), đồng bộ style +
- * vuốt-để-đóng/edge-to-edge với các dialog full-screen khác trong app.
- *
- * - Hiển thị nội dung cập nhật bằng TEXT thuần, tải từ [changelogUrl] (vd: Version.md raw trên
- *   GitHub) - không dùng WebView (bỏ chi phí khởi tạo engine WebView lần đầu, tránh chậm).
- * - Thanh tiến trình phía trên 2 nút dùng chung: tiến trình tải nội dung text khi mới mở dialog,
- *   tiến trình tải file apk sau khi bấm Xác nhận.
- * - Khi đang tải apk: ẩn nút Xác nhận, nút Hủy bỏ chiếm trọn hàng nút. Không thể vuốt back / bấm back khi đang tải.
- * - Nếu file apk đã tồn tại sẵn trong cache (từ lần tải trước) thì cho cài lại ngay, không bắt
- *   tải lại từ đầu - không kiểm tra sha256 (chỉ cần tải về không lỗi là cho phép cài).
- * - Tải xong: dùng OpenFileActivity mở file apk, kích hoạt trình cài đặt hệ thống.
- */
 class DialogAppUpdate(
     darkMode: Boolean,
     private val apkUrl: String,
@@ -119,8 +105,10 @@ class DialogAppUpdate(
                 return@setOnClickListener
             }
 
-            // Khóa vuốt back / bấm nút back khi bắt đầu tải
             isCancelable = false
+            // isCancelable chỉ chặn back/chạm ngoài; vuốt lùi đã bind sẵn từ lúc mở dialog nên
+            // phải tắt riêng bằng setSwipeToDismissEnabled để không vuốt đóng được khi đang tải.
+            setSwipeToDismissEnabled(false)
 
             btnConfirm.visibility = View.GONE
             progressBar.isIndeterminate = false
@@ -155,8 +143,8 @@ class DialogAppUpdate(
                     if (error != null) {
                         destFile.delete()
                         if (isAdded) {
-                            // Mở lại vuốt back khi việc tải bị lỗi
                             isCancelable = true
+                            setSwipeToDismissEnabled(true)
                             progressBar.visibility = View.INVISIBLE
                             btnConfirm.visibility = View.VISIBLE
                         }
@@ -179,8 +167,8 @@ class DialogAppUpdate(
         btnCancel.setOnClickListener {
             val state = activeDownload
             if (state != null) {
-                // Hủy tải: cho phép vuốt back / bấm back trở lại
                 isCancelable = true
+                setSwipeToDismissEnabled(true)
                 activeDownload = null
                 state.cancelled = true
                 try {

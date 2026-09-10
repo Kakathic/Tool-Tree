@@ -10,70 +10,23 @@ import android.view.ViewGroup
 import com.tool.tree.R
 
 
-/*
-继承使用示例：
-
-class DialogAppChooser(private val darkMode: Boolean): DialogFullScreen(R.layout.dialog_app_chooser, darkMode) {
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-    }
-
-    override fun onDismiss(dialog: DialogInterface) {
-        super.onDismiss(dialog)
-    }
-}
-*/
-
 open class DialogFullScreen(private val layout: Int, private val darkMode: Boolean) : androidx.fragment.app.DialogFragment() {
-    // Lưu ý: class này phải khai báo BÊN NGOÀI companion object (dù chỉ được tạo ra từ hàm trong
-    // companion object bên dưới). Kotlin không tự "nâng" 1 class lồng BÊN TRONG companion object
-    // thành DialogFullScreen.TenClass như với hàm/property - phải gọi là
-    // DialogFullScreen.Companion.TenClass, khiến mọi nơi gọi từ file khác
-    // (DialogLogFragment.kt, ActionListFragment.kt, DialogHelper.kt) bị lỗi build "Unresolved
-    // reference" vì chỉ viết DialogFullScreen.SwipeToDismissBinding.
     class SwipeToDismissBinding internal constructor(
         private val helper: DialogSwipeBackHelper
     ) {
         fun release(dialog: Dialog) {
             helper.release()
         }
+        fun setEnabled(enabled: Boolean) {
+            helper.enabled = enabled
+        }
     }
 
     companion object {
-        /**
-         * Gắn cử chỉ vuốt lùi (vuốt sang phải ở bất kỳ đâu trên nội dung để đóng) cho 1 Dialog
-         * TOÀN MÀN HÌNH bất kỳ ĐÃ show (dialog.window khác null, đã setContentView) - dùng chung
-         * cho chính DialogFullScreen (bên dưới, xem onViewCreated()) LẪN các dialog dựng tay khác
-         * không kế thừa DialogFullScreen, ví dụ dialog tham số
-         * (kr_dialog_params/kr_dialog_params_small) ở ActionListFragment, dialog blur ở
-         * DialogHelper.customDialog(), hay DialogLogFragment - kể cả dialog dựng qua AlertDialog
-         * (không chỉ Dialog thường), vì DialogSwipeBackBlurWrapper.wrap() giờ tự lấy nội dung
-         * thật từ android.R.id.content của window, không cần bên gọi tự chỉ view nào.
-         *
-         * Không còn hỗ trợ cử chỉ vuốt-từ-mép (predictive-back của hệ thống) - chỉ vuốt trực tiếp
-         * trên nội dung dialog mới đóng được.
-         *
-         * @param activity Activity đang chứa dialog (cần để FastBlurUtility chụp màn hình phía
-         * sau, xem DialogSwipeBackBlurWrapper).
-         * @param dialog Dialog ĐÃ show (đã setContentView - với DialogFragment nghĩa là gọi SAU
-         * onActivityCreated(), ví dụ trong view.post {} từ onViewCreated()).
-         * @param onBack callback khi vuốt lùi hoàn tất - thường là dialog.dismiss().
-         * @return handle để bên gọi release() đúng lúc dialog bị dismiss/destroy (tránh leak
-         * VelocityTracker/animator), null nếu dialog chưa có window.
-         */
         fun bindSwipeToDismiss(activity: Activity, dialog: Dialog, onBack: () -> Unit): SwipeToDismissBinding? {
             val window = dialog.window ?: return null
             val swipeTarget = DialogSwipeBackBlurWrapper.wrap(activity, window) ?: run {
                 DialogHelper.setWindowBlurBg(window, activity)
-                // Fallback: không bọc blur trượt được thì vẫn kéo được cả khối android.R.id.content
-                // (toàn bộ nội dung window) - chỉ là nền blur phía dưới đứng yên tĩnh như hành vi
-                // cũ, không trượt cùng.
                 window.findViewById(android.R.id.content)
             }
             val helper = DialogSwipeBackHelper.bind(dialog, swipeTarget) { onBack() } ?: return null
@@ -89,9 +42,6 @@ open class DialogFullScreen(private val layout: Int, private val darkMode: Boole
     private var themeResId: Int = 0
     private lateinit var currentView: View
 
-    // Cho vuốt sang phải để đóng dialog (xem onViewCreated() bên dưới / DialogSwipeBackHelper).
-    // Dialog con nào có cử chỉ kéo ngang riêng cần ưu tiên hơn (hiếm) có thể gán false TRƯỚC
-    // khi view được dựng (super.onViewCreated()) để tắt tính năng này.
     protected var swipeToDismissEnabled = true
     private var swipeToDismissBinding: SwipeToDismissBinding? = null
 
@@ -117,15 +67,6 @@ open class DialogFullScreen(private val layout: Int, private val darkMode: Boole
             }
 
             if (swipeToDismissEnabled && isCancelable) {
-                // isCancelable=false (xem androidx.fragment.app.DialogFragment) nghĩa là dialog
-                // này KHÔNG cho phép đóng bằng nút back/chạm ra ngoài -> vuốt lùi cũng phải bị
-                // chặn theo, không thì người dùng vẫn có 1 đường lách để đóng dialog "không thể
-                // đóng" này.
-                // QUAN TRỌNG: view.parent vẫn còn null tại đây - AndroidX DialogFragment chỉ
-                // thật sự gọi dialog.setContentView(view) ở onActivityCreated() (chạy SAU
-                // onViewCreated()), nên DialogSwipeBackBlurWrapper.wrap() gọi ngay tại chỗ này
-                // sẽ luôn thấy parent null và fallback về nền blur tĩnh cũ. view.post() đợi 1
-                // vòng của UI thread - lúc đó setContentView() đã chạy xong, view đã có parent.
                 view.post {
                     if (d.window == null) return@post
                     swipeToDismissBinding = bindSwipeToDismiss(activity, d) { closeView() }
@@ -144,6 +85,13 @@ open class DialogFullScreen(private val layout: Int, private val darkMode: Boole
         dialog?.let { swipeToDismissBinding?.release(it) }
         swipeToDismissBinding = null
         super.onDestroyView()
+    }
+
+    // isCancelable chỉ được đọc 1 LẦN lúc bindSwipeToDismiss() ở onViewCreated() - đổi
+    // isCancelable sau đó (lúc dialog đang chạy) không tự tắt vuốt-lùi đã bind sẵn, nên dialog
+    // con cần chủ động gọi hàm này để tắt/bật vuốt-lùi đúng lúc (vd: khi bắt đầu/kết thúc tải).
+    protected fun setSwipeToDismissEnabled(enabled: Boolean) {
+        swipeToDismissBinding?.setEnabled(enabled)
     }
 
     fun closeView() {

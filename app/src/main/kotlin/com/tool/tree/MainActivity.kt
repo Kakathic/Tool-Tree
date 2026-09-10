@@ -12,6 +12,7 @@ import android.text.style.SuperscriptSpan
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import android.widget.TextView
@@ -51,9 +52,6 @@ class MainActivity : AppCompatActivity() {
     private var openedSubPage = false
     private var isFavoritesTab = false
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
-    // Bản cập nhật mới nhất tìm được (từ SplashActivity) - điều khiển hiện/ẩn icon cập nhật
-    // (kèm dấu chấm đỏ) ở menu item option_menu_update, bên trái icon nguồn. null = không có
-    // bản mới -> ẩn icon.
     private var pendingUpdateInfo: AppUpdateInfo? = null
     private lateinit var toolbar: Toolbar
 
@@ -84,8 +82,6 @@ class MainActivity : AppCompatActivity() {
             startService(Intent(this@MainActivity, WakeLockService::class.java).apply {
                 action = WakeLockService.ACTION_END_WAKELOCK
             })
-            // isEnabled = false
-            // onBackPressedDispatcher.onBackPressed()
             finish()
         }
 
@@ -99,10 +95,6 @@ class MainActivity : AppCompatActivity() {
         handleResumeNotificationIntent(intent)
     }
 
-    /**
-     * Nếu Activity được mở từ việc bấm vào thông báo tiến trình đã ẩn (nút "Ẩn" trong
-     * DialogLogFragment), mở lại dialog log tương ứng thay vì chỉ đưa app lên foreground.
-     */
     private fun handleResumeNotificationIntent(intent: Intent?) {
         val notificationId = intent?.getIntExtra(DialogLogFragment.EXTRA_RESUME_NOTIFICATION_ID, -1) ?: -1
         if (notificationId == -1) return
@@ -110,11 +102,6 @@ class MainActivity : AppCompatActivity() {
         DialogLogFragment.resume(notificationId)?.show(supportFragmentManager, "")
     }
 
-    /**
-     * SplashActivity kiểm tra cập nhật song song lúc tải data (AppUpdateChecker.fetchUpdateInfo)
-     * và chuyển kết quả qua Intent extra "pendingUpdate" nếu có bản mới - ở đây chỉ cần hiện
-     * dialog, không cần gọi mạng lại.
-     */
     private fun showPendingUpdateIfAny() {
         @Suppress("DEPRECATION")
         val updateInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
@@ -122,9 +109,6 @@ class MainActivity : AppCompatActivity() {
         else
             intent.getSerializableExtra("pendingUpdate") as? AppUpdateInfo
 
-        // Icon (kèm dấu chấm đỏ) ở option_menu_update hiện theo biến này bất kể người dùng đã
-        // từng bấm Hủy bỏ hay chưa - chỉ việc TỰ ĐỘNG hiện dialog mới bị chặn lại theo trạng
-        // thái đã lưu.
         pendingUpdateInfo = updateInfo
         invalidateOptionsMenu()
 
@@ -167,7 +151,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadTabs() {
-        // Ưu tiên dùng data đã preload từ SplashActivity
         @Suppress("DEPRECATION")
         val preloaded = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
             intent.getSerializableExtra("preloadedTabs", MainTabsPreloadedData::class.java)
@@ -175,10 +158,8 @@ class MainActivity : AppCompatActivity() {
             intent.getSerializableExtra("preloadedTabs") as? MainTabsPreloadedData
 
         if (preloaded != null) {
-            // Đã có sẵn data — hiện ngay, không cần dialog
             applyTabsData(preloaded.favorites, preloaded.pages, preloaded.tab3Items, preloaded.tab4Items)
         } else {
-            // Không có preload (vd: recreate, reload) — tải thẳng, không hiện dialog
             lifecycleScope.launch(Dispatchers.IO) {
                 val favorites = getItems(krScriptConfig.getFavoriteConfig())
                 val pages = getItems(krScriptConfig.getPageListConfig())
@@ -274,15 +255,12 @@ class MainActivity : AppCompatActivity() {
             binding.tabLayout.addTab(tab)
         }
 
-        // FIX: Xử lý sự kiện click thủ công cho Custom Tab View
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
-                // Ép SwipePager chuyển trang khi ấn vào icon tab
                 if (binding.viewPager.currentItem != tab.position) {
                     binding.viewPager.setCurrentItem(tab.position, true)
                 }
 
-                // Cập nhật hiệu ứng hiển thị (màu sắc/scale) của tab
                 tabHelper.updateHighlight(binding.tabLayout, tab.position)
 
                 isFavoritesTab = (tab.position == 0)
@@ -291,17 +269,38 @@ class MainActivity : AppCompatActivity() {
             override fun onTabReselected(tab: TabLayout.Tab) {}
         })
 
-        // Đồng bộ TabLayout khi trang được chọn do vuốt (SwipePager tự settle xong mới báo,
-        // tránh chọn tab liên tục theo từng pixel kéo giữa chừng).
+        // Cho phép nhấn giữ 1 icon tab rồi kéo ngón tay qua các icon khác để chuyển tab
+        // ngay theo thời gian thực (kéo tới hoặc kéo lui lại đều chuyển), thay vì chỉ
+        // chuyển khi nhấc tay đúng lên icon như hành vi mặc định của TabLayout.
+        binding.tabLayout.setOnTouchListener { view, event ->
+            val tabCount = binding.tabLayout.tabCount
+            if (tabCount == 0) return@setOnTouchListener false
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    val tabWidth = binding.tabLayout.width / tabCount
+                    if (tabWidth > 0) {
+                        val index = (event.x / tabWidth).toInt().coerceIn(0, tabCount - 1)
+                        binding.tabLayout.getTabAt(index)?.let { tab ->
+                            if (tab.position != binding.tabLayout.selectedTabPosition) {
+                                tab.select()
+                            }
+                        }
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    view.performClick()
+                    true
+                }
+                else -> false
+            }
+        }
+
         binding.viewPager.setOnPageChangeListener(object : SwipePager.OnPageChangeListener {
             override fun onPageSelected(position: Int) {
                 binding.tabLayout.getTabAt(position)?.select()
             }
 
-            // Đổi độ sáng icon NGAY khi vuốt qua quá nửa trang (không đợi settle xong hẳn mới
-            // đổi như onPageSelected). CHỈ gọi updateHighlight() (chỉ đổi alpha icon) - KHÔNG
-            // gọi tab.select() ở đây, vì .select() sẽ kích hoạt luôn setCurrentItem() ép chuyển
-            // trang trong onTabSelected() bên trên, xung đột với thao tác kéo tay đang diễn ra.
             override fun onPageScrolled(position: Int, offset: Float) {
                 val highlightPosition = if (offset > 0.5f) position + 1 else position
                 tabHelper.updateHighlight(binding.tabLayout, highlightPosition)
@@ -450,8 +449,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.option_menu_reboot)?.isEnabled = hasRoot
-        // Icon cập nhật (kèm dấu chấm đỏ ghép sẵn trong ic_update_badge) chỉ hiện khi có bản
-        // mới - nằm bên trái, sát cạnh icon nguồn (xem order trong res/menu/main.xml).
         menu.findItem(R.id.option_menu_update)?.isVisible = pendingUpdateInfo != null
         return super.onPrepareOptionsMenu(menu)
     }
@@ -465,13 +462,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // override fun onRestart() {
-        // super.onRestart()
-        // if (openedSubPage) {
-            // openedSubPage = false
-            // reloadTabs()
-        // }
-    // }
 
     private fun showSettingsDialog() {
         val layout = LayoutInflater.from(this).inflate(R.layout.dialog_about, null)
