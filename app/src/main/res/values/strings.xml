@@ -84,10 +84,8 @@ If you agree, press the confirm button to continue."</string>
     <string name="app_update_desc">A new version is available, would you like to update the app?</string>
     <string name="app_update_btn_confirm">Confirm</string>
     <string name="app_update_btn_install">Install</string>
-    <string name="app_update_downloading">Downloading update…</string>
     <string name="app_update_download_fail">Failed to download the update</string>
     <string name="app_update_download_cancelled">Update download cancelled</string>
-    <string name="app_update_sha256_mismatch">Downloaded file failed the integrity check (SHA-256 mismatch)</string>
     <string name="app_update_changelog_fail">Failed to load update details</string>
     <string name="onloading">Loading data…</string>
     <string name="kr_shell_completed">Script execution completed</string>

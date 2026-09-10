@@ -72,10 +72,8 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="app_update_desc">Đã có phiên bản mới, bạn có muốn cập nhật ứng dụng?</string>
     <string name="app_update_btn_confirm">Xác nhận</string>
     <string name="app_update_btn_install">Cài đặt</string>
-    <string name="app_update_downloading">Đang tải bản cập nhật…</string>
     <string name="app_update_download_fail">Tải bản cập nhật thất bại</string>
     <string name="app_update_download_cancelled">Đã hủy tải bản cập nhật</string>
-    <string name="app_update_sha256_mismatch">Tệp tải về không toàn vẹn (sai mã SHA-256)</string>
     <string name="app_update_changelog_fail">Không tải được nội dung cập nhật</string>
     <string name="onloading">Đang tải dữ liệu…</string>
     <string name="kr_shell_completed">Thực thi script hoàn tất</string>
