@@ -85,6 +85,9 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_above="@id/bottom_actions"
+            android:requiresFadingEdge="vertical"
+            android:fillViewport="true"
+            android:overScrollMode="never"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp">
 
@@ -92,8 +95,7 @@
                 android:id="@+id/update_content"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:textIsSelectable="true" />
+                android:layout_marginHorizontal="16dp" />
         </ScrollView>
 
     </RelativeLayout>

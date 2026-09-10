@@ -5,11 +5,13 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.method.LinkMovementMethod
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.text.HtmlCompat
 import com.tool.tree.OpenFileActivity
 import com.tool.tree.R
 import java.io.File
@@ -72,6 +74,7 @@ class DialogAppUpdate(
         val activity = requireActivity()
 
         contentText = view.findViewById(R.id.update_content)
+        contentText.movementMethod = LinkMovementMethod.getInstance()
         progressBar = view.findViewById(R.id.update_progress)
         btnCancel = view.findViewById(R.id.btn_cancel)
         btnConfirm = view.findViewById(R.id.btn_confirm)
@@ -99,7 +102,11 @@ class DialogAppUpdate(
                     if (activeDownload == null) {
                         progressBar.visibility = View.INVISIBLE
                     }
-                    contentText.text = text ?: activity.getString(R.string.app_update_changelog_fail)
+                    contentText.text = if (text != null) {
+                        HtmlCompat.fromHtml(markdownToHtml(text), HtmlCompat.FROM_HTML_MODE_LEGACY)
+                    } else {
+                        activity.getString(R.string.app_update_changelog_fail)
+                    }
                 }
             }
             thread.isDaemon = true
@@ -216,6 +223,40 @@ class DialogAppUpdate(
     private fun formatFileSize(bytes: Long): String {
         val mb = bytes / (1024.0 * 1024.0)
         return String.format("%.1f MB", mb)
+    }
+
+    // Chuyển 1 tập con Markdown đơn giản (đủ dùng cho Version.md) sang HTML để hiển thị bằng
+    // HtmlCompat.fromHtml(): "# tiêu đề" (kèm [text](url) bên trong) -> in đậm cỡ lớn, có thể
+    // bấm link; "**...**" -> in đậm; dòng bắt đầu "+ " -> gạch đầu dòng dạng chấm tròn "•".
+    // Escape HTML trước khi áp quy tắc markdown để nội dung tải về không phá layout.
+    private fun markdownToHtml(markdown: String): String {
+        val linkRegex = Regex("\\[(.+?)\\]\\((.+?)\\)")
+        val boldRegex = Regex("\\*\\*(.+?)\\*\\*")
+        val headingRegex = Regex("^#+\\s*(.*)$")
+
+        fun applyInlineStyles(raw: String): String {
+            var result = linkRegex.replace(raw) { m -> "<a href=\"${m.groupValues[2]}\">${m.groupValues[1]}</a>" }
+            result = boldRegex.replace(result) { m -> "<b>${m.groupValues[1]}</b>" }
+            return result
+        }
+
+        val sb = StringBuilder()
+        for (rawLine in markdown.lines()) {
+            val line = android.text.TextUtils.htmlEncode(rawLine.trimEnd())
+            when {
+                line.isBlank() -> sb.append("<br>")
+                headingRegex.matches(line) -> {
+                    val inner = applyInlineStyles(headingRegex.find(line)!!.groupValues[1])
+                    sb.append("<b><big>").append(inner).append("</big></b><br>")
+                }
+                line.startsWith("+ ") -> {
+                    val inner = applyInlineStyles(line.removePrefix("+ ").trim())
+                    sb.append("&#8226;&nbsp;").append(inner).append("<br>")
+                }
+                else -> sb.append(applyInlineStyles(line)).append("<br>")
+            }
+        }
+        return sb.toString()
     }
 
     // Tải nội dung text thuần (vd: Version.md raw) qua HttpURLConnection - trả về
