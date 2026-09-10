@@ -38,7 +38,7 @@
             android:value="2.8" />
         <activity
             android:name=".ActionPage"
-            android:exported="true"
+            android:exported="false"
             android:windowSoftInputMode="adjustResize"
             android:label="@string/title_activity_action_page"
             android:configChanges="keyboardHidden|orientation|layoutDirection|screenLayout|colorMode|fontScale|smallestScreenSize|density|keyboard|screenSize|touchscreen">
@@ -61,7 +61,7 @@
             android:name=".MainActivity"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="keyboardHidden|orientation|layoutDirection|screenLayout|colorMode|fontScale|smallestScreenSize|density|keyboard|screenSize|touchscreen"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -70,7 +70,7 @@
         <activity
             android:name=".SplashActivity"
             android:configChanges="keyboardHidden|orientation|layoutDirection|screenLayout|colorMode|fontScale|smallestScreenSize|density|keyboard|screenSize|touchscreen"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -79,7 +79,7 @@
         <activity
             android:name=".ActivityFileSelector"
             android:excludeFromRecents="true"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_file_selector"
             android:configChanges="keyboardHidden|orientation|layoutDirection|screenLayout|colorMode|fontScale|smallestScreenSize|density|keyboard|screenSize|touchscreen"
             android:launchMode="standard">
@@ -151,14 +151,14 @@
         </receiver>
         <receiver android:name=".BannerReceiver"
                   android:enabled="true"
-                  android:exported="true">
+                  android:exported="false">
             <intent-filter>
                 <action android:name="${applicationId}.broadcast.BANNER" />
             </intent-filter>
         </receiver>
         <receiver android:name=".ShowDialogReceiver"
                   android:enabled="true"
-                  android:exported="true">
+                  android:exported="false">
             <intent-filter>
                 <action android:name="${applicationId}.broadcast.SHOWDIALOG" />
             </intent-filter>
