@@ -138,7 +138,6 @@ class MainActivity : AppCompatActivity() {
             darkMode = ThemeModeState.isDarkMode(),
             apkUrl = updateInfo.apkUrl,
             changelogUrl = updateInfo.changelogUrl,
-            expectedSha256 = updateInfo.sha256,
             apkSize = updateInfo.apkSize,
             onCancel = { AppUpdateConfig(this).setDismissedSha256(updateInfo.sha256) }
         ).show(supportFragmentManager, "app_update")

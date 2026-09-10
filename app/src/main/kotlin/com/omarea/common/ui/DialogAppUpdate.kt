@@ -10,7 +10,6 @@ import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import com.omarea.common.shared.FileSha256
 import com.tool.tree.OpenFileActivity
 import com.tool.tree.R
 import java.io.File
@@ -30,7 +29,8 @@ import java.net.URL
  * - Khi đang tải apk: ẩn nút Xác nhận, nút Hủy bỏ chiếm trọn hàng nút.
  * - Không thể đóng dialog bằng vuốt / back / chạm ra ngoài (isCancelable = false) - CHỈ bấm nút
  *   Hủy bỏ mới thoát được.
- * - Nếu đã có sẵn file apk hợp lệ từ lần tải trước thì nút Xác nhận đổi thành Cài đặt.
+ * - Nếu file apk đã tồn tại sẵn trong cache (từ lần tải trước) thì cho cài lại ngay, không bắt
+ *   tải lại từ đầu - không kiểm tra sha256 (chỉ cần tải về không lỗi là cho phép cài).
  * - Tải xong: dùng OpenFileActivity mở file apk, kích hoạt trình cài đặt hệ thống.
  */
 class DialogAppUpdate(
@@ -38,8 +38,6 @@ class DialogAppUpdate(
     private val apkUrl: String,
     private val changelogUrl: String,
     private val fileName: String? = null,
-    // sha256 lấy từ API, dùng để kiểm tra toàn vẹn file apk sau khi tải xong. Bỏ qua nếu null.
-    private val expectedSha256: String? = null,
     // Dung lượng file apk (byte) lấy từ API - null/<=0 nếu không xác định được, khi đó ẩn dòng
     // hiển thị dung lượng.
     private val apkSize: Long? = null,
@@ -108,19 +106,12 @@ class DialogAppUpdate(
             thread.start()
         }
 
-        // Nếu trước đó đã tải xong đúng file này rồi thì cho cài lại ngay, không bắt tải lại từ
-        // đầu - đổi nút Xác nhận thành Cài đặt. Kiểm tra sha256 ở thread nền để tránh treo UI.
-        if (expectedSha256 != null && destFile.exists() && destFile.length() > 0) {
-            Thread {
-                val localHash = FileSha256().getFileSha256(destFile)
-                val matches = localHash != null && expectedSha256.equals(localHash, ignoreCase = true)
-                mainHandler.post {
-                    if (matches && activeDownload == null) {
-                        readyToInstall = true
-                        btnConfirm.text = activity.getString(R.string.app_update_btn_install)
-                    }
-                }
-            }.apply { isDaemon = true }.start()
+        // Nếu trước đó đã tải xong file này rồi thì cho cài lại ngay, không bắt tải lại từ đầu -
+        // đổi nút Xác nhận thành Cài đặt. Không kiểm tra sha256: file tải về không lỗi là coi
+        // như hợp lệ (sha256 lấy tại thời điểm mở app có thể đã cũ hơn bản apk thật trên server).
+        if (destFile.exists() && destFile.length() > 0) {
+            readyToInstall = true
+            btnConfirm.text = activity.getString(R.string.app_update_btn_install)
         }
 
         btnConfirm.setOnClickListener {
@@ -157,12 +148,6 @@ class DialogAppUpdate(
                         }
                     }
                 )
-                // Tính sha256 ngay trên thread nền, rồi mới báo kết quả cuối cùng lên UI.
-                var hashMismatch = false
-                if (error == null && !state.cancelled && expectedSha256 != null) {
-                    val localHash = FileSha256().getFileSha256(destFile)
-                    hashMismatch = localHash == null || !expectedSha256.equals(localHash, ignoreCase = true)
-                }
                 mainHandler.post {
                     // Nếu đã bị hủy, phần dọn dẹp UI đã được xử lý ngay tại nút Hủy bỏ
                     if (state.cancelled) {
@@ -170,31 +155,19 @@ class DialogAppUpdate(
                         return@post
                     }
                     if (activeDownload === state) activeDownload = null
-                    when {
-                        error != null -> {
-                            destFile.delete()
-                            progressBar.visibility = View.INVISIBLE
-                            btnConfirm.visibility = View.VISIBLE
-                            Toast.makeText(
-                                activity,
-                                activity.getString(R.string.app_update_download_fail) + ": " + error,
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                        hashMismatch -> {
-                            destFile.delete()
-                            progressBar.visibility = View.INVISIBLE
-                            btnConfirm.visibility = View.VISIBLE
-                            Toast.makeText(
-                                activity,
-                                activity.getString(R.string.app_update_sha256_mismatch),
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                        else -> {
-                            dismiss()
-                            openApk(activity, destFile)
-                        }
+                    if (error != null) {
+                        destFile.delete()
+                        progressBar.visibility = View.INVISIBLE
+                        btnConfirm.visibility = View.VISIBLE
+                        Toast.makeText(
+                            activity,
+                            activity.getString(R.string.app_update_download_fail) + ": " + error,
+                            Toast.LENGTH_LONG
+                        ).show()
+                    } else {
+                        // Tải về không lỗi -> cho phép cài luôn, không kiểm tra sha256
+                        dismiss()
+                        openApk(activity, destFile)
                     }
                 }
             }
