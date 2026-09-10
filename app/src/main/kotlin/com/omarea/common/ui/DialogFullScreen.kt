@@ -90,7 +90,9 @@ open class DialogFullScreen(private val layout: Int, private val darkMode: Boole
     // isCancelable chỉ được đọc 1 LẦN lúc bindSwipeToDismiss() ở onViewCreated() - đổi
     // isCancelable sau đó (lúc dialog đang chạy) không tự tắt vuốt-lùi đã bind sẵn, nên dialog
     // con cần chủ động gọi hàm này để tắt/bật vuốt-lùi đúng lúc (vd: khi bắt đầu/kết thúc tải).
-    protected fun setSwipeToDismissEnabled(enabled: Boolean) {
+    // Tên hàm KHÔNG được trùng "setSwipeToDismissEnabled" vì property var swipeToDismissEnabled
+    // ở trên đã tự sinh sẵn setter cùng chữ ký JVM đó, gây lỗi "Platform declaration clash".
+    protected fun setSwipeBackRuntimeEnabled(enabled: Boolean) {
         swipeToDismissBinding?.setEnabled(enabled)
     }
 

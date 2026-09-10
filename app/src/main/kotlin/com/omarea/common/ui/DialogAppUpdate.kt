@@ -107,8 +107,8 @@ class DialogAppUpdate(
 
             isCancelable = false
             // isCancelable chỉ chặn back/chạm ngoài; vuốt lùi đã bind sẵn từ lúc mở dialog nên
-            // phải tắt riêng bằng setSwipeToDismissEnabled để không vuốt đóng được khi đang tải.
-            setSwipeToDismissEnabled(false)
+            // phải tắt riêng bằng setSwipeBackRuntimeEnabled để không vuốt đóng được khi đang tải.
+            setSwipeBackRuntimeEnabled(false)
 
             btnConfirm.visibility = View.GONE
             progressBar.isIndeterminate = false
@@ -144,7 +144,7 @@ class DialogAppUpdate(
                         destFile.delete()
                         if (isAdded) {
                             isCancelable = true
-                            setSwipeToDismissEnabled(true)
+                            setSwipeBackRuntimeEnabled(true)
                             progressBar.visibility = View.INVISIBLE
                             btnConfirm.visibility = View.VISIBLE
                         }
@@ -168,7 +168,7 @@ class DialogAppUpdate(
             val state = activeDownload
             if (state != null) {
                 isCancelable = true
-                setSwipeToDismissEnabled(true)
+                setSwipeBackRuntimeEnabled(true)
                 activeDownload = null
                 state.cancelled = true
                 try {
