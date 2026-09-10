@@ -35,13 +35,9 @@ object ScriptEnvironmen {
     private var privateShell: ShellSession? = null
     private var shellTranslation: ShellTranslation? = null
 
-    // Template gốc của executor.sh (chưa thay thế biến), lưu lại để có thể build lại
-    // file executor mỗi khi các biến môi trường "động" (vd: DARK_MODE) thay đổi.
     private var envShellTemplate = ""
     private var executorFileName = ""
 
-    // Giá trị DARK_MODE đã được ghi vào file executor gần nhất, dùng để tránh ghi lại
-    // file khi giá trị không đổi (switchTheme có thể được gọi ở onCreate của mọi Activity).
     private var lastDarkMode: Boolean? = null
 
     @JvmStatic
@@ -79,8 +75,6 @@ object ScriptEnvironmen {
             val length = inputStream.read(bytes, 0, bytes.size)
             val envShell = String(bytes, Charset.defaultCharset()).replace("\r", "")
 
-            // Lưu lại template gốc (trước khi thay thế biến) và tên file, để sau này
-            // có thể build lại file executor khi cần cập nhật các biến "động" như DARK_MODE.
             envShellTemplate = envShell
             executorFileName = fileName
 
@@ -102,9 +96,6 @@ object ScriptEnvironmen {
         }
     }
 
-    // Build lại nội dung executor.sh từ template gốc (envShellTemplate) với các biến
-    // môi trường mới nhất (bao gồm DARK_MODE), rồi ghi đè xuống file private.
-    // Tách riêng khỏi init() để có thể gọi lại nhiều lần trong vòng đời app.
     private fun writeExecutorScript(context: Context): Boolean {
         if (envShellTemplate.isEmpty() || executorFileName.isEmpty()) {
             return false
@@ -130,20 +121,13 @@ object ScriptEnvironmen {
         }
     }
 
-    // Gọi hàm này mỗi khi chế độ dark mode của app thay đổi (vd: trong
-    // ThemeModeState.switchTheme) để cập nhật lại biến DARK_MODE trong file executor.
-    // Trước đây DARK_MODE chỉ được tính 1 lần lúc init() nên khi đổi dark mode ở giữa
-    // phiên sử dụng, giá trị cũ vẫn được giữ nguyên cho tới khi khởi động lại app.
     @JvmStatic
     @Synchronized
     fun updateDarkMode(context: Context, isDarkMode: Boolean): Boolean {
         if (!inited) {
-            // Chưa init thì giá trị DARK_MODE sẽ được lấy đúng ở lần init() đầu tiên,
-            // không cần làm gì thêm ở đây.
             return false
         }
         if (lastDarkMode != null && lastDarkMode == isDarkMode) {
-            // Giá trị không đổi, không cần ghi lại file.
             return true
         }
         val success = writeExecutorScript(context)
@@ -259,23 +243,6 @@ object ScriptEnvironmen {
         }
     }
 
-    // ========== TỐI ƯU: GỘP NHIỀU SCRIPT THÀNH 1 LẦN GỌI SHELL DUY NHẤT ==========
-    // Dùng khi cần đọc value/options của NHIỀU ActionParam cùng lúc (ví dụ khi mở dialog
-    // nhập tham số của 1 action có nhiều param, mỗi param có thể có valueShell/optionsSh
-    // riêng). Trước đây mỗi script được gọi qua 1 lần executeResultRoot() -> 1 round-trip
-    // riêng qua shell root (vốn là 1 tiến trình DÙNG CHUNG, có khóa ReentrantLock, nên các
-    // lệnh luôn phải xếp hàng chạy TUẦN TỰ dù gọi bằng coroutine song song). Với N script,
-    // cách cũ tốn N lần ghi/đọc qua BufferedReader + N lần kiểm tra/tạo cache file (MD5 +
-    // File.exists()).
-    //
-    // Hàm này gộp toàn bộ N script thành 1 khối lệnh duy nhất (mỗi script vẫn được cache
-    // ra file như cũ, chỉ gộp lúc GỌI shell), bọc mỗi script bằng 1 marker echo riêng dựa
-    // trên hash của tag, rồi gọi doCmdSync() ĐÚNG 1 LẦN. Sau đó tách kết quả theo marker để
-    // trả về map tag -> kết quả (giữ đúng ngữ nghĩa như executeResultRoot cho từng script).
-    //
-    // scripts: key = tag định danh duy nhất do caller tự đặt (ví dụ "value:tenParam",
-    //          "options:tenParam"), value = nội dung script (null/rỗng sẽ được bỏ qua,
-    //          trả về "" cho tag đó, KHÔNG tốn round-trip).
     @JvmStatic
     fun executeMultipleResultRoot(
         context: Context,
@@ -291,7 +258,6 @@ object ScriptEnvironmen {
             init(context)
         }
 
-        // Lọc bỏ script rỗng/null ngay từ đầu, không tốn chỗ trong lệnh gộp
         val validScripts = LinkedHashMap<String, String>()
         for ((key, script) in scripts) {
             if (script.trim().isNotEmpty()) {
@@ -304,7 +270,6 @@ object ScriptEnvironmen {
             return results
         }
 
-        // Chỉ có 1 script hợp lệ thì không cần gộp, dùng thẳng hàm cũ cho đơn giản
         if (validScripts.size == 1) {
             val only = validScripts.entries.iterator().next()
             results[only.key] = executeResultRoot(context, only.value, nodeInfoBase)
@@ -314,8 +279,6 @@ object ScriptEnvironmen {
         val cmd = StringBuilder()
         cmd.append("\n")
 
-        // Các biến môi trường phụ thuộc trang (PAGE_CONFIG_DIR...) chỉ cần export 1 LẦN
-        // cho cả khối lệnh gộp, thay vì lặp lại cho từng script như trước.
         if (nodeInfoBase != null && nodeInfoBase.currentPageConfigPath.isNotEmpty()) {
             val parentPageConfigDir = nodeInfoBase.pageConfigDir
             val currentPageConfigPath = nodeInfoBase.currentPageConfigPath
@@ -334,20 +297,6 @@ object ScriptEnvironmen {
 
         val orderedTags = ArrayList(validScripts.keys)
 
-        // ===== TỐI ƯU (v2) =====
-        // Bản gộp trước chỉ gộp được 1 ROUND-TRIP qua doCmdSync(), nhưng bên TRONG round-trip
-        // đó vẫn gọi "environmentPath <path>" RIÊNG cho từng script -> mỗi lần gọi là 1 TIẾN
-        // TRÌNH MỚI phải chạy lại toàn bộ nội dung executor.sh (export TOOLKIT, START_DIR,
-        // PATH...) dù các biến này giống hệt nhau giữa các script trong cùng 1 lần refresh.
-        // Với N checkbox, tốn N lần spawn + setup lại executor -> đây mới là phần thực sự
-        // gây chậm (không phải bản thân lệnh getprop), nên N càng lớn càng chậm rõ dù chỉ có
-        // 1 round-trip qua shell.
-        //
-        // Cách khắc phục: gộp toàn bộ N script (kèm marker echo) thành 1 FILE DUY NHẤT, rồi
-        // chỉ gọi "environmentPath <mergedPath>" ĐÚNG 1 LẦN. executor.sh chỉ setup môi trường
-        // 1 LẦN rồi thực thi mergedPath; bên trong mergedPath mỗi script con được bọc trong
-        // "( ... )" - 1 subshell nhẹ (chỉ fork, KHÔNG chạy lại executor) để cô lập cd/exit của
-        // từng script với nhau, giữ đúng ngữ nghĩa cũ.
         val merged = StringBuilder()
         for (tag in orderedTags) {
             val script = validScripts[tag]!!
@@ -378,7 +327,6 @@ object ScriptEnvironmen {
             rawOutput = shellTranslation!!.resolveRow(rawOutput)
         }
 
-        // Tách kết quả gộp thành từng phần theo marker của mỗi tag
         for (tag in orderedTags) {
             val marker = "KRBATCH_" + md5(tag)
             val startMarker = ">>>$marker"
@@ -425,6 +373,7 @@ object ScriptEnvironmen {
         params["ARCH"] = System.getProperty("os.arch") ?: ""
         params["ANDROID_SDK"] = Build.VERSION.SDK_INT.toString()
         params["KERNEL_VERSION"] = System.getProperty("os.version") ?: ""
+        params["SELINUX"] = getSELinuxStatus()
 
         val fileOwner = FileOwner(context)
         val androidUid = fileOwner.getUserId()
@@ -459,6 +408,22 @@ object ScriptEnvironmen {
         }
 
         return params
+    }
+
+    private fun getSELinuxStatus(): String {
+        return try {
+            val process = Runtime.getRuntime().exec("getenforce")
+            val status = process.inputStream.bufferedReader().use { it.readText().trim() }
+            if (status.isNotEmpty()) status else "Unknown"
+        } catch (e: Exception) {
+            try {
+                val c = Class.forName("android.os.SELinux")
+                val isEnforced = c.getMethod("isSELinuxEnforced").invoke(null) as Boolean
+                if (isEnforced) "Enforcing" else "Permissive"
+            } catch (ex: Exception) {
+                "Unknown"
+            }
+        }
     }
 
     private fun getVariables(params: HashMap<String, String>?): ArrayList<String> {

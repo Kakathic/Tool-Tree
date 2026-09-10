@@ -203,7 +203,7 @@ object DownloadTaskHelper {
                 }
                 Status.COMPLETED -> {
                     view.showStatusLabel(view.context.getString(R.string.kr_download_execute_success))
-                    view.finishBusy()
+                    view.finishBusy(showDoneIcon = true)
                 }
                 Status.ERROR -> {
                     view.showStatusLabel(view.context.getString(R.string.kr_download_error) + ": " + (session.error ?: ""), spin = false)
@@ -469,7 +469,7 @@ object DownloadTaskHelper {
             postMain {
                 session.viewRef?.let { v ->
                     v.showStatusLabel(v.context.getString(R.string.kr_download_execute_success))
-                    v.finishBusy()
+                    v.finishBusy(showDoneIcon = true)
                 }
                 session.onFinished?.invoke()
             }

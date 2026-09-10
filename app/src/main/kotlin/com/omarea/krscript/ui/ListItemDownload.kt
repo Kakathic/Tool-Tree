@@ -77,10 +77,13 @@ class ListItemDownload(context: Context, config: DownloadNode) :
         desc = originalDesc
     }
 
-    fun finishBusy() {
+    fun finishBusy(showDoneIcon: Boolean = false) {
         isBusy = false
         cancelAction = null
         ringView?.visibility = View.GONE
+        widgetView?.setImageDrawable(
+            context.getDrawable(if (showDoneIcon) R.drawable.download_done else R.drawable.kr_download)
+        )
         widgetView?.visibility = View.VISIBLE
     }
 
