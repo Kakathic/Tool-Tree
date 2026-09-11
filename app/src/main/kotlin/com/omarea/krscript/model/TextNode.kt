@@ -51,6 +51,9 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         internal var text: String = ""
         // Script lấy text động (khai báo bằng "sh" hoặc "text-sh" trong TOML)
         internal var dynamicTextSh: String = ""
+        // Nếu true: "text" (hoặc kết quả "sh") được diễn giải như Markdown inline (bold/italic/
+        // strikethrough/code/link) trước khi hiển thị - khai báo bằng "markdown"/"md" trong TOML
+        internal var markdown: Boolean = false
         // 点击后执行的脚本
         internal var onClickScript: String = ""
         internal var photo: String = ""

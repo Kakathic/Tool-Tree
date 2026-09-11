@@ -203,10 +203,25 @@ object RowsRenderHelper {
             }
             previousHadMarginBottom = false
             // Nếu có khai báo "sh": lấy nội dung dòng từ kết quả shell đã gộp sẵn ở trên
-            val label = if (row.dynamicTextSh.isNotEmpty()) {
+            val rawLabel = if (row.dynamicTextSh.isNotEmpty()) {
                 dynamicTextResults[rowIndex] ?: ""
             } else {
                 row.text
+            }
+
+            // Nếu row khai báo "markdown"/"md": diễn giải rawLabel như Markdown inline (bold/
+            // italic/strikethrough/code/link) - label dùng cho phần hiển thị bên dưới là text
+            // THUẦN (đã bỏ ký hiệu), các span tương ứng được lưu lại để áp vào đúng vị trí sau
+            // khi đã ghép thêm placeholder icon/toggle (xem markdownSpans + markdownOffset bên dưới).
+            val markdownSpans: List<MarkdownInlineHelper.MarkdownSpanInfo>
+            val label: String
+            if (row.markdown && rawLabel.isNotEmpty()) {
+                val (plain, spans) = MarkdownInlineHelper.parse(rawLabel)
+                label = plain
+                markdownSpans = spans
+            } else {
+                label = rawLabel
+                markdownSpans = emptyList()
             }
 
             // Row có "icon" (ảnh nhỏ inline, khác "photo" khối riêng): nạp ảnh trước để biết có
@@ -233,6 +248,10 @@ object RowsRenderHelper {
             }
             val length = text.length
             val spannableString = SpannableString(text)
+            // Vị trí bắt đầu của "label" bên trong "text" - chỉ lệch khi có icon chèn TRƯỚC
+            // label ("\u2002 " dài 2 ký tự); dùng để bù toạ độ khi áp markdownSpans (toạ độ
+            // markdownSpans được tính theo "label" thuần, không tính icon/toggle).
+            val markdownOffset = if (showIcon && row.iconPosition == "before") 2 else 0
 
             var toggleDrawable: Drawable? = null
             if (isToggle) {
@@ -396,6 +415,14 @@ object RowsRenderHelper {
             // định - không đụng tới RGB, tránh mất màu chữ khi kết hợp cả color lẫn alpha.
             if (row.alpha in 0f..1f) {
                 spannableString.setSpan(TextAlphaSpan(row.alpha), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+
+            // Áp các span Markdown inline (bold/italic/strikethrough/code/link) đã parse từ
+            // rawLabel ở trên - đặt SAU các span cấp-row (bold/color/...) để markdown có thể
+            // ghi đè/bổ sung style cho đúng phần chữ tương ứng, toạ độ được bù thêm
+            // markdownOffset (icon chèn trước label nếu có).
+            if (markdownSpans.isNotEmpty()) {
+                applyMarkdownSpans(context, spannableString, markdownSpans, markdownOffset, length)
             }
 
             // Canh lề (trái/giữa/phải) giờ được áp dụng 1 LẦN cho cả NHÓM (finalizeGroup), không
@@ -638,6 +665,57 @@ object RowsRenderHelper {
             Layout.Alignment.ALIGN_OPPOSITE -> extra.toInt()
             Layout.Alignment.ALIGN_CENTER -> (extra / 2f).toInt()
             else -> null
+        }
+    }
+
+    // Áp các span Markdown inline (bold/italic/strikethrough/code/link) đã parse sẵn (xem
+    // MarkdownInlineHelper) vào spannableString. Toạ độ trong "spans" được tính theo label THUẦN
+    // (không tính icon/toggle) nên cần cộng "offset" (vị trí label bắt đầu trong text hiển thị)
+    // và luôn kẹp trong [0, maxLength) để không tràn qua ký tự placeholder icon/toggle phía sau.
+    private fun applyMarkdownSpans(
+        context: Context,
+        spannableString: SpannableString,
+        spans: List<MarkdownInlineHelper.MarkdownSpanInfo>,
+        offset: Int,
+        maxLength: Int
+    ) {
+        for (info in spans) {
+            val start = info.start + offset
+            val end = (info.end + offset).coerceAtMost(maxLength)
+            if (start < 0 || end <= start || start >= maxLength) {
+                continue
+            }
+            when (info.type) {
+                MarkdownInlineHelper.MarkdownSpanType.BOLD ->
+                    spannableString.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                MarkdownInlineHelper.MarkdownSpanType.ITALIC ->
+                    spannableString.setSpan(StyleSpan(Typeface.ITALIC), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                MarkdownInlineHelper.MarkdownSpanType.STRIKETHROUGH ->
+                    spannableString.setSpan(StrikethroughSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                MarkdownInlineHelper.MarkdownSpanType.CODE -> {
+                    @Suppress("DEPRECATION")
+                    spannableString.setSpan(TypefaceSpan("monospace"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    spannableString.setSpan(BackgroundColorSpan(0x22808080), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                MarkdownInlineHelper.MarkdownSpanType.LINK -> {
+                    val href = info.href
+                    spannableString.setSpan(object : ClickableSpan() {
+                        override fun onClick(widget: View) {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(href))
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            } catch (ex: Exception) {
+                                Toast.makeText(context, context.getString(R.string.kr_slice_activity_fail), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                        override fun updateDrawState(ds: TextPaint) {
+                            ds.isUnderlineText = true
+                        }
+                    }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
         }
     }
 

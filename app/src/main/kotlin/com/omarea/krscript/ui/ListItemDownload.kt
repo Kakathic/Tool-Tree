@@ -27,6 +27,7 @@ class ListItemDownload(context: Context, config: DownloadNode) :
     init {
         widgetView?.visibility = View.VISIBLE
         widgetView?.setImageDrawable(context.getDrawable(R.drawable.kr_download))
+        WidgetTintHelper.applyTint(context, widgetView, iconDrawable)
         RowsRenderHelper.bind(context, rowsView, rowsPhotoView, config.rows, config)
     }
 

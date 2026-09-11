@@ -995,6 +995,7 @@ class PageConfigReader {
         tomlGet(table, "icon-gif-loop", "icon-gif-loop-count", "icon-gif_loop_count")?.let { row.iconGifLoopCount = it.trim().toIntOrNull() ?: row.iconGifLoopCount }
         tomlGet(table, "script", "run")?.let { row.onClickScript = it }
         tomlGet(table, "sh", "text-sh")?.let { row.dynamicTextSh = it }
+        tomlGet(table, "markdown", "md")?.let { row.markdown = tomlTruthy(it, "markdown", "md") }
         // Toggle nhỏ (checkbox / switch) lồng trong dòng text
         tomlGet(table, "toggle", "toggle-type")?.let {
             val t = it.trim().lowercase(getDefault())

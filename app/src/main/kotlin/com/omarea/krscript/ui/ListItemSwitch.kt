@@ -31,5 +31,6 @@ class ListItemSwitch(context: Context,
 
     init {
         checked = config.checked
+        WidgetTintHelper.applyTint(context, switchView, iconDrawable)
     }
 }
