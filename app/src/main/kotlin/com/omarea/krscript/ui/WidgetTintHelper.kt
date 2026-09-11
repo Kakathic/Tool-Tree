@@ -17,13 +17,13 @@ object WidgetTintHelper {
 
         val defaultAccent = resolveAccentColor(context)
 
-        // 1. Không có icon -> Tô màu Accent mặc định
+        // 1. Không có icon -> Giữ nguyên logic khôi phục màu mặc định
         if (iconDrawable == null) {
             widgetView.imageTintList = ColorStateList.valueOf(defaultAccent)
             return
         }
 
-        // 2. Trích xuất Top 3 màu chủ đạo nhất từ icon
+        // 2. Trích xuất Top 3 màu chủ đạo (Chỉ lọc bỏ alpha & màu xám ở đoạn trích xuất từ ảnh)
         val topColors = extractTopColors(iconDrawable, topN = 3)
 
         // 3. Trộn các màu theo đúng tỷ lệ trọng số xuất hiện
@@ -54,7 +54,6 @@ object WidgetTintHelper {
             val nextScore = colorsWithScores[i].second
             val totalScore = currentScore + nextScore
 
-            // Tỷ lệ màu tiếp theo chiếm trong tổng tích lũy
             val ratio = if (totalScore > 0f) nextScore / totalScore else 0.5f
             
             currentColor = ColorUtils.blendARGB(currentColor, nextColor, ratio)
@@ -64,6 +63,7 @@ object WidgetTintHelper {
         return currentColor
     }
 
+    // Giữ nguyên hàm khôi phục/lấy màu accent
     private fun resolveAccentColor(context: Context): Int {
         val typedValue = TypedValue()
         context.theme.resolveAttribute(android.R.attr.colorAccent, typedValue, true)
@@ -82,7 +82,7 @@ object WidgetTintHelper {
     }
 
     /**
-     * Trích xuất Top N màu xuất hiện nhiều & đặc trưng nhất cùng điểm số
+     * Chỉ lọc bỏ Alpha và Màu Xám tại bước phân tích icon
      */
     private fun extractTopColors(drawable: Drawable?, topN: Int = 3): List<Pair<Int, Float>> {
         drawable ?: return emptyList()
@@ -107,16 +107,24 @@ object WidgetTintHelper {
             for (y in 0 until sampleSize) {
                 val pixel = bitmap.getPixel(x, y)
 
-                if (Color.alpha(pixel) < 50) continue
+                // 1. LOẠI BỎ ALPHA: Chỉ duyệt pixel đục (Alpha >= 200)
+                if (Color.alpha(pixel) < 200) continue
 
                 Color.colorToHSV(pixel, hsv)
-                val sat = hsv[1]
-                val valVal = hsv[2]
+                val sat = hsv[1]    // Độ bão hòa màu
+                val valVal = hsv[2] // Độ sáng
+
+                // 2. LOẠI BỎ MÀU XÁM / ĐEN QUÁ TỐI:
+                // sat < 0.20f: Nhóm màu tone xám/trắng không có màu chủ đạo
+                // valVal < 0.15f: Nhóm màu quá tối
+                if (sat < 0.20f || valVal < 0.15f) continue
 
                 // Nhóm các màu gần giống nhau
                 val r = (Color.red(pixel) shr 4) shl 4
                 val g = (Color.green(pixel) shr 4) shl 4
                 val b = (Color.blue(pixel) shr 4) shl 4
+                
+                // Color.rgb tạo màu có Alpha = 255 mặc định
                 val quantizedColor = Color.rgb(r, g, b)
 
                 val weight = 1.0f + (sat * 2.0f) + (if (valVal > 0.15f && valVal < 0.95f) 0.5f else 0.0f)
@@ -128,7 +136,6 @@ object WidgetTintHelper {
 
         bitmap.recycle()
 
-        // Lấy Top N màu có điểm trọng số cao nhất
         return colorScores.entries
             .sortedByDescending { it.value }
             .take(topN)
