@@ -12,6 +12,7 @@ import android.text.style.SuperscriptSpan
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import android.widget.TextView
@@ -36,7 +37,6 @@ import com.tool.tree.databinding.ActivityMainBinding
 import com.tool.tree.ui.FadeScalePageTransformer
 import com.tool.tree.ui.MainPagerAdapter
 import com.tool.tree.ui.SwipePager
-import com.tool.tree.ui.TabDragSelectHelper
 import com.tool.tree.ui.TabIconHelper
 import com.tool.tree.ui.SpinnerPopupHelper
 import kotlinx.coroutines.Dispatchers
@@ -130,7 +130,7 @@ class MainActivity : AppCompatActivity() {
         invalidateOptionsMenu()
 
         if (updateInfo != null && !AppUpdateConfig(this).isDismissed(updateInfo.sha256)) {
-            showUpdateDialog(updateInfo)
+            binding.root.postDelayed({ showUpdateDialog(updateInfo) }, 2000)
         }
     }
 
@@ -275,9 +275,10 @@ class MainActivity : AppCompatActivity() {
             binding.tabLayout.addTab(tab)
         }
 
-        // Nhấn giữ 1 icon rồi kéo tay qua icon khác -> cũng chuyển tab (thay vì chỉ tap từng
-        // icon một). Phải gắn SAU khi các tab đã được addTab() ở trên vì cần customView tồn tại.
-        TabDragSelectHelper.attach(binding.tabLayout)
+        // Chạm hoặc di chuyển ngón tay qua icon nào là chọn NGAY icon đó (không cần nhấc tay
+        // lên mới chọn, không cần giữ lâu). Phải gắn SAU khi các tab đã addTab() ở trên vì cần
+        // customView tồn tại.
+        attachTabTouchSelect()
 
         // FIX: Xử lý sự kiện click thủ công cho Custom Tab View
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -312,6 +313,46 @@ class MainActivity : AppCompatActivity() {
                 tabHelper.updateHighlight(binding.tabLayout, highlightPosition)
             }
         })
+    }
+
+    // Gắn touch listener lên từng icon tab: chạm xuống hoặc di ngón tay qua icon nào là chọn
+    // NGAY icon đó (dựa theo vị trí tay thực tế trên màn hình - rawX), không cần đợi nhấc tay.
+    private fun attachTabTouchSelect() {
+        for (position in 0 until binding.tabLayout.tabCount) {
+            val customView = binding.tabLayout.getTabAt(position)?.customView ?: continue
+            customView.setOnTouchListener { v, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        binding.tabLayout.getTabAt(position)?.select()
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        findTabAt(event.rawX)?.let { target ->
+                            if (binding.tabLayout.selectedTabPosition != target) {
+                                binding.tabLayout.getTabAt(target)?.select()
+                            }
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        v.performClick()
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }
+    }
+
+    // Tìm icon tab đang nằm dưới toạ độ X thực tế trên màn hình (rawX).
+    private fun findTabAt(rawX: Float): Int? {
+        val loc = IntArray(2)
+        for (i in 0 until binding.tabLayout.tabCount) {
+            val view = binding.tabLayout.getTabAt(i)?.customView ?: continue
+            view.getLocationOnScreen(loc)
+            if (rawX >= loc[0] && rawX < loc[0] + view.width) return i
+        }
+        return null
     }
 
     private fun getItems(pageNode: PageNode): ArrayList<NodeInfoBase>? {

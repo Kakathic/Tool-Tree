@@ -539,6 +539,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
     }
 
     private fun downloadExecute(item: DownloadNode, listItemView: ListItemDownload, onExit: Runnable) {
+        if (!isAdded) return
         DownloadTaskHelper.start(requireContext(), viewLifecycleOwner.lifecycleScope, item, listItemView) {
             krScriptActionHandler?.onActionCompleted(item)
             onExit.run()
