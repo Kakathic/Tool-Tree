@@ -1,34 +1,35 @@
 package com.omarea.common.shell
 
-import android.util.Log
 import com.omarea.common.shared.RootFileInfo
 import java.io.File
 
-/**
- * Created by Hello on 2018/07/06.
- */
-
 object RootFile {
+    // Dùng "test" qua shell root thay vì java.io.File, vì File API chạy dưới quyền app
+    // vẫn bị Android/SELinux chặn ở các đường dẫn ngoài sandbox (vd: /data, /system) dù
+    // thiết bị đã root - trong khi lệnh shell chạy trong phiên su thì không bị chặn.
+    private fun shellTest(flag: String, path: String): Boolean {
+        return KeepShellPublic.doCmdSync("test $flag \"$path\" && echo 1 || echo 0").trim() == "1"
+    }
+
+    // Ưu tiên java.io.File (tức thì, không cần root) - chỉ gọi qua shell khi Java báo
+    // "không có" (có thể do thật sự không tồn tại, hoặc do bị chặn quyền ngoài sandbox),
+    // để không phát sinh tiến trình su cho các đường dẫn bình thường app vẫn đọc được.
     fun itemExists(path: String): Boolean {
-        return File(path).exists()
+        return File(path).exists() || shellTest("-e", path)
     }
 
     fun fileExists(path: String): Boolean {
-        return File(path).isFile
+        return File(path).isFile || shellTest("-f", path)
     }
 
     fun dirExists(path: String): Boolean {
-        return File(path).isDirectory
+        return File(path).isDirectory || shellTest("-d", path)
     }
 
     fun deleteDirOrFile(path: String) {
-        if (File(path).isDirectory)  File(path).deleteRecursively() else File(path).delete()
+        if (dirExists(path)) File(path).deleteRecursively() else File(path).delete()
     }
 
-    // 通过MD5比对两个文件是否相同
-
-
-    // 处理像 "drwxrwx--x   3 root     root         4096 1970-07-14 17:13 vendor_de/" 这样的数据行
     private fun shellFileInfoRow(row: String, parent: String): RootFileInfo? {
         if (row.startsWith("total ")) {
             return null
@@ -53,11 +54,7 @@ object RootFile {
             if (fileName.endsWith("/")) {
                 file.filePath = fileName.dropLast(1)
                 file.isDirectory = true
-            } else if (fileName.endsWith("@")) {
-                file.filePath = fileName.dropLast(1)
-            } else if (fileName.endsWith("|")) {
-                file.filePath = fileName.dropLast(1)
-            } else if (fileName.endsWith("*")) {
+            } else if (fileName.endsWith("@") || fileName.endsWith("|") || fileName.endsWith("*")) {
                 file.filePath = fileName.dropLast(1)
             } else {
                 file.filePath = fileName
@@ -76,20 +73,15 @@ object RootFile {
         val files = ArrayList<RootFileInfo>()
         if (dirExists(absPath)) {
             val outputInfo = KeepShellPublic.doCmdSync("busybox ls -1Fs \"$absPath\"")
-            Log.d(">>>> files", outputInfo)
             if (outputInfo != "error") {
                 val rows = outputInfo.split("\n")
                 for (row in rows) {
                     val file = shellFileInfoRow(row, absPath)
                     if (file != null) {
                         files.add(file)
-                    } else {
-                        Log.e(">>>> Scene", "MapDirError Row -> $row")
                     }
                 }
             }
-        } else {
-            Log.e(">>>> dir lost", absPath)
         }
 
         return files
@@ -98,7 +90,6 @@ object RootFile {
     fun fileInfo(path: String): RootFileInfo? {
         val absPath = if (path.endsWith("/")) path.subSequence(0, path.length - 1).toString() else path
         val outputInfo = KeepShellPublic.doCmdSync("busybox ls -1dFs \"$absPath\"")
-        Log.d(">>>> file", outputInfo)
         if (outputInfo != "error") {
             val rows = outputInfo.split("\n")
             for (row in rows) {
@@ -107,8 +98,6 @@ object RootFile {
                     file.filePath = absPath.substring(absPath.lastIndexOf("/") + 1)
                     file.parentDir = absPath.take(absPath.lastIndexOf("/"))
                     return file
-                } else {
-                    Log.e(">>>> Scene", "MapDirError Row -> $row")
                 }
             }
         }
