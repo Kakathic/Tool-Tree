@@ -8,6 +8,9 @@ import android.widget.BaseAdapter
 import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
+import com.omarea.common.shared.RootFileInfo
+import com.omarea.common.shell.KeepShellPublic
+import com.omarea.common.shell.RootFile
 import com.omarea.common.ui.DialogHelper
 import com.omarea.common.ui.ProgressBarDialog
 import com.tool.tree.R
@@ -40,6 +43,25 @@ class AdapterFileSelector private constructor(
 
     // Giữ thứ tự đã chọn
     private val selectedFiles = LinkedHashSet<File>()
+
+    // Thông tin (isDirectory/size) lấy được qua root cho các mục mà java.io.File không tự
+    // stat được (thư mục ngoài sdcard) - khoá theo absolutePath, ghi đè lên File API thường.
+    private val rootInfoMap = HashMap<String, RootFileInfo>()
+
+    private fun isDir(file: File): Boolean {
+        return rootInfoMap[file.absolutePath]?.isDirectory ?: file.isDirectory
+    }
+
+    private fun sizeOf(file: File): Long {
+        return rootInfoMap[file.absolutePath]?.length() ?: file.length()
+    }
+
+    // file.exists() luôn trả về false với đường dẫn ngoài sdcard mà java.io không stat
+    // được, dù mục đó vừa được liệt kê qua root - nên coi các mục có trong rootInfoMap
+    // là đang tồn tại, không dò lại bằng File API thường.
+    private fun existsSafe(file: File): Boolean {
+        return rootInfoMap.containsKey(file.absolutePath) || file.exists()
+    }
 
     // Được gọi mỗi khi danh sách đã chọn thay đổi (để activity cập nhật nút "Xong"/số lượng đã chọn)
     private var selectionChangedListener: SelectionChangedListener? = null
@@ -102,26 +124,31 @@ class AdapterFileSelector private constructor(
         return false
     }
 
+    // Sắp xếp: thư mục trước, rồi theo tên (không phân biệt hoa/thường). isDirOf cho phép
+    // dùng thông tin isDirectory lấy qua root thay vì file.isDirectory (không sửa được field
+    // dùng chung nếu gọi từ background thread trước khi notifyDataSetChanged).
+    private fun sortFiles(files: Array<File>, isDirOf: (File) -> Boolean) {
+        for (i in files.indices) {
+            for (j in i + 1 until files.size) {
+                val iIsDir = isDirOf(files[i])
+                val jIsDir = isDirOf(files[j])
+                if (jIsDir && !iIsDir) {
+                    val t = files[i]; files[i] = files[j]; files[j] = t
+                } else if (jIsDir == iIsDir && files[j].name.lowercase() < files[i].name.lowercase()) {
+                    val t = files[i]; files[i] = files[j]; files[j] = t
+                }
+            }
+        }
+    }
+
     private fun loadDir(dir: File) {
-        // progressBarDialog.showDialog("Loading...");
         Thread {
-            // Tính toán trên background thread, nhưng KHÔNG ghi vào field của adapter ở đây.
-            // Mọi field (fileArray/currentDir/hasParent) chỉ được gán trên UI thread, ngay
-            // trước khi gọi notifyDataSetChanged(), để tránh khoảng hở khiến ListView layout
-            // với dữ liệu đã đổi nhưng chưa được notify (-> IllegalStateException).
-            // Chỉ ẩn "..." khi thực sự không còn thư mục cha (đã tới root filesystem) -
-            // KHÔNG còn dò canRead() ở đây nữa: nếu cha bị từ chối quyền tạm thời,
-            // loadDir() (gọi khi bấm "...") đã tự xử lý đúng (accessDeniedListener + rỗng)
-            // thay vì phải chặn từ trước như cũ.
             val parent = dir.parentFile
             val newHasParent = parent != null
 
-            // "Bị từ chối" (không đọc được / listFiles() null) PHẢI ra kết quả rỗng chứ
-            // không phải null - null từng khiến bước gán dưới đây giữ nguyên fileArray CŨ
-            // (danh sách thư mục trước đó), làm màn hình đứng yên như chưa hề chuyển thư
-            // mục khi đi ra ngoài sdcard vào nơi thiếu quyền.
             var newFileArray: Array<File> = emptyArray()
             var accessDenied = false
+            val newRootInfo = HashMap<String, RootFileInfo>()
 
             if (dir.exists() && dir.canRead()) {
                 val files = dir.listFiles(FileFilter { fileItem ->
@@ -135,36 +162,42 @@ class AdapterFileSelector private constructor(
                 if (files == null) {
                     accessDenied = true
                 } else {
-                    // 文件排序
-                    for (i in files.indices) {
-                        for (j in i + 1 until files.size) {
-                            if (files[j].isDirectory && files[i].isFile) {
-                                val t = files[i]
-                                files[i] = files[j]
-                                files[j] = t
-                            } else if (files[j].isDirectory == files[i].isDirectory &&
-                                files[j].name.lowercase().compareTo(files[i].name.lowercase()) < 0
-                            ) {
-                                val t = files[i]
-                                files[i] = files[j]
-                                files[j] = t
-                            }
-                        }
-                    }
+                    sortFiles(files) { it.isDirectory }
                     newFileArray = files
                 }
             } else {
                 accessDenied = true
             }
 
+            // java.io.File bị chặn (thường gặp ngoài sdcard, vd /data, /system) dù máy đã
+            // root - thử lại qua shell root (RootFile), vốn không bị giới hạn quyền của app.
+            if (accessDenied && KeepShellPublic.checkRoot()) {
+                val entries = ArrayList<File>()
+                for (info in RootFile.list(dir.absolutePath)) {
+                    if (folderChooserMode && !info.isDirectory) {
+                        continue
+                    }
+                    val childFile = File(dir, info.fileName)
+                    if (!folderChooserMode && !info.isDirectory && !matchesExtension(childFile)) {
+                        continue
+                    }
+                    newRootInfo[childFile.absolutePath] = info
+                    entries.add(childFile)
+                }
+                val array = entries.toTypedArray()
+                sortFiles(array) { newRootInfo[it.absolutePath]?.isDirectory ?: it.isDirectory }
+                newFileArray = array
+                accessDenied = false
+            }
+
             val finalFileArray = newFileArray
             val finalAccessDenied = accessDenied
             handler.post {
-                // Gán dữ liệu và notify trong cùng một lượt trên UI thread, không có
-                // background thread nào chen vào giữa hai bước này.
                 hasParent = newHasParent
                 fileArray = finalFileArray
                 currentDir = dir
+                rootInfoMap.clear()
+                rootInfoMap.putAll(newRootInfo)
                 notifyDataSetChanged()
                 progressBarDialog.hideDialog()
                 selectionChangedListener?.onSelectionChanged(selectedFiles.size)
@@ -235,7 +268,7 @@ class AdapterFileSelector private constructor(
     // Ở chế độ chọn thư mục: mọi mục trong fileArray đều là thư mục -> có thể chọn.
     // Ở chế độ chọn tệp: chỉ tệp mới có thể chọn, thư mục chỉ dùng để điều hướng.
     private fun isSelectable(file: File): Boolean {
-        return folderChooserMode || !file.isDirectory
+        return folderChooserMode || !isDir(file)
     }
 
     // Thư mục hiện tại đã được chọn hết (mọi mục có thể chọn) hay chưa - dùng để đồng bộ checkbox "Chọn tất cả".
@@ -286,10 +319,10 @@ class AdapterFileSelector private constructor(
             return view
         } else {
             val file = getItem(position) as File
-            if (file.isDirectory) {
+            if (isDir(file)) {
                 view = View.inflate(parent.context, R.layout.list_item_dir, null)
                 view.setOnClickListener {
-                    if (!file.exists()) {
+                    if (!existsSafe(file)) {
                         Toast.makeText(view.context, "The selected file has been deleted. Please select again!", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
@@ -306,7 +339,7 @@ class AdapterFileSelector private constructor(
                             checkBox.visibility = View.VISIBLE
                             checkBox.isChecked = selectedFiles.contains(file)
                             checkBox.setOnClickListener {
-                                if (!file.exists()) {
+                                if (!existsSafe(file)) {
                                     Toast.makeText(view.context, "The selected directory has been deleted. Please select another one!", Toast.LENGTH_SHORT).show()
                                     return@setOnClickListener
                                 }
@@ -315,7 +348,7 @@ class AdapterFileSelector private constructor(
                         }
                         // Nhấn giữ vẫn dùng để chọn nhanh 1 thư mục (giữ hành vi cũ, thêm vào danh sách đã chọn)
                         view.setOnLongClickListener {
-                            if (!file.exists()) {
+                            if (!existsSafe(file)) {
                                 Toast.makeText(view.context, "The selected directory has been deleted. Please select another one!", Toast.LENGTH_SHORT).show()
                                 return@setOnLongClickListener true
                             }
@@ -328,7 +361,7 @@ class AdapterFileSelector private constructor(
                         }
                         view.setOnLongClickListener {
                             DialogHelper.confirm(view.context, view.context.getString(R.string.dialog_title_select_directory), file.absolutePath, Runnable {
-                                if (!file.exists()) {
+                                if (!existsSafe(file)) {
                                     Toast.makeText(view.context, "The selected directory has been deleted. Please select another one!", Toast.LENGTH_SHORT).show()
                                     return@Runnable
                                 }
@@ -346,15 +379,15 @@ class AdapterFileSelector private constructor(
                 }
             } else {
                 view = View.inflate(parent.context, R.layout.list_item_file, null)
-                val fileLength = file.length()
+                val fileLength = sizeOf(file)
                 val fileSize: String = if (fileLength < 1024) {
                     fileLength.toString() + "B"
                 } else if (fileLength < 1048576) {
-                    String.format("%sKB", String.format("%.2f", (file.length() / 1024.0)))
+                    String.format("%sKB", String.format("%.2f", (fileLength / 1024.0)))
                 } else if (fileLength < 1073741824) {
-                    String.format("%sMB", String.format("%.2f", (file.length() / 1048576.0)))
+                    String.format("%sMB", String.format("%.2f", (fileLength / 1048576.0)))
                 } else {
-                    String.format("%sGB", String.format("%.2f", (file.length() / 1073741824.0)))
+                    String.format("%sGB", String.format("%.2f", (fileLength / 1073741824.0)))
                 }
 
                 (view.findViewById<View>(R.id.ItemText) as TextView).text = fileSize
@@ -366,7 +399,7 @@ class AdapterFileSelector private constructor(
                         checkBox.isChecked = selectedFiles.contains(file)
                     }
                     val toggleListener = View.OnClickListener {
-                        if (!file.exists()) {
+                        if (!existsSafe(file)) {
                             Toast.makeText(view.context, "The selected file has been deleted. Please select again!", Toast.LENGTH_SHORT).show()
                             return@OnClickListener
                         }
@@ -380,7 +413,7 @@ class AdapterFileSelector private constructor(
                     }
                     view.setOnClickListener {
                         DialogHelper.confirm(view.context, view.context.getString(R.string.dialog_title_select_file), file.absolutePath, Runnable {
-                            if (!file.exists()) {
+                            if (!existsSafe(file)) {
                                 Toast.makeText(view.context, "The selected file has been deleted. Please select again!", Toast.LENGTH_SHORT).show()
                                 return@Runnable
                             }
