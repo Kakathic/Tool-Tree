@@ -34,6 +34,8 @@ open class ListItemClickable(
 
     private var dragHighlightView: View? = null
 
+    private var longPressPending = false
+
     protected open fun allowLongClick(): Boolean = allowShortcutConfig
 
     fun setOnClickListener(onClickListener: OnClickListener): ListItemClickable {
@@ -61,7 +63,7 @@ open class ListItemClickable(
         
         this.layout.setOnLongClickListener {
             if (allowLongClick()) {
-                this.mOnLongClickListener?.onLongClick(this)
+                longPressPending = true
                 dragHighlightView = layout
                 layout.parent?.requestDisallowInterceptTouchEvent(true)
                 true
@@ -73,7 +75,9 @@ open class ListItemClickable(
         // Hiệu ứng nhấn chỉ hiện 1 lần khi vừa chạm, không giữ theo thời gian nhấn giữ (kể cả khi long-press).
         // Sau khi long-press kích hoạt (dragHighlightView != null), theo dõi ngón tay di chuyển sang item
         // khác để tô sáng item đó (chỉ để xem, không tự bấm khi thả tay). requestDisallowInterceptTouchEvent
-        // để ScrollView cha không cướp sự kiện chạm giữa chừng khi đang vuốt.
+        // để ScrollView cha không cướp sự kiện chạm giữa chừng khi đang vuốt. Việc gọi mOnLongClickListener
+        // thật (mở dialog tạo shortcut/huỷ tải...) được hoãn tới lúc thả tay: chỉ gọi nếu chưa từng vuốt
+        // sang item khác, để dialog không tự bật lên giữa chừng làm mất luôn sự kiện chạm.
         this.layout.setOnTouchListener { view, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -87,9 +91,17 @@ open class ListItemClickable(
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     view.removeCallbacks(resetPressedRunnable)
+                    val draggedAway = dragHighlightView != null && dragHighlightView !== layout
                     dragHighlightView?.isPressed = false
                     dragHighlightView = null
                     view.parent?.requestDisallowInterceptTouchEvent(false)
+
+                    if (longPressPending) {
+                        longPressPending = false
+                        if (!draggedAway && event.actionMasked == MotionEvent.ACTION_UP) {
+                            this.mOnLongClickListener?.onLongClick(this)
+                        }
+                    }
                 }
             }
             false

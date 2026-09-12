@@ -183,7 +183,10 @@ class BlurController {
                     if (!act.isFinishing && act.window != null) {
                         act.window.decorView.invalidate()
                     }
+                    BlurEngine.notifyBlurReady()
                 }
+            } else {
+                act.runOnUiThread { BlurEngine.notifyBlurReady() }
             }
         }.start()
     }
@@ -266,8 +269,15 @@ class BlurController {
                         if (!act.isFinishing && act.window != null) {
                             act.window.decorView.invalidate()
                         }
+                        BlurEngine.notifyBlurReady()
                     }
+                } else {
+                    act.runOnUiThread { BlurEngine.notifyBlurReady() }
                 }
+            } else {
+                // Không lấy được wallpaper nguồn - vẫn phải giải phóng các callback đang
+                // chờ qua runWhenBlurReady(), nếu không sẽ kẹt vô thời hạn.
+                act.runOnUiThread { BlurEngine.notifyBlurReady() }
             }
         }.start()
     }

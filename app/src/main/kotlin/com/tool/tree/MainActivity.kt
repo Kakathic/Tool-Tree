@@ -25,6 +25,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.tabs.TabLayout
 import com.omarea.common.shared.FilePathResolver
 import com.omarea.common.shell.KeepShellPublic
+import com.omarea.common.ui.BlurEngine
 import com.omarea.common.ui.DialogAppUpdate
 import com.omarea.common.ui.DialogHelper
 import com.omarea.krscript.config.PageConfigReader
@@ -129,8 +130,12 @@ class MainActivity : AppCompatActivity() {
         pendingUpdateInfo = updateInfo
         invalidateOptionsMenu()
 
+        // Chờ blur nền capture xong (hoặc không cần blur) rồi mới hiện dialog, thay vì
+        // đợi cố định 2s - xem BlurEngine.runWhenBlurReady()/BlurController.
         if (updateInfo != null && !AppUpdateConfig(this).isDismissed(updateInfo.sha256)) {
-            binding.root.postDelayed({ showUpdateDialog(updateInfo) }, 2000)
+            BlurEngine.runWhenBlurReady {
+                if (!isFinishing && !isDestroyed) showUpdateDialog(updateInfo)
+            }
         }
     }
 

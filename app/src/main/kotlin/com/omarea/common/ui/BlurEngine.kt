@@ -205,6 +205,35 @@ class BlurEngine(private val targetView: View) {
 
         private var strokePaint: Paint? = null
 
+        // Hàng đợi callback cho runWhenBlurReady() - luôn được gọi/xử lý trên UI thread
+        // (từ BlurController qua act.runOnUiThread), nên không cần đồng bộ hoá riêng.
+        private val readyListeners = mutableListOf<() -> Unit>()
+
+        /**
+         * Chạy [callback] ngay nếu blur đã sẵn sàng để hiển thị (đang tắt/không dùng blur,
+         * hoặc đã có blurBitmap hợp lệ) - nếu chưa, xếp vào hàng đợi tới khi
+         * BlurController báo capture xong (notifyBlurReady(), gọi cả khi capture lỗi để
+         * không kẹt hàng đợi mãi mãi).
+         */
+        @JvmStatic
+        fun runWhenBlurReady(callback: () -> Unit) {
+            val bitmap = blurBitmap
+            if (isPaused || (bitmap != null && !bitmap.isRecycled)) {
+                callback()
+            } else {
+                readyListeners.add(callback)
+            }
+        }
+
+        /** BlurController gọi sau mỗi lần capture (thành công hay thất bại) trên UI thread. */
+        @JvmStatic
+        fun notifyBlurReady() {
+            if (readyListeners.isEmpty()) return
+            val pending = readyListeners.toList()
+            readyListeners.clear()
+            pending.forEach { it() }
+        }
+
         @JvmStatic
         fun getStrokePaint(context: Context): Paint {
             var paint = strokePaint
