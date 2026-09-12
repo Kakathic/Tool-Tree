@@ -136,7 +136,7 @@ class MainActivity : AppCompatActivity() {
             BlurEngine.runWhenBlurReady {
                 updateDialogHandler.postDelayed({
                     if (!isFinishing && !isDestroyed) showUpdateDialog(updateInfo)
-                }, 2000)
+                }, 1000)
             }
         }
     }
@@ -145,7 +145,7 @@ class MainActivity : AppCompatActivity() {
         DialogAppUpdate(
             darkMode = ThemeModeState.isDarkMode(),
             apkUrl = updateInfo.apkUrl,
-            changelogUrl = updateInfo.changelogUrl,
+            changelogText = updateInfo.changelogText,
             fileName = updateInfo.apkFileName,
             apkSize = updateInfo.apkSize,
             onCancel = { AppUpdateConfig(this).setDismissedSha256(updateInfo.sha256) }

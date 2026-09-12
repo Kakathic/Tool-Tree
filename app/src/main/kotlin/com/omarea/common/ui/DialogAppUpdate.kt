@@ -23,7 +23,7 @@ import java.net.URL
 class DialogAppUpdate(
     darkMode: Boolean,
     private val apkUrl: String,
-    private val changelogUrl: String,
+    private val changelogText: String?,
     private val fileName: String,
     private val apkSize: Long? = null,
     private val onCancel: (() -> Unit)? = null
@@ -69,26 +69,12 @@ class DialogAppUpdate(
 
         destFile = File(activity.cacheDir, fileName)
 
-        if (changelogUrl.isNotEmpty()) {
-            progressBar.isIndeterminate = true
-            progressBar.visibility = View.VISIBLE
-            contentText.text = activity.getString(R.string.onloading)
-
-            val thread = Thread {
-                val (text, _) = fetchTextContent(changelogUrl)
-                mainHandler.post {
-                    if (activeDownload == null) {
-                        progressBar.visibility = View.INVISIBLE
-                    }
-                    contentText.text = if (text != null) {
-                        HtmlCompat.fromHtml(markdownToHtml(text), HtmlCompat.FROM_HTML_MODE_LEGACY)
-                    } else {
-                        activity.getString(R.string.app_update_changelog_fail)
-                    }
-                }
-            }
-            thread.isDaemon = true
-            thread.start()
+        // Changelog đã được AppUpdateChecker tải sẵn từ lúc SplashActivity kiểm tra cập nhật -
+        // ở đây chỉ hiển thị lại, không tự tải mạng nữa khi mở dialog.
+        contentText.text = if (changelogText != null) {
+            HtmlCompat.fromHtml(markdownToHtml(changelogText), HtmlCompat.FROM_HTML_MODE_LEGACY)
+        } else {
+            activity.getString(R.string.app_update_changelog_fail)
         }
 
         if (destFile.exists() && destFile.length() > 0) {
@@ -100,8 +86,6 @@ class DialogAppUpdate(
             if (activeDownload != null) return@setOnClickListener
 
             if (readyToInstall) {
-                closingToInstall = true
-                dismiss()
                 openApk(activity, destFile)
                 return@setOnClickListener
             }
@@ -155,8 +139,6 @@ class DialogAppUpdate(
                             Toast.LENGTH_LONG
                         ).show()
                     } else {
-                        closingToInstall = true
-                        if (isAdded) dismiss()
                         openApk(activity, destFile)
                     }
                 }
@@ -231,28 +213,6 @@ class DialogAppUpdate(
         return sb.toString()
     }
 
-    private fun fetchTextContent(url: String): Pair<String?, String?> {
-        var connection: HttpURLConnection? = null
-        return try {
-            connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 10000
-                readTimeout = 10000
-                instanceFollowRedirects = true
-            }
-            connection.connect()
-            val responseCode = connection.responseCode
-            if (responseCode !in 200..299) {
-                return Pair(null, "HTTP $responseCode")
-            }
-            val text = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            Pair(text, null)
-        } catch (ex: Exception) {
-            Pair(null, "" + ex.message)
-        } finally {
-            connection?.disconnect()
-        }
-    }
-
     // Có quyền root: cài thẳng qua "pm install -r" ở nền, không cần mở OpenFileActivity (màn
     // hình cài đặt hệ thống). Không root (hoặc lệnh root thất bại) mới fallback về cách cũ.
     private fun openApk(activity: android.app.Activity, file: File) {
@@ -260,8 +220,12 @@ class DialogAppUpdate(
             val installed = installApkWithRoot(file)
             mainHandler.post {
                 if (installed) {
-                    Toast.makeText(activity, activity.getString(R.string.app_update_install_success), Toast.LENGTH_LONG).show()
+                    // Cài bằng root xong app sẽ tự khởi động lại/thoát do đang tự cập nhật
+                    // chính nó, nên không cần (và không kịp) đóng dialog hay hiện toast báo
+                    // thành công - lúc này app coi như đã thoát rồi.
                 } else {
+                    closingToInstall = true
+                    if (isAdded) dismiss()
                     openApkViaSystemInstaller(activity, file)
                 }
             }

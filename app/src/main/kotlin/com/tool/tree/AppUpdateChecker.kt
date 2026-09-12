@@ -17,7 +17,8 @@ import java.net.URL
  * - Lấy sha256 do GitHub tính sẵn: .assets[0].digest (dạng "sha256:<hex>")
  * - So sánh với sha256 của file apk đang cài trên máy - khác nhau thì coi là có bản mới.
  * - Link xem log/nội dung cập nhật (đưa vào AppUpdateInfo.changelogUrl) luôn là trang cố định
- *   CHANGELOG_URL bên dưới, không lấy từ html_url của GitHub.
+ *   CHANGELOG_URL bên dưới, không lấy từ html_url của GitHub. Nội dung trang này được tải sẵn
+ *   luôn ở đây (AppUpdateInfo.changelogText) - DialogAppUpdate chỉ hiển thị lại, không tự tải.
  *
  * Lưu ý: trường "digest" chỉ có khi GitHub đã tính xong checksum cho asset (có thể rỗng/null với
  * asset vừa upload) - trường hợp đó bỏ qua, coi như không có cập nhật.
@@ -58,6 +59,7 @@ object AppUpdateChecker {
                 .substringAfter(":", "")
                 .takeIf { it.isNotEmpty() } ?: return null
             val changelogUrl = CHANGELOG_URL
+            val changelogText = fetchText(changelogUrl)
             val apkSize = firstAsset.optLong("size", -1)
 
             val currentApk = File(activity.applicationInfo.sourceDir)
@@ -81,7 +83,7 @@ object AppUpdateChecker {
                 }
             }
 
-            AppUpdateInfo(apkUrl, changelogUrl, remoteSha256, apkSize, APK_FILE_NAME)
+            AppUpdateInfo(apkUrl, changelogUrl, remoteSha256, apkSize, APK_FILE_NAME, changelogText)
         } catch (_: Exception) {
             null
         }
@@ -111,6 +113,26 @@ object AppUpdateChecker {
             if (connection.responseCode !in 200..299) return null
             val body = connection.inputStream.bufferedReader().use { it.readText() }
             JSONObject(body)
+        } catch (_: Exception) {
+            null
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    // Tải nội dung changelog (markdown thô) - dùng chung timeout ngắn như fetchJson, chạy
+    // ngay trong lúc kiểm tra cập nhật ở SplashActivity thay vì đợi lúc mở DialogAppUpdate.
+    private fun fetchText(url: String): String? {
+        var connection: HttpURLConnection? = null
+        return try {
+            connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 8000
+                readTimeout = 8000
+                instanceFollowRedirects = true
+            }
+            connection.connect()
+            if (connection.responseCode !in 200..299) return null
+            connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
         } catch (_: Exception) {
             null
         } finally {
