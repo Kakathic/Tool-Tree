@@ -105,20 +105,31 @@ class ActivityFileSelector : AppCompatActivity() {
         // multiple) giờ cũng cần nút này vì checkbox không tự đóng màn hình như nhấn giữ.
         if (multiple || mode == MODE_FOLDER) {
             menuInflater.inflate(R.menu.menu_file_selector, menu)
+            // Nút "Xong" dùng actionLayout riêng (action_confirm_selection.xml - có gạch
+            // ngăn cách + vùng ripple rộng hơn khung chữ mặc định) thay vì action item text
+            // thường, nên phải tự wire onClick ở đây - actionLayout không tự đi qua
+            // onOptionsItemSelected() như action item mặc định.
+            menu?.findItem(R.id.action_confirm_selection)?.actionView
+                ?.findViewById<TextView>(R.id.action_confirm_text)
+                ?.setOnClickListener { onConfirmSelectionClicked() }
         }
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == R.id.action_confirm_selection) {
-            if (mode == MODE_FOLDER && !multiple) {
-                finishWithSingleFolderSelection()
-            } else {
-                finishWithSelection()
-            }
+            onConfirmSelectionClicked()
             return true
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    private fun onConfirmSelectionClicked() {
+        if (mode == MODE_FOLDER && !multiple) {
+            finishWithSingleFolderSelection()
+        } else {
+            finishWithSelection()
+        }
     }
 
     // Xác nhận thư mục đã chọn qua checkbox "1 lựa chọn" (chế độ chọn thư mục, không

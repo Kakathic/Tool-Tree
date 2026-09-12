@@ -6,5 +6,6 @@
         android:orderInCategory="100"
         android:title="@string/action_done_select"
         android:visible="true"
-        app:showAsAction="always|withText" />
+        app:actionLayout="@layout/action_confirm_selection"
+        app:showAsAction="always" />
 </menu>
