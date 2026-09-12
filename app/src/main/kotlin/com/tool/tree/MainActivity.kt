@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var krScriptConfig = KrScriptConfig()
     private val hasRoot by lazy { KeepShellPublic.checkRoot() }
-    private var openedSubPage = false
+    // private var openedSubPage = false
     private var isFavoritesTab = false
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
     // Bản cập nhật mới nhất tìm được (từ SplashActivity) - điều khiển hiện/ẩn icon cập nhật

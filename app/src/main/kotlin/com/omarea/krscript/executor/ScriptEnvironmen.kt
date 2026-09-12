@@ -1,8 +1,11 @@
 package com.omarea.krscript.executor
 
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageInfo
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
@@ -211,6 +214,7 @@ object ScriptEnvironmen {
         val stringBuilder = StringBuilder()
 
         stringBuilder.append("\n")
+        stringBuilder.append(buildDynamicExports(context))
         if (nodeInfoBase != null && nodeInfoBase.currentPageConfigPath.isNotEmpty()) {
             val parentPageConfigDir = nodeInfoBase.pageConfigDir
             val currentPageConfigPath = nodeInfoBase.currentPageConfigPath
@@ -278,6 +282,7 @@ object ScriptEnvironmen {
 
         val cmd = StringBuilder()
         cmd.append("\n")
+        cmd.append(buildDynamicExports(context))
 
         if (nodeInfoBase != null && nodeInfoBase.currentPageConfigPath.isNotEmpty()) {
             val parentPageConfigDir = nodeInfoBase.pageConfigDir
@@ -344,6 +349,49 @@ object ScriptEnvironmen {
         return results
     }
 
+    // Các giá trị "động" - đổi liên tục theo thời gian thực (pin, mạng...), KHÔNG bake tĩnh vào
+    // file executor như getEnvironment() (chỉ ghi lại 1 lần lúc init()/updateDarkMode()). Được
+    // tính lại và export TƯƠI mỗi lần chạy script (xem buildDynamicExports, dùng trong
+    // executeResultRoot/executeShell/executeMultipleResultRoot) - không cần ghi lại file nào.
+    private fun getDynamicEnvironment(context: Context): HashMap<String, String> {
+        val params = HashMap<String, String>()
+
+        try {
+            val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            if (batteryIntent != null) {
+                val level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                if (level >= 0 && scale > 0) {
+                    params["BATTERY_LEVEL"] = (level * 100 / scale).toString()
+                }
+
+                val status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                params["BATTERY_CHARGING"] = if (
+                    status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == BatteryManager.BATTERY_STATUS_FULL
+                ) "true" else "false"
+
+                val temperature = batteryIntent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1)
+                if (temperature >= 0) {
+                    params["BATTERY_TEMPERATURE"] = (temperature / 10.0).toString()
+                }
+            }
+        } catch (ignored: Exception) {
+        }
+
+        return params
+    }
+
+    // Chuỗi "export KEY='value'\n" từ getDynamicEnvironment() - chèn vào đầu mỗi lần thực thi
+    // script (executeResultRoot/executeShell/executeMultipleResultRoot).
+    private fun buildDynamicExports(context: Context): String {
+        val sb = StringBuilder()
+        for ((key, value) in getDynamicEnvironment(context)) {
+            sb.append("export ").append(key).append("='").append(value.replace("'", "'\\''")).append("'\n")
+        }
+        return sb.toString()
+    }
+
     private fun getStartPath(context: Context): String {
         val dir = FileWrite.getPrivateFileDir(context)
         if (dir.endsWith("/")) {
@@ -374,6 +422,11 @@ object ScriptEnvironmen {
         params["ANDROID_SDK"] = Build.VERSION.SDK_INT.toString()
         params["KERNEL_VERSION"] = System.getProperty("os.version") ?: ""
         params["SELINUX"] = getSELinuxStatus()
+
+        val displayMetrics = context.resources.displayMetrics
+        params["SCREEN_WIDTH"] = displayMetrics.widthPixels.toString()
+        params["SCREEN_HEIGHT"] = displayMetrics.heightPixels.toString()
+        params["BATTERY_CAPACITY"] = getBatteryCapacity(context)
 
         val fileOwner = FileOwner(context)
         val androidUid = fileOwner.getUserId()
@@ -408,6 +461,20 @@ object ScriptEnvironmen {
         }
 
         return params
+    }
+
+    // Không có API công khai để lấy dung lượng pin thiết kế (mAh) - dùng reflection lên class ẩn
+    // com.android.internal.os.PowerProfile (cách phổ biến, dùng cả trong nhiều app hệ thống/tuỳ
+    // biến pin). Có thể thất bại trên 1 số thiết bị hạn chế truy cập hidden API -> trả "Unknown".
+    private fun getBatteryCapacity(context: Context): String {
+        return try {
+            val powerProfileClass = Class.forName("com.android.internal.os.PowerProfile")
+            val instance = powerProfileClass.getConstructor(Context::class.java).newInstance(context)
+            val capacity = powerProfileClass.getMethod("getBatteryCapacity").invoke(instance) as Double
+            capacity.toInt().toString()
+        } catch (ex: Exception) {
+            "Unknown"
+        }
     }
 
     private fun getSELinuxStatus(): String {
@@ -514,6 +581,7 @@ object ScriptEnvironmen {
 
         val envp = getVariables(params)
         val envpCmds = StringBuilder()
+        envpCmds.append(buildDynamicExports(context))
         if (envp.isNotEmpty()) {
             for (param in envp) {
                 envpCmds.append("export ").append(param).append("\n")
