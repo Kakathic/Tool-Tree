@@ -2,7 +2,9 @@ package com.omarea.krscript.ui
 
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.widget.ImageView
 import android.widget.RelativeLayout
 import com.tool.tree.R
@@ -25,6 +27,8 @@ open class ListItemClickable(
     protected var iconDrawable: Drawable? = null
 
     private val allowShortcutConfig = this.key.isNotEmpty() && config.allowShortcut != false
+
+    private val resetPressedRunnable = Runnable { layout.isPressed = false }
 
     protected open fun allowLongClick(): Boolean = allowShortcutConfig
 
@@ -60,9 +64,22 @@ open class ListItemClickable(
             }
         }
 
+        // Chủ động tắt trạng thái pressed sau một khoảng cố định để hiệu ứng nhấn chỉ hiện 1 lần, không giữ theo thời gian nhấn giữ
+        this.layout.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    view.removeCallbacks(resetPressedRunnable)
+                    view.postDelayed(resetPressedRunnable, ViewConfiguration.getPressedStateDuration().toLong())
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    view.removeCallbacks(resetPressedRunnable)
+                }
+            }
+            false
+        }
+
         shortcutIconView?.visibility = if (allowShortcutConfig) View.VISIBLE else View.GONE
 
-        // Tái sử dụng 1 instance duy nhất để load tài nguyên
         val analyzer = IconPathAnalysis()
 
         iconView?.let { view ->
