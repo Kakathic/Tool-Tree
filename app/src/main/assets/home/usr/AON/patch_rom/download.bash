@@ -7,4 +7,4 @@ description="ROM quick patch tool"
 version=3.6
 versionCode=361
 root=false
-url=https://github.com/Kakathic/Tool-Tree/releases/download/V1/patch_rom_$versionCode.add
+url=https://github.com/Kakathic/Tool-Tree/releases/download/V1.0.2/patch_rom_$versionCode.add

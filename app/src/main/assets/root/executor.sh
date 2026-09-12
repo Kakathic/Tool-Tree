@@ -37,8 +37,10 @@ export TERMUX="$HOME/termux"
 export ETC="$HOME/etc"
 export BIN="$HOME/bin"
 export LOG="$HOME/usr/log"
-export AON="$HOME/ZADD"
-export AOK="$HOME/ZAPK"
+export AON="$HOME/usr/AON"
+export AOK="$HOME/usr/AOK"
+export UDD="$HOME/usr/UDD"
+export UPK="$HOME/usr/UPK"
 export TMPDIR="$HOME/tmp"
 export LIB="$HOME/lib"
 export TMP="$TMPDIR"
@@ -61,7 +63,7 @@ export PTAH="$(glog PTAH APK)"; # $APK/$PTAH
 # Không giới hạn ngang
 [ "$(glog scroll_ngang)" == 1 ] || export COLUMNS=47
 
-# User web
+# User Web
 export WEBS="User-Agent: Mozilla/5.0 (Linux; Android $ANDROID_RELEASE; $ANDROID_MODEL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
 
 if [ "$ROOT" == 'true' ]; then

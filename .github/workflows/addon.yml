@@ -30,6 +30,6 @@ jobs:
       - name: Upload module
         uses: softprops/action-gh-release@v2
         with:
-          name: "Tmp"
-          tag_name: "V1"
+          name: "Add-on"
+          tag_name: "V1.0.2"
           files: /home/runner/*.add

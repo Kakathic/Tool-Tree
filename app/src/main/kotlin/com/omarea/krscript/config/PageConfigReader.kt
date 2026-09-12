@@ -66,7 +66,7 @@ class PageConfigReader {
     private fun readConfigXml(fileInputStream: InputStream, onNodeReady: ((NodeInfoBase?, Int, Int) -> Unit)? = null): ArrayList<NodeInfoBase>? {
         return try {
             val rawText = fileInputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            readConfigToml(rawText, onNodeReady)
+            readConfigToml(applyLoadKey(rawText), onNodeReady)
         } catch (ex: Exception) {
             Handler(Looper.getMainLooper()).post {
                 Toast.makeText(context, "Failed to parse configuration file\n" + ex.message, Toast.LENGTH_LONG).show()
@@ -83,6 +83,76 @@ class PageConfigReader {
         }
 
         return ScriptEnvironmen.executeResultRoot(context, scriptIn, vitualRootNode)
+    }
+
+    // Nạp file ngôn ngữ dạng key="value" và thay thế $key trong toàn bộ text TOML
+    // trước khi parse. Dòng "load-key"/"load-key-sh" bị loại khỏi text sau khi xử lý.
+    private val loadKeyDirectiveRegex = Regex("""(?m)^[ \t]*load-key(-sh)?[ \t]*=[ \t]*"([^"]*)"[ \t]*\r?\n?""")
+    private val langLineRegex = Regex("""(?m)^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*"((?:[^"\\]|\\.)*)"[ \t]*$""")
+    private val escapeSeqRegex = Regex("""\\(.)""")
+
+    // Dùng đúng nguồn ngôn ngữ hiện tại mà app đang dùng (giống ScriptEnvironmen.kt,
+    // params["LANGUAGE"] = Locale.getDefault().language). Trả về danh sách ứng viên
+    // theo thứ tự ưu tiên: ngôn ngữ-khu vực (vd "zh-CN") -> ngôn ngữ (vd "zh") -> "default".
+    private fun currentLangCandidates(): List<String> {
+        val locale = getDefault()
+        val lang = locale.language
+        val country = locale.country
+        val list = mutableListOf<String>()
+        if (lang.isNotEmpty() && country.isNotEmpty()) list.add("$lang-$country")
+        if (lang.isNotEmpty()) list.add(lang)
+        list.add("default")
+        return list.distinct()
+    }
+
+    private fun applyLoadKey(rawText: String): String {
+        val match = loadKeyDirectiveRegex.find(rawText) ?: return rawText
+        val isShell = match.groupValues[1] == "-sh"
+        val rawPath = match.groupValues[2]
+        val stripped = rawText.removeRange(match.range)
+
+        var stream: InputStream? = null
+
+        if (isShell) {
+            val path = executeResultRoot(context, rawPath).trim()
+            if (path.isNotEmpty()) {
+                stream = try {
+                    PathAnalysis(context, parentDir).parsePath(path)
+                } catch (_: Exception) {
+                    null
+                }
+            }
+        } else {
+            // Thử lần lượt: ngôn ngữ-khu vực -> ngôn ngữ -> default, dừng ngay khi tìm thấy file
+            val codes = if (rawPath.contains("{LANG}")) currentLangCandidates() else listOf(null)
+            for (code in codes) {
+                val path = (if (code == null) rawPath else rawPath.replace("{LANG}", code)).trim()
+                if (path.isEmpty()) continue
+                stream = try {
+                    PathAnalysis(context, parentDir).parsePath(path)
+                } catch (_: Exception) {
+                    null
+                }
+                if (stream != null) break
+            }
+        }
+
+        val keyMap = try {
+            stream?.use { s ->
+                val keyText = s.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                langLineRegex.findAll(keyText).associate { m ->
+                    m.groupValues[1] to escapeSeqRegex.replace(m.groupValues[2]) { it.groupValues[1] }
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+        if (keyMap.isNullOrEmpty()) return stripped
+
+        val keyRefRegex = Regex("\\$(" + keyMap.keys.joinToString("|") { Regex.escape(it) } + ")\\b")
+        return keyRefRegex.replace(stripped) { m ->
+            keyMap[m.groupValues[1]]?.replace("\\", "\\\\")?.replace("\"", "\\\"") ?: m.value
+        }
     }
 
     private val pendingSwitchStates = ArrayList<Pair<SwitchNode, String>>()
@@ -608,7 +678,7 @@ class PageConfigReader {
                 registerDynamicString(this, "warning", it)
             }
             if (warning.isEmpty()) {
-                tomlGet(table, "warn", "warning")?.let { warning = it }
+                tomlGet(table, "warn", "warning")?.let { warning = StringResRef.resolve(context, it) }
             }
             tomlGet(table, "auto-off", "auto-close")?.let { autoOff = tomlTruthy(it, "auto-close", "auto-off") }
             tomlGet(table, "auto-finish")?.let { autoFinish = tomlTruthy(it, "auto-finish") }
@@ -839,15 +909,15 @@ class PageConfigReader {
     private fun actionParamToml(table: TomlTable): ActionParamInfo? {
         val p = ActionParamInfo()
         tomlGet(table, "name")?.let { p.name = it }
-        tomlGet(table, "label")?.let { p.label = it }
+        tomlGet(table, "label")?.let { p.label = StringResRef.resolve(context, it) }
         tomlGet(table, "label-sh")?.let { p.labelSh = it }
-        tomlGet(table, "placeholder")?.let { p.placeholder = it }
+        tomlGet(table, "placeholder")?.let { p.placeholder = StringResRef.resolve(context, it) }
         tomlGet(table, "placeholder-sh")?.let { p.placeholderSh = it }
-        tomlGet(table, "title")?.let { p.title = it }
+        tomlGet(table, "title")?.let { p.title = StringResRef.resolve(context, it) }
         tomlGet(table, "title-sh")?.let { p.titleSh = it }
-        tomlGet(table, "desc")?.let { p.desc = it }
+        tomlGet(table, "desc")?.let { p.desc = StringResRef.resolve(context, it) }
         tomlGet(table, "desc-sh")?.let { p.descSh = it }
-        tomlGet(table, "desc-on", "on-desc", "desc-checked")?.let { p.descOn = it }
+        tomlGet(table, "desc-on", "on-desc", "desc-checked")?.let { p.descOn = StringResRef.resolve(context, it) }
         tomlGet(table, "desc-on-sh", "on-desc-sh", "desc-checked-sh")?.let { p.descOnSh = it }
         tomlGet(table, "value")?.let { p.value = it }
         tomlGet(table, "type")?.let { p.type = it.lowercase(getDefault()).trim() }
@@ -1031,7 +1101,7 @@ class PageConfigReader {
         val editor = clickableNodeToml(EditorNode(pageConfigAbsPath), table) as EditorNode? ?: return null
         tomlGet(table, "file", "path")?.let { editor.file = it.trim() }
         tomlGet(table, "wrap")?.let { editor.wrap = !(it == "0" || it == "false" || it == "off" || it == "no-wrap") }
-        tomlGet(table, "placeholder")?.let { editor.placeholder = it }
+        tomlGet(table, "placeholder")?.let { editor.placeholder = StringResRef.resolve(context, it) }
         tomlGet(table, "readonly")?.let { editor.readonly = resolveBoolOrShell(it) }
         tomlGet(table, "need-input")?.let { editor.needInput = (it == "true" || it == "1") }
         tomlGet(table, "value-sh")?.let { editor.valueSh = it }

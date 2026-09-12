@@ -22,7 +22,7 @@ android {
         targetSdkVersion 28
         versionCode Integer.parseInt(new java.text.SimpleDateFormat("yyMMddHH").format(new Date()))
         // versionCode 26021101
-        versionName "1.6.0"
+        versionName "1.6.1"
     }
     signingConfigs {
         release {
