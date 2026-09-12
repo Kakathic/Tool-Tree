@@ -144,16 +144,6 @@ echo '
   '
 }
 
-(
-  # Tạo thư mục
-  [ -d $PTAD/out ] && mkdir -p $PTAD/out &>/dev/null
-  [ -d $PTSD/out ] && mkdir -p $PTSD/out &>/dev/null
-  # Dịch ngôn ngữ
-  if [[ "$1" == "Home" || "$1" == "More" ]]; then
-  auto_trans &>/dev/null
-  fi
-) &
-
 # Ngôn ngữ
 source language 2>/dev/null
 
@@ -169,14 +159,14 @@ Home() {
   echo '
   [[group]]
   [[page]]
-  title = "'$setting_text_3'"
+  title = "'$setting_text_3' ROM"
   desc = "'$setting_text_4'"
   icon = "'$urlicon'/project.png"
   config-sh = "'$ETC'/tool-tree.bash Project 1"
 
   [[group]]
   [[page]]
-  title = "'$editor_rom'"
+  title = "'$customize_text'"
   desc = "'$home_text_2'"
   icon = "'$urlicon'/utilities.png"
   config-sh = "'$ETC'/tool-tree.bash Utilities"
@@ -206,14 +196,14 @@ More() {
   echo '
   [[group]]
   [[page]]
-  title = "'$setting_text_3'"
+  title = "'$setting_text_3' APK"
   desc = "'$setting_text_4'"
   icon = "'$urlicon'/project.png"
   config-sh = "'$ETC'/tool-tree.bash Project 2"
 
   [[group]]
   [[page]]
-  title = "'$editor_apk'"
+  title = "'$customize_text'"
   desc = "'$more_text_6'"
   icon = "'$urlicon'/apk_utility.png"
   config-sh = "'$ETC'/tool-tree.bash Utiliapk"
@@ -221,7 +211,7 @@ More() {
 
   [[group]]
   [[page]]
-  title = "'$utilities_text'"
+  title = "'$tools_text'"
   desc = "'$more_text_7'"
   icon = "'$urlicon'/tool_apk.png"
   config-sh = "'$ETC'/tool-tree.bash Troot"
@@ -274,7 +264,6 @@ Info() {
   desc = "'$setting_text_2'"
   icon = "'$urlicon'/info.png"
   config-sh = "'$ETC'/tool-tree.bash Update"
-  process = true
     
   [[group]]
   [[page]]
@@ -353,33 +342,10 @@ Info() {
   '
 }
 
-Getlog() {
-url_ver="https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/Version.md"
-if [ "$(glog gg_trans_ver)" == 1 ]; then
-  [ -f $TMP/logver_trans.txt ] && cat $TMP/logver_trans.txt || xem "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=5 {printf "Version:%s", $0}' | transai -b | tee $TMP/logver_trans.txt
-else
-  [ -f $TMP/logver.txt ] && cat $TMP/logver.txt || xem "$url_ver" | sed -e 's|\*\*||g' -e 's|+|•|g' | awk 'BEGIN{RS="Version:"} NR>=2 && NR<=5 {printf "Version:%s", $0}' | tee $TMP/logver.txt
-fi
-}
-
 Update() {
   echo '
   [[group]]
   [[menu]]
-  [[menu.items]]
-  title = "Gemini"
-  get = "glog gg_trans_ver"
-  reload = true
-  silent = true
-  type = "checkbox"
-  script = """
-  if [ "$(glog gg_trans_ver)" == 1 ]; then
-  slog gg_trans_ver 0
-  else
-  transai -c && slog gg_trans_ver 1 || showdialog -t "Gemini" -m "'$warn_gemini_text'" -g 15 -e "'$ETC'/tool-tree.bash Feature"
-  fi
-  """
-  
   [[menu.items]]
   auto-kill = true
   silent = true
@@ -390,12 +356,6 @@ Update() {
   slog -d sum_moduls
   slog -d sum_ver_boot
   """
-    
-  [[group]]
-  [[fab]]
-  [[fab.items]]
-  type = "refresh"
-  icon = "'$ETC'/icon/Loading.png"
   
   [[group]]
   [[page]]
@@ -416,19 +376,7 @@ Update() {
   html = "https://t.me/tooltree"
 
   [[group]]
-  [[download]]
-  title = "'$update_text'"
-  desc-sh = "cat $TMP/size"
-  icon = "'$urlicon'/update.png"
-  support = "check_update"
-  url-sh = "cat $TMP/update"
-  script = "openfile \"$state\""
-
-  [[group]]
   [[text]]
-  desc-sh = """
-  '$ETC'/tool-tree.bash Getlog
-  """
   [[text.rows]]
   photo = "'$ETC'/icon/tool-tree.jpg"
   '
@@ -2024,7 +1972,7 @@ Addon() {
     
     [[menu.items]]
     title = "'$customize_text'"
-    get = "glog show_setting_add"
+    get = "glog show_setting_add 1"
     reload = true
     silent = true
     type = "checkbox"
