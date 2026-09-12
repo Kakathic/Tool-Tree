@@ -136,7 +136,7 @@ class MainActivity : AppCompatActivity() {
             BlurEngine.runWhenBlurReady {
                 updateDialogHandler.postDelayed({
                     if (!isFinishing && !isDestroyed) showUpdateDialog(updateInfo)
-                }, 1000)
+                }, 2000)
             }
         }
     }

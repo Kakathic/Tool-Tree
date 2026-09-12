@@ -477,22 +477,29 @@ object ScriptEnvironmen {
         }
     }
 
+    // getenforce chạy trực tiếp (Runtime.exec) bị SELinux domain của app thường chặn đọc dù máy
+    // đã root - vì tiến trình đó KHÔNG chạy qua root, chỉ mang uid/domain của chính app. Máy đã
+    // root thì phải chạy lệnh này qua root shell (KeepShellPublic) mới đọc được đúng trạng thái
+    // thực tế. Không root (hoặc lệnh root thất bại) mới fallback về cách cũ.
     private fun getSELinuxStatus(): String {
-        return try {
-            val process = Runtime.getRuntime().exec("getenforce")
-            val status = process.inputStream.bufferedReader().use { it.readText().trim() }
-            if (status.isNotEmpty()) status else "Unknown"
-        } catch (e: Exception) {
-            try {
-                val c = Class.forName("android.os.SELinux")
-                val isEnforced = c.getMethod("isSELinuxEnforced").invoke(null) as Boolean
-                if (isEnforced) "Enforcing" else "Permissive"
-            } catch (ex: Exception) {
-                "Unknown"
+        if (rooted) {
+            val result = try {
+                KeepShellPublic.doCmdSync("getenforce").trim()
+            } catch (ignored: Exception) { "" }
+            if (result.isNotEmpty() && result != "error" && !result.contains("not found", ignoreCase = true)) {
+                return result
             }
         }
+    
+        return try {
+            val isEnforced = Class.forName("android.os.SELinux")
+                .getMethod("isSELinuxEnforced").invoke(null) as Boolean
+            if (isEnforced) "Enforcing" else "Permissive"
+        } catch (ex: Exception) {
+            "Unknown"
+        }
     }
-
+    
     private fun getVariables(params: HashMap<String, String>?): ArrayList<String> {
         val envp = ArrayList<String>()
 
