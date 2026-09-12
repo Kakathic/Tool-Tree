@@ -365,7 +365,6 @@ class AdapterFileSelector private constructor(
                     if (multipleMode) {
                         if (checkBox != null) {
                             checkBox.visibility = View.VISIBLE
-                            checkBox.setButtonDrawable(android.R.drawable.btn_checkbox)
                             checkBox.isChecked = selectedFiles.contains(file)
                             checkBox.setOnClickListener {
                                 if (!existsSafe(file)) {
@@ -438,7 +437,6 @@ class AdapterFileSelector private constructor(
                 if (multipleMode) {
                     if (checkBox != null) {
                         checkBox.visibility = View.VISIBLE
-                        checkBox.setButtonDrawable(android.R.drawable.btn_checkbox)
                         checkBox.isChecked = selectedFiles.contains(file)
                     }
                     val toggleListener = View.OnClickListener {
