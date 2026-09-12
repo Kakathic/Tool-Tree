@@ -1,12 +1,8 @@
 package com.omarea.krscript.ui
 
 import android.content.Context
-import android.graphics.Rect
 import android.graphics.drawable.Drawable
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
-import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.RelativeLayout
 import com.tool.tree.R
@@ -29,12 +25,6 @@ open class ListItemClickable(
     protected var iconDrawable: Drawable? = null
 
     private val allowShortcutConfig = this.key.isNotEmpty() && config.allowShortcut != false
-
-    private val resetPressedRunnable = Runnable { layout.isPressed = false }
-
-    private var dragHighlightView: View? = null
-
-    private var longPressPending = false
 
     protected open fun allowLongClick(): Boolean = allowShortcutConfig
 
@@ -63,52 +53,16 @@ open class ListItemClickable(
         
         this.layout.setOnLongClickListener {
             if (allowLongClick()) {
-                longPressPending = true
-                dragHighlightView = layout
-                layout.parent?.requestDisallowInterceptTouchEvent(true)
+                this.mOnLongClickListener?.onLongClick(this)
                 true
             } else {
                 false
             }
         }
 
-        // Hiệu ứng nhấn chỉ hiện 1 lần khi vừa chạm, không giữ theo thời gian nhấn giữ (kể cả khi long-press).
-        // Sau khi long-press kích hoạt (dragHighlightView != null), theo dõi ngón tay di chuyển sang item
-        // khác để tô sáng item đó (chỉ để xem, không tự bấm khi thả tay). requestDisallowInterceptTouchEvent
-        // để ScrollView cha không cướp sự kiện chạm giữa chừng khi đang vuốt. Việc gọi mOnLongClickListener
-        // thật (mở dialog tạo shortcut/huỷ tải...) được hoãn tới lúc thả tay: chỉ gọi nếu chưa từng vuốt
-        // sang item khác, để dialog không tự bật lên giữa chừng làm mất luôn sự kiện chạm.
-        this.layout.setOnTouchListener { view, event ->
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    view.removeCallbacks(resetPressedRunnable)
-                    view.postDelayed(resetPressedRunnable, ViewConfiguration.getPressedStateDuration().toLong())
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    if (dragHighlightView != null) {
-                        updateDragHighlight(event.rawX.toInt(), event.rawY.toInt())
-                    }
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    view.removeCallbacks(resetPressedRunnable)
-                    val draggedAway = dragHighlightView != null && dragHighlightView !== layout
-                    dragHighlightView?.isPressed = false
-                    dragHighlightView = null
-                    view.parent?.requestDisallowInterceptTouchEvent(false)
-
-                    if (longPressPending) {
-                        longPressPending = false
-                        if (!draggedAway && event.actionMasked == MotionEvent.ACTION_UP) {
-                            this.mOnLongClickListener?.onLongClick(this)
-                        }
-                    }
-                }
-            }
-            false
-        }
-
         shortcutIconView?.visibility = if (allowShortcutConfig) View.VISIBLE else View.GONE
 
+        // Tái sử dụng 1 instance duy nhất để load tài nguyên
         val analyzer = IconPathAnalysis()
 
         iconView?.let { view ->
@@ -143,27 +97,6 @@ open class ListItemClickable(
                     view.visibility = View.VISIBLE
                 }
             }
-        }
-    }
-
-    private fun updateDragHighlight(rawX: Int, rawY: Int) {
-        val parent = layout.parent as? ViewGroup ?: return
-        var target: View? = null
-        val location = IntArray(2)
-        for (i in 0 until parent.childCount) {
-            val child = parent.getChildAt(i)
-            if (child.visibility != View.VISIBLE || !child.isLongClickable) continue
-            child.getLocationOnScreen(location)
-            val rect = Rect(location[0], location[1], location[0] + child.width, location[1] + child.height)
-            if (rect.contains(rawX, rawY)) {
-                target = child
-                break
-            }
-        }
-        if (target !== dragHighlightView) {
-            dragHighlightView?.isPressed = false
-            dragHighlightView = target
-            target?.isPressed = true
         }
     }
 
