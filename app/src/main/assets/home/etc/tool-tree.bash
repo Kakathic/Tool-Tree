@@ -169,10 +169,10 @@ Home() {
   echo '
   [[group]]
   [[page]]
-  title = "'$setting_text'"
-  desc = "'$home_text_1'"
-  icon = "'$urlicon'/settings.png"
-  config-sh = "'$ETC'/tool-tree.bash Info"
+  title = "'$setting_text_3'"
+  desc = "'$setting_text_4'"
+  icon = "'$urlicon'/project.png"
+  config-sh = "'$ETC'/tool-tree.bash Project"
 
   [[group]]
   [[page]]
@@ -190,7 +190,7 @@ Home() {
 
   [[group]]
   [[page]]
-  title = "'$addon_text'"
+  title = "'$plugin_text'"
   desc = "'$home_text_4'"
   icon = "'$urlicon'/addon.png"
   process = true
@@ -729,7 +729,7 @@ Root() {
   [[group]]
   [[action]]
   title = "'$mount_text_1'"
-  summary = "'$show_root_text'"
+  summary = "'$text_root'"
   icon = "'$urlicon'/mount.png"
   lock = "'$LOT'|'$root_warning_text'"
   interruptible = false
@@ -757,7 +757,7 @@ Root() {
 
   [[action]]
   title = "'$umount_text_1'"
-  summary = "'$show_root_text'"
+  summary = "'$text_root'"
   icon = "'$urlicon'/umount.png"
   lock = "'$LOT'|'$root_warning_text'"
   interruptible = false
@@ -784,7 +784,7 @@ Root() {
   [[group]]
   [[action]]
   title = "'$backup_text_1'"
-  summary = "'$show_root_text'"
+  summary = "'$text_root'"
   icon = "'$urlicon'/backup.png"
   lock = "'$LOT'|'$root_warning_text'"
   interruptible = false
@@ -816,7 +816,7 @@ Root() {
 
   [[action]]
   title = "'$flash_text_1'"
-  summary = "'$show_root_text'"
+  summary = "'$text_root'"
   icon = "'$urlicon'/flash.png"
   lock = "'$LOT'|'$root_warning_text'"
   script = """
@@ -902,7 +902,7 @@ Troot() {
   [[group]]
   [[action]]
   title = "'$dexopt_app_text'"
-  summary = "'$show_root_text'"
+  summary = "'$text_root'"
   icon = "'$urlicon'/dexopt_app.png"
   lock = "'$LOT'|'$root_warning_text'"
   script = """

@@ -68,7 +68,7 @@ if [ "$ROOT" == 'true' ]; then
     export ROT=0
     export LOT=1
     export xu=xu
-    export show_root_text="ROOT"
+    export text_root="ROOT"
 fi
 
 if [ "$ARCH" != 'aarch64' ] && [ "$ARCH" != 'armv8l' ]; then

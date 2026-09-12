@@ -5,13 +5,11 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.graphics.drawable.Drawable
 import android.util.TypedValue
 import android.widget.ImageView
 import android.widget.Switch
 import androidx.core.graphics.ColorUtils
-import com.tool.tree.R
 
 object WidgetTintHelper {
 
@@ -20,7 +18,7 @@ object WidgetTintHelper {
         widgetView.imageTintList = ColorStateList.valueOf(resolveTintColor(context, iconDrawable))
     }
 
-    // Tô màu track của Switch theo màu trích xuất từ icon: bật dùng màu trích xuất, tắt giữ màu mặc định (colorPirm)
+    // Tô màu track của Switch theo màu trích xuất từ icon: chỉ áp khi bật, tắt thì bỏ tint để dùng màu mặc định
     fun applyTint(context: Context, switchView: Switch?, iconDrawable: Drawable?) {
         switchView ?: return
 
@@ -30,14 +28,13 @@ object WidgetTintHelper {
         }
 
         val onColor = resolveTintColor(context, iconDrawable)
-        val offColor = resolveOffTrackColor(context)
 
-        val states = arrayOf(
-            intArrayOf(android.R.attr.state_checked),
-            intArrayOf(-android.R.attr.state_checked)
-        )
-        switchView.trackTintList = ColorStateList(states, intArrayOf(onColor, offColor))
-        switchView.trackTintMode = PorterDuff.Mode.SRC_IN
+        fun updateTrackTint() {
+            switchView.trackTintList = if (switchView.isChecked) ColorStateList.valueOf(onColor) else null
+        }
+
+        updateTrackTint()
+        switchView.setOnCheckedChangeListener { _, _ -> updateTrackTint() }
     }
 
     private fun resolveTintColor(context: Context, iconDrawable: Drawable?): Int {
@@ -52,12 +49,6 @@ object WidgetTintHelper {
         }
 
         return brightenColor(blendedColor)
-    }
-
-    private fun resolveOffTrackColor(context: Context): Int {
-        val typedValue = TypedValue()
-        context.theme.resolveAttribute(R.attr.colorPirm, typedValue, true)
-        return typedValue.data
     }
 
     private fun blendMultipleColors(colorsWithScores: List<Pair<Int, Float>>): Int {
