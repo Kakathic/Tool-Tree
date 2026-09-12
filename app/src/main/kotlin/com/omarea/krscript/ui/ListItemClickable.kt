@@ -1,10 +1,12 @@
 package com.omarea.krscript.ui
 
 import android.content.Context
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.RelativeLayout
 import com.tool.tree.R
@@ -29,6 +31,8 @@ open class ListItemClickable(
     private val allowShortcutConfig = this.key.isNotEmpty() && config.allowShortcut != false
 
     private val resetPressedRunnable = Runnable { layout.isPressed = false }
+
+    private var dragHighlightView: View? = null
 
     protected open fun allowLongClick(): Boolean = allowShortcutConfig
 
@@ -58,21 +62,33 @@ open class ListItemClickable(
         this.layout.setOnLongClickListener {
             if (allowLongClick()) {
                 this.mOnLongClickListener?.onLongClick(this)
+                layout.removeCallbacks(resetPressedRunnable)
+                dragHighlightView = layout
+                layout.isPressed = true
                 true
             } else {
                 false
             }
         }
 
-        // Chủ động tắt trạng thái pressed sau một khoảng cố định để hiệu ứng nhấn chỉ hiện 1 lần, không giữ theo thời gian nhấn giữ
+        // Hiệu ứng nhấn chỉ hiện 1 lần khi vừa chạm, không giữ theo thời gian nhấn giữ.
+        // Sau khi long-press kích hoạt (dragHighlightView != null), theo dõi ngón tay di chuyển
+        // sang item khác để tô sáng item đó (chỉ để xem, không tự bấm khi thả tay).
         this.layout.setOnTouchListener { view, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     view.removeCallbacks(resetPressedRunnable)
                     view.postDelayed(resetPressedRunnable, ViewConfiguration.getPressedStateDuration().toLong())
                 }
+                MotionEvent.ACTION_MOVE -> {
+                    if (dragHighlightView != null) {
+                        updateDragHighlight(event.rawX.toInt(), event.rawY.toInt())
+                    }
+                }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     view.removeCallbacks(resetPressedRunnable)
+                    dragHighlightView?.isPressed = false
+                    dragHighlightView = null
                 }
             }
             false
@@ -114,6 +130,27 @@ open class ListItemClickable(
                     view.visibility = View.VISIBLE
                 }
             }
+        }
+    }
+
+    private fun updateDragHighlight(rawX: Int, rawY: Int) {
+        val parent = layout.parent as? ViewGroup ?: return
+        var target: View? = null
+        val location = IntArray(2)
+        for (i in 0 until parent.childCount) {
+            val child = parent.getChildAt(i)
+            if (child.visibility != View.VISIBLE || !child.isLongClickable) continue
+            child.getLocationOnScreen(location)
+            val rect = Rect(location[0], location[1], location[0] + child.width, location[1] + child.height)
+            if (rect.contains(rawX, rawY)) {
+                target = child
+                break
+            }
+        }
+        if (target !== dragHighlightView) {
+            dragHighlightView?.isPressed = false
+            dragHighlightView = target
+            target?.isPressed = true
         }
     }
 
