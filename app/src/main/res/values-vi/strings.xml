@@ -52,6 +52,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="dialog_title_select_directory">Bạn muốn chọn thư mục này?</string>
     <string name="dialog_title_select_file">Bạn muốn chọn tệp tin này?</string>
     <string name="no_files_in_directory">Thư mục trống và không có tệp tin nào!</string>
+    <string name="msg_dir_access_denied">Không có quyền đọc thư mục này</string>
     <string name="execute_success">Thực thi thành công</string>
     <string name="execute_fail">Thực thi thất bại</string>
     <string name="execute_wait">Đang thực thi, vui lòng chờ...</string>

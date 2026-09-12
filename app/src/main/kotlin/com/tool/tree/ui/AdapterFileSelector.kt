@@ -8,7 +8,6 @@ import android.widget.BaseAdapter
 import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
-import com.google.android.material.snackbar.Snackbar
 import com.omarea.common.ui.DialogHelper
 import com.omarea.common.ui.ProgressBarDialog
 import com.tool.tree.R
@@ -33,8 +32,6 @@ class AdapterFileSelector private constructor(
     // Danh sách đuôi file được phép (đã có dấu chấm ở đầu, chữ thường), null/rỗng = không giới hạn
     private var extensions: Array<String>? = null
     private var hasParent = false // 是否还有父级
-    private var rootDir: String = "/" // 根目录
-    private val leaveRootDir = true // 是否允许离开设定的rootDir到更父级的目录去
     var folderChooserMode = false // 是否是目录选择模式（目录选择模式下不显示文件，长按目录选中）
         private set
 
@@ -51,12 +48,23 @@ class AdapterFileSelector private constructor(
         fun onSelectionChanged(selectedCount: Int)
     }
 
+    // Báo riêng khi 1 thư mục không đọc được (thiếu quyền) - khác với thư mục đọc được
+    // nhưng thực sự rỗng (no_files_in_directory), để người dùng biết vì sao danh sách trống
+    private var accessDeniedListener: AccessDeniedListener? = null
+
+    interface AccessDeniedListener {
+        fun onAccessDenied(dir: File)
+    }
+
+    fun setAccessDeniedListener(listener: AccessDeniedListener?) {
+        this.accessDeniedListener = listener
+    }
+
     init {
         init(rootDir, fileSelected, progressBarDialog, extension)
     }
 
     private fun init(rootDir: File, fileSelected: Runnable, progressBarDialog: ProgressBarDialog, extension: String?) {
-        this.rootDir = rootDir.absolutePath
         this.fileSelected = fileSelected
         this.progressBarDialog = progressBarDialog
         // Hỗ trợ nhiều đuôi file, phân cách bằng dấu phẩy, ví dụ: "zip,apk,7z"
@@ -101,16 +109,20 @@ class AdapterFileSelector private constructor(
             // Mọi field (fileArray/currentDir/hasParent) chỉ được gán trên UI thread, ngay
             // trước khi gọi notifyDataSetChanged(), để tránh khoảng hở khiến ListView layout
             // với dữ liệu đã đổi nhưng chưa được notify (-> IllegalStateException).
-            val newHasParent: Boolean
+            // Chỉ ẩn "..." khi thực sự không còn thư mục cha (đã tới root filesystem) -
+            // KHÔNG còn dò canRead() ở đây nữa: nếu cha bị từ chối quyền tạm thời,
+            // loadDir() (gọi khi bấm "...") đã tự xử lý đúng (accessDeniedListener + rỗng)
+            // thay vì phải chặn từ trước như cũ.
             val parent = dir.parentFile
-            newHasParent = if (parent != null) {
-                val parentPath = parent.absolutePath
-                parent.exists() && parent.canRead() && (leaveRootDir || !(rootDir.startsWith(parentPath) && rootDir.length > parentPath.length))
-            } else {
-                false
-            }
+            val newHasParent = parent != null
 
-            var newFileArray: Array<File>? = null
+            // "Bị từ chối" (không đọc được / listFiles() null) PHẢI ra kết quả rỗng chứ
+            // không phải null - null từng khiến bước gán dưới đây giữ nguyên fileArray CŨ
+            // (danh sách thư mục trước đó), làm màn hình đứng yên như chưa hề chuyển thư
+            // mục khi đi ra ngoài sdcard vào nơi thiếu quyền.
+            var newFileArray: Array<File> = emptyArray()
+            var accessDenied = false
+
             if (dir.exists() && dir.canRead()) {
                 val files = dir.listFiles(FileFilter { fileItem ->
                     if (folderChooserMode) {
@@ -120,7 +132,9 @@ class AdapterFileSelector private constructor(
                     }
                 })
 
-                if (files != null) {
+                if (files == null) {
+                    accessDenied = true
+                } else {
                     // 文件排序
                     for (i in files.indices) {
                         for (j in i + 1 until files.size) {
@@ -137,22 +151,26 @@ class AdapterFileSelector private constructor(
                             }
                         }
                     }
+                    newFileArray = files
                 }
-                newFileArray = files
+            } else {
+                accessDenied = true
             }
 
             val finalFileArray = newFileArray
+            val finalAccessDenied = accessDenied
             handler.post {
                 // Gán dữ liệu và notify trong cùng một lượt trên UI thread, không có
                 // background thread nào chen vào giữa hai bước này.
                 hasParent = newHasParent
-                if (finalFileArray != null) {
-                    fileArray = finalFileArray
-                }
+                fileArray = finalFileArray
                 currentDir = dir
                 notifyDataSetChanged()
                 progressBarDialog.hideDialog()
                 selectionChangedListener?.onSelectionChanged(selectedFiles.size)
+                if (finalAccessDenied) {
+                    accessDeniedListener?.onAccessDenied(dir)
+                }
             }
         }.start()
     }
@@ -275,12 +293,11 @@ class AdapterFileSelector private constructor(
                         Toast.makeText(view.context, "The selected file has been deleted. Please select again!", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
-                    val files = file.listFiles()
-                    if (files != null && files.isNotEmpty()) {
-                        loadDir(file)
-                    } else {
-                        Snackbar.make(view, view.context.getString(R.string.no_files_in_directory), Snackbar.LENGTH_SHORT).show()
-                    }
+                    // Luôn vào thẳng loadDir() (chạy nền, tự xử lý rỗng/bị từ chối) - không
+                    // dò listFiles() trước trên UI thread nữa, vì với thư mục ngoài sdcard nó
+                    // rất dễ trả null (bị từ chối tạm thời) và chặn đứng việc đi sâu hơn dù
+                    // thư mục thực ra đọc được.
+                    loadDir(file)
                 }
                 if (folderChooserMode) {
                     val checkBox = view.findViewById<CheckBox>(R.id.ItemCheckBox)

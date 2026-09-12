@@ -64,6 +64,7 @@ If you agree, press the confirm button to continue."</string>
     <string name="dialog_title_select_directory">Do you want to select this folder?</string>
     <string name="dialog_title_select_file">Do you want to select this file?</string>
     <string name="no_files_in_directory">The folder is empty and contains no files!</string>
+    <string name="msg_dir_access_denied">Permission denied: cannot read this folder</string>
     <string name="execute_success">Execution successful</string>
     <string name="execute_fail">Execution failed</string>
     <string name="execute_wait">Executing, please wait...</string>

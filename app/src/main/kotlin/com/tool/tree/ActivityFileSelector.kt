@@ -165,6 +165,12 @@ class ActivityFileSelector : AppCompatActivity() {
 
             binding.fileSelectorList.adapter = adapterFileSelector
 
+            adapterFileSelector?.setAccessDeniedListener(object : AdapterFileSelector.AccessDeniedListener {
+                override fun onAccessDenied(dir: File) {
+                    showToast(getString(R.string.msg_dir_access_denied))
+                }
+            })
+
             // Hàng "Chọn tất cả" chỉ hiện khi đang ở chế độ chọn nhiều (multiple)
             if (multiple) {
                 binding.selectAllBlock.visibility = View.VISIBLE
