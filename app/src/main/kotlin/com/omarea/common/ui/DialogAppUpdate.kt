@@ -12,6 +12,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.text.HtmlCompat
+import com.omarea.common.shell.KeepShellPublic
 import com.tool.tree.OpenFileActivity
 import com.tool.tree.R
 import java.io.File
@@ -252,7 +253,29 @@ class DialogAppUpdate(
         }
     }
 
+    // Có quyền root: cài thẳng qua "pm install -r" ở nền, không cần mở OpenFileActivity (màn
+    // hình cài đặt hệ thống). Không root (hoặc lệnh root thất bại) mới fallback về cách cũ.
     private fun openApk(activity: android.app.Activity, file: File) {
+        Thread {
+            val installed = installApkWithRoot(file)
+            mainHandler.post {
+                if (installed) {
+                    Toast.makeText(activity, activity.getString(R.string.app_update_install_success), Toast.LENGTH_LONG).show()
+                } else {
+                    openApkViaSystemInstaller(activity, file)
+                }
+            }
+        }.apply { isDaemon = true }.start()
+    }
+
+    private fun installApkWithRoot(file: File): Boolean {
+        if (!KeepShellPublic.checkRoot()) return false
+        val escapedPath = file.absolutePath.replace("'", "'\\''")
+        val result = KeepShellPublic.doCmdSync("pm install -r '$escapedPath'")
+        return result.contains("Success", ignoreCase = true)
+    }
+
+    private fun openApkViaSystemInstaller(activity: android.app.Activity, file: File) {
         val intent = Intent(activity, OpenFileActivity::class.java)
         intent.putExtra("path", file.absolutePath)
         activity.startActivity(intent)

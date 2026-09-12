@@ -72,6 +72,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="app_update_title">Cập nhật mới</string>
     <string name="app_update_desc">Đã có phiên bản mới, bạn có muốn cập nhật ứng dụng?</string>
     <string name="app_update_btn_install">Cài đặt</string>
+    <string name="app_update_install_success">Đã cài đặt thành công</string>
     <string name="app_update_download_fail">Tải bản cập nhật thất bại</string>
     <string name="app_update_download_cancelled">Đã hủy tải bản cập nhật</string>
     <string name="app_update_changelog_fail">Không tải được nội dung cập nhật</string>
