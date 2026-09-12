@@ -9,7 +9,6 @@ import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
 import com.omarea.common.shared.RootFileInfo
-import com.omarea.common.shell.KeepShellPublic
 import com.omarea.common.shell.RootFile
 import com.omarea.common.ui.DialogHelper
 import com.omarea.common.ui.ProgressBarDialog
@@ -169,9 +168,11 @@ class AdapterFileSelector private constructor(
                 accessDenied = true
             }
 
-            // java.io.File bị chặn (thường gặp ngoài sdcard, vd /data, /system) dù máy đã
-            // root - thử lại qua shell root (RootFile), vốn không bị giới hạn quyền của app.
-            if (accessDenied && KeepShellPublic.checkRoot()) {
+            // java.io.File bị chặn (thường gặp ngoài sdcard, vd /data, /system) - thử lại qua
+            // shell (root nếu có, tự rơi về sh nếu không). Chỉ coi là thành công khi shell
+            // xác nhận thư mục thực sự tồn tại - nếu không (kể cả khi thiết bị không root),
+            // giữ nguyên accessDenied để báo đúng như trước, tránh hiện nhầm "thư mục rỗng".
+            if (accessDenied && RootFile.dirExists(dir.absolutePath)) {
                 val entries = ArrayList<File>()
                 for (info in RootFile.list(dir.absolutePath)) {
                     if (folderChooserMode && !info.isDirectory) {

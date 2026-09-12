@@ -11,16 +11,19 @@ object RootFile {
         return KeepShellPublic.doCmdSync("test $flag \"$path\" && echo 1 || echo 0").trim() == "1"
     }
 
+    // Ưu tiên java.io.File (tức thì, không cần root) - chỉ gọi qua shell khi Java báo
+    // "không có" (có thể do thật sự không tồn tại, hoặc do bị chặn quyền ngoài sandbox),
+    // để không phát sinh tiến trình su cho các đường dẫn bình thường app vẫn đọc được.
     fun itemExists(path: String): Boolean {
-        return shellTest("-e", path)
+        return File(path).exists() || shellTest("-e", path)
     }
 
     fun fileExists(path: String): Boolean {
-        return shellTest("-f", path)
+        return File(path).isFile || shellTest("-f", path)
     }
 
     fun dirExists(path: String): Boolean {
-        return shellTest("-d", path)
+        return File(path).isDirectory || shellTest("-d", path)
     }
 
     fun deleteDirOrFile(path: String) {
