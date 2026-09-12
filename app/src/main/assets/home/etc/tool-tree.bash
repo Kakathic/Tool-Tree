@@ -418,7 +418,8 @@ Project() {
   value-sh = "glog SDC"
   type = "folder"
   required = true
-    
+
+  [[group]]
   [[action]]
   title = "'$project_text_3'"
   icon = "'$urlicon'/cleanup.png"

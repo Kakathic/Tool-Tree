@@ -78,23 +78,32 @@ class ActivityFileSelector : AppCompatActivity() {
 
         invalidateOptionsMenu()
 
-        // Cho phép tiêu đề toolbar xuống dòng (tối đa 2 dòng) thay vì bị cắt hiện dấu "..."
-        // Toolbar tự tạo TextView tiêu đề khi layout, nên phải chờ tới lúc đó mới chỉnh được.
+        // Tiêu đề toolbar hiện đường dẫn thư mục hiện tại (xem updatePathTitle()) - ép 1 dòng,
+        // cắt bớt và hiện "..." Ở ĐẦU khi quá dài, giữ lại phần cuối path (thường quan trọng
+        // hơn phần đầu). Toolbar tự tạo TextView tiêu đề khi layout, nên phải chờ tới lúc đó
+        // mới chỉnh được; chỉnh 1 lần là đủ vì Toolbar tái dùng cùng 1 TextView cho các lần
+        // đổi title sau (updatePathTitle chỉ setText, không tạo lại view).
         toolbar.post {
             for (i in 0 until toolbar.childCount) {
                 val child = toolbar.getChildAt(i)
                 if (child is TextView && child.text?.toString() == toolbar.title?.toString()) {
-                    child.isSingleLine = false
-                    child.maxLines = 2
-                    child.ellipsize = null
+                    child.isSingleLine = true
+                    child.maxLines = 1
+                    child.ellipsize = android.text.TextUtils.TruncateAt.START
                     break
                 }
             }
         }
     }
 
+    private fun updatePathTitle(dir: File) {
+        title = dir.absolutePath
+    }
+
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        if (multiple) {
+        // Chọn nhiều (file/thư mục) đã có nút xác nhận từ trước. Chọn 1 thư mục (không
+        // multiple) giờ cũng cần nút này vì checkbox không tự đóng màn hình như nhấn giữ.
+        if (multiple || mode == MODE_FOLDER) {
             menuInflater.inflate(R.menu.menu_file_selector, menu)
         }
         return true
@@ -102,10 +111,27 @@ class ActivityFileSelector : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == R.id.action_confirm_selection) {
-            finishWithSelection()
+            if (mode == MODE_FOLDER && !multiple) {
+                finishWithSingleFolderSelection()
+            } else {
+                finishWithSelection()
+            }
             return true
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    // Xác nhận thư mục đã chọn qua checkbox "1 lựa chọn" (chế độ chọn thư mục, không
+    // multiple) - trả về đúng extra "file" (không phải "files") để khớp với cách long-press
+    // chọn ngay vẫn đang trả về, giữ tương thích với nơi gọi màn hình này.
+    private fun finishWithSingleFolderSelection() {
+        val selected = adapterFileSelector?.getSelectedFiles()?.firstOrNull()
+        if (selected == null) {
+            showToast(R.string.msg_nothing_selected)
+            return
+        }
+        setResult(RESULT_OK, Intent().putExtra("file", selected.absolutePath))
+        finish()
     }
 
     private fun finishWithSelection() {
@@ -162,6 +188,16 @@ class ActivityFileSelector : AppCompatActivity() {
             } else {
                 AdapterFileSelector.FileChooser(startDir, onSelected, ProgressBarDialog(this), extension, multiple)
             }
+
+            // Set ngay path khởi đầu (không đợi listener, vì loadDir() đầu tiên chạy nền và
+            // có thể đã hoàn tất trước khi listener kịp gắn ở dòng dưới), rồi mỗi lần đổi
+            // thư mục sau đó (mở thư mục con / bấm "..") sẽ tự cập nhật qua listener.
+            updatePathTitle(startDir)
+            adapterFileSelector?.setDirChangedListener(object : AdapterFileSelector.OnDirChangedListener {
+                override fun onDirChanged(dir: File) {
+                    updatePathTitle(dir)
+                }
+            })
 
             binding.fileSelectorList.adapter = adapterFileSelector
 

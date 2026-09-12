@@ -60,7 +60,6 @@ export PTAH="$(glog PTAH APK 2>/dev/null)"; # $APK/$PTAH
 # User web
 export WEBS="User-Agent: Mozilla/5.0 (Linux; Android $ANDROID_RELEASE; $ANDROID_MODEL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
 
-
 if [ "$ROOT" == 'true' ]; then
     export ROT=1
     export LOT=0

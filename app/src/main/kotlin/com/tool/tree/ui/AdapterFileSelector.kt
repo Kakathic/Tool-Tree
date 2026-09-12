@@ -81,6 +81,18 @@ class AdapterFileSelector private constructor(
         this.accessDeniedListener = listener
     }
 
+    // Báo mỗi khi thư mục hiện tại thay đổi (mở thư mục con / quay lại thư mục cha) -
+    // dùng để activity cập nhật đường dẫn hiện tại lên tiêu đề toolbar.
+    private var dirChangedListener: OnDirChangedListener? = null
+
+    interface OnDirChangedListener {
+        fun onDirChanged(dir: File)
+    }
+
+    fun setDirChangedListener(listener: OnDirChangedListener?) {
+        this.dirChangedListener = listener
+    }
+
     init {
         init(rootDir, fileSelected, progressBarDialog, extension)
     }
@@ -199,6 +211,7 @@ class AdapterFileSelector private constructor(
                 currentDir = dir
                 rootInfoMap.clear()
                 rootInfoMap.putAll(newRootInfo)
+                dirChangedListener?.onDirChanged(dir)
                 notifyDataSetChanged()
                 progressBarDialog.hideDialog()
                 selectionChangedListener?.onSelectionChanged(selectedFiles.size)
@@ -259,6 +272,20 @@ class AdapterFileSelector private constructor(
         if (selectedFiles.contains(file)) {
             selectedFiles.remove(file)
         } else {
+            selectedFiles.add(file)
+        }
+        notifyDataSetChanged()
+        selectionChangedListener?.onSelectionChanged(selectedFiles.size)
+    }
+
+    // Chọn 1 thư mục duy nhất kiểu radio (chọn mục mới tự bỏ chọn mục trước đó, không tự
+    // đóng màn hình) - dùng cho chế độ chọn thư mục KHÔNG multiple. Bấm lại đúng mục đang
+    // chọn thì bỏ chọn. Tái dùng chung tập selectedFiles với chế độ multiple.
+    private fun setSingleChecked(file: File) {
+        if (selectedFiles.contains(file)) {
+            selectedFiles.remove(file)
+        } else {
+            selectedFiles.clear()
             selectedFiles.add(file)
         }
         notifyDataSetChanged()
@@ -357,8 +384,20 @@ class AdapterFileSelector private constructor(
                             true
                         }
                     } else {
+                        // Chế độ chọn 1 thư mục (không multiple): giữ nguyên nhấn giữ để chọn
+                        // ngay + đóng màn hình (hành vi cũ), đồng thời thêm checkbox dạng "1
+                        // lựa chọn" (radio) - chọn thư mục nào thì tự bỏ chọn thư mục khác,
+                        // KHÔNG tự đóng, phải bấm nút xác nhận riêng ở toolbar.
                         if (checkBox != null) {
-                            checkBox.visibility = View.GONE
+                            checkBox.visibility = View.VISIBLE
+                            checkBox.isChecked = selectedFiles.contains(file)
+                            checkBox.setOnClickListener {
+                                if (!existsSafe(file)) {
+                                    Toast.makeText(view.context, "The selected directory has been deleted. Please select another one!", Toast.LENGTH_SHORT).show()
+                                    return@setOnClickListener
+                                }
+                                setSingleChecked(file)
+                            }
                         }
                         view.setOnLongClickListener {
                             DialogHelper.confirm(view.context, view.context.getString(R.string.dialog_title_select_directory), file.absolutePath, Runnable {
