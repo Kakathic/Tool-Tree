@@ -511,7 +511,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.option_menu_update -> { pendingUpdateInfo?.let { showUpdateDialog(it) }; true }
+            R.id.option_menu_update -> {
+                // Trước đó gọi thẳng showUpdateDialog() không chờ blur - nền dialog hiện
+                // trong suốt rồi mới đổi sang blur khi capture xong, giống lỗi luồng tự động
+                // đã fix (showPendingUpdateIfAny). Bọc runWhenBlurReady() giống vậy, không
+                // cần postDelayed(2000) vì đây là bấm tay, không phải tự bật lúc mở app.
+                pendingUpdateInfo?.let { info ->
+                    BlurEngine.runWhenBlurReady {
+                        if (!isFinishing && !isDestroyed) showUpdateDialog(info)
+                    }
+                }
+                true
+            }
             R.id.option_menu_info -> { showSettingsDialog(); true }
             R.id.option_menu_reboot -> { DialogPower(this).showPowerMenu(); true }
             else -> super.onOptionsItemSelected(item)
