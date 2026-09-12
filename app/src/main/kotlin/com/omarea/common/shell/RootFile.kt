@@ -68,8 +68,15 @@ object RootFile {
         }
     }
 
+    // Cắt dấu "/" cuối chuỗi để chuẩn hoá đường dẫn (vd "/sdcard/" -> "/sdcard") - trừ khi
+    // path chính là thư mục gốc filesystem "/" (dài 1 ký tự), vì cắt nốt sẽ biến nó thành
+    // chuỗi rỗng và mọi lệnh test/ls chạy trên đường dẫn rỗng sẽ luôn ra kết quả trống.
+    private fun normalizePath(path: String): String {
+        return if (path.length > 1 && path.endsWith("/")) path.dropLast(1) else path
+    }
+
     fun list(path: String): ArrayList<RootFileInfo> {
-        val absPath = if (path.endsWith("/")) path.subSequence(0, path.length - 1).toString() else path
+        val absPath = normalizePath(path)
         val files = ArrayList<RootFileInfo>()
         if (dirExists(absPath)) {
             val outputInfo = KeepShellPublic.doCmdSync("busybox ls -1Fs \"$absPath\"")
@@ -88,15 +95,22 @@ object RootFile {
     }
 
     fun fileInfo(path: String): RootFileInfo? {
-        val absPath = if (path.endsWith("/")) path.subSequence(0, path.length - 1).toString() else path
+        val absPath = normalizePath(path)
         val outputInfo = KeepShellPublic.doCmdSync("busybox ls -1dFs \"$absPath\"")
         if (outputInfo != "error") {
             val rows = outputInfo.split("\n")
             for (row in rows) {
                 val file = shellFileInfoRow(row, absPath)
                 if (file != null) {
-                    file.filePath = absPath.substring(absPath.lastIndexOf("/") + 1)
-                    file.parentDir = absPath.take(absPath.lastIndexOf("/"))
+                    if (absPath == "/") {
+                        // "/" không có thư mục cha và tên của nó chính là "/", không thể
+                        // tách bằng lastIndexOf("/") như đường dẫn thường (sẽ ra chuỗi rỗng).
+                        file.filePath = "/"
+                        file.parentDir = ""
+                    } else {
+                        file.filePath = absPath.substring(absPath.lastIndexOf("/") + 1)
+                        file.parentDir = absPath.take(absPath.lastIndexOf("/"))
+                    }
                     return file
                 }
             }
