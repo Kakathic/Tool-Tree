@@ -5,6 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
@@ -117,6 +119,10 @@ class MainActivity : AppCompatActivity() {
      * và chuyển kết quả qua Intent extra "pendingUpdate" nếu có bản mới - ở đây chỉ cần hiện
      * dialog, không cần gọi mạng lại.
      */
+    // Chờ blur nền capture xong (hoặc không cần blur) rồi mới hiện dialog, có thêm 2s trễ
+    // sau đó để tránh hiện dialog ngay lúc màn hình vừa vào.
+    private val updateDialogHandler = Handler(Looper.getMainLooper())
+
     private fun showPendingUpdateIfAny() {
         @Suppress("DEPRECATION")
         val updateInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
@@ -124,17 +130,14 @@ class MainActivity : AppCompatActivity() {
         else
             intent.getSerializableExtra("pendingUpdate") as? AppUpdateInfo
 
-        // Icon (kèm dấu chấm đỏ) ở option_menu_update hiện theo biến này bất kể người dùng đã
-        // từng bấm Hủy bỏ hay chưa - chỉ việc TỰ ĐỘNG hiện dialog mới bị chặn lại theo trạng
-        // thái đã lưu.
         pendingUpdateInfo = updateInfo
         invalidateOptionsMenu()
 
-        // Chờ blur nền capture xong (hoặc không cần blur) rồi mới hiện dialog, thay vì
-        // đợi cố định 2s - xem BlurEngine.runWhenBlurReady()/BlurController.
         if (updateInfo != null && !AppUpdateConfig(this).isDismissed(updateInfo.sha256)) {
             BlurEngine.runWhenBlurReady {
-                if (!isFinishing && !isDestroyed) showUpdateDialog(updateInfo)
+                updateDialogHandler.postDelayed({
+                    if (!isFinishing && !isDestroyed) showUpdateDialog(updateInfo)
+                }, 2000)
             }
         }
     }
