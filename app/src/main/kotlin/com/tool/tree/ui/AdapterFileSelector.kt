@@ -362,20 +362,11 @@ class AdapterFileSelector private constructor(
                 }
                 if (folderChooserMode) {
                     val checkBox = view.findViewById<CheckBox>(R.id.ItemCheckBox)
-                    if (checkBox != null) {
-                        checkBox.visibility = View.VISIBLE
-                        checkBox.isChecked = selectedFiles.contains(file)
-                
-                        // Đổi drawable: Hình tròn (btn_radio) khi chọn 1, hình vuông (btn_check) khi chọn nhiều
-                        if (multipleMode) {
-                            checkBox.setButtonDrawable(android.R.drawable.btn_check)
-                        } else {
-                            checkBox.setButtonDrawable(android.R.drawable.btn_radio)
-                        }
-                    }
-                
                     if (multipleMode) {
                         if (checkBox != null) {
+                            checkBox.visibility = View.VISIBLE
+                            checkBox.setButtonDrawable(android.R.drawable.btn_checkbox)
+                            checkBox.isChecked = selectedFiles.contains(file)
                             checkBox.setOnClickListener {
                                 if (!existsSafe(file)) {
                                     Toast.makeText(view.context, "The selected directory has been deleted. Please select another one!", Toast.LENGTH_SHORT).show()
@@ -384,7 +375,7 @@ class AdapterFileSelector private constructor(
                                 toggleSelection(file)
                             }
                         }
-                        // Nhấn giữ vẫn dùng để chọn nhanh 1 thư mục
+                        // Nhấn giữ vẫn dùng để chọn nhanh 1 thư mục (giữ hành vi cũ, thêm vào danh sách đã chọn)
                         view.setOnLongClickListener {
                             if (!existsSafe(file)) {
                                 Toast.makeText(view.context, "The selected directory has been deleted. Please select another one!", Toast.LENGTH_SHORT).show()
@@ -394,8 +385,14 @@ class AdapterFileSelector private constructor(
                             true
                         }
                     } else {
-                        // Chế độ chọn 1 thư mục (không multiple)
+                        // Chế độ chọn 1 thư mục (không multiple): giữ nguyên nhấn giữ để chọn
+                        // ngay + đóng màn hình (hành vi cũ), đồng thời thêm checkbox dạng "1
+                        // lựa chọn" (radio) - chọn thư mục nào thì tự bỏ chọn thư mục khác,
+                        // KHÔNG tự đóng, phải bấm nút xác nhận riêng ở toolbar.
                         if (checkBox != null) {
+                            checkBox.visibility = View.VISIBLE
+                            checkBox.setButtonDrawable(android.R.drawable.btn_radio)
+                            checkBox.isChecked = selectedFiles.contains(file)
                             checkBox.setOnClickListener {
                                 if (!existsSafe(file)) {
                                     Toast.makeText(view.context, "The selected directory has been deleted. Please select another one!", Toast.LENGTH_SHORT).show()
@@ -441,6 +438,7 @@ class AdapterFileSelector private constructor(
                 if (multipleMode) {
                     if (checkBox != null) {
                         checkBox.visibility = View.VISIBLE
+                        checkBox.setButtonDrawable(android.R.drawable.btn_checkbox)
                         checkBox.isChecked = selectedFiles.contains(file)
                     }
                     val toggleListener = View.OnClickListener {
