@@ -62,18 +62,18 @@ open class ListItemClickable(
         this.layout.setOnLongClickListener {
             if (allowLongClick()) {
                 this.mOnLongClickListener?.onLongClick(this)
-                layout.removeCallbacks(resetPressedRunnable)
                 dragHighlightView = layout
-                layout.isPressed = true
+                layout.parent?.requestDisallowInterceptTouchEvent(true)
                 true
             } else {
                 false
             }
         }
 
-        // Hiệu ứng nhấn chỉ hiện 1 lần khi vừa chạm, không giữ theo thời gian nhấn giữ.
-        // Sau khi long-press kích hoạt (dragHighlightView != null), theo dõi ngón tay di chuyển
-        // sang item khác để tô sáng item đó (chỉ để xem, không tự bấm khi thả tay).
+        // Hiệu ứng nhấn chỉ hiện 1 lần khi vừa chạm, không giữ theo thời gian nhấn giữ (kể cả khi long-press).
+        // Sau khi long-press kích hoạt (dragHighlightView != null), theo dõi ngón tay di chuyển sang item
+        // khác để tô sáng item đó (chỉ để xem, không tự bấm khi thả tay). requestDisallowInterceptTouchEvent
+        // để ScrollView cha không cướp sự kiện chạm giữa chừng khi đang vuốt.
         this.layout.setOnTouchListener { view, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -89,6 +89,7 @@ open class ListItemClickable(
                     view.removeCallbacks(resetPressedRunnable)
                     dragHighlightView?.isPressed = false
                     dragHighlightView = null
+                    view.parent?.requestDisallowInterceptTouchEvent(false)
                 }
             }
             false
