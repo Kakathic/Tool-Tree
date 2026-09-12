@@ -343,6 +343,7 @@ class AdapterFileSelector private constructor(
             if (checkBox != null) {
                 checkBox.visibility = View.GONE
             }
+            view.findViewById<View>(R.id.ItemRadioButton)?.visibility = View.GONE
             view.setOnClickListener { goParent() }
             return view
         } else {
@@ -362,7 +363,9 @@ class AdapterFileSelector private constructor(
                 }
                 if (folderChooserMode) {
                     val checkBox = view.findViewById<CheckBox>(R.id.ItemCheckBox)
+                    val radioButton = view.findViewById<android.widget.RadioButton>(R.id.ItemRadioButton)
                     if (multipleMode) {
+                        radioButton?.visibility = View.GONE
                         if (checkBox != null) {
                             checkBox.visibility = View.VISIBLE
                             checkBox.isChecked = selectedFiles.contains(file)
@@ -385,14 +388,17 @@ class AdapterFileSelector private constructor(
                         }
                     } else {
                         // Chế độ chọn 1 thư mục (không multiple): giữ nguyên nhấn giữ để chọn
-                        // ngay + đóng màn hình (hành vi cũ), đồng thời thêm checkbox dạng "1
-                        // lựa chọn" (radio) - chọn thư mục nào thì tự bỏ chọn thư mục khác,
-                        // KHÔNG tự đóng, phải bấm nút xác nhận riêng ở toolbar.
+                        // ngay + đóng màn hình (hành vi cũ), đồng thời thêm RadioButton thật
+                        // (theo đúng theme app, không phải drawable android cũ) - chọn thư mục
+                        // nào thì tự bỏ chọn thư mục khác, KHÔNG tự đóng, phải bấm nút xác
+                        // nhận riêng ở toolbar.
                         if (checkBox != null) {
-                            checkBox.visibility = View.VISIBLE
-                            checkBox.setButtonDrawable(android.R.drawable.btn_radio)
-                            checkBox.isChecked = selectedFiles.contains(file)
-                            checkBox.setOnClickListener {
+                            checkBox.visibility = View.GONE
+                        }
+                        if (radioButton != null) {
+                            radioButton.visibility = View.VISIBLE
+                            radioButton.isChecked = selectedFiles.contains(file)
+                            radioButton.setOnClickListener {
                                 if (!existsSafe(file)) {
                                     Toast.makeText(view.context, "The selected directory has been deleted. Please select another one!", Toast.LENGTH_SHORT).show()
                                     return@setOnClickListener
@@ -417,6 +423,7 @@ class AdapterFileSelector private constructor(
                     if (checkBox != null) {
                         checkBox.visibility = View.GONE
                     }
+                    view.findViewById<View>(R.id.ItemRadioButton)?.visibility = View.GONE
                 }
             } else {
                 view = View.inflate(parent.context, R.layout.list_item_file, null)
