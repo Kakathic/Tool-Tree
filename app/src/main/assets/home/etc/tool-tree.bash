@@ -172,7 +172,7 @@ Home() {
   title = "'$setting_text_3'"
   desc = "'$setting_text_4'"
   icon = "'$urlicon'/project.png"
-  config-sh = "'$ETC'/tool-tree.bash Project"
+  config-sh = "'$ETC'/tool-tree.bash Project 1"
 
   [[group]]
   [[page]]
@@ -194,7 +194,7 @@ Home() {
   desc = "'$home_text_4'"
   icon = "'$urlicon'/addon.png"
   process = true
-  config-sh = "PATHADD=\"$AON\" '$ETC'/tool-tree.bash Addon"
+  config-sh = "'$ETC'/tool-tree.bash Addon $AON"
   '
 
   [ "$(glog shellc)" == 1 ] && shell_bash shellc
@@ -206,10 +206,10 @@ More() {
   echo '
   [[group]]
   [[page]]
-  title = "'$setting_text'"
-  desc = "'$home_text_1'"
-  icon = "'$urlicon'/settings.png"
-  config-sh = "'$ETC'/tool-tree.bash Info"
+  title = "'$setting_text_3'"
+  desc = "'$setting_text_4'"
+  icon = "'$urlicon'/project.png"
+  config-sh = "'$ETC'/tool-tree.bash Project 2"
 
   [[group]]
   [[page]]
@@ -232,7 +232,7 @@ More() {
   desc = "'$more_text_8'"
   icon = "'$urlicon'/apk_addon.png"
   process = true
-  config-sh = "PATHADD=\"$AOK\" '$ETC'/tool-tree.bash Addon"
+  config-sh = "'$ETC'/tool-tree.bash Addon $AOK"
   '
 
   [ "$(glog shellc)" == 1 ] && shell_bash shells
@@ -275,13 +275,6 @@ Info() {
   icon = "'$urlicon'/info.png"
   config-sh = "'$ETC'/tool-tree.bash Update"
   process = true
-  
-  [[group]]
-  [[page]]
-  title = "'$setting_text_3'"
-  desc = "'$setting_text_4'"
-  icon = "'$urlicon'/project.png"
-  config-sh = "'$ETC'/tool-tree.bash Project"
     
   [[group]]
   [[page]]
@@ -443,6 +436,12 @@ Update() {
 
 Project() {
 
+  if [ "$1" == 1 ]; then
+  clear_shell='findfile folders $SDH/$PTSH'
+  else
+  clear_shell='findfile folders $APK/$PTAH'
+  fi
+
   echo '
   [[group]]
   [[menu]]
@@ -487,9 +486,12 @@ Project() {
     [[action.params]]
     name = "dels"
     label = "'$option_text'"
-    options-sh = "findfile folders $SDH/$PTSH; findfile folders $APK/$PTAH"
+    options-sh = "'$clear_shell'"
     multiple = true
+'
 
+if [ "$1" == 1 ]; then
+  echo '
   [[group]]
   [[action]]
   title = "'$customize_tools_text'"
@@ -549,40 +551,41 @@ Project() {
   '
 
   for vvsskk in $SDH/$PTSH/*; do
-  [[ -d "$vvsskk" ]] && namept="${vvsskk##*/}" || continue
-  [[ "$namept" == *config* || "$namept" == *raw* ]] && continue
-  sload+='if [[ -z "$name_'$namept'" || "$name_'$namept'" == 0 ]]; then
-  rm -rf $SDH/$PTSH/config/'$namept'_size.txt
-  else
-  echo "$name_'$namept'" > $SDH/$PTSH/config/'$namept'_size.txt
-  fi
-  '
-  vbload+='
-  [[action.params]]
-  name = "name_'$namept'"
-  type = "number"
-  placeholder = "0"
-  label = "'$namept'"
-  value-sh = "cat $SDH/$PTSH/config/'$namept'_size.txt 2>/dev/null"
-  '
+    [[ -d "$vvsskk" ]] && namept="${vvsskk##*/}" || continue
+    [[ "$namept" == *config* || "$namept" == *raw* ]] && continue
+    sload+='if [[ -z "$name_'$namept'" || "$name_'$namept'" == 0 ]]; then
+    rm -rf $SDH/$PTSH/config/'$namept'_size.txt
+    else
+    echo "$name_'$namept'" > $SDH/$PTSH/config/'$namept'_size.txt
+    fi
+    '
+    vbload+='
+    [[action.params]]
+    name = "name_'$namept'"
+    type = "number"
+    placeholder = "0"
+    label = "'$namept'"
+    value-sh = "cat $SDH/$PTSH/config/'$namept'_size.txt 2>/dev/null"
+    '
   done
   
   if [ -n "$(ls -1d "$SDH/$PTSH"/* 2>/dev/null | grep -vE '/(raw|config)')" ]; then
-  echo '
-  [[group]]
-  [[action]]
-  title = "'$custom_size'"
-  warn = "'$custom_size_desc'"
-  icon = "'$urlicon'/size_icon.png"
-  shell = "hidden"
-  reload = true
-  script = """
-  '"$sload"'
-  """
-  '"$vbload"'
-  '
+    echo '
+    [[group]]
+    [[action]]
+    title = "'$custom_size'"
+    warn = "'$custom_size_desc'"
+    icon = "'$urlicon'/size_icon.png"
+    shell = "hidden"
+    reload = true
+    script = """
+    '"$sload"'
+    """
+    '"$vbload"'
+    '
   fi
   
+fi
 }
 
 Feature() {
@@ -1128,8 +1131,8 @@ Utilities() {
   """
   
     [[menu.items]]
-    title = "'$setting_text' - '$setting_text_3'"
-    config-sh = "'$ETC'/tool-tree.bash Project"
+    title = "'$apex_text'"
+    config-sh = "'$ETC'/tool-tree.bash Apex"
     '"$vdbfbfsn"'
     
     [[menu.items]]
@@ -2002,12 +2005,6 @@ Utiliapk() {
 
 Addon() {
 
-  if [[ "$PATHADD" == "$AON" ]]; then
-  linkweb="Addon.html"
-  else
-  linkweb="Apkon.html"
-  fi
-  
   echo '
     [[group]]
     [[menu]]
@@ -2042,7 +2039,7 @@ Addon() {
     [[group]]
     [[fab]]
     handler = """
-    [ "$menu_id" == "file" ] && installadd "$file" "'$PATHADD'"
+    [ "$menu_id" == "file" ] && installadd "$file" "'$1'"
     """
     
     [[fab.items]]
@@ -2058,7 +2055,6 @@ Addon() {
     echo '[[group]]
     [[download]]
     '$croot_add'
-    warn = "'$use_network_text'"
     icon = "'$icon_vb'"
     title = "'$name'"
     desc = "'$sum_vb'"
@@ -2208,7 +2204,7 @@ Addon() {
   }
 
   # Load trang add-on có pin trước
-  for vadd in $PATHADD/*/Add-on.bash; do
+  for vadd in $1/*/Add-on.bash; do
     [ -f "$vadd" ] || continue
     dirvad="${vadd%/*}"
     [ -f "$dirvad/pin" ] || continue
@@ -2218,7 +2214,7 @@ Addon() {
   done
 
   # Load trang không có pin
-  for vadd in $PATHADD/*/Add-on.bash; do
+  for vadd in $1/*/Add-on.bash; do
     [ -f "$vadd" ] || continue
     dirvad="${vadd%/*}"
     [ -f "$dirvad/pin" ] && continue
@@ -2228,7 +2224,7 @@ Addon() {
   done
 
   # Load trang tải xuống ở dưới cùng
-  for vadd in $PATHADD/*/download.bash; do
+  for vadd in $1/*/download.bash; do
     [ -f "$vadd" ] || continue
     dirvad="${vadd%/*}"
     if [[ -f "$dirvad/index.bash" || -f "$dirvad/index.toml" ]]; then
