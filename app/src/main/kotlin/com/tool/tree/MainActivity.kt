@@ -63,6 +63,9 @@ class MainActivity : AppCompatActivity() {
 
     private val ACTION_FILE_PATH_CHOOSER = 65400
     private val ACTION_FILE_PATH_CHOOSER_INNER = 65300
+    // Chờ blur nền xong rồi mới hiện dialog cập nhật, thêm 2s trễ sau đó để không hiện
+    // ngay lúc màn hình vừa vào.
+    private val updateDialogHandler = Handler(Looper.getMainLooper())
     private lateinit var adapter: MainPagerAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,10 +122,6 @@ class MainActivity : AppCompatActivity() {
      * và chuyển kết quả qua Intent extra "pendingUpdate" nếu có bản mới - ở đây chỉ cần hiện
      * dialog, không cần gọi mạng lại.
      */
-    // Chờ blur nền capture xong (hoặc không cần blur) rồi mới hiện dialog, có thêm 2s trễ
-    // sau đó để tránh hiện dialog ngay lúc màn hình vừa vào.
-    private val updateDialogHandler = Handler(Looper.getMainLooper())
-
     private fun showPendingUpdateIfAny() {
         @Suppress("DEPRECATION")
         val updateInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
