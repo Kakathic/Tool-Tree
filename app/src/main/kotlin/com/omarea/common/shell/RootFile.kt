@@ -91,6 +91,24 @@ object RootFile {
             }
         }
 
+        // Android (qua FUSE) thường giấu nội dung "/storage/emulated" khỏi lệnh liệt kê thư
+        // mục, kể cả chạy qua root - dù từng thư mục người dùng con (vd /storage/emulated/0)
+        // vẫn truy cập trực tiếp được bình thường. Dò thêm các id người dùng thường gặp bằng
+        // cách kiểm tra tồn tại trực tiếp, để không mất các mục này khỏi danh sách.
+        if (absPath == "/storage/emulated") {
+            val known = files.map { it.fileName }.toHashSet()
+            for (userId in 0..9) {
+                val name = userId.toString()
+                if (name !in known && dirExists("$absPath/$name")) {
+                    val info = RootFileInfo()
+                    info.filePath = name
+                    info.parentDir = absPath
+                    info.isDirectory = true
+                    files.add(info)
+                }
+            }
+        }
+
         return files
     }
 
