@@ -8,9 +8,10 @@ show_sett() {
   shell = "hidden"
   reload = true
   menu = true
-  title = "'$input_folder_text'"
+  title = "'$projects_text'"
   desc = "'$path_text': '$PTSD'"
   script = """
+  slog SDH "$SDH"
   if [ ! -d "$SDC/$Name" ] || [ ! -d "$SDH/$Name" ]; then
     slog PTSD "$SDC/$Name"
     slog PTSH "$Name"
@@ -22,10 +23,18 @@ show_sett() {
   """
 
   [[action.params]]
+  name = "SDH"
+  title = "'$output_folder_text'"
+  desc = "'$path_text': '$SDH'"
+  type = "folder"
+  value-sh = "glog SDH"
+  path-home = "'$HOME'"
+  
+  [[action.params]]
   name = "Name"
+  title = "'$setting_text_3'"
   desc = "'$config_text_1'"
   label = "'$option_text'"
-  title = "'$projects_text'"
   options-sh = "findfile for $SDH"
   value-sh = "glog PTSH"
   editable = true
@@ -39,9 +48,10 @@ show_apkset() {
   shell = "hidden"
   reload = true
   menu = true
-  title = "'$input_folder_text'"
+  title = "'$projects_text'"
   desc = "'$path_text': '$PTAD'"
   script = """
+  slog APK "$APK"
   if [ ! -d "$SDC/$Name" ] || [ ! -d "$APK/$Name" ]; then
     slog PTAD "$SDC/$Name"
     slog PTAH "$Name"
@@ -53,10 +63,18 @@ show_apkset() {
   """
 
   [[action.params]]
+  name = "APK"
+  title = "'$output_folder_text'"
+  desc = "'$path_text': '$APK'"
+  type = "folder"
+  value-sh = "glog APK"
+  path-home = "'$HOME'"
+
+  [[action.params]]
   name = "Name"
+  title = "'$setting_text_3'"
   desc = "'$config_text_1'"
   label = "'$option_text'"
-  title = "'$projects_text'"
   options-sh = "findfile for $APK"
   value-sh = "glog PTAH"
   editable = true

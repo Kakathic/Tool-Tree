@@ -33,8 +33,6 @@ export TERMUX="$HOME/termux"
 export ETC="$HOME/etc"
 export BIN="$HOME/bin"
 export LOG="$HOME/usr/log"
-export SDH="$HOME/TREE"
-export APK="$HOME/TOOL"
 export AON="$HOME/ZADD"
 export AOK="$HOME/ZAPK"
 export TMPDIR="$HOME/tmp"
@@ -48,11 +46,13 @@ export TERM=xterm-256color
 export START_TIME="$(date +%s)"
 
 # export LD_LIBRARY_PATH="$LIB"
-export SDC="$(glog SDC $SDCARD_PATH/TREE 2>/dev/null)";
-export PTSD="$(glog PTSD $SDC/ROM 2>/dev/null)";
-export PTSH="$(glog PTSH ROM 2>/dev/null)"; # $SDH/$PTSH
-export PTAD="$(glog PTAD $SDC/APK 2>/dev/null)";
-export PTAH="$(glog PTAH APK 2>/dev/null)"; # $APK/$PTAH
+export SDC="$(glog SDC $SDCARD_PATH/TREE)";
+export SDH="$(glog SDH $HOME/TREE)";
+export APK="$(glog APK $HOME/TOOL)";
+export PTSD="$(glog PTSD $SDC/ROM)";
+export PTAD="$(glog PTAD $SDC/APK)";
+export PTSH="$(glog PTSH ROM)"; # $SDH/$PTSH
+export PTAH="$(glog PTAH APK)"; # $APK/$PTAH
 
 # Không giới hạn ngang
 [ "$(glog scroll_ngang)" == 1 ] || export COLUMNS=47

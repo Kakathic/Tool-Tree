@@ -1,9 +1,10 @@
 #!/data/data/com.tool.tree/files/home/bin/bash
+
 shopt -s extglob
 set -o pipefail
 #set -x
 source language 2>/dev/null
-#threads=$(nproc)
+
 show_help() {
   echo "Usage: repack_img -i <input> -o <output> <flags>"
   echo
@@ -38,7 +39,13 @@ if [[ $# -eq 0 || "$1" != -* ]]; then
   show_help
 fi
 
-unset OUTPUT NENEROFS CONVER LVLNEN SAINEN TTBUILDI CDELIMG DISATFS
+NENEROFS='lz4hc'
+LVLNEN=4
+SAINEN=0
+TTBUILDI=0
+CDELIMG=1
+CONVER='raw'
+DISATFS=1
 
 while getopts ":i:o:n:l:c:s:k:d:p:h" opt; do
   case $opt in
@@ -63,14 +70,6 @@ if [[ -z "$INPUT" || -z "$OUTPUT" ]]; then
 -o $OUTPUT" >&2
   exit 1
 fi
-
-[[ -z "$NENEROFS" ]] && NENEROFS='lz4hc'
-[[ -z "$LVLNEN" ]] && LVLNEN=4
-[[ -z "$SAINEN" ]] && SAINEN=0
-[[ -z "$TTBUILDI" ]] && TTBUILDI=0
-[[ -z "$CDELIMG" ]] && CDELIMG=1
-[[ -z "$CONVER" ]] && CONVER='raw'
-[[ -z "$DISATFS" ]] && DISATFS=1
 
 [ -f "$ETC/mke2fs.conf" ] && export MKE2FS_CONFIG="$ETC/mke2fs.conf"
 

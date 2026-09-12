@@ -35,8 +35,11 @@ if [[ $# -eq 0 || "$1" != -* ]]; then
   print_help
 fi
 
-INPUT=''; OUTPUT=''; NODECO=''; XOAIMG=''; PVUGBIN='';
-XOAOAT=''; AVBIMG=''; PTVBMETA='';
+XOAIMG=0
+NODECO=0
+XOAOAT=0
+AVBIMG=0
+PTVBMETA=0
 
 while getopts ":i:o:a:n:d:p:m:r:h" opt; do
   case $opt in
@@ -60,12 +63,6 @@ if [[ -z "$INPUT" || -z "$OUTPUT" ]]; then
 -o $OUTPUT" >&2
   exit 1
 fi
-
-[[ -z "$XOAIMG" ]] && XOAIMG=0
-[[ -z "$NODECO" ]] && NODECO=0
-[[ -z "$XOAOAT" ]] && XOAOAT=0
-[[ -z "$AVBIMG" ]] && AVBIMG=0
-[[ -z "$PTVBMETA" ]] && PTVBMETA=0
 
 source language 2>/dev/null
 dang_tep="$(checktype "$INPUT")"
