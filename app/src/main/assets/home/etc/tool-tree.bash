@@ -29,6 +29,7 @@ show_sett() {
   type = "folder"
   value-sh = "glog SDH"
   path-home = "'$HOME'"
+  editable = true
   
   [[action.params]]
   name = "Name"
@@ -69,6 +70,7 @@ show_apkset() {
   type = "folder"
   value-sh = "glog APK"
   path-home = "'$HOME'"
+  editable = true
 
   [[action.params]]
   name = "Name"
