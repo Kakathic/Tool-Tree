@@ -423,14 +423,14 @@ Update() {
 
   [[group]]
   [[download]]
-  title = "'$download_text' Stable"
+  title = "'$download_text' stable"
   icon = "'$urlicon'/update.png"
   url-sh = "linkgit https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest Tool-Tree"
   script = "openfile $state"
   
   [[group]]
   [[download]]
-  title = "'$download_text' Beta"
+  title = "'$download_text' beta"
   icon = "'$urlicon'/update.png"
   url = "https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-beta.apk"
   script = "openfile $state"
