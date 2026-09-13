@@ -7,7 +7,7 @@ import android.widget.TextView
 import com.tool.tree.R
 import com.omarea.krscript.model.DownloadNode
 
-class ListItemDownload(context: Context, config: DownloadNode) :
+class ListItemDownload(context: Context, private val config: DownloadNode) :
     ListItemClickable(context, R.layout.kr_download_list_item, config) {
 
     private val widgetView = layout.findViewById<ImageView?>(R.id.kr_widget)
@@ -23,6 +23,13 @@ class ListItemDownload(context: Context, config: DownloadNode) :
     override fun allowLongClick(): Boolean = isBusy || super.allowLongClick()
 
     private var cancelAction: (() -> Unit)? = null
+
+    // process = true: sau khi resolvePendingStates() (get shell của rows) chạy xong, phải vẽ
+    // lại rows thì checkbox/switch trong rows mới cập nhật đúng trạng thái trên UI.
+    override fun updateViewByShell() {
+        super.updateViewByShell()
+        RowsRenderHelper.bind(context, rowsView, rowsPhotoView, config.rows, config)
+    }
 
     init {
         widgetView?.visibility = View.VISIBLE

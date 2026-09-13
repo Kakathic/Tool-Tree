@@ -2063,7 +2063,7 @@ Addon() {
     '$croot_add'
     icon = "'$icon_vb'"
     title = "'$name'"
-    summary = "'$version' × '$author'"
+    summary = "'$version', '$author'"
     reload = true
     url = "'$url'"
     script = """
@@ -2078,10 +2078,10 @@ Addon() {
         
         [[download.rows]]
         toggle = "checkbox"
-        text = "'$hide_add_text'"
-        get = "[ -f '$dirvad'/hide ] && echo 1"
         line = true
         align="opposite"
+        text = "'$hide_add_text'"
+        get = "[ -f '$dirvad'/hide ] && echo 1"
         set = """
         if [ -f '$dirvad'/hide ]; then
         rm '$dirvad'/hide
@@ -2155,7 +2155,7 @@ Addon() {
       [[group]]
       [[page]]
       title = "'$name'"
-      summary = "'$version' × '$author'"
+      summary = "'$version', '$author'"
       icon = "'$icon_vb'"
       process = "'$process'"
       '$croot_add'
@@ -2212,7 +2212,7 @@ Addon() {
         Homeadd
         fi
       elif [ -f "$dirvad/download.bash" ]; then
-        if [[ "$(glog show_dows_add)" == 1 ]]; then
+        if [[ "$(glog show_setting_add)" == 1 || "$(glog show_dows_add)" == 1 ]]; then
         Download
         fi
       fi

@@ -64,8 +64,8 @@ class TextEditorActivity : AppCompatActivity() {
         private const val EXTRA_VALUE_SH = "value_sh"
 
         // Giới hạn tối đa 10 lượt Undo/Redo, vượt quá sẽ tự động xoá lượt cũ nhất
-        private const val UNDO_HISTORY_LIMIT = 10
-        private const val REDO_HISTORY_LIMIT = 10
+        private const val UNDO_HISTORY_LIMIT = 20
+        private const val REDO_HISTORY_LIMIT = 20
         private const val UNDO_DEBOUNCE_MS = 600L
         private const val UNDO_CACHE_DEBOUNCE_MS = 1000L
         private const val UNDO_CACHE_DIR = "cache"

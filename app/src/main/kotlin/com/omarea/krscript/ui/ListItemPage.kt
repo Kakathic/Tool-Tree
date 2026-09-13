@@ -7,10 +7,17 @@ import android.widget.TextView
 import com.tool.tree.R
 import com.omarea.krscript.model.PageNode
 
-class ListItemPage(context: Context, config: PageNode) : ListItemClickable(context, R.layout.kr_action_list_item, config) {
+class ListItemPage(context: Context, private val config: PageNode) : ListItemClickable(context, R.layout.kr_action_list_item, config) {
     private val widgetView = layout.findViewById<ImageView?>(R.id.kr_widget)
     private val rowsView = layout.findViewById<TextView?>(R.id.kr_rows)
     private val rowsPhotoView = layout.findViewById<ImageView?>(R.id.kr_rows_photo)
+
+    // process = true: sau khi resolvePendingStates() (get shell của rows) chạy xong, phải vẽ
+    // lại rows thì checkbox/switch trong rows mới cập nhật đúng trạng thái trên UI.
+    override fun updateViewByShell() {
+        super.updateViewByShell()
+        RowsRenderHelper.bind(context, rowsView, rowsPhotoView, config.rows, config)
+    }
 
     init {
         widgetView?.visibility = View.VISIBLE

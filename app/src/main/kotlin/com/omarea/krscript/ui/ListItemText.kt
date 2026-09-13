@@ -8,10 +8,17 @@ import com.omarea.krscript.model.TextNode
 
 class ListItemText(context: Context,
                    layoutId: Int,
-                   config: TextNode) : ListItemView(context, layoutId, config) {
+                   private val config: TextNode) : ListItemView(context, layoutId, config) {
 
     private val rowsView = layout.findViewById<TextView?>(R.id.kr_rows)
     protected var extraIconView = layout.findViewById<ImageView?>(R.id.kr_extra_icon_text)
+
+    // process = true: sau khi resolvePendingStates() (get shell của rows) chạy xong, phải vẽ
+    // lại rows thì checkbox/switch trong rows mới cập nhật đúng trạng thái trên UI.
+    override fun updateViewByShell() {
+        super.updateViewByShell()
+        RowsRenderHelper.bind(context, rowsView, extraIconView, config.rows, config)
+    }
 
     init {
         RowsRenderHelper.bind(context, rowsView, extraIconView, config.rows, config)
