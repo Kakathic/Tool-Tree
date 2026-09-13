@@ -334,8 +334,7 @@ Info() {
   slog chatai_lang "$chatai_lang"
   slog chatai_nextrule "$chatai_nextrule"
   [ "$models_thinking" -gt 0 ] && thingkk="-t $models_thinking"
-  [ -n "$chatai_nextrule" ] && rule_ai="-n \"$chatai_nextrule\""
-  transai -m "$chatai" -l "$chatai_lang" $thingkk $rule_ai
+  transai -m "$chatai" -l "$chatai_lang" $thingkk
   """
   
   [[action.params]]
