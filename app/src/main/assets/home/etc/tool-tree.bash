@@ -331,6 +331,7 @@ Info() {
   script = """
   slog chatai_save "$chatai"
   slog models_thinking "$models_thinking"
+  slog models_genmini "$models_genmini"
   slog chatai_lang "$chatai_lang"
   slog chatai_nextrule "$chatai_nextrule"
   [ "$models_thinking" -gt 0 ] && thingkk="-t $models_thinking"
@@ -701,11 +702,7 @@ Feature() {
   icon = "'$urlicon'/apikey.png"
   shell = "hidden"
   script = """
-  if [ -z "$models_genmini" ]; then
-  slog -d models_genmini
-  else
   slog models_genmini "$models_genmini"
-  fi
   transai -c
   """
   
