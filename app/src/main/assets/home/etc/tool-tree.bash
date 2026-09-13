@@ -363,7 +363,7 @@ Info() {
   value-sh = "glog chatai_lang \"$LANGUAGE-$COUNTRY\""
   
   [[action.params]]
-  name = "next_rule"
+  name = "chatai_nextrule"
   title = "'$chatai_rule_text'"
   placeholder = "- Always return text in uppercase"
   type = "text"
