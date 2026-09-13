@@ -5,7 +5,7 @@
 find "$TMPDIR" -maxdepth 1 ! -path "$TMPDIR" ! -name '*.log' -exec rm -rf {} +
 rm -fr $TEMP/documents $TEMP/kr_download_* $START_DIR/icons/*
 
-check_update boot &
+[ -z $(glog api_genmini) ] && transai -c &
 
 {
 # Cấp quyền tự động nếu đã root
@@ -34,26 +34,24 @@ cmd appops set $PACKAGE_NAME WAKE_LOCK allow
 # Cấp quyền ở MIUI, HyperOS
 cmd appops set $PACKAGE_NAME 10022 allow
 cmd appops set $PACKAGE_NAME GET_USAGE_STATS allow
-[ "$API" -ge 30 ] && cmd appops set $PACKAGE_NAME QUERY_ALL_PACKAGES allow
+cmd appops set $PACKAGE_NAME QUERY_ALL_PACKAGES allow
 # Phím tắt màn hình chính
 cmd appops set $PACKAGE_NAME 10017 allow
 # Loaded sẵn danh sách img
 search_image &>/dev/null
 } &
 
-{
-  # Dọn bộ đếm
-  rm -fr $AON/*/zcheck $AOK/*/zcheck
-  # Cấp quyền 755 tự động
-  set_permis $AON/*/* $AOK/*/* &>/dev/null
-  # Khởi động các file shell ở add-on
-  for vadd in $AON/* $AOK/*; do
-  if [ -f "$vadd/early_start.bash" ]; then
-  echo "Run shell: $vadd/early_start.bash"
-  $vadd/early_start.bash &
-  elif [ -f "$vadd/early_start.sh" ]; then
-  echo "Run shell: $vadd/early_start.sh"
-  $vadd/early_start.sh &
-  fi
-  done
-}
+# Dọn bộ đếm
+rm -fr $AON/*/zcheck $AOK/*/zcheck
+# Cấp quyền 755 tự động
+set_permis $AON/*/* $AOK/*/* &>/dev/null
+# Khởi động các file shell ở add-on
+for vadd in $AON/* $AOK/*; do
+if [ -f "$vadd/early_start.bash" ]; then
+echo "Run shell: $vadd/early_start.bash"
+$vadd/early_start.bash &
+elif [ -f "$vadd/early_start.sh" ]; then
+echo "Run shell: $vadd/early_start.sh"
+$vadd/early_start.sh &
+fi
+done
