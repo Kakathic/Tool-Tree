@@ -1,5 +1,6 @@
 package com.omarea.common.ui
 
+import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
@@ -36,6 +37,16 @@ class DialogAppUpdate(
 
     init {
         isCancelable = true
+    }
+
+    // Ép animation fade thuần (windowAnim2 - giống dialog_about) thay cho hiệu ứng đẩy ngang
+    // mặc định của DialogFullScreen (dialog_full_screen_light/dark). Chỉ ghi đè riêng ở
+    // DialogAppUpdate, không sửa DialogFullScreen.kt vì file đó dùng chung cho các dialog
+    // full-screen khác (DialogLogFragment, DialogPower...).
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val dialog = super.onCreateDialog(savedInstanceState)
+        dialog.window?.setWindowAnimations(R.style.windowAnim2)
+        return dialog
     }
 
     private var closingToInstall = false
