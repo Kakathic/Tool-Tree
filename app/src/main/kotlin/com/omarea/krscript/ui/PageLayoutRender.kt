@@ -183,10 +183,11 @@ class PageLayoutRender(private val mContext: Context,
         rootGroup.addPlaceholders(views)
     }
 
-    // Gỡ hết khung skeleton còn dư - gọi khi mục đầu tiên đã load xong (xem appendNode()) hoặc
-    // khi trang process = true build xong toàn bộ, đề phòng trang không có mục nào (xem
-    // ActionListFragment.finishProgressiveList()). Gọi thêm lần nữa khi danh sách placeholder
-    // đã rỗng vẫn an toàn (vòng lặp rỗng, không có gì để gỡ).
+    // Gỡ hết khung skeleton còn dư (trang có ít item thật hơn số khung đã hiện sẵn ban đầu) -
+    // gọi khi trang process = true đã build xong toàn bộ (xem
+    // ActionListFragment.finishProgressiveList()). Mỗi khung khớp với 1 item thật thì đã tự bị
+    // gỡ ngay lúc item đó load xong (xem ListItemGroup.addViewBeforePlaceholder()), nên hàm
+    // này thường chỉ còn phải gỡ khung dư, không phải khung nào cũng còn tồn tại tới lúc này.
     fun clearLoadingPlaceholders() {
         rootGroup.clearPlaceholders()
     }
@@ -216,16 +217,14 @@ class PageLayoutRender(private val mContext: Context,
     }
 
     // Dùng cho chế độ process = true: thêm NGAY 1 mục mới vào rootGroup mà không dựng lại các
-    // mục đã hiện trước đó - xem ActionListFragment.appendProgressiveItem. Item mới được chèn
-    // ngay TRƯỚC ô loading (nếu còn) - xem addLoadingPlaceholders(). Ngay khi mục ĐẦU TIÊN load
-    // xong, ẩn luôn khung skeleton (không đợi tới lúc cả trang tải xong mới ẩn như trước).
+    // mục đã hiện trước đó - xem ActionListFragment.appendProgressiveItem. Item mới thay đúng
+    // vào chỗ khung skeleton của riêng nó (nếu còn) và khung đó bị gỡ ngay lập tức - xem
+    // ListItemGroup.addViewBeforePlaceholder(). Các khung skeleton còn lại (dành cho mục sau)
+    // không bị đụng tới, chỉ mất khi tới lượt hoặc khi trang build xong hẳn (xem
+    // ActionListFragment.finishProgressiveList()).
     fun appendNode(node: NodeInfoBase) {
-        val isFirstItem = itemConfigList.isEmpty()
         itemConfigList.add(node)
         renderNode(rootGroup, node, replacePlaceholder = true)
-        if (isFirstItem) {
-            clearLoadingPlaceholders()
-        }
     }
 
     // load-after: quy đổi "index" trong itemConfigList (model, gồm cả group rỗng chưa từng

@@ -34,11 +34,11 @@ import kotlinx.coroutines.*
 class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.OnItemClickListener {
     companion object {
         // process = true: số khung skeleton hiện sẵn ngay từ đầu trong lúc chờ item thật build
-        // xong - xem setupProgressiveRoot()/appendProgressiveItem(). Khung skeleton này tự ẩn
-        // ngay khi mục ĐẦU TIÊN load xong (xem PageLayoutRender.appendNode()), không đợi tới
-        // lúc cả trang tải xong. Giá trị mặc định khi trang không tự đặt qua toml
-        // "placeholder-count" (xem PageConfigReader.pageNodeToml(), PageNode.placeholderCount,
-        // createProgressive()).
+        // xong - xem setupProgressiveRoot()/appendProgressiveItem(). Mỗi khung tự ẩn ngay khi
+        // ĐÚNG mục của nó load xong (xem ListItemGroup.addViewBeforePlaceholder()), khung nào
+        // chưa tới lượt vẫn đứng yên chờ, không bị gỡ oan theo mục khác. Giá trị mặc định khi
+        // trang không tự đặt qua toml "placeholder-count" (xem PageConfigReader.pageNodeToml(),
+        // PageNode.placeholderCount, createProgressive()).
         private const val PROGRESSIVE_PLACEHOLDER_COUNT_DEFAULT = 1
 
         fun create(
@@ -192,8 +192,9 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
     // resolvePendingStates() ở PageConfigReader lúc này cũng đã chạy xong nên trạng thái
     // thật của switch/picker đã có sẵn trên model - làm mới hiển thị (không dựng lại view)
     // rồi mới chạy autoRunTask như luồng tải trang bình thường. clearLoadingPlaceholders() ở
-    // đây chỉ còn tác dụng phòng hờ trang không có mục nào (khung skeleton thường đã tự ẩn
-    // ngay từ khi mục đầu tiên load xong - xem PageLayoutRender.appendNode()).
+    // đây gỡ nốt khung skeleton còn dư (trang có ít item thật hơn số khung đã hiện sẵn ban
+    // đầu) - các khung đã khớp đúng 1 item thật thì tự gỡ từ trước rồi (xem
+    // ListItemGroup.addViewBeforePlaceholder()).
     fun finishProgressiveList() {
         if (::rootGroup.isInitialized) {
             pageLayoutRender?.clearLoadingPlaceholders()
