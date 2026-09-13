@@ -332,9 +332,10 @@ Info() {
   slog chatai_save "$chatai"
   slog models_thinking "$models_thinking"
   slog chatai_lang "$chatai_lang"
+  slog chatai_nextrule "$chatai_nextrule"
   [ "$models_thinking" -gt 0 ] && thingkk="-t $models_thinking"
   [ -n "$chatai_nextrule" ] && rule_ai="-n \"$chatai_nextrule\""
-  transai -m "$chatai" -l "$chatai_lang" $rule_ai $thingkk
+  transai -m "$chatai" -l "$chatai_lang" $thingkk $rule_ai
   """
   
   [[action.params]]
@@ -364,6 +365,7 @@ Info() {
   [[action.params]]
   name = "next_rule"
   title = "'$chatai_rule_text'"
+  placeholder = "- Always return text in uppercase"
   type = "text"
   value-sh = "glog chatai_nextrule"
   
