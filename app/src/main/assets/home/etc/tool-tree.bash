@@ -2063,7 +2063,7 @@ Addon() {
     '$croot_add'
     icon = "'$icon_vb'"
     title = "'$name'"
-    desc = "'$sum_vb'"
+    summary = "'$version' '$author'"
     reload = true
     url = "'$url'"
     script = """
@@ -2072,6 +2072,10 @@ Addon() {
     
       if [ "$(glog show_setting_add)" == 1 ]; then
         echo '
+        [[download.rows]]
+        text = "'$description'"
+        margin-top = 4
+        
         [[download.rows]]
         toggle = "checkbox"
         text = "'$hide_add_text'"
@@ -2085,6 +2089,13 @@ Addon() {
         touch '$dirvad'/hide
         fi
         """
+        '
+      else
+        echo '
+        [[download.rows]]
+        text = "'$description'"
+        margin-top = 4
+        line = true
         '
       fi
     fi
@@ -2144,7 +2155,7 @@ Addon() {
       [[group]]
       [[page]]
       title = "'$name'"
-      desc = "'$version', '$author'"
+      summary = "'$version' '$author'"
       icon = "'$icon_vb'"
       process = "'$process'"
       '$croot_add'
@@ -2163,8 +2174,8 @@ Addon() {
   Vips() {
     
     # Xoá giá trị cũ
-    id= root= shortcut= description= google_text= url= name=
-    google_trans= code_option= beforesh= croot_add= process=
+    id= root= shortcut= description= url= name=
+    beforesh= croot_add= process=
     hinde_add= shortcut_text= delete_add=
     
     # Nạp string
