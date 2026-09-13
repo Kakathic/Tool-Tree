@@ -330,7 +330,11 @@ Info() {
   visible = "[ -z \"$(glog api_genmini)\" ] || echo 1"
   script = """
   slog chatai_save "$chatai"
-  [ "$chatai" ] && transai -m "$chatai"
+  slog models_thinking "$models_thinking"
+  slog chatai_lang "$chatai_lang"
+  [ "$models_thinking" -gt 0 ] && thingkk="-t $models_thinking"
+  [ -n "$chatai_nextrule" ] && rule_ai="-n \"$chatai_nextrule\""
+  transai -m "$chatai" -l "$chatai_lang" $rule_ai $thingkk
   """
   
   [[action.params]]
@@ -341,6 +345,27 @@ Info() {
   label = "Models"
   items = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
   value-sh = "glog models_genmini \"gemini-3.1-flash-lite\""
+  
+  [[action.params]]
+  name = "models_thinking"
+  title = "'$chatai_think_text'"
+  label = "'$option_text'"
+  items = ["0|'$default_text'", "1024", "2048", "4096"]
+  value-sh = "glog models_thinking 0"
+  
+  [[action.params]]
+  name = "chatai_lang"
+  title = "'$permis_text_5'"
+  label = "'$permis_text_2'"
+  placeholder = "en-US"
+  type = "text"
+  value-sh = "glog chatai_lang \"$LANGUAGE-$COUNTRY\""
+  
+  [[action.params]]
+  name = "next_rule"
+  title = "'$chatai_rule_text'"
+  type = "text"
+  value-sh = "glog chatai_nextrule"
   
   [[action.params]]
   name = "chatai"
