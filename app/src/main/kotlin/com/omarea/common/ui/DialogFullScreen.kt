@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import com.tool.tree.R
 
 
@@ -67,8 +68,13 @@ open class DialogFullScreen(private val layout: Int, private val darkMode: Boole
             }
 
             if (swipeToDismissEnabled && isCancelable) {
-                view.post {
-                    if (d.window == null) return@post
+                // Trước đây dùng view.post{} - chạy SAU khi frame đầu tiên (chữ, chưa có lớp mờ
+                // nền) đã hiện ra màn hình, vì DialogSwipeBackBlurWrapper.wrap() bên trong
+                // bindSwipeToDismiss() chỉ chạy lúc đó -> gây hiệu ứng "chữ hiện trước, mờ hiện
+                // sau". runBeforeFirstDraw() chạy TRƯỚC khi frame đầu tiên được vẽ (nội dung đã
+                // attach xong nên wrap() vẫn lấy được view con), nên mờ + chữ cùng hiện 1 lượt.
+                runBeforeFirstDraw(view) {
+                    if (d.window == null) return@runBeforeFirstDraw
                     swipeToDismissBinding = bindSwipeToDismiss(activity, d) { closeView() }
                 }
             } else {
@@ -94,6 +100,44 @@ open class DialogFullScreen(private val layout: Int, private val darkMode: Boole
     // ở trên đã tự sinh sẵn setter cùng chữ ký JVM đó, gây lỗi "Platform declaration clash".
     protected fun setSwipeBackRuntimeEnabled(enabled: Boolean) {
         swipeToDismissBinding?.setEnabled(enabled)
+    }
+
+    /**
+     * Chạy [action] NGAY TRƯỚC khi frame đầu tiên của [view] được vẽ ra màn hình (khác
+     * view.post{} - chạy SAU khi frame đầu tiên đã hiện). Nội dung đã attach xong vào lúc này
+     * nên DialogSwipeBackBlurWrapper.wrap() (gọi bên trong bindSwipeToDismiss()) vẫn lấy được
+     * view con của android.R.id.content như bình thường.
+     * Tự gỡ listener sau đúng 1 lần gọi. Xử lý cả trường hợp [view] CHƯA attach vào window lúc
+     * gọi hàm này (viewTreeObserver lấy lúc chưa attach không phải observer thật của cây view -
+     * phải đợi onViewAttachedToWindow rồi mới addOnPreDrawListener lên observer thật).
+     */
+    private fun runBeforeFirstDraw(view: View, action: () -> Unit) {
+        fun attachPreDraw() {
+            val observer = view.viewTreeObserver
+            if (!observer.isAlive) {
+                action()
+                return
+            }
+            observer.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    view.viewTreeObserver.removeOnPreDrawListener(this)
+                    action()
+                    return true
+                }
+            })
+        }
+
+        if (view.isAttachedToWindow) {
+            attachPreDraw()
+        } else {
+            view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) {
+                    view.removeOnAttachStateChangeListener(this)
+                    attachPreDraw()
+                }
+                override fun onViewDetachedFromWindow(v: View) {}
+            })
+        }
     }
 
     fun closeView() {
