@@ -2,7 +2,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    style="@style/dialogRoot">
+    style="@style/dialogRootSmall">
     <LinearLayout
         android:orientation="vertical"
         android:background="@drawable/krscript_item_ripple_kon"
