@@ -20,6 +20,7 @@ import android.text.method.LinkMovementMethod
 import android.text.style.*
 import android.view.MotionEvent
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -41,11 +42,15 @@ object RowsRenderHelper {
         rowsView: TextView?,
         extraIconView: ImageView?,
         rows: List<TextNode.TextRow>,
-        config: NodeInfoBase
+        config: NodeInfoBase,
+        htmlContainer: FrameLayout? = null
     ) {
         if (rowsView == null) {
             return
         }
+        // Khung html (nếu có) độc lập với text/photo bên dưới - render trước để row.html-file/
+        // html-url vẫn hiện được kể cả khi rows rỗng (không có text nào khác).
+        RowsHtmlRenderHelper.bind(context, htmlContainer, rows, config)
         if (rows.isEmpty()) {
             rowsView.visibility = View.GONE
             extraIconView?.visibility = View.GONE
@@ -315,7 +320,7 @@ object RowsRenderHelper {
                             }
                         }
                         // Vẽ lại toàn bộ rows để cập nhật icon vừa đổi trạng thái
-                        bind(context, rowsView, extraIconView, rows, config)
+                        bind(context, rowsView, extraIconView, rows, config, htmlContainer)
                     }
 
                     override fun updateDrawState(ds: TextPaint) {
@@ -479,7 +484,7 @@ object RowsRenderHelper {
         if (needsRebindAfterLayout) {
             rowsView.post {
                 if (rowsView.width > 0) {
-                    bind(context, rowsView, extraIconView, rows, config)
+                    bind(context, rowsView, extraIconView, rows, config, htmlContainer)
                 }
             }
         }

@@ -107,6 +107,16 @@
         android:layout_marginBottom="12dp"
         style="@style/textSmall" />
 
+    <FrameLayout
+        android:id="@+id/kr_rows_html"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:layout_below="@id/kr_rows"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp" />
+
     <ImageView
         android:id="@+id/kr_rows_photo"
         android:visibility="gone"
@@ -115,7 +125,7 @@
         android:layout_marginBottom="10dp"
         android:scaleType="fitCenter"
         android:adjustViewBounds="true"
-        android:layout_below="@id/kr_rows"
+        android:layout_below="@id/kr_rows_html"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp" />
 

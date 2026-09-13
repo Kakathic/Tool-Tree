@@ -1071,6 +1071,9 @@ class PageConfigReader {
         tomlGet(table, "script", "run")?.let { row.onClickScript = it }
         tomlGet(table, "sh", "text-sh")?.let { row.dynamicTextSh = it }
         tomlGet(table, "markdown", "md")?.let { row.markdown = tomlTruthy(it, "markdown", "md") }
+        tomlGet(table, "html-file", "html-path")?.let { row.htmlFile = it.trim() }
+        tomlGet(table, "html-url", "html-link")?.let { row.htmlUrl = it.trim() }
+        tomlGet(table, "html-height")?.let { row.htmlHeight = it.trim().toIntOrNull() ?: row.htmlHeight }
         // Toggle nhỏ (checkbox / switch) lồng trong dòng text
         tomlGet(table, "toggle", "toggle-type")?.let {
             val t = it.trim().lowercase(getDefault())

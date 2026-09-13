@@ -94,6 +94,17 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         internal var iconGifLoopCount: Int = 0
         // Nếu true: icon inline là file .gif THẬT - cùng ràng buộc API 28+ như photoRealGif ở trên
         internal var iconRealGif: Boolean = false
+        // Đường dẫn file HTML cục bộ hiển thị trong 1 khung WebView riêng bên dưới rows -
+        // resolve qua PathAnalysis (hỗ trợ path tương đối theo thư mục cấu hình, thư mục riêng
+        // app, assets, path tuyệt đối). "" = không có. Khai báo bằng "html-file"/"html-path".
+        internal var htmlFile: String = ""
+        // Link http/https hiển thị trực tiếp trong khung WebView (ưu tiên hơn htmlFile nếu cả
+        // 2 cùng khai báo). Khai báo bằng "html-url"/"html-link".
+        internal var htmlUrl: String = ""
+        // Chiều cao khung WebView (dp), 0 = dùng mặc định (xem RowsHtmlRenderHelper). Khai báo
+        // bằng "html-height".
+        internal var htmlHeight: Int = 0
+
         // "" (mặc định) = không phải toggle; "checkbox" hoặc "switch"
         internal var toggle: String = ""
         // Trạng thái bật/tắt hiện tại (được resolveBoolOrShell tại lúc parse trang - xem "checked")

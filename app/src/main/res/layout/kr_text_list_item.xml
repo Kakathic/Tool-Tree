@@ -38,7 +38,14 @@
         android:layout_height="wrap_content"
         android:visibility="gone"
         style="@style/textSmall" />
-        
+
+    <FrameLayout
+        android:id="@+id/kr_rows_html"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:visibility="gone" />
+
     <ImageView
         android:id="@+id/kr_extra_icon_text"
         android:layout_width="match_parent"
