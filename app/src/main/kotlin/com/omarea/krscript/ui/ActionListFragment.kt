@@ -34,8 +34,12 @@ import kotlinx.coroutines.*
 class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.OnItemClickListener {
     companion object {
         // process = true: số khung skeleton hiện sẵn ngay từ đầu trong lúc chờ item thật build
-        // xong - xem setupProgressiveRoot()/appendProgressiveItem().
-        private const val PROGRESSIVE_PLACEHOLDER_COUNT = 1
+        // xong - xem setupProgressiveRoot()/appendProgressiveItem(). Khung skeleton này tự ẩn
+        // ngay khi mục ĐẦU TIÊN load xong (xem PageLayoutRender.appendNode()), không đợi tới
+        // lúc cả trang tải xong. Giá trị mặc định khi trang không tự đặt qua toml
+        // "placeholder-count" (xem PageConfigReader.pageNodeToml(), PageNode.placeholderCount,
+        // createProgressive()).
+        private const val PROGRESSIVE_PLACEHOLDER_COUNT_DEFAULT = 1
 
         fun create(
                 actionInfos: ArrayList<NodeInfoBase>?,
@@ -56,12 +60,17 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         // mục sẽ được thêm dần từng cái một qua appendProgressiveItem() ngay khi ActionPage
         // build xong từng mục (xem ActionPage.loadPageConfig), thay vì đợi build xong toàn
         // bộ trang mới hiện danh sách như create() ở trên.
+        // placeholderCount: số khung skeleton hiện sẵn ban đầu - bên gọi (ActionPage) truyền
+        // xuống từ config.placeholderCount (đọc từ toml trang, xem PageNode.placeholderCount);
+        // không truyền thì dùng PROGRESSIVE_PLACEHOLDER_COUNT_DEFAULT.
         fun createProgressive(
                 krScriptActionHandler: KrScriptActionHandler? = null,
                 autoRunTask: AutoRunTask? = null,
-                themeMode: ThemeMode? = null): ActionListFragment {
+                themeMode: ThemeMode? = null,
+                placeholderCount: Int = PROGRESSIVE_PLACEHOLDER_COUNT_DEFAULT): ActionListFragment {
             val fragment = ActionListFragment()
             fragment.progressiveMode = true
+            fragment.placeholderCount = placeholderCount
             fragment.setListData(ArrayList(), krScriptActionHandler, autoRunTask, themeMode)
             return fragment
         }
@@ -80,6 +89,8 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
 
     // process = true: xem createProgressive()/appendProgressiveItem()/finishProgressiveList()
     private var progressiveMode = false
+    // Số khung skeleton hiện sẵn ban đầu cho progressiveMode - xem createProgressive().
+    private var placeholderCount = PROGRESSIVE_PLACEHOLDER_COUNT_DEFAULT
     // Mục đến TRƯỚC khi onViewCreated() dựng xong rootGroup thì xếp hàng ở đây, tránh mất
     // mục do race giữa fragment transaction và các lệnh handler.post() thêm mục từ ActionPage.
     private val pendingProgressiveItems = ArrayList<NodeInfoBase>()
@@ -157,7 +168,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         rootView?.removeAllViews()
         rootView?.addView(layout)
 
-        pageLayoutRender?.addLoadingPlaceholders(PROGRESSIVE_PLACEHOLDER_COUNT)
+        pageLayoutRender?.addLoadingPlaceholders(placeholderCount)
 
         if (pendingProgressiveItems.isNotEmpty()) {
             val queued = ArrayList(pendingProgressiveItems)
@@ -180,8 +191,9 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
     // Gọi khi ActionPage đã build xong TOÀN BỘ trang (mọi mục đã appendProgressiveItem).
     // resolvePendingStates() ở PageConfigReader lúc này cũng đã chạy xong nên trạng thái
     // thật của switch/picker đã có sẵn trên model - làm mới hiển thị (không dựng lại view)
-    // rồi mới chạy autoRunTask như luồng tải trang bình thường. Gỡ nốt khung skeleton còn dư
-    // (trang có ít item thật hơn số khung đã hiện sẵn ban đầu).
+    // rồi mới chạy autoRunTask như luồng tải trang bình thường. clearLoadingPlaceholders() ở
+    // đây chỉ còn tác dụng phòng hờ trang không có mục nào (khung skeleton thường đã tự ẩn
+    // ngay từ khi mục đầu tiên load xong - xem PageLayoutRender.appendNode()).
     fun finishProgressiveList() {
         if (::rootGroup.isInitialized) {
             pageLayoutRender?.clearLoadingPlaceholders()

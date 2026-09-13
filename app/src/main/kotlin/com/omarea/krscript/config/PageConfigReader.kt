@@ -733,6 +733,7 @@ class PageConfigReader {
         tomlGet(table, "load-fail", "load-error")?.let { page.loadFail = it }
         tomlGet(table, "config-sh")?.let { page.pageConfigSh = it }
         tomlGet(table, "process")?.let { page.process = tomlTruthy(it, "process") }
+        tomlGet(table, "placeholder-count", "placeholder_count")?.let { page.placeholderCount = it.trim().toIntOrNull() ?: page.placeholderCount }
         tomlGet(table, "link", "href")?.let { page.link = it }
         tomlGet(table, "activity", "a", "intent")?.let { page.activity = it }
         tomlGet(table, "lock", "lock-state")?.let { parseLockAttr(it, page) }

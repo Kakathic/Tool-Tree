@@ -183,8 +183,10 @@ class PageLayoutRender(private val mContext: Context,
         rootGroup.addPlaceholders(views)
     }
 
-    // Gỡ hết khung skeleton còn dư (trang có ít item thật hơn số khung đã hiện) - gọi khi trang
-    // process = true đã build xong toàn bộ (xem ActionListFragment.finishProgressiveList()).
+    // Gỡ hết khung skeleton còn dư - gọi khi mục đầu tiên đã load xong (xem appendNode()) hoặc
+    // khi trang process = true build xong toàn bộ, đề phòng trang không có mục nào (xem
+    // ActionListFragment.finishProgressiveList()). Gọi thêm lần nữa khi danh sách placeholder
+    // đã rỗng vẫn an toàn (vòng lặp rỗng, không có gì để gỡ).
     fun clearLoadingPlaceholders() {
         rootGroup.clearPlaceholders()
     }
@@ -215,11 +217,15 @@ class PageLayoutRender(private val mContext: Context,
 
     // Dùng cho chế độ process = true: thêm NGAY 1 mục mới vào rootGroup mà không dựng lại các
     // mục đã hiện trước đó - xem ActionListFragment.appendProgressiveItem. Item mới được chèn
-    // ngay TRƯỚC ô loading (nếu còn) - xem addLoadingPlaceholders() - ô loading không bị xoá,
-    // tự trôi xuống dưới cùng cho tới khi cả trang tải xong.
+    // ngay TRƯỚC ô loading (nếu còn) - xem addLoadingPlaceholders(). Ngay khi mục ĐẦU TIÊN load
+    // xong, ẩn luôn khung skeleton (không đợi tới lúc cả trang tải xong mới ẩn như trước).
     fun appendNode(node: NodeInfoBase) {
+        val isFirstItem = itemConfigList.isEmpty()
         itemConfigList.add(node)
         renderNode(rootGroup, node, replacePlaceholder = true)
+        if (isFirstItem) {
+            clearLoadingPlaceholders()
+        }
     }
 
     // load-after: quy đổi "index" trong itemConfigList (model, gồm cả group rỗng chưa từng

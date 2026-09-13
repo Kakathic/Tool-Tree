@@ -644,6 +644,7 @@ script = "sync; echo 3 &gt; /proc/sys/vm/drop_caches"
 <tr><td class="field-name">load-ok</td><td>load-success</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script run if load succeeds</td></tr>
 <tr><td class="field-name">load-fail</td><td>load-error</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script run if load fails</td></tr>
 <tr><td class="field-name">process</td><td>-</td><td class="field-type">Bool</td><td><span class="badge new">new</span> true: show items one by one as they build (with progress bar) instead of waiting (see <a href="#process">section 21</a>)</td></tr>
+<tr><td class="field-name">placeholder-count</td><td>placeholder_count</td><td class="field-type">Int</td><td><span class="badge new">new</span> Only used when <code>process = true</code>. Number of skeleton placeholders shown up-front while waiting for the first real item. Default: <code>1</code> (see <a href="#process">section 21</a>)</td></tr>
 <tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format</td></tr>
 <tr><td class="field-name">lock-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script to check the lock state (returns <code>"1"</code> = locked)</td></tr>
 <tr><td class="field-name">rows</td><td>-</td><td class="field-type">Array</td><td>Rich-text rows shown below the page (see <a href="#text-rows">section 12</a>)</td></tr>
@@ -1505,6 +1506,12 @@ depend-value = "folder"
 <section id="process">
 <h2>21. process = true</h2>
 <p>Setting <code>process = true</code> on a <code>[[page]]</code> instructs the rendering engine to build and render child nodes progressively on the UI as they are parsed, accompanied by a linear progress indicator, rather than holding display until the entire tree has loaded. Note that a <code>[[group]]</code> is emitted to the UI only after ALL of its children have been collected (group + children appear together), while items outside any group are emitted one by one as soon as they are parsed.</p>
+<p>While the first real item is still being built, the page shows <code>placeholder-count</code> shimmering skeleton cards up-front so it doesn't look empty (default: <code>1</code>). As soon as the FIRST real item finishes loading, the skeleton(s) are hidden immediately - they no longer wait for the whole page to finish loading.</p>
+<pre><code>[[page]]
+title = "Kernel tweaks"
+config = "kernel.toml"
+process = true
+placeholder-count = 3</code></pre>
 </section>
 
 <section id="lifecycle">
@@ -1711,6 +1718,7 @@ script = "sh $state"
 <h3>26.2. <a href="#page">§6 [[page]]</a></h3>
 <ul>
   <li><code>process</code> - controls whether the sub-page loads progressively in place or is preloaded before navigation. See <a href="#process">section 21</a>.</li>
+  <li><code>placeholder-count</code> - number of skeleton placeholders shown while <code>process = true</code> waits for the first real item; hidden as soon as that first item loads. Defaults to <code>1</code> when omitted. See <a href="#process">section 21</a>.</li>
 </ul>
 
 <h3>26.3. <a href="#action">§7 [[action]]</a></h3>

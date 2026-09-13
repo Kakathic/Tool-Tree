@@ -52,4 +52,8 @@ class PageNode(currentConfigXml: String) : ClickableNode(currentConfigXml) {
     // toolbar) thay vì đợi build xong toàn bộ mới hiện - dùng cho trang có nhiều mục/nhiều
     // lệnh shell nên load lâu (xem PageConfigReader.tomlChildren, ActionPage.loadPageConfig).
     var process: Boolean = false
+    // Số khung skeleton hiện sẵn lúc đầu khi process = true - đọc từ toml field
+    // "placeholder-count" (xem PageConfigReader.pageNodeToml()); không khai báo thì giữ mặc
+    // định = 1 (xem ActionListFragment.PROGRESSIVE_PLACEHOLDER_COUNT_DEFAULT).
+    var placeholderCount: Int = 1
 }

@@ -715,7 +715,7 @@ class ActionPage : AppCompatActivity() {
             var progressiveFragment: ActionListFragment? = null
             if (useProgressiveLoad) {
                 withContext(Dispatchers.Main) {
-                    progressiveFragment = beginProgressiveList()
+                    progressiveFragment = beginProgressiveList(config.placeholderCount)
                     loadProgressBar.apply {
                         isIndeterminate = true
                         visibility = View.VISIBLE
@@ -894,8 +894,8 @@ class ActionPage : AppCompatActivity() {
         }
     }
 
-    private fun beginProgressiveList(): ActionListFragment {
-        val fragment = ActionListFragment.createProgressive(actionShortClickHandler, buildAutoRunTask(), ThemeModeState.getThemeMode())
+    private fun beginProgressiveList(placeholderCount: Int): ActionListFragment {
+        val fragment = ActionListFragment.createProgressive(actionShortClickHandler, buildAutoRunTask(), ThemeModeState.getThemeMode(), placeholderCount)
         supportFragmentManager.beginTransaction()
             .replace(R.id.main_list, fragment)
             .commitAllowingStateLoss()
