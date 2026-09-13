@@ -1,4 +1,4 @@
-# Changelog
+### Changelog
 
 **Version: 1.6.0 (5-9-2026)**
 
