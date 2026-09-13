@@ -12,7 +12,7 @@ import com.omarea.krscript.model.ClickableNode
 open class ListItemClickable(
     context: Context,
     layoutId: Int,
-    config: ClickableNode
+    private val config: ClickableNode
 ) : ListItemView(context, layoutId, config) {
 
     protected var mOnClickListener: OnClickListener? = null
@@ -25,6 +25,9 @@ open class ListItemClickable(
     protected var iconDrawable: Drawable? = null
 
     private val allowShortcutConfig = this.key.isNotEmpty() && config.allowShortcut != false
+
+    // Tái sử dụng 1 instance duy nhất để load tài nguyên (icon/photo/bg)
+    private val analyzer = IconPathAnalysis()
 
     protected open fun allowLongClick(): Boolean = allowShortcutConfig
 
@@ -42,29 +45,16 @@ open class ListItemClickable(
         this.mOnClickListener?.onClick(this)
     }
 
-    init {
-        title = config.title
-        desc = config.desc
-        summary = config.summary
+    // process = true: icon-sh/photo-sh/bg-sh chỉ có giá trị SAU KHI resolvePendingStates()
+    // chạy xong, mà item process=true lại được dựng view TRƯỚC đó (xem applyIconPhotoBg() gọi
+    // trong init) - nên phải load lại icon/photo/bg ở đây, đúng lúc ListItemGroup.triggerUpdate()
+    // chạy sau khi trang đã tải xong (finishProgressiveList()).
+    override fun updateViewByShell() {
+        super.updateViewByShell()
+        applyIconPhotoBg()
+    }
 
-        this.layout.setOnClickListener {
-            this.mOnClickListener?.onClick(this)
-        }
-        
-        this.layout.setOnLongClickListener {
-            if (allowLongClick()) {
-                this.mOnLongClickListener?.onLongClick(this)
-                true
-            } else {
-                false
-            }
-        }
-
-        shortcutIconView?.visibility = if (allowShortcutConfig) View.VISIBLE else View.GONE
-
-        // Tái sử dụng 1 instance duy nhất để load tài nguyên
-        val analyzer = IconPathAnalysis()
-
+    private fun applyIconPhotoBg() {
         iconView?.let { view ->
             view.visibility = View.GONE
             if (config.iconPath.isNotEmpty()) {
@@ -98,6 +88,29 @@ open class ListItemClickable(
                 }
             }
         }
+    }
+
+    init {
+        title = config.title
+        desc = config.desc
+        summary = config.summary
+
+        this.layout.setOnClickListener {
+            this.mOnClickListener?.onClick(this)
+        }
+        
+        this.layout.setOnLongClickListener {
+            if (allowLongClick()) {
+                this.mOnLongClickListener?.onLongClick(this)
+                true
+            } else {
+                false
+            }
+        }
+
+        shortcutIconView?.visibility = if (allowShortcutConfig) View.VISIBLE else View.GONE
+
+        applyIconPhotoBg()
     }
 
     private fun applyPhotoRealSize(imageView: ImageView?, realSize: Boolean) {
