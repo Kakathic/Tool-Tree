@@ -422,6 +422,20 @@ Update() {
   html = "https://t.me/tooltree"
 
   [[group]]
+  [[download]]
+  title = "'$download_text' Stable"
+  icon = "'$urlicon'/update.png"
+  url-sh = "linkgit https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest Tool-Tree"
+  script = "openfile $state"
+  
+  [[group]]
+  [[download]]
+  title = "'$download_text' Beta"
+  icon = "'$urlicon'/update.png"
+  url = "https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-beta.apk"
+  script = "openfile $state"
+
+  [[group]]
   [[text]]
   [[text.rows]]
   photo = "'$ETC'/icon/tool-tree.jpg"

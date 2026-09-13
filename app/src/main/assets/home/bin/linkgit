@@ -1,0 +1,2 @@
+# Kakathic
+xem "$1" | jq -r '.assets[] | select(.name | contains("'$2'")) | .browser_download_url // empty'
