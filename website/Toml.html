@@ -381,6 +381,7 @@ footer {
   <h3>Practice</h3>
   <a href="#example">24. Full example</a>
   <a href="#tips">25. Tips &amp; pitfalls</a>
+  <a href="#changelog">26. Changelog</a>
 </aside>
 <main class="main">
 
@@ -391,6 +392,8 @@ This guide is for <strong>Tool-Tree</strong>, the component that powers the func
 All page configuration files must use <strong>TOML</strong> (XML is no longer supported).
 The parser lives in <code>com.omarea.krscript.config.PageConfigReader</code> and uses the <code>org.tomlj:tomlj</code> library.
 </p>
+
+<p>This reference is intended for anyone authoring or maintaining a Tool-Tree <code>.toml</code> page: it documents every node type, every field (with its aliases, type, and default), and the runtime behavior around them - dependency evaluation, shell-script integration, page lifecycle, and load ordering. Sections 2-4 cover the shared rules and fields every node relies on; sections 5-16 document each node type in turn; sections 17-23 cover cross-cutting mechanics; sections 24-26 provide a worked example, a checklist of common mistakes, and a changelog of recently added fields.</p>
 
 <p>A TOML configuration file describes <strong>the node tree of a page</strong>: each page is a list of <em>nodes</em>
 (group, action, switch, picker, text, page, editor, download, resource, menu, fab) displayed in the order they appear in the file.
@@ -527,10 +530,12 @@ All text fields accept <code>@string/...</code> references.</p>
 <tr><td class="field-name">photo-gif-time</td><td>gif-time, gif_time</td><td class="field-type">Int</td><td>Time per frame (ms; default 300)</td></tr>
 <tr><td class="field-name">photo-gif-autoplay</td><td>gif-autoplay, gif_autoplay</td><td class="field-type">Bool</td><td>true (default): auto-play the GIF</td></tr>
 <tr><td class="field-name">photo-gif-loop</td><td>photo-gif-loop-count, gif-loop, gif-loop-count, gif_loop_count</td><td class="field-type">Int</td><td>Loop count (0 = infinite)</td></tr>
+<tr><td class="field-name">photo-real-gif</td><td>real-gif, photo-gif-real</td><td class="field-type">Bool</td><td><span class="badge new">new</span> true: <code>photo</code> points to a REAL <code>.gif</code> file (decoded via <code>AnimatedImageDrawable</code>) instead of the simulated frame-sequence GIF above. <strong>Requires Android 9 / API 28+</strong> - on older devices this flag is ignored and falls back to a static first frame. When enabled, <code>photo-gif-num</code>/multi-path frame lists are not needed for this field</td></tr>
 <tr><td class="field-name">icon-gif-num</td><td>icon-gif_num</td><td class="field-type">Int</td><td>Same as photo-gif-num but for the small icon</td></tr>
 <tr><td class="field-name">icon-gif-time</td><td>icon-gif_time</td><td class="field-type">Int</td><td>Time per frame for the icon</td></tr>
 <tr><td class="field-name">icon-gif-autoplay</td><td>icon-gif_autoplay</td><td class="field-type">Bool</td><td>Auto-play icon GIF</td></tr>
-<tr><td class="field-name">icon-gif-loop</td><td>icon-gif-loop-count</td><td class="field-type">Int</td><td>Loop count for the icon GIF</td></tr>
+<tr><td class="field-name">icon-gif-loop</td><td>icon-gif-loop-count, icon-gif_loop_count</td><td class="field-type">Int</td><td>Loop count for the icon GIF</td></tr>
+<tr><td class="field-name">icon-real-gif</td><td>icon-gif-real</td><td class="field-type">Bool</td><td><span class="badge new">new</span> Same as <code>photo-real-gif</code> but for the small icon - REAL <code>.gif</code> file, Android 9/API 28+ only</td></tr>
 <tr><td class="field-name">bg</td><td>bg-path</td><td class="field-type">String</td><td>Background image for the item/dialog</td></tr>
 <tr><td class="field-name">bg-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the background image path dynamically. Runs during parse (batched); overrides <code>bg</code></td></tr>
 <tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Lock the item (no interaction allowed). <code>true</code>/<code>1</code> = locked; or the format <code>"state|message"</code>, e.g. <code>lock = "1|Requires root"</code> - the message is shown when the user clicks the locked item</td></tr>
@@ -754,7 +759,7 @@ auto-off = true
 <tr><td class="field-name">separator</td><td>-</td><td class="field-type">String</td><td>Value separator (multi). Default <code>\n</code></td></tr>
 <tr><td class="field-name">suffix</td><td>-</td><td class="field-type">String</td><td>File extension filter (e.g. <code>"zip,apk"</code>). Only type=file</td></tr>
 <tr><td class="field-name">mime</td><td>-</td><td class="field-type">String</td><td>MIME type filter. Only type=file</td></tr>
-<tr><td class="field-name">path-home</td><td>home-path</td><td class="field-type">String</td><td>Initial directory when opening file picker</td></tr>
+<tr><td class="field-name">path-home</td><td>home-path, pathhome</td><td class="field-type">String</td><td>Initial directory when opening file picker</td></tr>
 <tr><td class="field-name">editable</td><td>-</td><td class="field-type">Bool</td><td>Allow manual path entry</td></tr>
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>Hide/show the param</td></tr>
 <tr><td class="field-name">sort</td><td>-</td><td class="field-type">Bool</td><td><span class="badge new">new</span> Move readonly params to the bottom (only effective when <code>readonly</code> is declared)</td></tr>
@@ -1001,6 +1006,7 @@ italic = true
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Default</th><th>Description</th></tr>
 <tr><td class="field-name">text</td><td>-</td><td class="field-type">String</td><td>""</td><td>Text content</td></tr>
 <tr><td class="field-name">sh</td><td>text-sh</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that produces text dynamically</td></tr>
+<tr><td class="field-name">markdown</td><td>md</td><td class="field-type">Bool</td><td>false</td><td>true: interpret <code>text</code> (or the <code>sh</code> result) as inline Markdown - bold/italic/strikethrough/code/link - before displaying</td></tr>
 <tr><td class="field-name">bold</td><td>b</td><td class="field-type">Bool</td><td>false</td><td>Bold</td></tr>
 <tr><td class="field-name">italic</td><td>i</td><td class="field-type">Bool</td><td>false</td><td>Italic</td></tr>
 <tr><td class="field-name">underline</td><td>u</td><td class="field-type">Bool</td><td>false</td><td>Underline</td></tr>
@@ -1026,6 +1032,7 @@ italic = true
 <tr><td class="field-name">photo-gif-time</td><td>gif-time</td><td class="field-type">Int</td><td>300</td><td>Time per frame (ms)</td></tr>
 <tr><td class="field-name">photo-gif-autoplay</td><td>gif-autoplay</td><td class="field-type">Bool</td><td>true</td><td>Auto-play the GIF</td></tr>
 <tr><td class="field-name">photo-gif-loop</td><td>photo-gif-loop-count, gif-loop, gif-loop-count</td><td class="field-type">Int</td><td>0</td><td>Loop count (0=infinite)</td></tr>
+<tr><td class="field-name">photo-real-gif</td><td>real-gif, photo-gif-real</td><td class="field-type">Bool</td><td>false</td><td><span class="badge new">new</span> true: row's <code>photo</code> is a REAL <code>.gif</code> file (via <code>AnimatedImageDrawable</code>), not the simulated frame-sequence GIF above. <strong>Android 9/API 28+ only</strong> - older devices fall back to a static first frame</td></tr>
 <tr><td class="field-name">icon</td><td>icon-path</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> INLINE small icon (same line, different from photo)</td></tr>
 <tr><td class="field-name">icon-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the row's inline icon path dynamically. Re-runs every time the rows are re-rendered (batched with text-sh/photo-sh, NOT cached); overrides <code>icon</code></td></tr>
 <tr><td class="field-name">icon-position</td><td>icon-pos</td><td class="field-type">String</td><td>before</td><td><code>before</code> / <code>after</code> the text</td></tr>
@@ -1033,7 +1040,8 @@ italic = true
 <tr><td class="field-name">icon-gif-num</td><td>icon-gif_num</td><td class="field-type">Int</td><td>0</td><td><span class="badge new">new</span> &gt;0: inline icon is animated (icon_1.png, icon_2.png...)</td></tr>
 <tr><td class="field-name">icon-gif-time</td><td>icon-gif_time</td><td class="field-type">Int</td><td>300</td><td><span class="badge new">new</span> Time per frame (ms)</td></tr>
 <tr><td class="field-name">icon-gif-autoplay</td><td>icon-gif_autoplay</td><td class="field-type">Bool</td><td>true</td><td><span class="badge new">new</span> Auto-play the icon animation. false: only the first frame is shown (no tap-to-play, unlike node/photo icons - inline icon has no dedicated hit area)</td></tr>
-<tr><td class="field-name">icon-gif-loop</td><td>icon-gif-loop-count</td><td class="field-type">Int</td><td>0</td><td><span class="badge new">new</span> Loop count (0=infinite)</td></tr>
+<tr><td class="field-name">icon-gif-loop</td><td>icon-gif-loop-count, icon-gif_loop_count</td><td class="field-type">Int</td><td>0</td><td><span class="badge new">new</span> Loop count (0=infinite)</td></tr>
+<tr><td class="field-name">icon-real-gif</td><td>icon-gif-real</td><td class="field-type">Bool</td><td>false</td><td><span class="badge new">new</span> Same as <code>photo-real-gif</code> but for the row's inline icon - REAL <code>.gif</code> file, Android 9/API 28+ only</td></tr>
 <tr><td class="field-name">script</td><td>run</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script to run when the row is clicked</td></tr>
 <tr><td class="field-name">toggle</td><td>toggle-type</td><td class="field-type">String</td><td>""</td><td><code>checkbox</code>/<code>switch</code> = show a small toggle next to the row</td></tr>
 <tr><td class="field-name">get</td><td>getstate</td><td class="field-type">Bool|Shell</td><td>false</td><td>Toggle initial state. A shell returning exactly <code>"1"</code> = checked (queued into pending states - see <a href="#pending-states">section 20</a>)</td></tr>
@@ -1259,7 +1267,7 @@ script = "sh /data/data/com.tool.tree/files/run.sh"
 <tr><td class="field-name">config-sh</td><td>-</td><td class="field-type">String</td><td>Script returning inline toml</td></tr>
 <tr><td class="field-name">suffix</td><td>-</td><td class="field-type">String</td><td>File extension filter (type=file)</td></tr>
 <tr><td class="field-name">mime</td><td>-</td><td class="field-type">String</td><td>MIME filter</td></tr>
-<tr><td class="field-name">path-home</td><td>home-path</td><td class="field-type">String</td><td>Initial directory (file picker)</td></tr>
+<tr><td class="field-name">path-home</td><td>home-path, pathhome</td><td class="field-type">String</td><td>Initial directory (file picker)</td></tr>
 <tr><td class="field-name">multiple</td><td>-</td><td class="field-type">Bool</td><td>Allow multiple file selection</td></tr>
 <tr><td class="field-name">options</td><td>-</td><td class="field-type">Array</td><td>(type=spinner) Choice list</td></tr>
 <tr><td class="field-name">option-sh</td><td>options-sh, options-su</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces options. Each line <code>value|title</code> or just <code>value</code></td></tr>
@@ -1687,6 +1695,45 @@ script = "sh $state"
   <li>Groups are flat - never use dotted <code>[[group.action]]</code> nesting (those children are silently ignored). Declare children flat, right after their <code>[[group]]</code>.</li>
   <li><code>[[toml]]</code> is a reserved marker for inline-TOML detection (<code>config-sh</code>) - do not use it as a node table name.</li>
   <li>Use selective refresh via <code>reload = "id1,id2"</code> instead of reloading the entire page after action execution.</li>
+</ul>
+</section>
+
+<section id="changelog">
+<h2>26. Changelog - recently added fields</h2>
+<p>Fields marked with the <span class="badge new">new</span> badge throughout this guide are summarized here, grouped by section, for quick reference when upgrading an existing config.</p>
+
+<h3>26.1. <a href="#shared-fields">§4 Shared fields</a></h3>
+<ul>
+  <li><code>icon-sh</code>, <code>photo-sh</code>, <code>bg-sh</code> - resolve the icon/photo/background path from a shell script at parse time, instead of a static path.</li>
+  <li><code>icon-real-gif</code>, <code>photo-real-gif</code> - decode <code>icon</code>/<code>photo</code> as a real animated <code>.gif</code> file via <code>AnimatedImageDrawable</code>. Requires Android 9 / API 28+; older devices fall back to a static first frame.</li>
+</ul>
+
+<h3>26.2. <a href="#page">§6 [[page]]</a></h3>
+<ul>
+  <li><code>process</code> - controls whether the sub-page loads progressively in place or is preloaded before navigation. See <a href="#process">section 21</a>.</li>
+</ul>
+
+<h3>26.3. <a href="#action">§7 [[action]]</a></h3>
+<ul>
+  <li><code>menu</code>, <code>show</code> - move an action into the page's overflow menu / auto-open its dialog on page load. These two are independent and can be combined.</li>
+</ul>
+
+<h3>26.4. <a href="#action-params">§8 [[action.params]]</a></h3>
+<ul>
+  <li><code>desc-on</code>, <code>desc-on-sh</code> - alternate description shown while a toggle/value is in its "on" state.</li>
+  <li><code>sort</code>, <code>allow-no-selection</code> - control ordering and whether a selector can be left with nothing chosen.</li>
+</ul>
+
+<h3>26.5. <a href="#text-rows">§12 [[text.rows]]</a></h3>
+<ul>
+  <li><code>icon</code>, <code>icon-sh</code> - inline icon shown next to a text row (distinct from the row's full-width <code>photo</code>), with dynamic script-based path support.</li>
+  <li><code>icon-gif-num</code>, <code>icon-gif-time</code>, <code>icon-gif-autoplay</code>, <code>icon-gif-loop</code>, <code>icon-real-gif</code> - animation controls for the inline icon, mirroring the row's <code>photo-gif-*</code> fields.</li>
+  <li><code>photo-sh</code>, <code>photo-real-gif</code> - dynamic path and real-<code>.gif</code> support for the row's <code>photo</code>.</li>
+</ul>
+
+<h3>26.6. <a href="#depend">§17 Dependencies</a></h3>
+<ul>
+  <li><code>depend-readonly</code>, <code>depend-sort</code> - dim and lock a dependent param instead of hiding it, and optionally move locked params to the bottom of the list.</li>
 </ul>
 </section>
 </main>
