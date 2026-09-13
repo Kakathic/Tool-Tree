@@ -2063,7 +2063,7 @@ Addon() {
     '$croot_add'
     icon = "'$icon_vb'"
     title = "'$name'"
-    summary = "'$version' '$author'"
+    summary = "'$version' × '$author'"
     reload = true
     url = "'$url'"
     script = """
@@ -2155,7 +2155,7 @@ Addon() {
       [[group]]
       [[page]]
       title = "'$name'"
-      summary = "'$version' '$author'"
+      summary = "'$version' × '$author'"
       icon = "'$icon_vb'"
       process = "'$process'"
       '$croot_add'
