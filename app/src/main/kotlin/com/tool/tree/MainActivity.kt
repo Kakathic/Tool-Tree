@@ -502,7 +502,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        menu.findItem(R.id.option_menu_reboot)?.isEnabled = hasRoot
+        val rebootItem = menu.findItem(R.id.option_menu_reboot)
+        rebootItem?.isEnabled = hasRoot
+        // isEnabled=false không tự làm mờ icon (icon không phải state-list drawable) - tự set alpha
+        // 97/255 (~38%, mức alpha chuẩn Material cho icon disabled) để phản ánh đúng trạng thái không root.
+        rebootItem?.icon?.alpha = if (hasRoot) 255 else 97
         // Icon cập nhật (kèm dấu chấm đỏ ghép sẵn trong ic_update_badge) chỉ hiện khi có bản
         // mới - nằm bên trái, sát cạnh icon nguồn (xem order trong res/menu/main.xml).
         menu.findItem(R.id.option_menu_update)?.isVisible = pendingUpdateInfo != null

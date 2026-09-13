@@ -60,18 +60,6 @@ title = "'$google_text'"
   echo
   checktime
   """
-
-[[group]]
-
-  [[page]]
-  html = "https://Kakathic.github.io/Tool-Tree/website/web/terminal.html"
-  title = "Web Terminal"
-
-[[group]]
-
-  [[page]]
-  html = "https://Kakathic.github.io/Tool-Tree/website/web/manager.html"
-  title = "Web Manager"
 '
 }
 
