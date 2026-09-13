@@ -2110,8 +2110,8 @@ Addon() {
       toggle = "checkbox"
       text = "'$hide_add_text'"
       get = "[ -f '$dirvad'/hide ] && echo 1"
-      line = true
       align="opposite"
+      line = true
       set = """
       if [ -f '$dirvad'/hide ]; then
       rm '$dirvad'/hide
@@ -2135,6 +2135,8 @@ Addon() {
       fi
       """
       '
+    else
+      text_line='line = true'
     fi
     
     # Danh sách Add-on
@@ -2149,8 +2151,12 @@ Addon() {
       '$shortcut_text'
       '$pagesh'
       '$beforesh'
-      '"$hinde_add"'
-      '"$delete_add"'
+        [[page.rows]]
+        text = "'$description'"
+        margin-top = 4
+        '$text_line'
+        '"$hinde_add"'
+        '"$delete_add"'
     '
   }
 
@@ -2159,7 +2165,7 @@ Addon() {
     # Xoá giá trị cũ
     id= root= shortcut= description= google_text= url= name=
     google_trans= code_option= beforesh= croot_add= process=
-    description_text= sum_vb= hinde_add= shortcut_text= delete_add=
+    sum_vb= hinde_add= shortcut_text= delete_add=
     
     # Nạp string
     source "$vadd" 2>/dev/null
@@ -2175,11 +2181,7 @@ Addon() {
     shortcut_text='key = "'$id'" '
     fi
     
-    if [ "$description" ]; then
-    description_text=" | $description"
-    fi
-    
-    sum_vb="$version $author$description_text"
+    sum_vb="$version $author"
     
     if [ "$(glog Ticon)" != 1 ]; then
       if [ -f "$dirvad/icon.png" ]; then
