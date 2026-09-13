@@ -405,6 +405,12 @@ Update() {
   """
   
   [[group]]
+  [[text]]
+  [[text.rows]]
+  html-file = "'$ETC'/html/tool-tree.html"
+  html-height = 100
+  
+  [[group]]
   [[page]]
   title = "'$author_text'"
   icon = "'$urlicon'/like.png"
@@ -435,11 +441,6 @@ Update() {
   icon = "'$urlicon'/update.png"
   url = "https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-beta.apk"
   script = "openfile $state"
-
-  [[group]]
-  [[text]]
-  [[text.rows]]
-  photo = "'$ETC'/icon/tool-tree.jpg"
   '
 }
 

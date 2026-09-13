@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tool-Tree Modern UI Snake</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+      max-height: 100%;
+      aspect-ratio: 900 / 260;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.2));
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="snakeCanvas" width="900" height="260"></canvas>
+
+  <script>
+    const canvas = document.getElementById('snakeCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const WIDTH = 900;
+    const HEIGHT = 260;
+    const CELL_SIZE = 5;
+    const SNAKE_LENGTH = 6;       // Thân rắn gọn nhẹ 6 đốt
+    const TRAIL_MAX_LENGTH = 45;  // Vệt sáng kéo dài mượt mà
+
+    const cols = Math.floor(WIDTH / CELL_SIZE);
+    const rows = Math.floor(HEIGHT / CELL_SIZE);
+
+    let isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => isDarkMode = e.matches);
+
+    const PALETTE = {
+      dark: {
+        gridDot: 'rgba(56, 189, 248, 0.22)',
+        textOutline: '#ffffff',
+        glowAura: 'rgba(14, 165, 233, 0.6)',
+        snakeHead: '#34d399',
+        snakeCore: '#ffffff',
+        snakeGradient: ['#34d399', '#06b6d4', '#818cf8'],
+        foodCore: '#ff2a5f',
+        foodGlow: 'rgba(255, 42, 95, 0.8)',
+        trailColor: '#10b981',
+        particles: ['#ff2a5f', '#38bdf8', '#10b981', '#f59e0b']
+      },
+      light: {
+        gridDot: 'rgba(99, 102, 241, 0.18)',
+        textOutline: '#0f172a',
+        glowAura: 'rgba(99, 102, 241, 0.25)',
+        snakeHead: '#059669',
+        snakeCore: '#ffffff',
+        snakeGradient: ['#059669', '#0284c7', '#4f46e5'],
+        foodCore: '#e11d48',
+        foodGlow: 'rgba(225, 29, 72, 0.5)',
+        trailColor: '#059669',
+        particles: ['#e11d48', '#0284c7', '#059669', '#d97706']
+      }
+    };
+
+    // Quét mặt nạ "Tool-Tree" với kích thước chữ 128px
+    const textCanvas = document.createElement('canvas');
+    textCanvas.width = WIDTH;
+    textCanvas.height = HEIGHT;
+    const textCtx = textCanvas.getContext('2d');
+
+    textCtx.fillStyle = '#ffffff';
+    textCtx.font = '900 128px system-ui, -apple-system, "Arial Black", sans-serif';
+    textCtx.textAlign = 'center';
+    textCtx.textBaseline = 'middle';
+    textCtx.fillText('Tool-Tree', WIDTH / 2, HEIGHT / 2);
+
+    textCtx.lineWidth = 15;
+    textCtx.strokeStyle = '#ffffff';
+    textCtx.lineJoin = 'round';
+    textCtx.strokeText('Tool-Tree', WIDTH / 2, HEIGHT / 2);
+
+    textCtx.lineWidth = 9;
+    textCtx.beginPath();
+    textCtx.moveTo(410, 130);
+    textCtx.lineTo(490, 130);
+    textCtx.stroke();
+
+    const imgData = textCtx.getImageData(0, 0, WIDTH, HEIGHT).data;
+    const grid = Array.from({ length: rows }, () => Array(cols).fill(false));
+    const validCells = [];
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const px = Math.floor(c * CELL_SIZE + CELL_SIZE / 2);
+        const py = Math.floor(r * CELL_SIZE + CELL_SIZE / 2);
+        const index = (py * WIDTH + px) * 4;
+        if (imgData[index + 3] > 100) {
+          grid[r][c] = true;
+          validCells.push({ r, c });
+        }
+      }
+    }
+
+    const key = (r, c) => `${r},${c}`;
+
+    function getValidNeighbors(r, c) {
+      const dirs = [{ r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }];
+      const result = [];
+      for (let d of dirs) {
+        const nr = r + d.r;
+        const nc = c + d.c;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc]) {
+          result.push({ r: nr, c: nc });
+        }
+      }
+      return result;
+    }
+
+    let startCell = validCells[Math.floor(Math.random() * validCells.length)];
+    let snake = [startCell];
+    for (let i = 1; i < SNAKE_LENGTH; i++) {
+      const head = snake[snake.length - 1];
+      const neighbors = getValidNeighbors(head.r, head.c);
+      snake.push(neighbors.length > 0 ? neighbors[Math.floor(Math.random() * neighbors.length)] : { ...head });
+    }
+
+    let food = null;
+    let particles = [];
+    let snakeTrail = [];
+
+    class Particle {
+      constructor(x, y, palette) {
+        this.x = x;
+        this.y = y;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 3.5 + 1;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.life = 1.0;
+        this.decay = Math.random() * 0.04 + 0.025;
+        this.size = Math.random() * 3 + 1.5;
+        this.color = palette[Math.floor(Math.random() * palette.length)];
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= this.decay;
+      }
+      draw(ctx) {
+        if (this.life <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function createExplosion(x, y) {
+      const theme = isDarkMode ? PALETTE.dark : PALETTE.light;
+      for (let i = 0; i < 18; i++) {
+        particles.push(new Particle(x, y, theme.particles));
+      }
+    }
+
+    function spawnFood() {
+      const snakeKeys = new Set(snake.map(s => key(s.r, s.c)));
+      const available = validCells.filter(cell => !snakeKeys.has(key(cell.r, cell.c)));
+      if (available.length > 0) {
+        food = available[Math.floor(Math.random() * available.length)];
+      }
+    }
+
+    spawnFood();
+
+    function findPath(start, target) {
+      const queue = [[start]];
+      const visited = new Set();
+      visited.add(key(start.r, start.c));
+      const snakeBodyKeys = new Set(snake.slice(0, -1).map(s => key(s.r, s.c)));
+
+      while (queue.length > 0) {
+        const path = queue.shift();
+        const curr = path[path.length - 1];
+        if (curr.r === target.r && curr.c === target.c) return path;
+
+        for (let n of getValidNeighbors(curr.r, curr.c)) {
+          const k = key(n.r, n.c);
+          if (!visited.has(k) && !snakeBodyKeys.has(k)) {
+            visited.add(k);
+            queue.push([...path, n]);
+          }
+        }
+      }
+
+      const neighbors = getValidNeighbors(start.r, start.c);
+      const free = neighbors.filter(n => !snakeBodyKeys.has(key(n.r, n.c)));
+      return free.length > 0 ? [start, free[Math.floor(Math.random() * free.length)]] : [start, start];
+    }
+
+    function update() {
+      if (!food) spawnFood();
+      const path = findPath(snake[0], food);
+      let nextHead = path.length > 1 ? path[1] : null;
+
+      if (!nextHead) { spawnFood(); return; }
+
+      snakeTrail.push({
+        x: snake[0].c * CELL_SIZE + CELL_SIZE / 2,
+        y: snake[0].r * CELL_SIZE + CELL_SIZE / 2
+      });
+      if (snakeTrail.length > TRAIL_MAX_LENGTH) snakeTrail.shift();
+
+      snake.unshift(nextHead);
+
+      if (nextHead.r === food.r && nextHead.c === food.c) {
+        createExplosion(food.c * CELL_SIZE + CELL_SIZE / 2, food.r * CELL_SIZE + CELL_SIZE / 2);
+        spawnFood();
+      }
+
+      snake.pop();
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        if (particles[i].life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+      const theme = isDarkMode ? PALETTE.dark : PALETTE.light;
+
+      // 1. Ma trận vi điểm
+      ctx.fillStyle = theme.gridDot;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (grid[r][c]) {
+            const cx = c * CELL_SIZE + CELL_SIZE / 2;
+            const cy = r * CELL_SIZE + CELL_SIZE / 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 1.6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // 2. Viền chữ (Size 128px)
+      ctx.save();
+      ctx.strokeStyle = theme.textOutline;
+      ctx.shadowColor = theme.glowAura;
+      ctx.shadowBlur = isDarkMode ? 16 : 8;
+      ctx.lineWidth = 1.8;
+      ctx.font = '900 128px system-ui, -apple-system, "Arial Black", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeText('Tool-Tree', WIDTH / 2, HEIGHT / 2);
+      ctx.restore();
+
+      // 3. Vệt sáng đuôi kéo dài mờ dần
+      for (let i = 0; i < snakeTrail.length; i++) {
+        const t = snakeTrail[i];
+        const progress = (i + 1) / snakeTrail.length;
+
+        ctx.save();
+        ctx.fillStyle = theme.trailColor;
+        ctx.globalAlpha = Math.pow(progress, 1.3) * (isDarkMode ? 0.75 : 0.55);
+        ctx.shadowColor = theme.trailColor;
+        ctx.shadowBlur = isDarkMode ? 12 : 6;
+
+        ctx.beginPath();
+        const radius = (CELL_SIZE / 2) * (0.2 + 0.8 * progress);
+        ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 4. Mồi
+      if (food) {
+        ctx.save();
+        const now = Date.now();
+        const pulse = Math.sin(now * 0.008) * 1.5;
+        const fx = food.c * CELL_SIZE + CELL_SIZE / 2;
+        const fy = food.r * CELL_SIZE + CELL_SIZE / 2;
+
+        ctx.strokeStyle = theme.foodGlow;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(fx, fy, Math.max(2, CELL_SIZE + pulse), 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = theme.foodCore;
+        ctx.shadowColor = theme.foodCore;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(fx, fy, CELL_SIZE / 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 5. Thân rắn uốn lượn mượt mà (Rounded & Tapered)
+      for (let i = snake.length - 1; i >= 0; i--) {
+        const seg = snake[i];
+        const cx = seg.c * CELL_SIZE + CELL_SIZE / 2;
+        const cy = seg.r * CELL_SIZE + CELL_SIZE / 2;
+        const ratio = i / snake.length;
+
+        ctx.save();
+        if (i === 0) {
+          ctx.fillStyle = theme.snakeHead;
+          ctx.shadowColor = theme.snakeHead;
+          ctx.shadowBlur = isDarkMode ? 18 : 10;
+          
+          ctx.beginPath();
+          ctx.arc(cx, cy, CELL_SIZE * 0.65, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = theme.snakeCore;
+          ctx.beginPath();
+          ctx.arc(cx, cy, CELL_SIZE * 0.28, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          const radius = (CELL_SIZE * 0.58) * (1 - ratio * 0.45);
+          const colorIdx = ratio < 0.5 ? 1 : 2;
+          
+          ctx.fillStyle = theme.snakeGradient[colorIdx];
+          ctx.shadowColor = theme.snakeGradient[colorIdx];
+          ctx.shadowBlur = isDarkMode ? 10 : 4;
+          ctx.globalAlpha = 1 - ratio * 0.25;
+
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // 6. Pháo hoa
+      particles.forEach(p => p.draw(ctx));
+    }
+
+    const BASE_FPS = 30;
+    const baseInterval = 1000 / BASE_FPS;
+    let now, then = Date.now();
+
+    function getDynamicInterval() {
+      if (!food) return baseInterval;
+      const dr = snake[0].r - food.r;
+      const dc = snake[0].c - food.c;
+      const dist = Math.sqrt(dr * dr + dc * dc);
+      
+      const maxDist = 45; 
+      const normDist = Math.min(dist / maxDist, 1.0);
+      const speedFactor = 1.25 - normDist * 0.5; 
+      return baseInterval * speedFactor;
+    }
+
+    function gameLoop() {
+      requestAnimationFrame(gameLoop);
+      now = Date.now();
+      let delta = now - then;
+      let dynamicInterval = getDynamicInterval();
+
+      if (delta > dynamicInterval) {
+        then = now - (delta % dynamicInterval);
+        update();
+        draw();
+      }
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
