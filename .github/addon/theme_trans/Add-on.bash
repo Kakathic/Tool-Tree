@@ -4,7 +4,7 @@ name="Theme Trans"
 author=Kakathic
 description="Translate theme, widget, aod"
 version=1.0
-versionCode=101
+versionCode=102
 root=true
 
 # default
