@@ -70,6 +70,9 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         internal var photoGifAutoplay: Boolean = true
         // Số vòng lặp tối đa (<=0: lặp vô hạn, mặc định)
         internal var photoGifLoopCount: Int = 0
+        // Nếu true: photo là file .gif THẬT (không phải chuỗi khung hình photo-gif-num), đọc qua
+        // AnimatedImageDrawable - chỉ hoạt động từ Android 9/API 28 trở lên, máy cũ hơn tự rớt về ảnh tĩnh
+        internal var photoRealGif: Boolean = false
 
         // Ảnh nhỏ hiển thị NGAY CẠNH chữ (inline, cùng dòng) - khác với "photo" (khối ảnh riêng,
         // full chiều rộng, nằm dưới toàn bộ rows). "" = không có icon.
@@ -89,6 +92,8 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         internal var iconGifAutoplay: Boolean = true
         // Số vòng lặp tối đa (<=0: lặp vô hạn, mặc định)
         internal var iconGifLoopCount: Int = 0
+        // Nếu true: icon inline là file .gif THẬT - cùng ràng buộc API 28+ như photoRealGif ở trên
+        internal var iconRealGif: Boolean = false
         // "" (mặc định) = không phải toggle; "checkbox" hoặc "switch"
         internal var toggle: String = ""
         // Trạng thái bật/tắt hiện tại (được resolveBoolOrShell tại lúc parse trang - xem "checked")

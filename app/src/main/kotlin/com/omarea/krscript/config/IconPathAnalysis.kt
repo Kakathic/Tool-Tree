@@ -3,13 +3,16 @@ package com.omarea.krscript.config
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.graphics.drawable.AnimationDrawable
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.util.LruCache
 import com.tool.tree.R
 import com.omarea.krscript.model.ClickableNode
 import com.omarea.krscript.model.TextNode
+import java.nio.ByteBuffer
 
 class IconPathAnalysis {
     companion object {
@@ -45,6 +48,9 @@ class IconPathAnalysis {
         if (clickableNode.iconPath.isEmpty()) return null
         val paths = splitMultiPaths(clickableNode.iconPath)
         if (paths.isEmpty()) return null
+        if (clickableNode.iconRealGif) {
+            decodeRealGif(context, clickableNode.pageConfigDir, paths[0])?.let { return it }
+        }
         if (paths.size > 1) {
             // Danh sách nhiều đường dẫn tường minh (vd: "a.png|b.png") -> luôn ưu tiên coi là hoạt ảnh
             loadAnimatedFromPaths(context, clickableNode.pageConfigDir, paths, clickableNode.iconGifTime)?.let { return it }
@@ -61,6 +67,9 @@ class IconPathAnalysis {
         if (clickableNode.photoPath.isEmpty()) return null
         val paths = splitMultiPaths(clickableNode.photoPath)
         if (paths.isEmpty()) return null
+        if (clickableNode.photoRealGif) {
+            decodeRealGif(context, clickableNode.pageConfigDir, paths[0])?.let { return it }
+        }
         if (paths.size > 1) {
             loadAnimatedFromPaths(context, clickableNode.pageConfigDir, paths, clickableNode.photoGifTime)?.let { return it }
         } else if (clickableNode.photoGifNum > 0) {
@@ -87,6 +96,9 @@ class IconPathAnalysis {
         if (photoPath.isEmpty()) return null
         val paths = splitMultiPaths(photoPath)
         if (paths.isEmpty()) return null
+        if (row.photoRealGif) {
+            decodeRealGif(context, pageDir, paths[0])?.let { return it }
+        }
         if (paths.size > 1) {
             loadAnimatedFromPaths(context, pageDir, paths, row.photoGifTime)?.let { return it }
         } else if (row.photoGifNum > 0) {
@@ -103,10 +115,13 @@ class IconPathAnalysis {
     // đặt tên icon_1.png, icon_2.png...). Việc CHẠY animation (start/stop, callback invalidate) do
     // bên gọi tự lo (xem GifPlaybackHelper.bindToTextView() trong RowsRenderHelper) vì AnimationDrawable
     // gắn trong ImageSpan không tự chạy như khi gắn vào ImageView.
-    fun loadRowIcon(context: Context, iconPath: String, pageDir: String, gifNum: Int = 0, gifTime: Int = 300): Drawable? {
+    fun loadRowIcon(context: Context, iconPath: String, pageDir: String, gifNum: Int = 0, gifTime: Int = 300, realGif: Boolean = false): Drawable? {
         if (iconPath.isEmpty()) return null
         val paths = splitMultiPaths(iconPath)
         if (paths.isEmpty()) return null
+        if (realGif) {
+            decodeRealGif(context, pageDir, paths[0])?.let { return it }
+        }
         if (paths.size > 1) {
             loadAnimatedFromPaths(context, pageDir, paths, gifTime)?.let { return it }
         } else if (gifNum > 0) {
@@ -116,6 +131,24 @@ class IconPathAnalysis {
             return bitmap2Drawable(it)
         }
         return null
+    }
+
+    // Đọc 1 file .gif THẬT (animated) thành Drawable tự chạy animation qua AnimatedImageDrawable.
+    // Chỉ hoạt động từ Android 9 (API 28) trở lên - dưới mức đó luôn trả về null để bên gọi tự rớt
+    // về nhánh cũ (khung tĩnh / chuỗi khung hình icon-gif-num). Không cache (khác decodeBitmap ở dưới)
+    // vì đây là Drawable có state animation riêng, không nên dùng chung giữa nhiều view.
+    private fun decodeRealGif(context: Context, pageDir: String, path: String): Drawable? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
+        if (path.isEmpty()) return null
+        return try {
+            val inputStream = PathAnalysis(context, pageDir).parsePath(path) ?: return null
+            val bytes = inputStream.use { it.readBytes() }
+            if (bytes.isEmpty()) return null
+            val source = ImageDecoder.createSource(ByteBuffer.wrap(bytes))
+            ImageDecoder.decodeDrawable(source)
+        } catch (ex: Exception) {
+            null
+        }
     }
 
     // Tách chuỗi cấu hình đường dẫn thành danh sách các đường dẫn riêng lẻ.

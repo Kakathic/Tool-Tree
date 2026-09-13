@@ -5,8 +5,11 @@ import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.graphics.drawable.Animatable
+import android.graphics.drawable.AnimatedImageDrawable
 import android.graphics.drawable.AnimationDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.net.Uri
 import android.text.Layout
 import android.text.Spannable
@@ -54,8 +57,8 @@ object RowsRenderHelper {
         // callback/schedule cũ lên rowsView khi RecyclerView rebind lại (xem cuối hàm: lưu lại
         // danh sách animation mới vào rowsView.tag để lần bind() kế tiếp dừng đúng các drawable này).
         @Suppress("UNCHECKED_CAST")
-        (rowsView.tag as? MutableList<AnimationDrawable>)?.forEach { it.stop() }
-        val animatedRowIcons = ArrayList<AnimationDrawable>()
+        (rowsView.tag as? MutableList<Animatable>)?.forEach { it.stop() }
+        val animatedRowIcons = ArrayList<Animatable>()
         // LinkMovementMethod mặc định: bấm bất kỳ đâu trên dòng (kể cả vùng trống do canh lề)
         // cũng tính là bấm trúng ClickableSpan của dòng đó. Dùng bản tuỳ chỉnh bên dưới để chỉ
         // nhận chạm trong vùng chữ/icon thực sự được vẽ.
@@ -266,9 +269,10 @@ object RowsRenderHelper {
                 rowIconDrawable = rowIconDrawableRaw
                 val iconIndex = if (row.iconPosition == "before") 0 else length - 1
                 spannableString.setSpan(VerticalCenterImageSpan(rowIconDrawable), iconIndex, iconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                if (rowIconDrawable is AnimationDrawable) {
+                val isRealGifDrawable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && rowIconDrawable is AnimatedImageDrawable
+                if (rowIconDrawable is AnimationDrawable || isRealGifDrawable) {
                     GifPlaybackHelper.bindToTextView(rowsView, rowIconDrawable, row.iconGifAutoplay, row.iconGifLoopCount)
-                    animatedRowIcons.add(rowIconDrawable)
+                    animatedRowIcons.add(rowIconDrawable as Animatable)
                 }
             }
 
@@ -730,7 +734,7 @@ object RowsRenderHelper {
     // (iconGifNum/iconGifTime) vẫn đọc từ row vì -sh chỉ thay path, không thay cấu hình gif.
     // Trả về null nếu không có icon hoặc không nạp được ảnh (ảnh lỗi/không tồn tại).
     private fun buildRowIconDrawable(context: Context, iconPath: String, row: TextNode.TextRow, config: NodeInfoBase): Drawable? {
-        val loaded = IconPathAnalysis().loadRowIcon(context, iconPath, config.pageConfigDir, row.iconGifNum, row.iconGifTime) ?: return null
+        val loaded = IconPathAnalysis().loadRowIcon(context, iconPath, config.pageConfigDir, row.iconGifNum, row.iconGifTime, row.iconRealGif) ?: return null
         val density = context.resources.displayMetrics.density
         val defaultDp = 18
         val size = ((if (row.iconSize > 0) row.iconSize else defaultDp) * density).toInt()

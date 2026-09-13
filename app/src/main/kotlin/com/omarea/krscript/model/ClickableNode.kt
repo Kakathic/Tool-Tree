@@ -14,6 +14,9 @@ open class ClickableNode(currentPageConfigPath: String) : NodeInfoBase(currentPa
     var iconGifAutoplay: Boolean = true
     // Số vòng lặp tối đa (<=0: lặp vô hạn, mặc định)
     var iconGifLoopCount: Int = 0
+    // Nếu true: iconPath là file .gif THẬT (không phải chuỗi khung hình icon-gif-num), đọc qua
+    // AnimatedImageDrawable - chỉ hoạt động từ Android 9/API 28 trở lên, máy cũ hơn tự rớt về ảnh tĩnh
+    var iconRealGif: Boolean = false
 
     // 功能图标路径（桌面快捷）
     var logoPath = ""
@@ -31,6 +34,8 @@ open class ClickableNode(currentPageConfigPath: String) : NodeInfoBase(currentPa
     var photoGifAutoplay: Boolean = true
     // Số vòng lặp tối đa (<=0: lặp vô hạn, mặc định)
     var photoGifLoopCount: Int = 0
+    // Nếu true: photoPath là file .gif THẬT - cùng ràng buộc API 28+ như iconRealGif ở trên
+    var photoRealGif: Boolean = false
     var bgPath = ""
     // "bg-sh": script trả về đường dẫn ảnh nền động - cùng cơ chế batch với photo-sh/icon-sh ở trên.
     var bgSh: String = ""
