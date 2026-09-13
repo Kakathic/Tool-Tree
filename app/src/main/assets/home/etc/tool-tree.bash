@@ -2144,7 +2144,7 @@ Addon() {
       [[group]]
       [[page]]
       title = "'$name'"
-      desc = "'$sum_vb'"
+      desc = "'$version', '$author'"
       icon = "'$icon_vb'"
       process = "'$process'"
       '$croot_add'
@@ -2165,7 +2165,7 @@ Addon() {
     # Xoá giá trị cũ
     id= root= shortcut= description= google_text= url= name=
     google_trans= code_option= beforesh= croot_add= process=
-    sum_vb= hinde_add= shortcut_text= delete_add=
+    hinde_add= shortcut_text= delete_add=
     
     # Nạp string
     source "$vadd" 2>/dev/null
@@ -2180,8 +2180,6 @@ Addon() {
     if [ "$shortcut" == "true" ]; then
     shortcut_text='key = "'$id'" '
     fi
-    
-    sum_vb="$version $author"
     
     if [ "$(glog Ticon)" != 1 ]; then
       if [ -f "$dirvad/icon.png" ]; then
