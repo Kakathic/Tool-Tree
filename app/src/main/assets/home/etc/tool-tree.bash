@@ -168,7 +168,7 @@ Home() {
   echo '
   [[group]]
   [[page]]
-  title = "'$setting_text_3' ROM"
+  title = "'$editor_rom'"
   desc = "'$setting_text_4'"
   icon = "'$urlicon'/project.png"
   config-sh = "'$ETC'/tool-tree.bash Project 1"
@@ -203,7 +203,7 @@ More() {
   echo '
   [[group]]
   [[page]]
-  title = "'$setting_text_3' APK"
+  title = "'$editor_apk'"
   desc = "'$setting_text_4'"
   icon = "'$urlicon'/project.png"
   config-sh = "'$ETC'/tool-tree.bash Project 2"
