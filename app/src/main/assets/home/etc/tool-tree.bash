@@ -2128,12 +2128,12 @@ Addon() {
       '$shortcut_text'
       '$pagesh'
       '$beforesh'
-        [[page.rows]]
-        text = "'$description'"
-        margin-top = 4
-        '$text_line'
-        '"$hinde_add"'
-        '"$delete_add"'
+      [[page.rows]]
+      text = "'$description'"
+      margin-top = 4
+      '$text_line'
+      '"$hinde_add"'
+      '"$delete_add"'
     '
   }
 

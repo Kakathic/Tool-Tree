@@ -533,7 +533,18 @@ class ActionPage : AppCompatActivity() {
     }
 
     // Lưu icon fab hiện tại rồi recreate() - instance mới sẽ tiếp tục xoay icon đó.
+    // Chặn bấm chồng: pendingSpinIcon != null nghĩa là 1 lượt refresh trước đó CHƯA XONG (còn
+    // đang xoay - reset về null khi tải xong/lỗi/đóng trang, xem stopFabSpinIfPending()/
+    // handleLoadError()/onDestroy()). Nếu bấm Refresh lần nữa lúc này mà vẫn recreate(), lượt
+    // tải cũ (PageConfigReader/PageConfigSh, các script -sh của từng row) bị bỏ rơi giữa chừng
+    // nhưng KHÔNG dừng lại (coroutine cancel chỉ mang tính hợp tác, không ngắt được các lệnh
+    // shell đồng bộ đang chờ), cứ chạy tiếp ngầm và tranh giành 2 phiên shell dùng chung
+    // (KeepShellPublic) với lượt tải mới -> lượt tải mới bị xếp hàng chờ, thanh tiến trình hiện
+    // lâu hơn hẳn lần đầu. Bỏ qua lần bấm thứ 2 ở đây triệt tiêu tận gốc kịch bản đó.
     private fun spinFabThenRecreate() {
+        if (pendingSpinIcon != null) {
+            return
+        }
         pendingSpinIcon = binding.actionPageFab.drawable
         recreate()
     }
@@ -818,7 +829,20 @@ class ActionPage : AppCompatActivity() {
             if (pendingReloadWhileLoading) {
                 pendingReloadWhileLoading = false
                 withContext(Dispatchers.Main) {
-                    if (!isFinishing && !isDestroyed) loadPageConfig(true)
+                    if (!isFinishing && !isDestroyed) {
+                        // Gọi lại loadPageConfig() ngay TẠI ĐÂY - vẫn đang nằm trong chính
+                        // coroutine của loadPageJob hiện tại (job này chưa thật sự hoàn tất,
+                        // isActive vẫn true) nên nếu để nguyên, guard "loadPageJob?.isActive"
+                        // ở đầu loadPageConfig() sẽ tưởng nhầm là "vẫn còn 1 lượt tải đang
+                        // chạy" (chính là bản thân job này) -> chỉ set lại
+                        // pendingReloadWhileLoading = true rồi return, KHÔNG thực sự tải lại,
+                        // và cờ đó bị bỏ quên (không ai kiểm tra lại) cho tới lần
+                        // loadPageConfig() kế tiếp được gọi từ bên ngoài. Coi job hiện tại như
+                        // đã xong việc bằng cách xoá tham chiếu trước khi gọi lại, để guard ở
+                        // trên chắc chắn cho lượt tải mới này chạy thật.
+                        loadPageJob = null
+                        loadPageConfig(true)
+                    }
                 }
             }
         }
