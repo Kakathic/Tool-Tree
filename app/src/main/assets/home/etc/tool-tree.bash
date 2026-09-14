@@ -87,7 +87,7 @@ inforkk() {
 echo '
   [[group]]
   [[text.rows]]
-  text = "'$infor_text' × '$system_text'"
+  text = "'$infor_text'"
   size = 16
   bold = true
   alpha = 1
@@ -95,61 +95,109 @@ echo '
   margin-top = 6
   
   [[text.rows]]
+  text = "|"
+  size = 14
+  
+  [[text.rows]]
+  text = "'$system_text'"
+  size = 16
+  bold = true
+  
+  [[text.rows]]
   size = 13
-  text = "'$root_text':"
+  text = "'$root_text': {'${ROOT^}'}(#0dbda2)"
   bold = true
   icon = "'$urlicon'/1shield.png"
   line-height = 1.3
   break = true
+  markdown = true
   
   [[text.rows]]
-  bold = true
-  size = 13
-  color = "#0dbda2"
-  text = "'${ROOT^}'"
-  
-  [[text.rows]]
-  text = "'$device_text':"
+  text = "'$device_text': {'$ANDROID_BRAND' - '$ANDROID_DEVICE'}(#0dbda2)"
   break = true
   size = 13
   bold = true
   line-height = 1.3
   icon = "'$urlicon'/1smart.png"
+  markdown = true
   
   [[text.rows]]
-  bold = true
-  size = 13
-  color = "#0dbda2"
-  text = "'$ANDROID_BRAND' - '$ANDROID_DEVICE'"
-  
-  [[text.rows]]
-  text = "'$operating_system':"
+  text = "'$operating_system': {Android '$ANDROID_RELEASE' - SDK '$API'}(#0dbda2)"
   break = true
   size = 13
   bold = true
   line-height = 1.3
   icon = "'$urlicon'/1android.png"
+  markdown = true
   
   [[text.rows]]
-  bold = true
-  size = 13
-  color = "#0dbda2"
-  text = "Android '$ANDROID_RELEASE' - SDK '$API'"
-  
-  [[text.rows]]
-  text = "'$microprocessors':"
+  text = "'$microprocessors': {'${CPU_ABI^}'}(#0dbda2)"
   break = true
   size = 13
   bold = true
   line-height = 1.3
+  margin-bottom = 6
   icon = "'$urlicon'/1cpu.png"
+  markdown = true
+  '
+}
+
+inforka() {
+echo '
+  [[group]]
+  [[text.rows]]
+  text = "'$infor_text'"
+  size = 16
+  bold = true
+  line-height = 1.3
+  margin-top = 6
   
   [[text.rows]]
+  text = "|"
+  size = 14
+  
+  [[text.rows]]
+  text = "'$system_text'"
+  size = 16
+  alpha = 1
   bold = true
+  
+  [[text.rows]]
   size = 13
-  color = "#0dbda2"
-  text = "'${CPU_ABI^}'"
+  text = "Selinux: {'$SELINUX'}(#0dbda2)"
+  bold = true
+  icon = "'$urlicon'/1shield.png"
+  line-height = 1.3
+  break = true
+  markdown = true
+  
+  [[text.rows]]
+  text = "Kernel: {'$KERNEL_VERSION'}(#0dbda2)"
+  break = true
+  size = 13
+  bold = true
+  line-height = 1.3
+  icon = "'$urlicon'/1smart.png"
+  markdown = true
+  
+  [[text.rows]]
+  text = "'$operating_system': {Android '$ANDROID_RELEASE' - SDK '$API'}(#0dbda2)"
+  break = true
+  size = 13
+  bold = true
+  line-height = 1.3
+  icon = "'$urlicon'/1android.png"
+  markdown = true
+  
+  [[text.rows]]
+  text = "'$microprocessors': {'${CPU_ABI^}'}(#0dbda2)"
+  break = true
+  size = 13
+  bold = true
+  line-height = 1.3
   margin-bottom = 6
+  icon = "'$urlicon'/1cpu.png"
+  markdown = true
   '
 }
 
@@ -198,7 +246,7 @@ Home() {
 }
 
 More() {
-  inforkk
+  inforka
   
   echo '
   [[group]]
