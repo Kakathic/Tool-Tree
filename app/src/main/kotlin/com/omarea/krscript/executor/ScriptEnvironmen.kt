@@ -384,7 +384,7 @@ object ScriptEnvironmen {
             } catch (ignored: Exception) {}
 
             put("ROOT_PERMISSION", if (rooted) "true" else "false")
-            put("SDCARD_PATH", Environment.getExternalStorageDirectory().absolutePath
+            put("SDCARD_PATH", Environment.getExternalStorageDirectory().absolutePath)
 
             try {
                 val packageInfo: PackageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
