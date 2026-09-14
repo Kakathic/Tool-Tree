@@ -3,6 +3,7 @@ package com.omarea.krscript.ui
 import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.Animatable
@@ -702,9 +703,14 @@ object RowsRenderHelper {
                 MarkdownInlineHelper.MarkdownSpanType.STRIKETHROUGH ->
                     spannableString.setSpan(StrikethroughSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 MarkdownInlineHelper.MarkdownSpanType.CODE -> {
-                    @Suppress("DEPRECATION")
-                    spannableString.setSpan(TypefaceSpan("monospace"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    spannableString.setSpan(BackgroundColorSpan(0x22808080), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    // Nền bo góc + padding đều quanh chữ (xem MarkdownCodeSpan)
+                    spannableString.setSpan(MarkdownCodeSpan(context), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                MarkdownInlineHelper.MarkdownSpanType.COLOR -> {
+                    val colorInt = parseMarkdownColor(info.href)
+                    if (colorInt != null) {
+                        spannableString.setSpan(ForegroundColorSpan(colorInt), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
                 }
                 MarkdownInlineHelper.MarkdownSpanType.LINK -> {
                     val href = info.href
@@ -725,6 +731,17 @@ object RowsRenderHelper {
                     }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
+        }
+    }
+
+    // Parse giá trị màu trong markdown {text}(color) - hỗ trợ tên màu (red, green...) và hex
+    // (#RRGGBB/#AARRGGBB) qua Color.parseColor(); trả về null nếu giá trị không hợp lệ (bỏ qua
+    // span màu, giữ nguyên chữ không tô màu thay vì crash).
+    private fun parseMarkdownColor(value: String): Int? {
+        return try {
+            Color.parseColor(value)
+        } catch (e: IllegalArgumentException) {
+            null
         }
     }
 

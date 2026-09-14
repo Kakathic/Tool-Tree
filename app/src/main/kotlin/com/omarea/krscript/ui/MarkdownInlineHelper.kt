@@ -3,11 +3,12 @@ package com.omarea.krscript.ui
 // Parser Markdown inline đơn giản cho nội dung 1 dòng (text.rows) - KHÔNG hỗ trợ block-level
 // (heading, list, blockquote, ...) vì rows vốn đã được cấu hình theo dòng riêng qua TOML.
 // Hỗ trợ: **bold**/__bold__, *italic*/_italic_, ~~strikethrough~~, `code`, [text](url),
+// {text}(color) - color là tên màu (red, green...) hoặc mã hex (#RRGGBB/#AARRGGBB),
 // escape bằng dấu \ (vd: \* hiển thị dấu * thường). Cho phép lồng nhau 1 cấp (vd:
 // **bold *italic* bold**) nhờ đệ quy vào phần nội dung bên trong mỗi cặp dấu (trừ code).
 object MarkdownInlineHelper {
 
-    enum class MarkdownSpanType { BOLD, ITALIC, STRIKETHROUGH, CODE, LINK }
+    enum class MarkdownSpanType { BOLD, ITALIC, STRIKETHROUGH, CODE, LINK, COLOR }
 
     data class MarkdownSpanInfo(
         val start: Int,
@@ -113,6 +114,25 @@ object MarkdownInlineHelper {
                         parseInto(label, output, spans)
                         if (output.length > start && href.isNotEmpty()) {
                             spans.add(MarkdownSpanInfo(start, output.length, MarkdownSpanType.LINK, href))
+                        }
+                        i = closeParen + 1
+                        continue
+                    }
+                }
+            }
+
+            // Color: {text}(red hoặc #RRGGBB) - cùng pattern với LINK, đổi ngoặc vuông thành ngoặc nhọn
+            if (c == '{') {
+                val closeBrace = raw.indexOf('}', i + 1)
+                if (closeBrace > i && closeBrace + 1 < n && raw[closeBrace + 1] == '(') {
+                    val closeParen = raw.indexOf(')', closeBrace + 2)
+                    if (closeParen > closeBrace) {
+                        val label = raw.substring(i + 1, closeBrace)
+                        val colorValue = raw.substring(closeBrace + 2, closeParen).trim()
+                        val start = output.length
+                        parseInto(label, output, spans)
+                        if (output.length > start && colorValue.isNotEmpty()) {
+                            spans.add(MarkdownSpanInfo(start, output.length, MarkdownSpanType.COLOR, colorValue))
                         }
                         i = closeParen + 1
                         continue
