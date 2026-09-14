@@ -1034,6 +1034,9 @@ italic = true
 <tr><td class="field-name">photo-gif-autoplay</td><td>gif-autoplay</td><td class="field-type">Bool</td><td>true</td><td>Auto-play the GIF</td></tr>
 <tr><td class="field-name">photo-gif-loop</td><td>photo-gif-loop-count, gif-loop, gif-loop-count</td><td class="field-type">Int</td><td>0</td><td>Loop count (0=infinite)</td></tr>
 <tr><td class="field-name">photo-real-gif</td><td>real-gif, photo-gif-real</td><td class="field-type">Bool</td><td>false</td><td><span class="badge new">new</span> true: row's <code>photo</code> is a REAL <code>.gif</code> file (via <code>AnimatedImageDrawable</code>), not the simulated frame-sequence GIF above. <strong>Android 9/API 28+ only</strong> - older devices fall back to a static first frame</td></tr>
+<tr><td class="field-name">html-file</td><td>html-path</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> Local <code>.html</code> file rendered inline in its own WebView block below the row's text (resolved like <code>photo</code>: relative to the page config dir, app-private dir, assets, or an absolute path). Ignored if <code>html-url</code> is also set</td></tr>
+<tr><td class="field-name">html-url</td><td>html-link</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> http/https page loaded directly into the WebView block. Takes priority over <code>html-file</code> if both are set</td></tr>
+<tr><td class="field-name">html-height</td><td>-</td><td class="field-type">Int</td><td>260</td><td><span class="badge new">new</span> Height of the WebView block (dp)</td></tr>
 <tr><td class="field-name">icon</td><td>icon-path</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> INLINE small icon (same line, different from photo)</td></tr>
 <tr><td class="field-name">icon-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the row's inline icon path dynamically. Re-runs every time the rows are re-rendered (batched with text-sh/photo-sh, NOT cached); overrides <code>icon</code></td></tr>
 <tr><td class="field-name">icon-position</td><td>icon-pos</td><td class="field-type">String</td><td>before</td><td><code>before</code> / <code>after</code> the text</td></tr>
@@ -1109,6 +1112,24 @@ get = "settings get global heads_up_notifications_enabled"
 set = "settings put global heads_up_notifications_enabled $state"
 </code></pre>
 <div class="callout warn"><code>sh</code> (alias <code>text-sh</code>) of a row is NOT queued into the pending-state system - it is left to the UI layer and evaluated when the row is rendered. <code>get</code> with a shell value IS queued into <code>pendingRowCheckedStates</code> and batched at the end - like switch/picker.</div>
+
+<h3>12.3. Inline HTML block (<code>html-file</code> / <code>html-url</code>)</h3>
+<p>A row can also render a full HTML page inline, in its own <code>WebView</code> block below the text - useful for content richer than Markdown can express (custom layout, images, JS-driven widgets).</p>
+<pre><code>[[text.rows]]
+text = "Changelog"
+bold = true
+
+[[text.rows]]
+html-file = "changelog.html"
+html-height = 300
+
+[[text.rows]]
+text = "Project homepage"
+
+[[text.rows]]
+html-url = "https://example.com"
+</code></pre>
+<div class="callout warn">Same limit as <code>photo</code>: each <code>[[text]]</code>/<code>[[action]]</code> item has only <strong>one</strong> HTML block - if several rows declare <code>html-file</code>/<code>html-url</code>, the <strong>last</strong> one wins. The WebView follows the app's light/dark theme (<code>force-dark</code>) and has a transparent background so it blends with the item - transparency only takes effect for HTML content that does not set its own CSS background color.</div>
 </section>
 
 <section id="editor">
@@ -1737,6 +1758,7 @@ script = "sh $state"
   <li><code>icon</code>, <code>icon-sh</code> - inline icon shown next to a text row (distinct from the row's full-width <code>photo</code>), with dynamic script-based path support.</li>
   <li><code>icon-gif-num</code>, <code>icon-gif-time</code>, <code>icon-gif-autoplay</code>, <code>icon-gif-loop</code>, <code>icon-real-gif</code> - animation controls for the inline icon, mirroring the row's <code>photo-gif-*</code> fields.</li>
   <li><code>photo-sh</code>, <code>photo-real-gif</code> - dynamic path and real-<code>.gif</code> support for the row's <code>photo</code>.</li>
+  <li><code>html-file</code>, <code>html-url</code>, <code>html-height</code> - render a full HTML page inline in its own WebView block below the row's text (local file or http/https link, one block per item, follows app theme, transparent background). See <a href="#text-rows">§12.3</a>.</li>
 </ul>
 
 <h3>26.6. <a href="#depend">§17 Dependencies</a></h3>

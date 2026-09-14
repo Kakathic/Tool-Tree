@@ -83,17 +83,6 @@ show_apkset() {
   '
 }
 
-shell_bash() {
-  echo '[[group]]
-  [[editor]]
-  title = "'$home_text_5'"
-  desc = "'$more_text_9'"
-  file = "home/usr/run_'$1'.bash"
-  need-input = "true"
-  placeholder = "#!/data/data/com.tool.tree/files/home/bin/bash"
-  icon = "'$urlicon'/shell.png" '
-}
-
 inforkk() {
 echo '
   [[group]]
@@ -206,8 +195,6 @@ Home() {
   process = true
   config-sh = "'$ETC'/tool-tree.bash Addon $AON"
   '
-
-  [ "$(glog shellc)" == 1 ] && shell_bash shellc
 }
 
 More() {
@@ -244,8 +231,6 @@ More() {
   process = true
   config-sh = "'$ETC'/tool-tree.bash Addon $AOK"
   '
-
-  [ "$(glog shellc)" == 1 ] && shell_bash shells
 }
 
 Info() {
@@ -284,6 +269,7 @@ Info() {
   desc = "'$setting_text_2'"
   icon = "'$urlicon'/info.png"
   config-sh = "'$ETC'/tool-tree.bash Update"
+  process = true
     
   [[group]]
   [[page]]
@@ -438,7 +424,7 @@ Update() {
   [[group]]
   [[download]]
   title = "'$download_text' beta"
-  icon = "'$urlicon'/update.png"
+  icon = "'$urlicon'/update2.png"
   url = "https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-beta.apk"
   script = "openfile $state"
   '
@@ -624,14 +610,6 @@ Feature() {
   auto-restart = true
   get = "glog Ticon"
   set = "slog Ticon $state"
-
-  [[switch]]
-  title = "'$project_text_6'"
-  icon = "'$urlicon'/shell_off.png"
-  shell = "hidden"
-  auto-restart = true
-  get = "glog shellc"
-  set = "slog shellc $state"
 
   [[group]]
   [[action]]
@@ -824,6 +802,7 @@ Root() {
     required = true
     multiple = true
 
+  [[group]]
   [[action]]
   title = "'$flash_text_1'"
   summary = "'$text_root'"
@@ -1721,10 +1700,27 @@ Utiliapk() {
     silent = true
     
   [[group]]
-  [[page]]
-  title = "'$apex_text'"
-  icon = "'$urlicon'/apex.png"
-  config-sh = "'$ETC'/tool-tree.bash Apex"
+  [[action]]
+  title = "'$apk_mager_text_2'"
+  icon = "'$urlicon'/merge_apk.png"
+  warn = "'$apk_mager_text_1'"
+  script = """
+    IFS=$'"'\n'"'
+    for v in $FILE; do
+        echo "'$more_text_4' $FILE"
+        echo
+        apkeditor m -f -i "$PTAD/$v" -o "$PTAD/out/$v" 2>&1 | sed -u -e "1,/__/d"
+        echo
+    done
+    checktime
+  """
+
+    [[action.params]]
+    name = "FILE"
+    options-sh = "findfile 9 $PTAD | grep -E \"(apks)|(apkm)|(xapk)\""
+    desc = "'$desc_apks'"
+    required = true
+    multiple = true
   
   [[group]]
   [[action]]
@@ -1911,27 +1907,10 @@ Utiliapk() {
     multiple = true
 
   [[group]]
-  [[action]]
-  title = "'$apk_mager_text_2'"
-  icon = "'$urlicon'/merge_apk.png"
-  warn = "'$apk_mager_text_1'"
-  script = """
-    IFS=$'"'\n'"'
-    for v in $FILE; do
-        echo "'$more_text_4' $FILE"
-        echo
-        apkeditor m -f -i "$PTAD/$v" -o "$PTAD/out/$v" 2>&1 | sed -u -e "1,/__/d"
-        echo
-    done
-    checktime
-  """
-
-    [[action.params]]
-    name = "FILE"
-    options-sh = "findfile 9 $PTAD | grep -E \"(apks)|(apkm)|(xapk)\""
-    desc = "'$desc_apks'"
-    required = true
-    multiple = true
+  [[page]]
+  title = "'$apex_text'"
+  icon = "'$urlicon'/apex.png"
+  config-sh = "'$ETC'/tool-tree.bash Apex"
     
   [[group]]
   [[action]]
