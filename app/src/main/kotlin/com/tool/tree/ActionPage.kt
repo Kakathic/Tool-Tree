@@ -13,6 +13,8 @@ import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
+import android.webkit.WebView
 import android.widget.ArrayAdapter
 import android.widget.ImageButton
 import android.widget.ListPopupWindow
@@ -104,6 +106,15 @@ class ActionPage : AppCompatActivity() {
     // Tránh chạy lại checkPageLock khi onResume() gọi lại trong lúc vẫn đang đợi.
     private var lockCheckStarted = false
 
+    // Đếm số lý do đang yêu cầu "đóng băng" WebView (html-file/html-url) cùng lúc - cuộn trang,
+    // vuốt-lùi, activity pause, ... - chỉ thực sự ẩn/pause khi có ít nhất 1 lý do (0 -> 1), chỉ
+    // thực sự hiện/resume lại khi KHÔNG còn lý do nào (1 -> 0), tránh trường hợp 2 nguyên nhân
+    // trùng lúc (vd đang cuộn thì cũng bắt đầu vuốt-lùi) làm "mở khoá" sớm khi 1 trong 2 kết thúc
+    // trước.
+    private var webViewFreezeCount = 0
+    private var scrollFreezeRunnable: Runnable? = null
+    private var scrollChangedListener: ViewTreeObserver.OnScrollChangedListener? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -141,11 +152,18 @@ class ActionPage : AppCompatActivity() {
                     binding.swipeBackPreviewSharp.visibility = visibility
                     if (!dragging) binding.swipeBackPreviewSharp.alpha = 0f
                 }
+                // Đang vuốt-lùi (kể cả lúc còn phân vân, chưa chắc buông tay có thật sự lùi
+                // trang hay không) -> đóng băng ngay, đỡ phải vẽ+chạy JS cho các WebView sắp bị
+                // che khuất bởi preview trang trước hoặc sắp biến mất hẳn - dragging=false chỉ
+                // xảy ra khi buông tay HUỶ (không lùi trang), lúc đó mới cần mở khoá lại; nếu
+                // vuốt-lùi thành công thì trang này bị destroy luôn, không cần mở khoá.
+                if (dragging) freezeWebViews() else unfreezeWebViews()
             },
             onDragProgress = { progress ->
                 binding.swipeBackPreviewSharp.alpha = progress * progress
             }
         )
+        setupWebViewScrollFreeze()
 
         val toolbar = findViewById<View>(R.id.toolbar) as Toolbar
         setSupportActionBar(toolbar)
@@ -556,15 +574,81 @@ class ActionPage : AppCompatActivity() {
         }
     }
 
-    // Lưu icon fab hiện tại rồi recreate() - instance mới sẽ tiếp tục xoay icon đó.
-    // Chặn bấm chồng: pendingSpinIcon != null nghĩa là 1 lượt refresh trước đó CHƯA XONG (còn
-    // đang xoay - reset về null khi tải xong/lỗi/đóng trang, xem stopFabSpinIfPending()/
-    // handleLoadError()/onDestroy()). Nếu bấm Refresh lần nữa lúc này mà vẫn recreate(), lượt
-    // tải cũ (PageConfigReader/PageConfigSh, các script -sh của từng row) bị bỏ rơi giữa chừng
-    // nhưng KHÔNG dừng lại (coroutine cancel chỉ mang tính hợp tác, không ngắt được các lệnh
-    // shell đồng bộ đang chờ), cứ chạy tiếp ngầm và tranh giành 2 phiên shell dùng chung
-    // (KeepShellPublic) với lượt tải mới -> lượt tải mới bị xếp hàng chờ, thanh tiến trình hiện
-    // lâu hơn hẳn lần đầu. Bỏ qua lần bấm thứ 2 ở đây triệt tiêu tận gốc kịch bản đó.
+    // Activity bị pause: về Home, mở app khác, vuốt-lùi bằng cử chỉ hệ thống (không qua
+    // SwipeBackHelper tự viết), màn hình tắt, ... - đằng nào cũng không ai nhìn trang này nữa,
+    // đóng băng luôn cho đỡ tốn CPU/GPU chạy ngầm. resume lại thì mở khoá bình thường.
+    override fun onPause() {
+        super.onPause()
+        freezeWebViews()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        unfreezeWebViews()
+    }
+
+    // Theo dõi cuộn trang (kr_content nằm trong fragment, nhưng ViewTreeObserver của root đã
+    // nhận được mọi sự kiện cuộn của toàn bộ cây view bên trong, không cần tìm đúng ScrollView).
+    // Cuộn NHIỀU WebView (html-file/html-url) cùng lúc rất dễ giật vì mỗi WebView đều phải vẽ
+    // lại/compositing theo từng frame cuộn - đóng băng (ẩn + pause) trong lúc đang cuộn, đợi hết
+    // rung (debounce 200ms không còn sự kiện cuộn mới) rồi mới mở khoá lại, giảm hẳn số WebView
+    // phải vẽ trong lúc tay đang lướt.
+    private fun setupWebViewScrollFreeze() {
+        val listener = ViewTreeObserver.OnScrollChangedListener {
+            if (scrollFreezeRunnable == null) {
+                freezeWebViews()
+            } else {
+                handler.removeCallbacks(scrollFreezeRunnable!!)
+            }
+            val runnable = Runnable {
+                scrollFreezeRunnable = null
+                unfreezeWebViews()
+            }
+            scrollFreezeRunnable = runnable
+            handler.postDelayed(runnable, 200)
+        }
+        scrollChangedListener = listener
+        binding.root.viewTreeObserver.addOnScrollChangedListener(listener)
+    }
+
+    private fun forEachWebView(view: View?, action: (WebView) -> Unit) {
+        when (view) {
+            is WebView -> action(view)
+            is ViewGroup -> for (i in 0 until view.childCount) forEachWebView(view.getChildAt(i), action)
+        }
+    }
+
+    // Ẩn (INVISIBLE - bỏ qua vẽ/compositing, tiết kiệm nhất) + onPause() từng WebView đang có
+    // trên trang, cộng thêm WebView.pauseTimers() (dừng JS/layout timer - CÓ HIỆU LỰC TOÀN APP
+    // chứ không riêng từng instance, chấp nhận được vì app chỉ có 1 màn hình hoạt động tại 1
+    // thời điểm). webViewFreezeCount đảm bảo chỉ áp dụng 1 lần dù nhiều lý do đóng băng trùng lúc.
+    private fun freezeWebViews() {
+        webViewFreezeCount++
+        if (webViewFreezeCount != 1 || !::binding.isInitialized) {
+            return
+        }
+        WebView.pauseTimers()
+        forEachWebView(binding.root) {
+            it.onPause()
+            it.visibility = View.INVISIBLE
+        }
+    }
+
+    private fun unfreezeWebViews() {
+        if (webViewFreezeCount == 0) {
+            return
+        }
+        webViewFreezeCount--
+        if (webViewFreezeCount != 0 || !::binding.isInitialized) {
+            return
+        }
+        WebView.resumeTimers()
+        forEachWebView(binding.root) {
+            it.visibility = View.VISIBLE
+            it.onResume()
+        }
+    }
+
     private fun triggerPageRecreate() {
         if (pendingSpinIcon != null) {
             return
@@ -1351,6 +1435,9 @@ class ActionPage : AppCompatActivity() {
         checkboxRefreshJob?.cancel()
         lockCheckJob?.cancel()
         handler.removeCallbacksAndMessages(null)
+        if (::binding.isInitialized) {
+            scrollChangedListener?.let { binding.root.viewTreeObserver.removeOnScrollChangedListener(it) }
+        }
         if (::swipeBackHelper.isInitialized) swipeBackHelper.release()
         // Chỉ recycle bitmap khi đóng hẳn, không recycle khi recreate (xoay/reload).
         if (isFinishing && ::binding.isInitialized) {
