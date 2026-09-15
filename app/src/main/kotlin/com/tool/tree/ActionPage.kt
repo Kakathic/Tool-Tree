@@ -516,7 +516,7 @@ class ActionPage : AppCompatActivity() {
         }
 
         when (menuOption.type) {
-            "refresh", "reload" -> spinFabThenRecreate()
+            "refresh", "reload" -> triggerPageRecreate()
             "restart" -> restartApp()
             "exit", "finish", "close" -> finish()
             "killapp" -> killApp()
@@ -541,7 +541,7 @@ class ActionPage : AppCompatActivity() {
     // shell đồng bộ đang chờ), cứ chạy tiếp ngầm và tranh giành 2 phiên shell dùng chung
     // (KeepShellPublic) với lượt tải mới -> lượt tải mới bị xếp hàng chờ, thanh tiến trình hiện
     // lâu hơn hẳn lần đầu. Bỏ qua lần bấm thứ 2 ở đây triệt tiêu tận gốc kịch bản đó.
-    private fun spinFabThenRecreate() {
+    private fun triggerPageRecreate() {
         if (pendingSpinIcon != null) {
             return
         }
@@ -640,7 +640,7 @@ class ActionPage : AppCompatActivity() {
                 val activityReplaced = menuOption.autoFinish || menuOption.reloadPage || menuOption.autoKill || menuOption.autoRestart
                 when {
                     menuOption.autoFinish -> finish()
-                    menuOption.reloadPage -> recreate()
+                    menuOption.reloadPage -> triggerPageRecreate()
                     menuOption.autoKill -> killApp()
                     menuOption.autoRestart -> restartApp()
                 }
@@ -986,7 +986,7 @@ class ActionPage : AppCompatActivity() {
             val activityReplaced = menuOption.autoFinish || menuOption.reloadPage || menuOption.autoKill || menuOption.autoRestart
             when {
                 menuOption.autoFinish -> finish()
-                menuOption.reloadPage -> recreate()
+                menuOption.reloadPage -> triggerPageRecreate()
                 menuOption.autoKill -> killApp()
                 menuOption.autoRestart -> restartApp()
             }
