@@ -55,6 +55,8 @@ class ActionPage : AppCompatActivity() {
         // Icon fab đang xoay chờ tải trang - static để sống qua recreate().
         // != null = đang xoay, reset về null khi xong/lỗi/đóng trang.
         private var pendingSpinIcon: android.graphics.drawable.Drawable? = null
+        // Xem scheduleCheckboxRefresh().
+        private const val CHECKBOX_REFRESH_DEBOUNCE_MS = 1000L
     }
 
     private val progressBarDialog by lazy { ProgressBarDialog(this) }
@@ -280,12 +282,28 @@ class ActionPage : AppCompatActivity() {
             startFabSpin()
         }
 
-        handler.post { refreshCheckboxMenuStates() }
+        handler.post { scheduleCheckboxRefresh() }
 
         return true
     }
 
     // Checkbox không còn là native MenuItem -> đọc trạng thái mỗi lần mở popup thay vì onPrepareOptionsMenu.
+    private val refreshCheckboxRunnable = Runnable { refreshCheckboxMenuStates() }
+
+    // Trì hoãn refreshCheckboxMenuStates() thay vì gọi ngay - nếu trong lúc chờ có 1 thao tác
+    // menu/checkbox MỚI xảy ra (xem onMenuItemClick()), lệnh post trễ này bị huỷ TRƯỚC KHI kịp
+    // chiếm lock của phiên shell dùng chung (KeepShell.doCmdSync - 1 ReentrantLock duy nhất,
+    // không ngắt được giữa chừng theo coroutine cancel). Trước đây gọi thẳng ngay sau mỗi lần
+    // tải trang (kể cả trang vừa được recreate() từ 1 checkbox khác) nên khi bấm tiếp 1 checkbox
+    // NGAY SAU ĐÓ (chưa kịp rời/vào lại trang để job cũ có thời gian chạy xong), lệnh của lần
+    // bấm sau luôn phải xếp hàng chờ job refresh của lần trước nhả lock - đúng kịch bản "bật
+    // nhanh, tắt chậm" đã gặp. Debounce ở đây triệt tiêu tận gốc: job refresh chỉ THỰC SỰ chạy
+    // khi người dùng dừng thao tác đủ lâu.
+    private fun scheduleCheckboxRefresh() {
+        handler.removeCallbacks(refreshCheckboxRunnable)
+        handler.postDelayed(refreshCheckboxRunnable, CHECKBOX_REFRESH_DEBOUNCE_MS)
+    }
+
     private fun refreshCheckboxMenuStates() {
         val config = currentPageConfig ?: return
 
@@ -507,6 +525,12 @@ class ActionPage : AppCompatActivity() {
 
     // anchor: neo cho popup spinner (null = toolbar). Từ FAB truyền actionPageFab vào.
     private fun onMenuItemClick(menuOption: PageMenuOption, anchor: View? = null) {
+        // Huỷ NGAY lệnh refresh trạng thái checkbox đang chờ trễ (nếu có) - xem
+        // scheduleCheckboxRefresh(). Phải huỷ ở đây, TRƯỚC KHI thao tác này kịp chạy script
+        // riêng của nó (cũng cần phiên shell dùng chung) - huỷ trễ hơn coi như vô tác dụng vì
+        // lúc đó job refresh có thể đã lỡ chiếm lock rồi.
+        handler.removeCallbacks(refreshCheckboxRunnable)
+
         if (menuOption.link.isNotEmpty() || menuOption.activity.isNotEmpty() ||
             menuOption.onlineHtmlPage.isNotEmpty() || menuOption.pageConfigSh.isNotEmpty() ||
             menuOption.pageConfigPath.isNotEmpty()
@@ -516,7 +540,7 @@ class ActionPage : AppCompatActivity() {
         }
 
         when (menuOption.type) {
-            "refresh", "reload" -> triggerPageRecreate()
+            "refresh", "reload" -> spinFabThenRecreate()
             "restart" -> restartApp()
             "exit", "finish", "close" -> finish()
             "killapp" -> killApp()
@@ -541,7 +565,7 @@ class ActionPage : AppCompatActivity() {
     // shell đồng bộ đang chờ), cứ chạy tiếp ngầm và tranh giành 2 phiên shell dùng chung
     // (KeepShellPublic) với lượt tải mới -> lượt tải mới bị xếp hàng chờ, thanh tiến trình hiện
     // lâu hơn hẳn lần đầu. Bỏ qua lần bấm thứ 2 ở đây triệt tiêu tận gốc kịch bản đó.
-    private fun triggerPageRecreate() {
+    private fun spinFabThenRecreate() {
         if (pendingSpinIcon != null) {
             return
         }
@@ -640,12 +664,12 @@ class ActionPage : AppCompatActivity() {
                 val activityReplaced = menuOption.autoFinish || menuOption.reloadPage || menuOption.autoKill || menuOption.autoRestart
                 when {
                     menuOption.autoFinish -> finish()
-                    menuOption.reloadPage -> triggerPageRecreate()
+                    menuOption.reloadPage -> recreate()
                     menuOption.autoKill -> killApp()
                     menuOption.autoRestart -> restartApp()
                 }
                 if (!activityReplaced && menuOption.type == "checkbox") {
-                    refreshCheckboxMenuStates()
+                    scheduleCheckboxRefresh()
                 }
             }
         }
@@ -827,7 +851,7 @@ class ActionPage : AppCompatActivity() {
                     menuOptions = null
                     headerActions = null
                     invalidateOptionsMenu()
-                    refreshCheckboxMenuStates()
+                    scheduleCheckboxRefresh()
                 } else {
                     handleLoadError(config)
                     hideLoadProgress()
@@ -986,12 +1010,12 @@ class ActionPage : AppCompatActivity() {
             val activityReplaced = menuOption.autoFinish || menuOption.reloadPage || menuOption.autoKill || menuOption.autoRestart
             when {
                 menuOption.autoFinish -> finish()
-                menuOption.reloadPage -> triggerPageRecreate()
+                menuOption.reloadPage -> recreate()
                 menuOption.autoKill -> killApp()
                 menuOption.autoRestart -> restartApp()
             }
             if (!activityReplaced && menuOption.type == "checkbox") {
-                refreshCheckboxMenuStates()
+                scheduleCheckboxRefresh()
             }
         }
 
