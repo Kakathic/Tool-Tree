@@ -41,15 +41,44 @@ object MarkdownInlineHelper {
                 continue
             }
 
-            // Code: `...` - không đệ quy vào bên trong (giữ nguyên literal)
-            if (c == '`') {
-                val end = raw.indexOf('`', i + 1)
+            // Code literal: ```...``` hoặc ```...|R``` - giữ NGUYÊN literal bên trong (không đệ quy),
+            // dùng khi cần hiện đúng ký tự markdown (vd ```test*```). Phải kiểm tra trước nhánh 1 dấu `.
+            if (c == '`' && i + 2 < n && raw[i + 1] == '`' && raw[i + 2] == '`') {
+                val end = raw.indexOf("```", i + 3)
                 if (end > i) {
-                    val inner = raw.substring(i + 1, end)
+                    var inner = raw.substring(i + 3, end)
+                    var radius = ""
+                    val barIndex = inner.lastIndexOf('|')
+                    if (barIndex >= 0 && inner.substring(barIndex + 1).toFloatOrNull() != null) {
+                        radius = inner.substring(barIndex + 1)
+                        inner = inner.substring(0, barIndex)
+                    }
                     val start = output.length
                     output.append(inner)
                     if (output.length > start) {
-                        spans.add(MarkdownSpanInfo(start, output.length, MarkdownSpanType.CODE))
+                        spans.add(MarkdownSpanInfo(start, output.length, MarkdownSpanType.CODE, radius))
+                    }
+                    i = end + 3
+                    continue
+                }
+            }
+
+            // Code: `...` hoặc `...|R` (R = bán kính bo góc dp riêng, vd `text|16`) - đệ quy vào
+            // bên trong để lồng được với BOLD/COLOR/LINK... (href mang giá trị R nếu có)
+            if (c == '`') {
+                val end = raw.indexOf('`', i + 1)
+                if (end > i) {
+                    var inner = raw.substring(i + 1, end)
+                    var radius = ""
+                    val barIndex = inner.lastIndexOf('|')
+                    if (barIndex >= 0 && inner.substring(barIndex + 1).toFloatOrNull() != null) {
+                        radius = inner.substring(barIndex + 1)
+                        inner = inner.substring(0, barIndex)
+                    }
+                    val start = output.length
+                    parseInto(inner, output, spans)
+                    if (output.length > start) {
+                        spans.add(MarkdownSpanInfo(start, output.length, MarkdownSpanType.CODE, radius))
                     }
                     i = end + 1
                     continue
