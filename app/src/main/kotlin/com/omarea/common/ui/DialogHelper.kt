@@ -462,7 +462,13 @@ class DialogHelper {
                 // wallpaper), không cần bitmap trung gian nên bỏ qua toàn bộ pipeline cache/screenshot
                 // cũ. isCrossWindowBlurEnabled = false khi thiết bị không hỗ trợ hoặc bị tắt (tiết kiệm
                 // pin, cài đặt "giảm trong suốt"...) - lúc đó rơi xuống pipeline chụp ảnh cũ như trước.
+                //
+                // setBackgroundBlurRadius thao tác trực tiếp lên DecorView nội bộ của PhoneWindow, và
+                // hàm này được gọi TRƯỚC dialog.show() nên DecorView chưa được tạo -> phải chủ động
+                // đọc "decorView" một lần để ép PhoneWindow tạo DecorView trước, tránh
+                // NullPointerException ("setBackgroundBlurRadius on a null object reference").
                 if (!disableBlurBg && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && activity.windowManager.isCrossWindowBlurEnabled) {
+                    decorView
                     val isDark = isNightMode(activity)
                     val tintColor = if (isDark) Color.argb(110, 0, 0, 0) else Color.argb(70, 255, 255, 255)
                     setBackgroundDrawable(tintColor.toDrawable())
