@@ -14,10 +14,15 @@ import androidx.core.graphics.drawable.toDrawable
  * ActionListFragment, DialogHelper.customDialog()) - các dialog không cancelable (không cho
  * đóng) thì không đụng tới, vẫn giữ nguyên window.setBackgroundDrawable() tĩnh như cũ.
  *
- * Vấn đề cũ: DialogHelper.setWindowBlurBg() gán ảnh blur làm background của WINDOW (decorView)
- * - một lớp tách biệt với contentView. DialogSwipeBackHelper chỉ translate contentView, nên khi
- * kéo, contentView trượt đi nhưng lớp blur phía dưới đứng yên tuyệt đối -> phần "lộ ra" luôn là
- * CHÍNH tấm ảnh blur tĩnh đó, không phải cửa sổ Activity thật.
+ * Từ khi có LIVE BLUR (API 31+, xem DialogHelper.canUseLiveBlur/setWindowBlurBg), class này CHỈ
+ * còn được gọi làm phương án dự phòng khi live blur KHÔNG khả dụng (API < 31, hoặc thiết bị/hệ
+ * thống không hỗ trợ - xem DialogFullScreen.bindSwipeToDismiss()) - live blur tự giải quyết đúng
+ * vấn đề mà class này sinh ra để vá (xem bên dưới) nên không cần bọc ảnh gì thêm khi có live blur.
+ *
+ * Vấn đề cũ (khi không có live blur): DialogHelper.setWindowBlurBg() gán ảnh blur làm background
+ * của WINDOW (decorView) - một lớp tách biệt với contentView. DialogSwipeBackHelper chỉ translate
+ * contentView, nên khi kéo, contentView trượt đi nhưng lớp blur phía dưới đứng yên tuyệt đối ->
+ * phần "lộ ra" luôn là CHÍNH tấm ảnh blur tĩnh đó, không phải cửa sổ Activity thật.
  *
  * Cách sửa ở đây: đưa ảnh blur vào LÀM 1 VIEW CON (ImageView) chung 1 FrameLayout với nội dung
  * dialog, thay vì đặt làm nền Window. Window được set nền TRONG SUỐT. Khi DialogSwipeBackHelper
