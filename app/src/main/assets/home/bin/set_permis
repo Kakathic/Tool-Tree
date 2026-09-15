@@ -78,7 +78,7 @@ done
 for path in "$@"; do
     [ -e "$path" ] || continue
     [ "${verbose:-0}" == 1 ] && echo "$path $perm $owner ${context}"
-    if [ "${recursive-0}" == 1 ] && [ -d "$path" ]; then
+    if [ "${recursive:-0}" == 1 ] && [ -d "$path" ]; then
         chmod -R "$perm" "$path"
         [ -n "$owner" ] && chown -R "$owner" "$path"
         [ -n "$context" ] && chcon -R "$context" "$path"
