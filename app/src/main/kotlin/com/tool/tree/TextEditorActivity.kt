@@ -3,12 +3,16 @@ package com.tool.tree
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.TextWatcher
+import android.text.style.BackgroundColorSpan
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.Menu
@@ -63,7 +67,7 @@ class TextEditorActivity : AppCompatActivity() {
         private const val EXTRA_VALUE = "value"
         private const val EXTRA_VALUE_SH = "value_sh"
 
-        // Giới hạn tối đa 10 lượt Undo/Redo, vượt quá sẽ tự động xoá lượt cũ nhất
+        // Giới hạn tối đa 20 lượt Undo/Redo, vượt quá sẽ tự động xoá lượt cũ nhất
         private const val UNDO_HISTORY_LIMIT = 20
         private const val REDO_HISTORY_LIMIT = 20
         private const val UNDO_DEBOUNCE_MS = 600L
@@ -215,6 +219,25 @@ class TextEditorActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    /**
+     * Hàm hỗ trợ bôi đen chữ (từ) nhưng bỏ qua khoảng trắng (whitespace).
+     * Có thể gọi hàm này khi bạn cần áp dụng BackgroundColorSpan cho văn bản mà không làm tô nền khoảng trống.
+     */
+    fun highlightTextWithoutSpaces(fullText: String, highlightColor: Int): SpannableString {
+        val spannable = SpannableString(fullText)
+        val regex = Regex("\\S+") // Khớp với các từ, bỏ qua khoảng trắng
+        
+        for (match in regex.findAll(fullText)) {
+            spannable.setSpan(
+                BackgroundColorSpan(highlightColor),
+                match.range.first,
+                match.range.last + 1,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+        return spannable
+    }
+
     private fun undoCacheFile(): File {
         val digest = MessageDigest.getInstance("SHA-256")
             .digest(absoluteFilePath.toByteArray(Charsets.UTF_8))
@@ -353,21 +376,17 @@ class TextEditorActivity : AppCompatActivity() {
                 val text = editText.text
 
                 if (layout != null && !text.isNullOrEmpty()) {
-                    // Quy đổi tọa độ Y tương ứng với EditText
                     val yInEditText = event.y + binding.editorLineNumbers.top - editText.top
                     val yInLayout = yInEditText - editText.paddingTop
                     val clampedY = yInLayout.coerceIn(0f, (layout.height - 1).toFloat())
 
-                    // Xác định dòng được nhấn
                     val line = layout.getLineForVertical(clampedY.toInt())
 
-                    // Tìm vị trí ký tự đầu dòng logic (hoạt động tốt cả khi bật Word Wrap)
                     var lineStart = layout.getLineStart(line)
                     while (lineStart > 0 && text[lineStart - 1] != '\n') {
                         lineStart--
                     }
 
-                    // Đặt con trỏ về đầu dòng
                     editText.setSelection(lineStart.coerceIn(0, text.length))
                 }
             }
@@ -393,7 +412,6 @@ class TextEditorActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {
                 if (isApplyingHistory) return
 
-                // 1. Quản lý Undo/Redo & Save Debounce
                 redoStack.clear()
                 editorHandler.removeCallbacks(commitPendingUndoRunnable)
                 editorHandler.postDelayed(commitPendingUndoRunnable, UNDO_DEBOUNCE_MS)
@@ -401,16 +419,13 @@ class TextEditorActivity : AppCompatActivity() {
                 refreshToolbarButtons()
                 scheduleUndoCachePersist()
 
-                // 2. Chỉ kiểm tra đổi Ngôn ngữ khi người dùng chỉnh sửa dòng đầu tiên (dòng chứa Shebang)
                 if (startChangeIndex < 100) {
                     refreshLanguageOverrideIfChanged()
                 }
 
-                // 3. Debounce việc tính toán Số dòng
                 editorHandler.removeCallbacks(updateLineNumbersRunnable)
                 editorHandler.postDelayed(updateLineNumbersRunnable, 80L)
 
-                // 4. Auto scroll theo con trỏ
                 binding.editorContent.post { scrollToCursor() }
             }
         })
@@ -662,7 +677,6 @@ class TextEditorActivity : AppCompatActivity() {
         binding.editorContent.post { scrollToCursor() }
     }
 
-    // Quản lý đồng bộ độ sáng/mờ và trạng thái active của cả 3 nút Toolbar (Undo, Redo, Save)
     private fun refreshToolbarButtons() {
         val canUndo = undoStack.isNotEmpty() || pendingUndoSnapshot != null
         val canRedo = redoStack.isNotEmpty()
@@ -685,8 +699,6 @@ class TextEditorActivity : AppCompatActivity() {
             } catch (_: Exception) {
             }
 
-            // Chỉ điền nội dung khởi tạo (value / value-sh) khi file CHƯA tồn tại.
-            // Nếu file đã tồn tại thì giữ nguyên, không điền/ghi đè gì thêm.
             if (newFile) {
                 val computedValue = if (initialValueSh.isNotEmpty()) {
                     try {
@@ -738,7 +750,6 @@ class TextEditorActivity : AppCompatActivity() {
         }
     }
 
-    // Áp dụng trạng thái chỉ đọc (readonly="true"): không cho phép gõ/sửa/dán nội dung
     private fun applyReadonlyState() {
         if (!readonlyMode) return
         binding.editorContent.keyListener = null
@@ -851,8 +862,6 @@ class TextEditorActivity : AppCompatActivity() {
             menu.findItem(R.id.editor_menu_redo)?.isVisible = false
         }
 
-        // Nút "⋮" tự dựng - cùng icon/kích thước/vị trí như overflow mặc định cũ,
-        // chỉ đổi nền popup bên trong sang kiểu bo góc giống ActionPage.
         val overflowItem = menu.add(Menu.NONE, Menu.NONE, 5, getString(R.string.kr_more_options))
         overflowItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         val overflowButton = OverflowMenuPopup.buildButton(this)
@@ -863,7 +872,6 @@ class TextEditorActivity : AppCompatActivity() {
         return true
     }
 
-    // Đọc lại trạng thái checkbox mới nhất mỗi lần mở popup.
     private fun showEditorOverflowPopup(anchor: View) {
         val rows = listOf(
             PopupMenuRow(
