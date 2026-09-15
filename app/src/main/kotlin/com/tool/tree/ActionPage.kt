@@ -629,13 +629,22 @@ class ActionPage : AppCompatActivity() {
                 if (!output.isNullOrBlank()) {
                     SilentShellOutputHandler(this@ActionPage).processOutput(output)
                 }
+                // Các nhánh dưới đây đều thay/hủy Activity hiện tại (recreate/finish/kill/
+                // restart) -> refreshCheckboxMenuStates() sau đó (đọc trạng thái TẤT CẢ
+                // checkbox trên menu qua phiên shell dùng chung) là việc làm THỪA (kết quả bị
+                // bỏ hẳn khi Activity mất), đồng thời còn CHIẾM LOCK của phiên shell dùng
+                // chung (KeepShell.doCmdSync - 1 ReentrantLock duy nhất, không huỷ được theo
+                // coroutine cancel) khiến thao tác TIẾP THEO của người dùng (vd bấm tắt ngay
+                // checkbox vừa bật) phải xếp hàng chờ dù không liên quan gì tới nó. Chỉ refresh
+                // khi Activity còn tồn tại nguyên vẹn (không có hành động chấm dứt nào ở trên).
+                val activityReplaced = menuOption.autoFinish || menuOption.reloadPage || menuOption.autoKill || menuOption.autoRestart
                 when {
                     menuOption.autoFinish -> finish()
                     menuOption.reloadPage -> recreate()
                     menuOption.autoKill -> killApp()
                     menuOption.autoRestart -> restartApp()
                 }
-                if (menuOption.type == "checkbox") {
+                if (!activityReplaced && menuOption.type == "checkbox") {
                     refreshCheckboxMenuStates()
                 }
             }
@@ -971,13 +980,17 @@ class ActionPage : AppCompatActivity() {
 
     private fun menuItemExecute(menuOption: PageMenuOption, params: HashMap<String, String>) {
         val onDismiss = Runnable {
+            // Xem giải thích activityReplaced ở menuItemExecuteSilent() - cùng lý do: các
+            // nhánh dưới đây thay/hủy Activity nên refresh trạng thái checkbox sau đó là thừa
+            // và chỉ chiếm lock của phiên shell dùng chung, làm chậm thao tác tiếp theo.
+            val activityReplaced = menuOption.autoFinish || menuOption.reloadPage || menuOption.autoKill || menuOption.autoRestart
             when {
                 menuOption.autoFinish -> finish()
                 menuOption.reloadPage -> recreate()
                 menuOption.autoKill -> killApp()
                 menuOption.autoRestart -> restartApp()
             }
-            if (menuOption.type == "checkbox") {
+            if (!activityReplaced && menuOption.type == "checkbox") {
                 refreshCheckboxMenuStates()
             }
         }

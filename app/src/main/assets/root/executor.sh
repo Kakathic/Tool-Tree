@@ -20,6 +20,7 @@ export BATTERY_CAPACITY="$({BATTERY_CAPACITY})"
 export SCREEN_HEIGHT="$({SCREEN_HEIGHT})"
 export SCREEN_WIDTH="$({SCREEN_WIDTH})"
 export BOOTLOADER_LOCKED="$({BOOTLOADER_LOCKED})"
+export BOOTLOADER_STATE="$({BOOTLOADER_STATE})"
 export VERIFIED_BOOT_STATE="$({VERIFIED_BOOT_STATE})"
 export CPU_ABI="$({CPU_ABI})"
 export LANGUAGE="$({LANGUAGE})"
@@ -33,6 +34,7 @@ export ANDROID_RELEASE="$({ANDROID_RELEASE})"
 export ANDROID_MODEL="$({ANDROID_MODEL})"
 export ANDROID_ID="$({ANDROID_ID})"
 export ROOT=$({ROOT_PERMISSION})
+export ROT=$({ROOT_NUMBER})
 export ARCH=$({ARCH})
 export HOME="$({TOOLKIT})"
 export TERMUX="$HOME/termux"
@@ -68,11 +70,9 @@ export PTAH="$(glog PTAH APK)"; # $APK/$PTAH
 # User Web
 export WEBS="User-Agent: Mozilla/5.0 (Linux; Android $ANDROID_RELEASE; $ANDROID_MODEL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
 
-if [ "$ROOT" == 'true' ]; then
-    export ROT=1
+if [ "$ROT" == 1 ]; then
     export LOT=0
     else
-    export ROT=0
     export LOT=1
     export xu=xu
     export text_root="ROOT"

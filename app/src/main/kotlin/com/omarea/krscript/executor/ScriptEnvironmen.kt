@@ -368,9 +368,15 @@ object ScriptEnvironmen {
 
             put("BATTERY_CAPACITY", getBatteryCapacity(context))
 
-            // Trạng thái bootloader và verified boot
-            put("BOOTLOADER_LOCKED", getSystemProperty("ro.boot.flash.locked"))
-            put("VERIFIED_BOOT_STATE", getSystemProperty("ro.boot.verifiedbootstate"))
+            // Trạng thái bootloader (số và dạng chữ)
+            val lockVal = getSystemProperty("ro.boot.flash.locked", "unknown")
+            put("BOOTLOADER_LOCKED", lockVal)
+            put("BOOTLOADER_STATE", when (lockVal) {
+                "1" -> "locked"
+                "0" -> "unlocked"
+                else -> "unknown"
+            })
+            put("VERIFIED_BOOT_STATE", getSystemProperty("ro.boot.verifiedbootstate", "unknown"))
 
             val fileOwner = FileOwner(context)
             put("ANDROID_UID", fileOwner.getUserId().toString())
@@ -383,6 +389,8 @@ object ScriptEnvironmen {
                 put("DARK_MODE", if (ThemeModeState.isDarkMode()) "true" else "false")
             } catch (ignored: Exception) {}
 
+            // Root dạng số 0 / 1
+            put("ROOT_NUMBER", if (rooted) "1" else "0")
             put("ROOT_PERMISSION", if (rooted) "true" else "false")
             put("SDCARD_PATH", Environment.getExternalStorageDirectory().absolutePath)
 
