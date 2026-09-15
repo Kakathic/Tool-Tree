@@ -2161,7 +2161,10 @@ Addon() {
       """
       '
     else
-      text_line='line = true'
+      text_line='[[page.rows]]
+      text = "'$description'"
+      margin-top = 4
+      line = true'
     fi
     
     # Danh sách Add-on
@@ -2176,10 +2179,7 @@ Addon() {
       '$shortcut_text'
       '$pagesh'
       '$beforesh'
-      [[page.rows]]
-      text = "'$description'"
-      margin-top = 4
-      '$text_line'
+      '"$text_line"'
       '"$hinde_add"'
       '"$delete_add"'
     '
