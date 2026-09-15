@@ -10,4 +10,5 @@
     <item name="kr_shortcut_icon" type="id" />
     <item name="kr_icon" type="id" />
     <item name="kr_param_value" type="id" />
+    <item name="kr_rows_refresh_runnable" type="id" />
 </resources>

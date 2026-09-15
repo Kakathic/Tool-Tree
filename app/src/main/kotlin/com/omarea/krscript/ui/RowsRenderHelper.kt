@@ -55,6 +55,10 @@ object RowsRenderHelper {
         if (rows.isEmpty()) {
             rowsView.visibility = View.GONE
             extraIconView?.visibility = View.GONE
+            // Rows rỗng (config vừa đổi/view bị tái sử dụng cho item khác): huỷ luôn lịch tự làm
+            // mới còn sót lại từ lần bind() trước, tránh vẽ nhầm cho item hiện tại.
+            (rowsView.getTag(R.id.kr_rows_refresh_runnable) as? Runnable)?.let { rowsView.removeCallbacks(it) }
+            rowsView.setTag(R.id.kr_rows_refresh_runnable, null)
             return
         }
 
@@ -65,6 +69,10 @@ object RowsRenderHelper {
         @Suppress("UNCHECKED_CAST")
         (rowsView.tag as? MutableList<Animatable>)?.forEach { it.stop() }
         val animatedRowIcons = ArrayList<Animatable>()
+        // Huỷ lịch tự làm mới (refresh-interval) đã đặt từ lần bind() TRƯỚC - tránh chồng nhiều
+        // runnable cùng lúc lên rowsView khi bind() được gọi lại (rebind list, bấm toggle...).
+        // Lịch mới (nếu rows lần này vẫn có refresh-interval) sẽ được đặt lại ở cuối hàm.
+        (rowsView.getTag(R.id.kr_rows_refresh_runnable) as? Runnable)?.let { rowsView.removeCallbacks(it) }
         // LinkMovementMethod mặc định: bấm bất kỳ đâu trên dòng (kể cả vùng trống do canh lề)
         // cũng tính là bấm trúng ClickableSpan của dòng đó. Dùng bản tuỳ chỉnh bên dưới để chỉ
         // nhận chạm trong vùng chữ/icon thực sự được vẽ.
@@ -311,17 +319,19 @@ object RowsRenderHelper {
             if (isToggle) {
                 spannableString.setSpan(object : ClickableSpan() {
                     override fun onClick(widget: View) {
-                        row.checked = !row.checked
-                        if (row.onChangeSh.isNotEmpty()) {
-                            val result = ScriptEnvironmen.executeResultRoot(context, row.onChangeSh, config, object : HashMap<String, String>() {
-                                init { put("state", if (row.checked) "1" else "0") }
-                            })
-                            if (result.trim().isNotEmpty()) {
-                                DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                        runRowAction(context, row.confirm) {
+                            row.checked = !row.checked
+                            if (row.onChangeSh.isNotEmpty()) {
+                                val result = ScriptEnvironmen.executeResultRoot(context, row.onChangeSh, config, object : HashMap<String, String>() {
+                                    init { put("state", if (row.checked) "1" else "0") }
+                                })
+                                if (result.trim().isNotEmpty()) {
+                                    DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                                }
                             }
+                            // Vẽ lại toàn bộ rows để cập nhật icon vừa đổi trạng thái
+                            bind(context, rowsView, extraIconView, rows, config, htmlContainer)
                         }
-                        // Vẽ lại toàn bộ rows để cập nhật icon vừa đổi trạng thái
-                        bind(context, rowsView, extraIconView, rows, config, htmlContainer)
                     }
 
                     override fun updateDrawState(ds: TextPaint) {
@@ -365,9 +375,11 @@ object RowsRenderHelper {
             if (!isToggle && row.onClickScript.isNotEmpty()) {
                 spannableString.setSpan(object : ClickableSpan() {
                     override fun onClick(widget: View) {
-                        val result = ScriptEnvironmen.executeResultRoot(context, row.onClickScript, config)
-                        if (result.trim().isNotEmpty()) {
-                            DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                        runRowAction(context, row.confirm) {
+                            val result = ScriptEnvironmen.executeResultRoot(context, row.onClickScript, config)
+                            if (result.trim().isNotEmpty()) {
+                                DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                            }
                         }
                     }
 
@@ -488,6 +500,37 @@ object RowsRenderHelper {
                     bind(context, rowsView, extraIconView, rows, config, htmlContainer)
                 }
             }
+        }
+
+        // "refresh-interval": nếu có ít nhất 1 row khai báo, tự lên lịch bind() lại sau đúng chu
+        // kỳ NGẮN NHẤT trong số các row (đơn vị giây) - lần bind() lại đó sẽ chạy lại toàn bộ
+        // text-sh/icon-sh/photo-sh (xem đầu hàm) rồi tự đặt lịch tiếp theo, tạo thành vòng lặp.
+        // Callback cũ đã được huỷ ở đầu hàm nên không lo chồng nhiều lịch cùng lúc.
+        val minRefreshInterval = rows.filter { it.refreshInterval > 0 }.minOfOrNull { it.refreshInterval }
+        if (minRefreshInterval != null) {
+            val refreshRunnable = Runnable {
+                // View đã bị gỡ khỏi cây layout (cuộn ra khỏi màn hình và bị tái sử dụng cho item
+                // khác) thì dừng hẳn, không tự vẽ lại nữa - tránh bind nhầm dữ liệu cho item khác
+                // đang dùng lại đúng rowsView này.
+                if (rowsView.isAttachedToWindow) {
+                    bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+                }
+            }
+            rowsView.setTag(R.id.kr_rows_refresh_runnable, refreshRunnable)
+            rowsView.postDelayed(refreshRunnable, minRefreshInterval * 1000L)
+        } else {
+            rowsView.setTag(R.id.kr_rows_refresh_runnable, null)
+        }
+    }
+
+    // Nếu row có khai báo "confirm": hiện hộp thoại xác nhận trước khi thực thi "action" (bấm
+    // "Huỷ" thì không làm gì cả, không thực thi action). Không khai báo (rỗng, mặc định) thì
+    // thực thi NGAY như hành vi cũ - không thay đổi cho row không dùng "confirm".
+    private fun runRowAction(context: Context, confirmMessage: String, action: () -> Unit) {
+        if (confirmMessage.isEmpty()) {
+            action()
+        } else {
+            DialogHelper.confirm(context, message = confirmMessage, onConfirm = Runnable { action() })
         }
     }
 

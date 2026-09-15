@@ -111,5 +111,14 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         internal var checked: Boolean = false
         // Script chạy khi người dùng bấm đổi trạng thái - nhận biến môi trường "state" = "1"/"0"
         internal var onChangeSh: String = ""
+
+        // Nội dung hộp thoại xác nhận, hiện ra TRƯỚC khi thực thi "onClickScript" hoặc đổi trạng
+        // thái toggle (onChangeSh) - bấm "Huỷ" thì không làm gì. "" (mặc định) = không cần xác
+        // nhận, thực thi ngay như cũ. Khai báo bằng "confirm" trong TOML.
+        internal var confirm: String = ""
+        // Chu kỳ (giây) tự động chạy lại text-sh/icon-sh/photo-sh và vẽ lại rows, KHÔNG cần đợi
+        // cả item được bind lại (list cuộn/rebind). 0 (mặc định) = không tự làm mới. Khai báo
+        // bằng "refresh-interval" trong TOML.
+        internal var refreshInterval: Int = 0
     }
 }
