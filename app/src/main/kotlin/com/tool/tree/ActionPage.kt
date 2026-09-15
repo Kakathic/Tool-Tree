@@ -107,8 +107,8 @@ class ActionPage : AppCompatActivity() {
     private var lockCheckStarted = false
 
     // Đếm số lý do đang yêu cầu "đóng băng" WebView (html-file/html-url) cùng lúc - cuộn trang,
-    // vuốt-lùi, activity pause, ... - chỉ thực sự ẩn/pause khi có ít nhất 1 lý do (0 -> 1), chỉ
-    // thực sự hiện/resume lại khi KHÔNG còn lý do nào (1 -> 0), tránh trường hợp 2 nguyên nhân
+    // vuốt-lùi, activity pause, ... - chỉ thực sự pause khi có ít nhất 1 lý do (0 -> 1), chỉ
+    // thực sự resume lại khi KHÔNG còn lý do nào (1 -> 0), tránh trường hợp 2 nguyên nhân
     // trùng lúc (vd đang cuộn thì cũng bắt đầu vuốt-lùi) làm "mở khoá" sớm khi 1 trong 2 kết thúc
     // trước.
     private var webViewFreezeCount = 0
@@ -590,7 +590,7 @@ class ActionPage : AppCompatActivity() {
     // Theo dõi cuộn trang (kr_content nằm trong fragment, nhưng ViewTreeObserver của root đã
     // nhận được mọi sự kiện cuộn của toàn bộ cây view bên trong, không cần tìm đúng ScrollView).
     // Cuộn NHIỀU WebView (html-file/html-url) cùng lúc rất dễ giật vì mỗi WebView đều phải vẽ
-    // lại/compositing theo từng frame cuộn - đóng băng (ẩn + pause) trong lúc đang cuộn, đợi hết
+    // lại/compositing theo từng frame cuộn - đóng băng (pause) trong lúc đang cuộn, đợi hết
     // rung (debounce 200ms không còn sự kiện cuộn mới) rồi mới mở khoá lại, giảm hẳn số WebView
     // phải vẽ trong lúc tay đang lướt.
     private fun setupWebViewScrollFreeze() {
@@ -618,12 +618,11 @@ class ActionPage : AppCompatActivity() {
         }
     }
 
-    // Ẩn (INVISIBLE - bỏ qua vẽ/compositing, tiết kiệm nhất) + onPause() + pauseTimers() từng
-    // WebView đang có trên trang. pauseTimers()/resumeTimers() tuy gọi trên 1 instance nhưng
-    // theo tài liệu Android có HIỆU LỰC TOÀN APP (dừng/chạy lại JS, layout, parsing timer của
-    // MỌI WebView, không riêng instance gọi) - gọi lặp lại trên nhiều instance vẫn an toàn, chỉ
-    // hơi thừa. Chấp nhận được vì app chỉ có 1 màn hình hoạt động tại 1 thời điểm.
-    // webViewFreezeCount đảm bảo chỉ áp dụng 1 lần dù nhiều lý do đóng băng trùng lúc.
+    // onPause() + pauseTimers() từng WebView đang có trên trang - giữ nguyên visibility (vẫn
+    // hiện frame cuối cùng đã vẽ, đứng yên) thay vì ẩn hẳn, để lúc vuốt/cuộn WebView trông như
+    // "đóng băng" chứ không "biến mất". pauseTimers()/resumeTimers() tuy gọi trên 1 instance
+    // nhưng theo tài liệu Android có hiệu lực toàn app; webViewFreezeCount đảm bảo chỉ áp dụng
+    // 1 lần dù nhiều lý do đóng băng trùng lúc.
     private fun freezeWebViews() {
         webViewFreezeCount++
         if (webViewFreezeCount != 1 || !::binding.isInitialized) {
@@ -632,7 +631,6 @@ class ActionPage : AppCompatActivity() {
         forEachWebView(binding.root) {
             it.onPause()
             it.pauseTimers()
-            it.visibility = View.INVISIBLE
         }
     }
 
@@ -645,7 +643,6 @@ class ActionPage : AppCompatActivity() {
             return
         }
         forEachWebView(binding.root) {
-            it.visibility = View.VISIBLE
             it.onResume()
             it.resumeTimers()
         }
