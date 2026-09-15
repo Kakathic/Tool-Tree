@@ -9,7 +9,6 @@ import android.os.Looper
 import android.text.method.LinkMovementMethod
 import android.view.View
 import android.widget.Button
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.text.HtmlCompat
@@ -52,13 +51,15 @@ class DialogAppUpdate(
     private var closingToInstall = false
 
     private lateinit var contentText: TextView
-    private lateinit var progressBar: ProgressBar
     private lateinit var btnCancel: Button
     private lateinit var btnConfirm: Button
     private lateinit var titleText: TextView
 
     private var activeDownload: DownloadState? = null
     private var readyToInstall = false
+    // Text gốc của btnConfirm TRƯỚC khi tải (vd "Cập nhật") - lưu lại để trả về đúng chữ này khi
+    // ấn hủy hoặc tải lỗi, vì lúc đang tải text bị thay bằng "%" tiến trình (xem bên dưới).
+    private var textBeforeDownload: CharSequence? = null
     private lateinit var destFile: File
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -69,7 +70,6 @@ class DialogAppUpdate(
 
         contentText = view.findViewById(R.id.update_content)
         contentText.movementMethod = LinkMovementMethod.getInstance()
-        progressBar = view.findViewById(R.id.update_progress)
         btnCancel = view.findViewById(R.id.btn_cancel)
         btnConfirm = view.findViewById(R.id.btn_confirm)
         titleText = view.findViewById(R.id.update_title)
@@ -106,10 +106,9 @@ class DialogAppUpdate(
             // phải tắt riêng bằng setSwipeBackRuntimeEnabled để không vuốt đóng được khi đang tải.
             setSwipeBackRuntimeEnabled(false)
 
-            btnConfirm.visibility = View.GONE
-            progressBar.isIndeterminate = false
-            progressBar.progress = 0
-            progressBar.visibility = View.VISIBLE
+            // Không ẩn nút xác nhận khi tải - giữ hiện, chỉ đổi TEXT của nó thành "%" tiến trình
+            // (xem onProgress bên dưới) thay cho thanh ProgressBar riêng đã bỏ.
+            textBeforeDownload = btnConfirm.text
 
             val state = DownloadState()
             activeDownload = state
@@ -123,7 +122,7 @@ class DialogAppUpdate(
                         if (total > 0) {
                             mainHandler.post {
                                 if (activeDownload === state) {
-                                    progressBar.progress = (downloaded * 100 / total).toInt()
+                                    btnConfirm.text = "${(downloaded * 100 / total).toInt()}%"
                                 }
                             }
                         }
@@ -141,8 +140,7 @@ class DialogAppUpdate(
                         if (isAdded) {
                             isCancelable = true
                             setSwipeBackRuntimeEnabled(true)
-                            progressBar.visibility = View.INVISIBLE
-                            btnConfirm.visibility = View.VISIBLE
+                            btnConfirm.text = textBeforeDownload
                         }
                         Toast.makeText(
                             activity,
@@ -169,8 +167,7 @@ class DialogAppUpdate(
                     state.connection?.disconnect()
                 } catch (_: Exception) {
                 }
-                progressBar.visibility = View.INVISIBLE
-                btnConfirm.visibility = View.VISIBLE
+                btnConfirm.text = textBeforeDownload
                 Toast.makeText(
                     activity,
                     activity.getString(R.string.app_update_download_cancelled),

@@ -38,18 +38,6 @@
             android:layout_marginBottom="16dp"
             android:orientation="vertical">
 
-            <ProgressBar
-                android:id="@+id/update_progress"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="4dp"
-                android:layout_marginBottom="8dp"
-                android:layout_marginHorizontal="16dp"
-                android:max="100"
-                android:progress="0"
-                android:indeterminate="true"
-                android:visibility="invisible" />
-
             <LinearLayout
                 android:id="@+id/update_btn_group"
                 android:layout_width="match_parent"
