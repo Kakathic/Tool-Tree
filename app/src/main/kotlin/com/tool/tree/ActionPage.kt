@@ -618,18 +618,20 @@ class ActionPage : AppCompatActivity() {
         }
     }
 
-    // Ẩn (INVISIBLE - bỏ qua vẽ/compositing, tiết kiệm nhất) + onPause() từng WebView đang có
-    // trên trang, cộng thêm WebView.pauseTimers() (dừng JS/layout timer - CÓ HIỆU LỰC TOÀN APP
-    // chứ không riêng từng instance, chấp nhận được vì app chỉ có 1 màn hình hoạt động tại 1
-    // thời điểm). webViewFreezeCount đảm bảo chỉ áp dụng 1 lần dù nhiều lý do đóng băng trùng lúc.
+    // Ẩn (INVISIBLE - bỏ qua vẽ/compositing, tiết kiệm nhất) + onPause() + pauseTimers() từng
+    // WebView đang có trên trang. pauseTimers()/resumeTimers() tuy gọi trên 1 instance nhưng
+    // theo tài liệu Android có HIỆU LỰC TOÀN APP (dừng/chạy lại JS, layout, parsing timer của
+    // MỌI WebView, không riêng instance gọi) - gọi lặp lại trên nhiều instance vẫn an toàn, chỉ
+    // hơi thừa. Chấp nhận được vì app chỉ có 1 màn hình hoạt động tại 1 thời điểm.
+    // webViewFreezeCount đảm bảo chỉ áp dụng 1 lần dù nhiều lý do đóng băng trùng lúc.
     private fun freezeWebViews() {
         webViewFreezeCount++
         if (webViewFreezeCount != 1 || !::binding.isInitialized) {
             return
         }
-        WebView.pauseTimers()
         forEachWebView(binding.root) {
             it.onPause()
+            it.pauseTimers()
             it.visibility = View.INVISIBLE
         }
     }
@@ -642,13 +644,22 @@ class ActionPage : AppCompatActivity() {
         if (webViewFreezeCount != 0 || !::binding.isInitialized) {
             return
         }
-        WebView.resumeTimers()
         forEachWebView(binding.root) {
             it.visibility = View.VISIBLE
             it.onResume()
+            it.resumeTimers()
         }
     }
 
+    // Lưu icon fab hiện tại rồi recreate() - instance mới sẽ tiếp tục xoay icon đó.
+    // Chặn bấm chồng: pendingSpinIcon != null nghĩa là 1 lượt refresh trước đó CHƯA XONG (còn
+    // đang xoay - reset về null khi tải xong/lỗi/đóng trang, xem stopFabSpinIfPending()/
+    // handleLoadError()/onDestroy()). Nếu bấm Refresh lần nữa lúc này mà vẫn recreate(), lượt
+    // tải cũ (PageConfigReader/PageConfigSh, các script -sh của từng row) bị bỏ rơi giữa chừng
+    // nhưng KHÔNG dừng lại (coroutine cancel chỉ mang tính hợp tác, không ngắt được các lệnh
+    // shell đồng bộ đang chờ), cứ chạy tiếp ngầm và tranh giành 2 phiên shell dùng chung
+    // (KeepShellPublic) với lượt tải mới -> lượt tải mới bị xếp hàng chờ, thanh tiến trình hiện
+    // lâu hơn hẳn lần đầu. Bỏ qua lần bấm thứ 2 ở đây triệt tiêu tận gốc kịch bản đó.
     private fun triggerPageRecreate() {
         if (pendingSpinIcon != null) {
             return
