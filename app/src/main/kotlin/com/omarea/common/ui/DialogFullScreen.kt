@@ -26,23 +26,9 @@ open class DialogFullScreen(private val layout: Int, private val darkMode: Boole
     companion object {
         fun bindSwipeToDismiss(activity: Activity, dialog: Dialog, onBack: () -> Unit): SwipeToDismissBinding? {
             val window = dialog.window ?: return null
-
-            // Ưu tiên LIVE BLUR (API 31+, xem DialogHelper.canUseLiveBlur/setWindowBlurBg): nền
-            // mờ là thuộc tính của WINDOW nên không "trượt" theo cùng content khi vuốt, NHƯNG vì
-            // hệ thống tự blur đúng nội dung THẬT đang hiển thị theo thời gian thực (không phải
-            // ảnh chụp tĩnh), phần lộ ra lúc vuốt luôn hiện đúng nội dung hiện tại - không bị lỗi
-            // "lộ ra ảnh blur tĩnh cũ" mà DialogSwipeBackBlurWrapper (bọc ảnh chụp + blur bằng
-            // RenderScript, dùng cho API < 31 hoặc khi live blur không khả dụng) từng phải giải
-            // quyết bằng cách bọc ảnh vào 1 view con trượt cùng content. Vì vậy không cần bọc gì
-            // thêm, chỉ cần bind thẳng content view làm swipeTarget.
-            val swipeTarget = if (DialogHelper.canUseLiveBlur(activity)) {
+            val swipeTarget = DialogSwipeBackBlurWrapper.wrap(activity, window) ?: run {
                 DialogHelper.setWindowBlurBg(window, activity)
                 window.findViewById(android.R.id.content)
-            } else {
-                DialogSwipeBackBlurWrapper.wrap(activity, window) ?: run {
-                    DialogHelper.setWindowBlurBg(window, activity)
-                    window.findViewById(android.R.id.content)
-                }
             }
             val helper = DialogSwipeBackHelper.bind(dialog, swipeTarget) { onBack() } ?: return null
             return SwipeToDismissBinding(helper)

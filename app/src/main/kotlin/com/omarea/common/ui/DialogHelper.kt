@@ -25,7 +25,6 @@ import androidx.core.graphics.drawable.toDrawable
 import com.tool.tree.ThemeModeState
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
-import android.os.Build
 
 class DialogHelper {
     class DialogButton(val text: String, val onClick: Runnable? = null, val dismiss: Boolean = true)
@@ -79,17 +78,6 @@ class DialogHelper {
     companion object {
         // 是否禁用模糊背景
         var disableBlurBg = false
-
-        /**
-         * Có dùng được LIVE BLUR thật của hệ thống (Window.setBackgroundBlurRadius, API 31+)
-         * cho activity này không - dùng chung bởi setWindowBlurBg() và
-         * DialogFullScreen.bindSwipeToDismiss() để tránh 2 nơi tự kiểm tra điều kiện khác nhau
-         * (từng gây lỗi live blur chạy chồng lên ảnh blur tĩnh của DialogSwipeBackBlurWrapper).
-         */
-        @JvmStatic
-        fun canUseLiveBlur(activity: Activity): Boolean {
-            return !disableBlurBg && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && activity.windowManager.isCrossWindowBlurEnabled
-        }
 
         fun animDialog(dialog: AlertDialog?): DialogWrap? {
             if (dialog != null && !dialog.isShowing) {
@@ -467,26 +455,6 @@ class DialogHelper {
         
         fun setWindowBlurBg(window: Window, activity: Activity) {
             window.run {
-                // Android 12+ (API 31): dùng LIVE BLUR thật của hệ thống (Window.setBackgroundBlurRadius)
-                // thay vì chụp screenshot rồi blur bằng RenderScript như pipeline cũ bên dưới. Hệ thống
-                // tự blur đúng nội dung đang hiển thị PHÍA SAU dialog theo thời gian thực (kể cả live
-                // wallpaper), không cần bitmap trung gian nên bỏ qua toàn bộ pipeline cache/screenshot
-                // cũ. canUseLiveBlur() = false khi thiết bị không hỗ trợ hoặc bị tắt (tiết kiệm pin,
-                // cài đặt "giảm trong suốt"...) - lúc đó rơi xuống pipeline chụp ảnh cũ như trước.
-                //
-                // setBackgroundBlurRadius thao tác trực tiếp lên DecorView nội bộ của PhoneWindow, và
-                // hàm này được gọi TRƯỚC dialog.show() nên DecorView chưa được tạo -> phải chủ động
-                // đọc "decorView" một lần để ép PhoneWindow tạo DecorView trước, tránh
-                // NullPointerException ("setBackgroundBlurRadius on a null object reference").
-                if (canUseLiveBlur(activity)) {
-                    decorView
-                    val isDark = isNightMode(activity)
-                    val tintColor = if (isDark) Color.argb(110, 0, 0, 0) else Color.argb(70, 255, 255, 255)
-                    setBackgroundDrawable(tintColor.toDrawable())
-                    setBackgroundBlurRadius(48)
-                    return
-                }
-
                 // 2 khái niệm KHÁC NHAU, trước đây bị gộp chung vào 1 biến "wallpaperMode" nên
                 // đọc sai tín hiệu cho trường hợp ảnh nền TĨNH (file tùy chỉnh / wallpaper hệ
                 // thống tĩnh):
