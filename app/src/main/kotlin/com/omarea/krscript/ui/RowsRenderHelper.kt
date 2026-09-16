@@ -34,8 +34,6 @@ import com.omarea.krscript.model.NodeInfoBase
 import com.omarea.krscript.model.TextNode
 import com.tool.tree.R
 
-// Tách logic hiển thị "rows" (dùng chung bởi item text và item action, ...) ra một nơi duy nhất,
-// tránh lặp lại code giữa ListItemText và ListItemAction.
 object RowsRenderHelper {
 
     fun bind(
@@ -49,70 +47,35 @@ object RowsRenderHelper {
         if (rowsView == null) {
             return
         }
-        // Khung html (nếu có) độc lập với text/photo bên dưới - render trước để row.html-file/
-        // html-url vẫn hiện được kể cả khi rows rỗng (không có text nào khác).
         RowsHtmlRenderHelper.bind(context, htmlContainer, rows, config)
         if (rows.isEmpty()) {
             rowsView.visibility = View.GONE
             extraIconView?.visibility = View.GONE
-            // Rows rỗng (config vừa đổi/view bị tái sử dụng cho item khác): huỷ luôn lịch tự làm
-            // mới còn sót lại từ lần bind() trước, tránh vẽ nhầm cho item hiện tại.
             (rowsView.getTag(R.id.kr_rows_refresh_runnable) as? Runnable)?.let { rowsView.removeCallbacks(it) }
             rowsView.setTag(R.id.kr_rows_refresh_runnable, null)
             return
         }
 
         rowsView.text = ""
-        // Dừng các icon inline đang chạy hoạt ảnh từ LẦN bind() TRƯỚC (nếu có) - tránh chồng
-        // callback/schedule cũ lên rowsView khi RecyclerView rebind lại (xem cuối hàm: lưu lại
-        // danh sách animation mới vào rowsView.tag để lần bind() kế tiếp dừng đúng các drawable này).
         @Suppress("UNCHECKED_CAST")
         (rowsView.tag as? MutableList<Animatable>)?.forEach { it.stop() }
         val animatedRowIcons = ArrayList<Animatable>()
-        // Huỷ lịch tự làm mới (refresh-interval) đã đặt từ lần bind() TRƯỚC - tránh chồng nhiều
-        // runnable cùng lúc lên rowsView khi bind() được gọi lại (rebind list, bấm toggle...).
-        // Lịch mới (nếu rows lần này vẫn có refresh-interval) sẽ được đặt lại ở cuối hàm.
         (rowsView.getTag(R.id.kr_rows_refresh_runnable) as? Runnable)?.let { rowsView.removeCallbacks(it) }
-        // LinkMovementMethod mặc định: bấm bất kỳ đâu trên dòng (kể cả vùng trống do canh lề)
-        // cũng tính là bấm trúng ClickableSpan của dòng đó. Dùng bản tuỳ chỉnh bên dưới để chỉ
-        // nhận chạm trong vùng chữ/icon thực sự được vẽ.
-        rowsView.movementMethod = BoundedLinkMovementMethod.instance // 不设置 ClickableSpan 点击没反应
+        rowsView.movementMethod = BoundedLinkMovementMethod.instance
         rowsView.visibility = View.VISIBLE
 
-        // BoundedLinkMovementMethod chỉ "nuốt" (consume) sự kiện chạm khi trúng đúng ClickableSpan
-        // (link/toggle/activity/script). Chạm vào phần còn lại của rowsView (chữ thường không có
-        // action, hoặc khoảng trống) sẽ KHÔNG được tiêu thụ -> Android coi như rowsView "không xử
-        // lý" và để sự kiện rơi xuống cho View cha (thường là toàn bộ item list) xử lý click, gây
-        // bấm nhầm vào action/kênh của item. Đặt rowsView clickable + listener rỗng để nó tự nuốt
-        // hết các lượt chạm còn lại, không rơi xuống item cha.
         rowsView.isClickable = true
         rowsView.setOnClickListener { }
 
-        // bind() thường được gọi lúc RecyclerView/ListView bind item - tức TRƯỚC khi view được
-        // đo/layout lần đầu (rowsView.width == 0 với view mới inflate). computeGroupLeadingMargin
-        // cần width thật để tính margin nên sẽ không tính được ở lần bind đầu này -> đánh dấu để
-        // sau khi layout xong thì bind lại 1 lần, tránh rơi về AlignmentSpan cũ (dính lại bug cũ).
         var needsRebindAfterLayout = false
         var hasContent = false
 
-        // Row liền TRƯỚC có marginBottom > 0 hay không - dùng để ép row hiện tại phải bắt đầu
-        // nhóm/dòng mới (xuống dòng), vì marginBottom luôn có nghĩa là "kết thúc dòng ở đây, các
-        // row sau phải xuống dòng mới" dù bản thân row đó không khai báo breakRow.
         var previousHadMarginBottom = false
 
-        // ----- Gom nhóm nhiều row liền kề vào chung 1 paragraph (1 dòng) - mặc định các row nối
-        // chung dòng với nhau (giống hành vi gốc của "break": không breakRow thì không xuống
-        // dòng), chỉ tách nhóm mới khi row.breakRow/row.line = true. Cả nhóm dùng chung 1 canh lề
-        // (lấy từ row đầu tiên trong nhóm có khai báo align) và margin tính theo TỔNG bề rộng của
-        // cả nhóm - để nhiều row (ví dụ 2 toggle) canh lề chung như 1 khối, thay vì canh lề riêng
-        // từng row (dễ đè/lệch nhau, xem lịch sử: "Vấn đề 2" trong cuộc trò chuyện).
-        // groupStart: vị trí bắt đầu (trong rowsView) của nhóm hiện tại.
         var groupStart = 0
         var groupAlign = Layout.Alignment.ALIGN_NORMAL
         var groupContentWidth = 0f
 
-        // Áp canh lề (margin) cho toàn bộ nhóm [groupStart, groupEnd) - gọi khi 1 nhóm đã đầy đủ
-        // (trước khi bắt đầu nhóm mới, và sau khi vòng lặp kết thúc cho nhóm cuối cùng).
         fun finalizeGroup(groupEnd: Int) {
             if (groupEnd <= groupStart || groupAlign == Layout.Alignment.ALIGN_NORMAL) {
                 return
@@ -131,12 +94,6 @@ object RowsRenderHelper {
             }
         }
 
-        // Gộp toàn bộ shell "sh" của mọi row trong LẦN bind() NÀY thành 1 lệnh
-        // executeMultipleResultRoot() duy nhất (text-sh + icon-sh + photo-sh cùng lúc), thay vì
-        // nhiều lệnh executeResultRoot() riêng lẻ tuần tự. bind() có thể chạy lại nhiều lần
-        // (RecyclerView cuộn/rebind, sau khi bấm 1 toggle khiến toàn bộ rows được vẽ lại) nên việc
-        // gộp này áp dụng lại mỗi lần bind(), không chỉ 1 lần lúc load trang - do đó icon-sh/photo-sh
-        // của row KHÔNG cache như icon-sh/photo-sh cấp node (chạy lại mỗi lần rows được vẽ lại).
         val dynamicTextResults: Map<Int, String>
         val dynamicIconResults: Map<Int, String>
         val dynamicPhotoResults: Map<Int, String>
@@ -166,20 +123,12 @@ object RowsRenderHelper {
             dynamicPhotoResults = photoMap
         }
 
-        // Quét trước: cặp row (trái align=normal, phải align=opposite) join CHUNG 1 dòng theo
-        // đúng luật join mặc định (không line/marginTop/breakRow, row trái không marginBottom) -
-        // và row phải chỉ chứa TEXT THUẦN (không icon/toggle/link/markdown) sẽ được ghim sát mép
-        // phải thật sự (xem PinnedRightTextSpan) thay vì cascade align cả nhóm như cũ. Không thoả
-        // điều kiện nào thì giữ nguyên hành vi cascade cũ, không đổi gì.
         val pinnedRightIndices = computePinnedRightIndices(rows)
 
         for ((rowIndex, row) in rows.withIndex()) {
             val isToggle = row.toggle == "checkbox" || row.toggle == "switch"
             val isPinnedRight = pinnedRightIndices.contains(rowIndex)
 
-            // row.line = true: chèn 1 dòng chỉ chứa đường kẻ mảnh (full chiều rộng) NGAY TRƯỚC
-            // nội dung row này, dùng để tách riêng phần rows (hoặc tách nhóm row) trực quan.
-            // Luôn kết thúc nhóm hiện tại (không cho join qua đường kẻ).
             if (row.line) {
                 finalizeGroup(rowsView.length())
                 if (hasContent) {
@@ -195,16 +144,6 @@ object RowsRenderHelper {
                 groupContentWidth = 0f
             }
 
-            // Chỉ bắt đầu nhóm/dòng mới khi row.breakRow (hoặc row.line, hoặc row.marginTop, hoặc
-            // row liền trước có marginBottom, hoặc chưa có nội dung nào trước đó) - mặc định
-            // (breakRow=false) luôn nối chung dòng với row liền trước, đúng ngữ nghĩa gốc của
-            // "break". Row có align != normal mà không muốn bị row kế tiếp nối chung dòng thì tự
-            // khai báo break = true cho row kế tiếp đó.
-            //
-            // Lưu ý: marginTop/marginBottom KHÔNG còn tạo dòng trống riêng (xem TopExtraSpaceSpan/
-            // BottomExtraSpaceSpan bên dưới) - chúng chỉ ép row phải nằm trên 1 paragraph riêng để
-            // phần không gian nới thêm (ascent/descent) chỉ ảnh hưởng đúng dòng của row đó, không
-            // lem sang các row khác đang chung dòng.
             val startsNewGroup = row.line || row.marginTop > 0 || row.breakRow || previousHadMarginBottom || !hasContent
             if (startsNewGroup) {
                 finalizeGroup(rowsView.length())
@@ -215,25 +154,16 @@ object RowsRenderHelper {
                 groupAlign = row.align
                 groupContentWidth = 0f
             } else if (!isPinnedRight) {
-                // Nối vào nhóm (dòng) hiện tại - lấy canh lề từ row đầu tiên trong nhóm có khai báo align.
                 if (groupAlign == Layout.Alignment.ALIGN_NORMAL && row.align != Layout.Alignment.ALIGN_NORMAL) {
                     groupAlign = row.align
                 }
                 if (groupContentWidth > 0f) {
-                    // Khoảng cách nhỏ giữa 2 row chung dòng cho dễ nhìn, không dính sát nhau
                     val gap = " "
                     rowsView.append(gap)
                     groupContentWidth += rowsView.paint.measureText(gap)
                 }
             }
 
-            // Row phải ghim-phải (xem pinnedRightIndices): chèn 1 SpacerSpan (ReplacementSpan)
-            // chiếm đúng phần bề rộng còn trống giữa nội dung bên trái và label bên phải, rồi nối
-            // label thật ngay sau - ReplacementSpan BẮT BUỘC phải được đo/vẽ khi layout dòng (khác
-            // LeadingMarginSpan cũ PinnedRightTextSpan, không đảm bảo drawLeadingMargin() luôn được
-            // gọi khi getLeadingMargin()=0 - đây chính là nguyên nhân label bị mất hẳn trên máy
-            // thật). KHÔNG đi qua toàn bộ pipeline icon/toggle/markdown bên dưới. Ép row kế tiếp
-            // (nếu có) phải xuống dòng mới (previousHadMarginBottom) để tránh đè lên vùng vừa ghim phải.
             if (isPinnedRight) {
                 val pinnedLabel = if (row.dynamicTextSh.isNotEmpty()) (dynamicTextResults[rowIndex] ?: "") else row.text
                 if (pinnedLabel.isNotEmpty()) {
@@ -247,9 +177,6 @@ object RowsRenderHelper {
                     val pinnedSpannable: SpannableString
                     val labelStart: Int
                     if (availableWidth <= 0) {
-                        // Chưa đo được bề rộng view thật (lần bind đầu tiên, trước khi layout) -
-                        // hiển thị tạm nối liền (không ghim phải được) và yêu cầu bind lại ngay sau
-                        // khi layout xong (needsRebindAfterLayout) để lần sau tính đúng khoảng đệm.
                         needsRebindAfterLayout = true
                         pinnedSpannable = SpannableString(pinnedLabel)
                         labelStart = 0
@@ -285,17 +212,12 @@ object RowsRenderHelper {
                 continue
             }
             previousHadMarginBottom = false
-            // Nếu có khai báo "sh": lấy nội dung dòng từ kết quả shell đã gộp sẵn ở trên
             val rawLabel = if (row.dynamicTextSh.isNotEmpty()) {
                 dynamicTextResults[rowIndex] ?: ""
             } else {
                 row.text
             }
 
-            // Nếu row khai báo "markdown"/"md": diễn giải rawLabel như Markdown inline (bold/
-            // italic/strikethrough/code/link) - label dùng cho phần hiển thị bên dưới là text
-            // THUẦN (đã bỏ ký hiệu), các span tương ứng được lưu lại để áp vào đúng vị trí sau
-            // khi đã ghép thêm placeholder icon/toggle (xem markdownSpans + markdownOffset bên dưới).
             val markdownSpans: List<MarkdownInlineHelper.MarkdownSpanInfo>
             val label: String
             if (row.markdown && rawLabel.isNotEmpty()) {
@@ -307,22 +229,11 @@ object RowsRenderHelper {
                 markdownSpans = emptyList()
             }
 
-            // Row có "icon" (ảnh nhỏ inline, khác "photo" khối riêng): nạp ảnh trước để biết có
-            // ghép được hay không, quyết định cách dựng "text" bên dưới. Nếu có "icon-sh": dùng
-            // kết quả shell đã gộp sẵn ở trên (dynamicIconResults) thay cho row.icon tĩnh.
             val effectiveIcon = if (row.iconSh.isNotEmpty()) (dynamicIconResults[rowIndex] ?: "") else row.icon
             val hasIcon = !isToggle && effectiveIcon.isNotEmpty()
             val rowIconDrawableRaw = if (hasIcon) buildRowIconDrawable(context, effectiveIcon, row, config) else null
             val showIcon = rowIconDrawableRaw != null
 
-            // Row dạng toggle (checkbox/switch nhỏ): chèn thêm 1 ký tự placeholder ở cuối (sau
-            // label) để vẽ icon lên bằng ImageSpan - icon nằm ngay sau chữ. Muốn canh trái/giữa/
-            // phải cho cả label+icon thì dùng field "align" ("normal"/"center"/"opposite") và
-            // "break" giống hệt row text thường - không có cơ chế canh riêng cho icon. Toàn bộ
-            // (label + icon) dùng chung 1 ClickableSpan để bấm đâu cũng đổi trạng thái được,
-            // không dùng link/activity/script click thường.
-            // Row có "icon": chèn 1 ký tự placeholder TRƯỚC hoặc SAU label (tuỳ "icon-position")
-            // để vẽ ảnh nhỏ ghép ngay cạnh chữ, cùng cơ chế ImageSpan như toggle ở trên.
             val text = when {
                 isToggle -> "$label \u2002 "
                 showIcon && row.iconPosition == "before" -> "\u2002 $label"
@@ -331,14 +242,10 @@ object RowsRenderHelper {
             }
             val length = text.length
             val spannableString = SpannableString(text)
-            // Vị trí bắt đầu của "label" bên trong "text" - chỉ lệch khi có icon chèn TRƯỚC
-            // label ("\u2002 " dài 2 ký tự); dùng để bù toạ độ khi áp markdownSpans (toạ độ
-            // markdownSpans được tính theo "label" thuần, không tính icon/toggle).
             val markdownOffset = if (showIcon && row.iconPosition == "before") 2 else 0
 
             var toggleDrawable: Drawable? = null
             if (isToggle) {
-                // Vị trí ký tự placeholder: ngay trước khoảng trắng cuối cùng vừa thêm
                 val iconIndex = length - 2
                 toggleDrawable = buildToggleDrawable(context, row)
                 spannableString.setSpan(VerticalCenterImageSpan(toggleDrawable), iconIndex, iconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -395,7 +302,6 @@ object RowsRenderHelper {
                                     DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
                                 }
                             }
-                            // Vẽ lại toàn bộ rows để cập nhật icon vừa đổi trạng thái
                             bind(context, rowsView, extraIconView, rows, config, htmlContainer)
                         }
                     }
@@ -419,7 +325,7 @@ object RowsRenderHelper {
                     }
 
                     override fun updateDrawState(ds: TextPaint) {
-                        ds.color = if (row.color != 1) ds.linkColor else row.color
+                        ds.color = if (row.color != -1) row.color else ds.linkColor
                         ds.isUnderlineText = row.underline
                     }
                 }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -432,7 +338,7 @@ object RowsRenderHelper {
                     }
 
                     override fun updateDrawState(ds: TextPaint) {
-                        ds.color = if (row.color != 1) ds.linkColor else row.color
+                        ds.color = if (row.color != -1) row.color else ds.linkColor
                         ds.isUnderlineText = row.underline
                     }
                 }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -450,7 +356,7 @@ object RowsRenderHelper {
                     }
 
                     override fun updateDrawState(ds: TextPaint) {
-                        ds.color = if (row.color != 1) ds.linkColor else row.color
+                        ds.color = if (row.color != -1) row.color else ds.linkColor
                         ds.isUnderlineText = row.underline
                     }
                 }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -484,13 +390,6 @@ object RowsRenderHelper {
                 spannableString.setSpan(LineHeightMultiplierSpan(row.lineHeight), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
 
-            // marginTop/marginBottom: KHÔNG tạo dòng trống riêng nữa (cách cũ gây thừa 1 dòng khi
-            // row là row cuối cùng, vì "\n" ở cuối cùng của toàn bộ rowsView.text khiến TextView tự
-            // vẽ thêm 1 dòng trống với chiều cao mặc định, không phải chiều cao marginBottom mong
-            // muốn). Thay vào đó, nới trực tiếp ascent (phía trên) / descent (phía dưới) của ĐÚNG
-            // dòng chứa row này bằng LineHeightSpan - không cần thêm ký tự "\n" hay " " nào.
-            // Với marginTop: row đã được ép startsNewGroup = true ở trên nên chắc chắn nằm ở đầu 1
-            // paragraph riêng, nới ascent chỉ ảnh hưởng đúng dòng đó.
             if (row.marginTop > 0) {
                 spannableString.setSpan(TopExtraSpaceSpan(dpToPx(context, row.marginTop)), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
@@ -498,31 +397,17 @@ object RowsRenderHelper {
                 spannableString.setSpan(BottomExtraSpaceSpan(dpToPx(context, row.marginBottom)), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
 
-            // Đặt TextAlphaSpan SAU CÙNG (trong số các span ảnh hưởng màu/vẽ) để nó luôn được áp
-            // dụng cuối, chỉ ghi đè kênh alpha của màu đã được set bởi ForegroundColorSpan/màu mặc
-            // định - không đụng tới RGB, tránh mất màu chữ khi kết hợp cả color lẫn alpha.
             if (row.alpha in 0f..1f) {
                 spannableString.setSpan(TextAlphaSpan(row.alpha), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
 
-            // Áp các span Markdown inline (bold/italic/strikethrough/code/link) đã parse từ
-            // rawLabel ở trên - đặt SAU các span cấp-row (bold/color/...) để markdown có thể
-            // ghi đè/bổ sung style cho đúng phần chữ tương ứng, toạ độ được bù thêm
-            // markdownOffset (icon chèn trước label nếu có).
             if (markdownSpans.isNotEmpty()) {
                 applyMarkdownSpans(context, spannableString, markdownSpans, markdownOffset, length)
             }
 
-            // Canh lề (trái/giữa/phải) giờ được áp dụng 1 LẦN cho cả NHÓM (finalizeGroup), không
-            // set riêng cho từng row nữa - để hỗ trợ nhiều row chung 1 dòng và tránh lỗi
-            // AlignmentSpan+ClickableSpan+ImageSpan (xem finalizeGroup/computeGroupLeadingMargin).
             rowsView.append(spannableString)
             hasContent = true
 
-            // Cộng dồn bề rộng đã render của row này vào nhóm, dùng để tính margin canh lề chung.
-            // Phải đo bằng paint mô phỏng ĐÚNG style thật của row (bold/italic/monospace/size) -
-            // không phải paint gốc của rowsView - vì chữ đậm/monospace thường RỘNG HƠN chữ thường,
-            // đo thiếu sẽ khiến margin tính thừa, đẩy cả nhóm lệch quá đà (có thể tràn ra ngoài lề).
             val measurePaint = measurePaintForRow(rowsView.paint, row)
             groupContentWidth += when {
                 isToggle && toggleDrawable != null -> {
@@ -540,20 +425,13 @@ object RowsRenderHelper {
                 else -> measurePaint.measureText(text)
             }
 
-            // Row này có marginBottom - ghi nhớ để ép row KẾ TIẾP phải bắt đầu nhóm/dòng mới (xem
-            // "previousHadMarginBottom" ở đầu vòng lặp), vì phần descent vừa nới thêm chỉ có ý
-            // nghĩa "khoảng trống bên dưới dòng này" khi dòng này thực sự kết thúc tại đây.
             if (row.marginBottom > 0) {
                 previousHadMarginBottom = true
             }
         }
 
-        // Áp canh lề cho nhóm CUỐI CÙNG (vòng lặp không có row nào phía sau để kích hoạt finalizeGroup).
         finalizeGroup(rowsView.length())
 
-        // Chặn crash Editor.touchPositionIsInSelection khi long-press vào vùng text
-        // (đã bỏ tính năng copy nội dung khi long-press). Tắt luôn haptic feedback vì Android tự
-        // rung khi performLongClick() được gọi, bất kể listener trả về true hay false.
         rowsView.isHapticFeedbackEnabled = false
         rowsView.setOnLongClickListener {
             true
@@ -568,16 +446,9 @@ object RowsRenderHelper {
             }
         }
 
-        // "refresh-interval": nếu có ít nhất 1 row khai báo, tự lên lịch bind() lại sau đúng chu
-        // kỳ NGẮN NHẤT trong số các row (đơn vị giây) - lần bind() lại đó sẽ chạy lại toàn bộ
-        // text-sh/icon-sh/photo-sh (xem đầu hàm) rồi tự đặt lịch tiếp theo, tạo thành vòng lặp.
-        // Callback cũ đã được huỷ ở đầu hàm nên không lo chồng nhiều lịch cùng lúc.
         val minRefreshInterval = rows.filter { it.refreshInterval > 0 }.minOfOrNull { it.refreshInterval }
         if (minRefreshInterval != null) {
             val refreshRunnable = Runnable {
-                // View đã bị gỡ khỏi cây layout (cuộn ra khỏi màn hình và bị tái sử dụng cho item
-                // khác) thì dừng hẳn, không tự vẽ lại nữa - tránh bind nhầm dữ liệu cho item khác
-                // đang dùng lại đúng rowsView này.
                 if (rowsView.isAttachedToWindow) {
                     bind(context, rowsView, extraIconView, rows, config, htmlContainer)
                 }
@@ -589,9 +460,6 @@ object RowsRenderHelper {
         }
     }
 
-    // Nếu row có khai báo "confirm": hiện hộp thoại xác nhận trước khi thực thi "action" (bấm
-    // "Huỷ" thì không làm gì cả, không thực thi action). Không khai báo (rỗng, mặc định) thì
-    // thực thi NGAY như hành vi cũ - không thay đổi cho row không dùng "confirm".
     private fun runRowAction(context: Context, confirmMessage: String, action: () -> Unit) {
         if (confirmMessage.isEmpty()) {
             action()
@@ -600,17 +468,12 @@ object RowsRenderHelper {
         }
     }
 
-    // Quét trước toàn bộ rows tìm cặp (trái align=normal, phải align=opposite) đủ điều kiện ghim
-    // phải thật sự trên cùng 1 dòng (xem PinnedRightTextSpan) - trả về tập index của các row PHẢI
-    // (bên trái không cần đánh dấu gì, vẫn render như bình thường). Row phải chỉ hỗ trợ TEXT
-    // THUẦN ở bản đầu (không icon/toggle/link/activity/onClickScript/markdown/underline/
-    // strikethrough) - không thoả bất kỳ điều kiện nào thì bỏ qua, giữ nguyên hành vi cascade cũ.
     private fun computePinnedRightIndices(rows: List<TextNode.TextRow>): Set<Int> {
         val result = HashSet<Int>()
         for (i in 0 until rows.size - 1) {
             val left = rows[i]
             val right = rows[i + 1]
-            val joinsDefault = !right.line && right.marginTop <= 0 && !right.breakRow && left.marginBottom <= 0
+            val joinsDefault = !right.line && right.marginTop <= 0 && !right.breakRow && left.marginBottom <= 0 && !result.contains(i)
             if (left.align == Layout.Alignment.ALIGN_NORMAL &&
                 right.align == Layout.Alignment.ALIGN_OPPOSITE &&
                 joinsDefault &&
@@ -632,41 +495,24 @@ object RowsRenderHelper {
         return result
     }
 
-    // Chiếm đúng 1 khoảng trống (spacerWidth, đơn vị px) ngay trong dòng - dùng để đẩy label bên
-    // phải (row align="opposite" join chung dòng với row align="normal" đứng trước, xem
-    // computePinnedRightIndices) ra sát mép phải, tạo hiệu ứng "1 bên trái, 1 bên phải" THẬT trên
-    // cùng 1 hàng - khác AlignmentSpan cũ (finalizeGroup) chỉ canh được CẢ dòng theo 1 kiểu duy
-    // nhất. Dùng ReplacementSpan (không phải LeadingMarginSpan như PinnedRightTextSpan cũ) vì
-    // getSize()/draw() của ReplacementSpan BẮT BUỘC phải được gọi khi đo/vẽ dòng (tham gia layout
-    // ký tự thật) - còn drawLeadingMargin() của LeadingMarginSpan không đảm bảo luôn được gọi khi
-    // getLeadingMargin()=0, đây chính là lý do label bị mất hẳn trên máy thật trước đây.
     private class SpacerSpan(private val width: Int) : ReplacementSpan() {
         override fun getSize(paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int = width
 
         override fun draw(canvas: Canvas, text: CharSequence?, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
-            // Không vẽ gì - chỉ chiếm chỗ để đẩy phần text theo sau ra đúng vị trí.
         }
     }
 
-    // Vẽ 1 đường kẻ mảnh ngang qua hết chiều rộng dòng - dùng cho row có "line = true". Cài qua
-    // LeadingMarginSpan (không chiếm margin - getLeadingMargin trả 0) để không ảnh hưởng layout
-    // ký tự, chỉ tận dụng callback drawLeadingMargin để vẽ tự do trên toàn bộ chiều rộng layout.
     private class DividerSpan(private val context: Context) : LeadingMarginSpan {
         override fun getLeadingMargin(first: Boolean): Int = 0
 
         override fun drawLeadingMargin(canvas: Canvas, paint: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int, text: CharSequence?, start: Int, end: Int, first: Boolean, layout: Layout?) {
             val strokePaint = BlurEngine.getStrokePaint(context)
-            // Đẩy đường kẻ xuống thấp hơn giữa dòng 1 chút (30% chiều cao dòng thay vì 50%/giữa)
             val y = top + (bottom - top) * 0.65f
             val right = (layout?.width ?: 0).toFloat()
             canvas.drawLine(0f, y, right, y, strokePaint)
         }
     }
 
-    // Span điều chỉnh khoảng cách giữa các chữ (đơn vị em, giống thuộc tính letterSpacing của
-    // TextView/Paint). Kế thừa MetricAffectingSpan (thay vì CharacterStyle) vì letter-spacing làm
-    // thay đổi bề rộng chữ - cần override cả updateMeasureState để layout đo đúng, không chỉ
-    // updateDrawState (chỉ ảnh hưởng lúc vẽ).
     private class LetterSpacingSpan(private val spacing: Float) : MetricAffectingSpan() {
         override fun updateDrawState(tp: TextPaint) {
             tp.letterSpacing = spacing
@@ -677,10 +523,6 @@ object RowsRenderHelper {
         }
     }
 
-    // Span tạo 1 dòng TRỐNG có chiều cao cố định (px) - không vẽ nội dung gì, chỉ ép chiều cao
-    // dòng chứa ký tự placeholder (" ") đúng bằng heightPx. Không còn dùng cho marginTop/
-    // marginBottom (xem TopExtraSpaceSpan/BottomExtraSpaceSpan) nhưng vẫn giữ lại vì có thể còn
-    // được dùng ở nơi khác cần 1 dòng trống độc lập thực sự.
     private class VerticalSpaceSpan(private val heightPx: Int) : LineHeightSpan {
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
             fm.ascent = -heightPx
@@ -690,10 +532,6 @@ object RowsRenderHelper {
         }
     }
 
-    // Nới thêm khoảng trống PHÍA TRÊN (ascent) của đúng dòng/paragraph mà span này được gắn vào -
-    // dùng cho row.marginTop. KHÔNG tạo dòng trống riêng: chỉ "kéo" ascent của dòng chứa nội dung
-    // thật lên cao hơn, nên không có ký tự nào bị thêm vào text, tránh hẳn lỗi thừa dòng khi row
-    // này là row cuối cùng của rowsView.
     private class TopExtraSpaceSpan(private val extraPx: Int) : LineHeightSpan {
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
             fm.ascent -= extraPx
@@ -701,9 +539,6 @@ object RowsRenderHelper {
         }
     }
 
-    // Nới thêm khoảng trống PHÍA DƯỚI (descent) của đúng dòng/paragraph mà span này được gắn vào -
-    // dùng cho row.marginBottom. Cùng nguyên lý với TopExtraSpaceSpan: không thêm ký tự/dòng nào,
-    // chỉ "đẩy" descent của dòng hiện tại xuống thấp hơn.
     private class BottomExtraSpaceSpan(private val extraPx: Int) : LineHeightSpan {
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
             fm.descent += extraPx
@@ -711,9 +546,6 @@ object RowsRenderHelper {
         }
     }
 
-    // Span điều chỉnh chiều cao dòng (line height) theo hệ số nhân so với chiều cao dòng mặc định
-    // của font hiện tại. Cộng thêm/bớt đều 2 bên (trên ascent/top và dưới descent/bottom) để chữ
-    // vẫn nằm giữa dòng theo chiều dọc, không bị dồn lệch lên/xuống khi tăng/giảm độ cao.
     private class LineHeightMultiplierSpan(private val multiplier: Float) : LineHeightSpan {
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
             val original = fm.descent - fm.ascent
@@ -729,9 +561,6 @@ object RowsRenderHelper {
         }
     }
 
-    // Span điều chỉnh độ trong suốt (alpha) của chữ mà KHÔNG đổi màu (RGB) - chỉ ghi đè kênh alpha
-    // của paint tại thời điểm vẽ. Nhờ được add SAU CÙNG (xem nơi gọi setSpan), span này chạy sau
-    // ForegroundColorSpan nên alpha luôn được áp cuối cùng, không bị màu chữ override lại thành 255.
     private class TextAlphaSpan(alpha: Float) : CharacterStyle() {
         private val alphaValue = (alpha.coerceIn(0f, 1f) * 255).toInt()
 
@@ -740,11 +569,6 @@ object RowsRenderHelper {
         }
     }
 
-    // LinkMovementMethod gốc quy đổi toạ độ chạm sang offset ký tự gần nhất trong dòng
-    // (Layout.getOffsetForHorizontal) mà không kiểm tra toạ độ đó có thực sự nằm trong vùng chữ
-    // được vẽ hay không - nên bấm vào khoảng trống do canh lề/margin cũng bị tính là bấm trúng
-    // ClickableSpan của dòng đó. Lớp này chặn trước: nếu x nằm ngoài [getLineLeft, getLineRight]
-    // của dòng (tức ngoài vùng chữ/icon thực tế), bỏ qua sự kiện thay vì chuyển cho lớp cha xử lý.
     private class BoundedLinkMovementMethod : LinkMovementMethod() {
         companion object {
             val instance = BoundedLinkMovementMethod()
@@ -766,10 +590,6 @@ object RowsRenderHelper {
         }
     }
 
-    // ImageSpan.ALIGN_CENTER canh icon theo giữa cả dòng (line box), nhưng dòng có thể cao hơn
-    // vùng chữ thật (do line spacing, dấu, ...) khiến icon bị lệch trên/dưới so với text xung
-    // quanh. Class này canh icon theo giữa vùng chữ thật (ascent/descent của Paint tại vị trí
-    // vẽ) để icon luôn thẳng hàng với text.
     private class VerticalCenterImageSpan(drawable: Drawable) : ImageSpan(drawable) {
         override fun draw(canvas: Canvas, text: CharSequence?, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
             val b = drawable
@@ -785,10 +605,6 @@ object RowsRenderHelper {
         }
     }
 
-    // Tạo 1 TextPaint mô phỏng đúng style thật mà row sẽ được vẽ (bold/italic/monospace/size/
-    // letter-spacing) - dùng để ĐO bề rộng cho chính xác (xem nơi gọi). Giống hệt cách các Span
-    // tương ứng (StyleSpan/TypefaceSpan/AbsoluteSizeSpan/LetterSpacingSpan) áp dụng lúc vẽ, chỉ
-    // khác là áp trực tiếp lên paint thay vì gắn Span, để đo mà không cần vẽ thật.
     private fun measurePaintForRow(basePaint: TextPaint, row: TextNode.TextRow): TextPaint {
         if (!row.bold && !row.italic && !row.monospace && row.size == -1 && row.letterSpacing == 0f) {
             return basePaint
@@ -806,7 +622,6 @@ object RowsRenderHelper {
             paint.typeface = Typeface.create(paint.typeface, Typeface.ITALIC)
         }
         if (row.size != -1) {
-            // AbsoluteSizeSpan(row.size, true) - true nghĩa là đơn vị dp, cần nhân density giống hệt
             paint.textSize = row.size * paint.density
         }
         if (row.letterSpacing != 0f) {
@@ -815,10 +630,6 @@ object RowsRenderHelper {
         return paint
     }
 
-    // Tính margin trái để "canh giữa/phải" thủ công cho cả 1 NHÓM row (thay AlignmentSpan - xem lý
-    // do ở finalizeGroup). contentWidth là tổng bề rộng đã đo (label + icon nếu có + khoảng cách
-    // giữa các row cùng dòng) của TOÀN BỘ row trong nhóm, do nơi gọi cộng dồn sẵn.
-    // Trả về null nếu chưa đo được (view chưa layout xong) để nơi gọi fallback về AlignmentSpan cũ.
     private fun computeGroupLeadingMargin(rowsView: TextView, align: Layout.Alignment, contentWidth: Float): Int? {
         val available = rowsView.width - rowsView.paddingLeft - rowsView.paddingRight
         if (available <= 0) {
@@ -835,10 +646,6 @@ object RowsRenderHelper {
         }
     }
 
-    // Áp các span Markdown inline (bold/italic/strikethrough/code/link) đã parse sẵn (xem
-    // MarkdownInlineHelper) vào spannableString. Toạ độ trong "spans" được tính theo label THUẦN
-    // (không tính icon/toggle) nên cần cộng "offset" (vị trí label bắt đầu trong text hiển thị)
-    // và luôn kẹp trong [0, maxLength) để không tràn qua ký tự placeholder icon/toggle phía sau.
     private fun applyMarkdownSpans(
         context: Context,
         spannableString: SpannableString,
@@ -860,7 +667,6 @@ object RowsRenderHelper {
                 MarkdownInlineHelper.MarkdownSpanType.STRIKETHROUGH ->
                     spannableString.setSpan(StrikethroughSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 MarkdownInlineHelper.MarkdownSpanType.CODE -> {
-                    // Nền bo góc quanh chữ - href mang bán kính bo góc riêng (dp) nếu có, không thì dùng mặc định
                     val customRadius = info.href.toFloatOrNull()
                     val codeSpan = if (customRadius != null) MarkdownCodeSpan(context, cornerRadiusDp = customRadius) else MarkdownCodeSpan(context)
                     spannableString.setSpan(codeSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -893,9 +699,6 @@ object RowsRenderHelper {
         }
     }
 
-    // Parse giá trị màu trong markdown {text}(color) - hỗ trợ tên màu (red, green...) và hex
-    // (#RRGGBB/#AARRGGBB) qua Color.parseColor(); trả về null nếu giá trị không hợp lệ (bỏ qua
-    // span màu, giữ nguyên chữ không tô màu thay vì crash).
     private fun parseMarkdownColor(value: String): Int? {
         return try {
             Color.parseColor(value)
@@ -904,16 +707,10 @@ object RowsRenderHelper {
         }
     }
 
-    // Chuyển đổi dp sang px theo density hiện tại của thiết bị, dùng cho marginTop/marginBottom.
     private fun dpToPx(context: Context, dp: Int): Int {
         return (dp * context.resources.displayMetrics.density).toInt()
     }
 
-    // Nạp + dựng drawable cho icon inline cạnh chữ của row - kích thước lấy theo "icon-size" (dp)
-    // nếu có khai báo, ngược lại mặc định 18dp (xấp xỉ 1 dòng chữ cỡ vừa). iconPath truyền tường
-    // minh (thay vì đọc row.icon trực tiếp) để hỗ trợ cả icon tĩnh và icon-sh động; các field gif
-    // (iconGifNum/iconGifTime) vẫn đọc từ row vì -sh chỉ thay path, không thay cấu hình gif.
-    // Trả về null nếu không có icon hoặc không nạp được ảnh (ảnh lỗi/không tồn tại).
     private fun buildRowIconDrawable(context: Context, iconPath: String, row: TextNode.TextRow, config: NodeInfoBase): Drawable? {
         val loaded = IconPathAnalysis().loadRowIcon(context, iconPath, config.pageConfigDir, row.iconGifNum, row.iconGifTime, row.iconRealGif) ?: return null
         val density = context.resources.displayMetrics.density
@@ -924,8 +721,6 @@ object RowsRenderHelper {
         return drawable
     }
 
-    // Tạo drawable icon cho row dạng toggle (checkbox/switch), kích thước nhỏ vừa 1 dòng text,
-    // chọn ảnh theo loại (checkbox/switch) và trạng thái hiện tại (checked/unchecked).
     private fun buildToggleDrawable(context: Context, row: TextNode.TextRow): Drawable {
         val density = context.resources.displayMetrics.density
         val drawableRes = if (row.toggle == "switch") {
@@ -947,8 +742,6 @@ object RowsRenderHelper {
         return drawable
     }
 
-    // Nếu photoRealSize = true: hiển thị ảnh trong khung vuông (chiều rộng = chiều cao = chiều ngang màn hình),
-    // căn giữa theo chiều ngang; ảnh sẽ được scale vừa vặn trong khung bằng CENTER_INSIDE mà không bị méo.
     private fun applyPhotoRealSize(imageView: ImageView, realSize: Boolean) {
         val params = imageView.layoutParams ?: return
         val maxSize = imageView.context.resources.displayMetrics.widthPixels
