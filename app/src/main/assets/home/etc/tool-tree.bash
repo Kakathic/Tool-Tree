@@ -253,7 +253,7 @@ More() {
   [[page]]
   title = "'$editor_apk'"
   desc = "'$setting_text_4'"
-  icon = "'$urlicon'/project.png"
+  icon = "'$urlicon'/project2.png"
   config-sh = "'$ETC'/tool-tree.bash Project 2"
 
   [[group]]
