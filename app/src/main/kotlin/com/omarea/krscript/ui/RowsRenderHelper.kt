@@ -166,8 +166,16 @@ object RowsRenderHelper {
             dynamicPhotoResults = photoMap
         }
 
+        // Quét trước: cặp row (trái align=normal, phải align=opposite) join CHUNG 1 dòng theo
+        // đúng luật join mặc định (không line/marginTop/breakRow, row trái không marginBottom) -
+        // và row phải chỉ chứa TEXT THUẦN (không icon/toggle/link/markdown) sẽ được ghim sát mép
+        // phải thật sự (xem PinnedRightTextSpan) thay vì cascade align cả nhóm như cũ. Không thoả
+        // điều kiện nào thì giữ nguyên hành vi cascade cũ, không đổi gì.
+        val pinnedRightIndices = computePinnedRightIndices(rows)
+
         for ((rowIndex, row) in rows.withIndex()) {
             val isToggle = row.toggle == "checkbox" || row.toggle == "switch"
+            val isPinnedRight = pinnedRightIndices.contains(rowIndex)
 
             // row.line = true: chèn 1 dòng chỉ chứa đường kẻ mảnh (full chiều rộng) NGAY TRƯỚC
             // nội dung row này, dùng để tách riêng phần rows (hoặc tách nhóm row) trực quan.
@@ -206,7 +214,7 @@ object RowsRenderHelper {
                 groupStart = rowsView.length()
                 groupAlign = row.align
                 groupContentWidth = 0f
-            } else {
+            } else if (!isPinnedRight) {
                 // Nối vào nhóm (dòng) hiện tại - lấy canh lề từ row đầu tiên trong nhóm có khai báo align.
                 if (groupAlign == Layout.Alignment.ALIGN_NORMAL && row.align != Layout.Alignment.ALIGN_NORMAL) {
                     groupAlign = row.align
@@ -217,6 +225,28 @@ object RowsRenderHelper {
                     rowsView.append(gap)
                     groupContentWidth += rowsView.paint.measureText(gap)
                 }
+            }
+
+            // Row phải ghim-phải (xem pinnedRightIndices): chèn 1 placeholder gần như không chiếm
+            // bề rộng, tự vẽ text ghim sát mép phải dòng qua PinnedRightTextSpan - KHÔNG đi qua
+            // toàn bộ pipeline icon/toggle/markdown bên dưới. Ép row kế tiếp (nếu có) phải xuống
+            // dòng mới (previousHadMarginBottom) để tránh đè lên vùng vừa ghim phải.
+            if (isPinnedRight) {
+                val pinnedLabel = if (row.dynamicTextSh.isNotEmpty()) (dynamicTextResults[rowIndex] ?: "") else row.text
+                if (pinnedLabel.isNotEmpty()) {
+                    val pinnedPaint = measurePaintForRow(rowsView.paint, row)
+                    var pinnedColor = if (row.color != -1) row.color else rowsView.currentTextColor
+                    if (row.alpha in 0f..1f) {
+                        val a = (row.alpha * 255).toInt().coerceIn(0, 255)
+                        pinnedColor = (pinnedColor and 0x00FFFFFF) or (a shl 24)
+                    }
+                    val placeholder = SpannableString("\u200B")
+                    placeholder.setSpan(PinnedRightTextSpan(pinnedLabel, pinnedPaint, pinnedColor), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    rowsView.append(placeholder)
+                    hasContent = true
+                }
+                previousHadMarginBottom = true
+                continue
             }
             previousHadMarginBottom = false
             // Nếu có khai báo "sh": lấy nội dung dòng từ kết quả shell đã gộp sẵn ở trên
@@ -531,6 +561,60 @@ object RowsRenderHelper {
             action()
         } else {
             DialogHelper.confirm(context, message = confirmMessage, onConfirm = Runnable { action() })
+        }
+    }
+
+    // Quét trước toàn bộ rows tìm cặp (trái align=normal, phải align=opposite) đủ điều kiện ghim
+    // phải thật sự trên cùng 1 dòng (xem PinnedRightTextSpan) - trả về tập index của các row PHẢI
+    // (bên trái không cần đánh dấu gì, vẫn render như bình thường). Row phải chỉ hỗ trợ TEXT
+    // THUẦN ở bản đầu (không icon/toggle/link/activity/onClickScript/markdown/underline/
+    // strikethrough) - không thoả bất kỳ điều kiện nào thì bỏ qua, giữ nguyên hành vi cascade cũ.
+    private fun computePinnedRightIndices(rows: List<TextNode.TextRow>): Set<Int> {
+        val result = HashSet<Int>()
+        for (i in 0 until rows.size - 1) {
+            val left = rows[i]
+            val right = rows[i + 1]
+            val joinsDefault = !right.line && right.marginTop <= 0 && !right.breakRow && left.marginBottom <= 0
+            if (left.align == Layout.Alignment.ALIGN_NORMAL &&
+                right.align == Layout.Alignment.ALIGN_OPPOSITE &&
+                joinsDefault &&
+                right.toggle.isEmpty() &&
+                right.icon.isEmpty() &&
+                right.iconSh.isEmpty() &&
+                right.photo.isEmpty() &&
+                right.photoSh.isEmpty() &&
+                !right.markdown &&
+                right.link.isEmpty() &&
+                right.activity.isEmpty() &&
+                right.onClickScript.isEmpty() &&
+                !right.underline &&
+                !right.strikethrough
+            ) {
+                result.add(i + 1)
+            }
+        }
+        return result
+    }
+
+    // Ghim 1 đoạn text SÁT MÉP PHẢI của dòng hiện tại - dùng cho row align="opposite" join chung
+    // dòng với row align="normal" đứng trước (xem computePinnedRightIndices), để có hiệu ứng
+    // "1 bên trái, 1 bên phải" THẬT trên cùng 1 hàng - khác AlignmentSpan/LeadingMarginSpan cũ
+    // (finalizeGroup) chỉ canh được CẢ dòng theo 1 kiểu duy nhất. Cài qua LeadingMarginSpan (giống
+    // DividerSpan bên dưới) vì callback drawLeadingMargin() cho biết layout.width THẬT lúc vẽ, tự
+    // tính toạ độ x ghim phải mà không cần biết trước bề rộng view lúc bind().
+    private class PinnedRightTextSpan(
+        private val text: String,
+        private val paint: TextPaint,
+        private val color: Int
+    ) : LeadingMarginSpan {
+        override fun getLeadingMargin(first: Boolean): Int = 0
+
+        override fun drawLeadingMargin(canvas: Canvas, p: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int, text_: CharSequence?, start: Int, end: Int, first: Boolean, layout: Layout?) {
+            val width = layout?.width ?: return
+            val drawPaint = TextPaint(paint)
+            drawPaint.color = color
+            val textWidth = drawPaint.measureText(text)
+            canvas.drawText(text, width - textWidth, baseline.toFloat(), drawPaint)
         }
     }
 
