@@ -1007,7 +1007,7 @@ italic = true
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Default</th><th>Description</th></tr>
 <tr><td class="field-name">text</td><td>-</td><td class="field-type">String</td><td>""</td><td>Text content</td></tr>
 <tr><td class="field-name">sh</td><td>text-sh</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that produces text dynamically</td></tr>
-<tr><td class="field-name">markdown</td><td>md</td><td class="field-type">Bool</td><td>false</td><td>true: interpret <code>text</code> (or the <code>sh</code> result) as inline Markdown - bold/italic/strikethrough/code/link - before displaying</td></tr>
+<tr><td class="field-name">markdown</td><td>md</td><td class="field-type">Bool</td><td>false</td><td>true: interpret <code>text</code> (or the <code>sh</code> result) as inline Markdown - bold/italic/strikethrough/color/link/code - before displaying, see <a href="#text-rows">section 12.4</a> for the full syntax</td></tr>
 <tr><td class="field-name">bold</td><td>b</td><td class="field-type">Bool</td><td>false</td><td>Bold</td></tr>
 <tr><td class="field-name">italic</td><td>i</td><td class="field-type">Bool</td><td>false</td><td>Italic</td></tr>
 <tr><td class="field-name">underline</td><td>u</td><td class="field-type">Bool</td><td>false</td><td>Underline</td></tr>
@@ -1023,7 +1023,7 @@ italic = true
 <tr><td class="field-name">size</td><td>-</td><td class="field-type">Int</td><td>-1</td><td>Font size (sp)</td></tr>
 <tr><td class="field-name">break</td><td>-</td><td class="field-type">Bool</td><td>false</td><td>Line break after this row</td></tr>
 <tr><td class="field-name">line</td><td>divider, separator</td><td class="field-type">Bool</td><td>false</td><td>Draw a horizontal divider before this row</td></tr>
-<tr><td class="field-name">align</td><td>-</td><td class="field-type">String</td><td>normal</td><td><code>normal</code>/<code>center</code>/<code>opposite</code></td></tr>
+<tr><td class="field-name">align</td><td>-</td><td class="field-type">String</td><td>normal</td><td><code>normal</code>/<code>center</code>/<code>opposite</code>. A <code>normal</code> row immediately followed by an <code>opposite</code> row on the same line gets a special two-column layout - see <a href="#text-rows">section 12.5</a></td></tr>
 <tr><td class="field-name">link</td><td>href</td><td class="field-type">String</td><td>""</td><td>URL to open on click</td></tr>
 <tr><td class="field-name">activity</td><td>a, intent</td><td class="field-type">String</td><td>""</td><td>Intent to open on click</td></tr>
 <tr><td class="field-name">photo</td><td>photo-path</td><td class="field-type">String</td><td>""</td><td>Large image (own line, separate from text)</td></tr>
@@ -1130,6 +1130,38 @@ text = "Project homepage"
 html-url = "https://example.com"
 </code></pre>
 <div class="callout warn">Same limit as <code>photo</code>: each <code>[[text]]</code>/<code>[[action]]</code> item has only <strong>one</strong> HTML block - if several rows declare <code>html-file</code>/<code>html-url</code>, the <strong>last</strong> one wins. The WebView follows the app's light/dark theme (<code>force-dark</code>) and has a transparent background so it blends with the item - transparency only takes effect for HTML content that does not set its own CSS background color.</div>
+
+<h3>12.4. Inline Markdown syntax reference (<code>markdown = true</code>)</h3>
+<p>When a row has <code>markdown</code> (alias <code>md</code>) set to <code>true</code>, its <code>text</code>/<code>sh</code> result is parsed as simple inline Markdown before display. Marks can be escaped with <code>\</code> (e.g. <code>\*</code> shows a literal <code>*</code>).</p>
+<div class="tbl-container">
+<table class="tbl">
+<tr><th>Syntax</th><th>Result</th></tr>
+<tr><td><code>**text**</code> / <code>__text__</code></td><td>Bold</td></tr>
+<tr><td><code>*text*</code> / <code>_text_</code></td><td>Italic</td></tr>
+<tr><td><code>~~text~~</code></td><td>Strikethrough</td></tr>
+<tr><td><code>{text}(color)</code></td><td>Custom text color - <code>color</code> is a color name (e.g. <code>red</code>) or hex (<code>#RRGGBB</code>/<code>#AARRGGBB</code>)</td></tr>
+<tr><td><code>[text](url)</code></td><td>Clickable link, opens <code>url</code></td></tr>
+<tr><td><code>`text`</code></td><td>Rounded background box around <code>text</code> (like an inline "code" chip). <span class="badge new">new</span> The content is parsed recursively, so it can nest the other marks above - e.g. <code>`{text}(red)`</code> = box + red text, <code>`[text](url)`</code> = box + clickable link</td></tr>
+<tr><td><code>`text|R`</code></td><td><span class="badge new">new</span> Same rounded box, with <code>R</code> (a plain number, dp) overriding the box's corner radius for this span only. No <code>|R</code> suffix = default radius. Also works combined with nesting, e.g. <code>`{text}(red)|16`</code></td></tr>
+<tr><td><code>```text```</code></td><td><span class="badge new">new</span> Same rounded box as <code>`text`</code>, but the content is shown <strong>literally</strong> - Markdown marks inside are NOT interpreted (use this to display raw symbols, e.g. <code>```**not bold**```</code> shows the asterisks as-is). Also accepts the <code>|R</code> corner-radius suffix</td></tr>
+</table>
+</div>
+<pre><code>[[text.rows]]
+text = "Status: `{OK}(green)` - link: `[details](https://example.com)` - `big|20`"
+markdown = true
+</code></pre>
+<div class="callout warn">Nesting only works inside single backticks (<code>`...`</code>) - triple backticks (<code>```...```</code>) always keep their content literal, by design, so they can be used to show raw Markdown symbols without any of them being interpreted.</div>
+
+<h3>12.5. Two rows pinned to opposite ends of the same line</h3>
+<p><span class="badge new">new</span> A row with <code>align = "normal"</code> (the default) immediately followed by a row with <code>align = "opposite"</code> that would join the same line by default (no <code>break</code>/<code>line</code>/<code>margin-top</code> on the second row, and no <code>margin-bottom</code> on the first) are rendered as a true two-column line: the first row stays on the left, the second is pinned to the right edge of the row - instead of the old behavior where <code>align</code> on either row applied to the whole shared line.</p>
+<pre><code>[[text.rows]]
+text = "kkkkk"
+
+[[text.rows]]
+text = "ffffffg"
+align = "opposite"
+</code></pre>
+<div class="callout warn">The right-hand (<code>opposite</code>) row supports <strong>plain text only</strong> for now - if it also sets <code>icon</code>/<code>icon-sh</code>/<code>photo</code>/<code>photo-sh</code>/<code>toggle</code>/<code>link</code>/<code>activity</code>/<code>run</code>/<code>markdown</code>/<code>underline</code>/<code>strikethrough</code>, it silently falls back to the old shared-line <code>align</code> behavior instead. A row following the pinned pair always starts on a new line, even without <code>break</code>.</div>
 </section>
 
 <section id="editor">
