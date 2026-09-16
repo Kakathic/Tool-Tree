@@ -1050,6 +1050,8 @@ italic = true
 <tr><td class="field-name">toggle</td><td>toggle-type</td><td class="field-type">String</td><td>""</td><td><code>checkbox</code>/<code>switch</code> = show a small toggle next to the row</td></tr>
 <tr><td class="field-name">get</td><td>getstate</td><td class="field-type">Bool|Shell</td><td>false</td><td>Toggle initial state. A shell returning exactly <code>"1"</code> = checked (queued into pending states - see <a href="#pending-states">section 20</a>)</td></tr>
 <tr><td class="field-name">set</td><td>setstate</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script run when the user toggles (receives <code>$state</code> = "1"/"0")</td></tr>
+<tr><td class="field-name">confirm</td><td>confirm-text, confirm-message</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> Confirmation message shown before running <code>script</code> or before applying a toggle change (<code>set</code>) - "Cancel" runs nothing. "" (default) = execute immediately, no confirmation</td></tr>
+<tr><td class="field-name">refresh-interval</td><td>refresh, interval</td><td class="field-type">Int</td><td>0</td><td><span class="badge new">new</span> Seconds interval to automatically re-run this row's <code>sh</code>/<code>icon-sh</code>/<code>photo-sh</code> and redraw it, without waiting for the whole item to rebind (e.g. list scroll). 0 (default) = no auto refresh; when several rows declare it, the shortest interval wins</td></tr>
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>true</td><td>Hide/show the row</td></tr>
 </table>
 </div>
@@ -1309,7 +1311,7 @@ script = "sh /data/data/com.tool.tree/files/run.sh"
 <table class="tbl">
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Description</th></tr>
 <tr><td class="field-name">title</td><td>text</td><td class="field-type">String</td><td>Title</td></tr>
-<tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td><code>refresh</code>/<code>finish</code>/<code>file</code>/<code>folder</code>/<code>spinner</code>/<code>checkbox</code>...</td></tr>
+<tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td><code>refresh</code>/<code>reload</code> (rerun the page), <code>restart</code> (restart the app), <code>finish</code>/<code>exit</code>/<code>close</code> (close the page), <code>killapp</code> (kill the app process), <code>file</code>/<code>folder</code>, <code>spinner</code>, <code>checkbox</code></td></tr>
 <tr><td class="field-name">style</td><td>-</td><td class="field-type">String</td><td>Set to <code>fab</code> to render this item as a floating action button (useful inside <code>[[menu]]</code>)</td></tr>
 <tr><td class="field-name">script</td><td>set, setstate</td><td class="field-type">String</td><td>Script to run on click. If empty, uses the group's <code>handler</code></td></tr>
 <tr><td class="field-name">get</td><td>getstate</td><td class="field-type">String</td><td><span class="badge shell">shell</span> (type=checkbox) script that decides the tick; (type=spinner) script that reads the current selection for highlighting. Re-run every time the menu opens</td></tr>
@@ -1791,6 +1793,8 @@ script = "sh $state"
   <li><code>icon-gif-num</code>, <code>icon-gif-time</code>, <code>icon-gif-autoplay</code>, <code>icon-gif-loop</code>, <code>icon-real-gif</code> - animation controls for the inline icon, mirroring the row's <code>photo-gif-*</code> fields.</li>
   <li><code>photo-sh</code>, <code>photo-real-gif</code> - dynamic path and real-<code>.gif</code> support for the row's <code>photo</code>.</li>
   <li><code>html-file</code>, <code>html-url</code>, <code>html-height</code> - render a full HTML page inline in its own WebView block below the row's text (local file or http/https link, one block per item, follows app theme, transparent background). See <a href="#text-rows">§12.3</a>.</li>
+  <li><code>confirm</code> - confirmation dialog shown before running the row's <code>script</code> or applying a toggle change; empty = no confirmation, unchanged from before.</li>
+  <li><code>refresh-interval</code> - auto re-runs <code>sh</code>/<code>icon-sh</code>/<code>photo-sh</code> and redraws the row on a fixed interval (seconds), independent of the item rebinding.</li>
 </ul>
 
 <h3>26.6. <a href="#depend">§17 Dependencies</a></h3>
