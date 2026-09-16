@@ -1,5 +1,5 @@
 #!/data/data/com.tool.tree/files/home/bin/bash
-# Kakathic
+
 
 show_sett() {
   echo '
@@ -190,7 +190,7 @@ echo '
   markdown = true
   
   [[text.rows]]
-  text = "'$microprocessors': {'${CPU_ABI^}'}(#0dbda2)"
+  text = "Bootloader: {'${BOOTLOADER_STATE^}' - '$VERIFIED_BOOT_STATE'}(#0dbda2)"
   break = true
   size = 13
   bold = true

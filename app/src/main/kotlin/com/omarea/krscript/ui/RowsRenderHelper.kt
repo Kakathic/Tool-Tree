@@ -227,10 +227,13 @@ object RowsRenderHelper {
                 }
             }
 
-            // Row phải ghim-phải (xem pinnedRightIndices): chèn 1 placeholder gần như không chiếm
-            // bề rộng, tự vẽ text ghim sát mép phải dòng qua PinnedRightTextSpan - KHÔNG đi qua
-            // toàn bộ pipeline icon/toggle/markdown bên dưới. Ép row kế tiếp (nếu có) phải xuống
-            // dòng mới (previousHadMarginBottom) để tránh đè lên vùng vừa ghim phải.
+            // Row phải ghim-phải (xem pinnedRightIndices): chèn 1 SpacerSpan (ReplacementSpan)
+            // chiếm đúng phần bề rộng còn trống giữa nội dung bên trái và label bên phải, rồi nối
+            // label thật ngay sau - ReplacementSpan BẮT BUỘC phải được đo/vẽ khi layout dòng (khác
+            // LeadingMarginSpan cũ PinnedRightTextSpan, không đảm bảo drawLeadingMargin() luôn được
+            // gọi khi getLeadingMargin()=0 - đây chính là nguyên nhân label bị mất hẳn trên máy
+            // thật). KHÔNG đi qua toàn bộ pipeline icon/toggle/markdown bên dưới. Ép row kế tiếp
+            // (nếu có) phải xuống dòng mới (previousHadMarginBottom) để tránh đè lên vùng vừa ghim phải.
             if (isPinnedRight) {
                 val pinnedLabel = if (row.dynamicTextSh.isNotEmpty()) (dynamicTextResults[rowIndex] ?: "") else row.text
                 if (pinnedLabel.isNotEmpty()) {
@@ -240,9 +243,42 @@ object RowsRenderHelper {
                         val a = (row.alpha * 255).toInt().coerceIn(0, 255)
                         pinnedColor = (pinnedColor and 0x00FFFFFF) or (a shl 24)
                     }
-                    val placeholder = SpannableString("\u200B")
-                    placeholder.setSpan(PinnedRightTextSpan(pinnedLabel, pinnedPaint, pinnedColor), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    rowsView.append(placeholder)
+                    val availableWidth = rowsView.width - rowsView.paddingLeft - rowsView.paddingRight
+                    val pinnedSpannable: SpannableString
+                    val labelStart: Int
+                    if (availableWidth <= 0) {
+                        // Chưa đo được bề rộng view thật (lần bind đầu tiên, trước khi layout) -
+                        // hiển thị tạm nối liền (không ghim phải được) và yêu cầu bind lại ngay sau
+                        // khi layout xong (needsRebindAfterLayout) để lần sau tính đúng khoảng đệm.
+                        needsRebindAfterLayout = true
+                        pinnedSpannable = SpannableString(pinnedLabel)
+                        labelStart = 0
+                    } else {
+                        val rightWidth = pinnedPaint.measureText(pinnedLabel)
+                        val spacerWidth = (availableWidth - groupContentWidth - rightWidth).toInt().coerceAtLeast(0)
+                        pinnedSpannable = SpannableString("\u200B$pinnedLabel")
+                        pinnedSpannable.setSpan(SpacerSpan(spacerWidth), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        labelStart = 1
+                    }
+                    pinnedSpannable.setSpan(ForegroundColorSpan(pinnedColor), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    if (row.bold && row.italic) {
+                        pinnedSpannable.setSpan(StyleSpan(Typeface.BOLD_ITALIC), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    } else if (row.bold) {
+                        pinnedSpannable.setSpan(StyleSpan(Typeface.BOLD), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    } else if (row.italic) {
+                        pinnedSpannable.setSpan(StyleSpan(Typeface.ITALIC), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                    if (row.monospace) {
+                        @Suppress("DEPRECATION")
+                        pinnedSpannable.setSpan(TypefaceSpan("monospace"), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                    if (row.size != -1) {
+                        pinnedSpannable.setSpan(AbsoluteSizeSpan(row.size, true), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                    if (row.letterSpacing != 0f) {
+                        pinnedSpannable.setSpan(LetterSpacingSpan(row.letterSpacing), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                    rowsView.append(pinnedSpannable)
                     hasContent = true
                 }
                 previousHadMarginBottom = true
@@ -596,25 +632,19 @@ object RowsRenderHelper {
         return result
     }
 
-    // Ghim 1 đoạn text SÁT MÉP PHẢI của dòng hiện tại - dùng cho row align="opposite" join chung
-    // dòng với row align="normal" đứng trước (xem computePinnedRightIndices), để có hiệu ứng
-    // "1 bên trái, 1 bên phải" THẬT trên cùng 1 hàng - khác AlignmentSpan/LeadingMarginSpan cũ
-    // (finalizeGroup) chỉ canh được CẢ dòng theo 1 kiểu duy nhất. Cài qua LeadingMarginSpan (giống
-    // DividerSpan bên dưới) vì callback drawLeadingMargin() cho biết layout.width THẬT lúc vẽ, tự
-    // tính toạ độ x ghim phải mà không cần biết trước bề rộng view lúc bind().
-    private class PinnedRightTextSpan(
-        private val text: String,
-        private val paint: TextPaint,
-        private val color: Int
-    ) : LeadingMarginSpan {
-        override fun getLeadingMargin(first: Boolean): Int = 0
+    // Chiếm đúng 1 khoảng trống (spacerWidth, đơn vị px) ngay trong dòng - dùng để đẩy label bên
+    // phải (row align="opposite" join chung dòng với row align="normal" đứng trước, xem
+    // computePinnedRightIndices) ra sát mép phải, tạo hiệu ứng "1 bên trái, 1 bên phải" THẬT trên
+    // cùng 1 hàng - khác AlignmentSpan cũ (finalizeGroup) chỉ canh được CẢ dòng theo 1 kiểu duy
+    // nhất. Dùng ReplacementSpan (không phải LeadingMarginSpan như PinnedRightTextSpan cũ) vì
+    // getSize()/draw() của ReplacementSpan BẮT BUỘC phải được gọi khi đo/vẽ dòng (tham gia layout
+    // ký tự thật) - còn drawLeadingMargin() của LeadingMarginSpan không đảm bảo luôn được gọi khi
+    // getLeadingMargin()=0, đây chính là lý do label bị mất hẳn trên máy thật trước đây.
+    private class SpacerSpan(private val width: Int) : ReplacementSpan() {
+        override fun getSize(paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int = width
 
-        override fun drawLeadingMargin(canvas: Canvas, p: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int, text_: CharSequence?, start: Int, end: Int, first: Boolean, layout: Layout?) {
-            val width = layout?.width ?: return
-            val drawPaint = TextPaint(paint)
-            drawPaint.color = color
-            val textWidth = drawPaint.measureText(text)
-            canvas.drawText(text, width - textWidth, baseline.toFloat(), drawPaint)
+        override fun draw(canvas: Canvas, text: CharSequence?, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
+            // Không vẽ gì - chỉ chiếm chỗ để đẩy phần text theo sau ra đúng vị trí.
         }
     }
 
