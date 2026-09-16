@@ -1,5 +1,28 @@
 #!/data/data/com.tool.tree/files/home/bin/bash
 
+Addss(){
+
+echo '
+
+  [[group]]
+  [[page]]
+  title = "Add-on sẵn có"
+  desc = "'$home_text_4'"
+  icon = "'$urlicon'/addon.png"
+  process = true
+  config-sh = "'$ETC'/tool-tree.bash Addon $UPL"
+  
+  [[group]]
+  [[page]]
+  title = "Add-on người dùng"
+  desc = "'$home_text_4'"
+  icon = "'$urlicon'/addon.png"
+  process = true
+  config-sh = "'$ETC'/tool-tree.bash Addon $UZE"
+
+'
+
+}
 
 show_sett() {
   echo '
