@@ -110,7 +110,7 @@ class DialogAppUpdate(
             // (xem onProgress bên dưới) thay cho thanh ProgressBar riêng đã bỏ. Trước khi có %
             // đầu tiên (đang mở kết nối/chưa biết total size) hiện tạm "..." để biết là đang tải.
             textBeforeDownload = btnConfirm.text
-            btnConfirm.text = "..."
+            btnConfirm.text = "....."
 
             val state = DownloadState()
             activeDownload = state
