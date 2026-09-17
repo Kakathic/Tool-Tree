@@ -12,6 +12,7 @@ import android.graphics.drawable.AnimationDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.net.Uri
+import android.text.Editable
 import android.text.Layout
 import android.text.Spannable
 import android.text.SpannableString
@@ -36,6 +37,17 @@ import com.tool.tree.R
 
 object RowsRenderHelper {
 
+    private class RowsRenderState(
+        val animatedIcons: MutableList<Animatable>,
+        val rowRanges: Map<Int, IntArray>,
+        val zoneGroupRows: Set<Int>
+    )
+
+    private class RowSpanResult(
+        val spannable: SpannableString,
+        val width: Float
+    )
+
     fun bind(
         context: Context,
         rowsView: TextView?,
@@ -57,10 +69,10 @@ object RowsRenderHelper {
         }
 
         rowsView.text = ""
-        @Suppress("UNCHECKED_CAST")
-        (rowsView.tag as? MutableList<Animatable>)?.forEach { it.stop() }
+        (rowsView.tag as? RowsRenderState)?.animatedIcons?.forEach { it.stop() }
         val animatedRowIcons = ArrayList<Animatable>()
         (rowsView.getTag(R.id.kr_rows_refresh_runnable) as? Runnable)?.let { rowsView.removeCallbacks(it) }
+        rowsView.setTextIsSelectable(true)
         rowsView.movementMethod = BoundedLinkMovementMethod.instance
         rowsView.visibility = View.VISIBLE
 
@@ -68,31 +80,6 @@ object RowsRenderHelper {
         rowsView.setOnClickListener { }
 
         var needsRebindAfterLayout = false
-        var hasContent = false
-
-        var previousHadMarginBottom = false
-
-        var groupStart = 0
-        var groupAlign = Layout.Alignment.ALIGN_NORMAL
-        var groupContentWidth = 0f
-
-        fun finalizeGroup(groupEnd: Int) {
-            if (groupEnd <= groupStart || groupAlign == Layout.Alignment.ALIGN_NORMAL) {
-                return
-            }
-            val spannable = rowsView.text as? Spannable ?: return
-            if (rowsView.width == 0) {
-                needsRebindAfterLayout = true
-                spannable.setSpan(AlignmentSpan.Standard(groupAlign), groupStart, groupEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                return
-            }
-            val margin = computeGroupLeadingMargin(rowsView, groupAlign, groupContentWidth)
-            if (margin != null) {
-                spannable.setSpan(LeadingMarginSpan.Standard(margin, margin), groupStart, groupEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            } else {
-                spannable.setSpan(AlignmentSpan.Standard(groupAlign), groupStart, groupEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-        }
 
         val dynamicTextResults: Map<Int, String>
         val dynamicIconResults: Map<Int, String>
@@ -123,149 +110,127 @@ object RowsRenderHelper {
             dynamicPhotoResults = photoMap
         }
 
-        val pinnedRightIndices = computePinnedRightIndices(rows)
+        val rowRanges = HashMap<Int, IntArray>()
+        val zoneGroupRows = HashSet<Int>()
 
-        for ((rowIndex, row) in rows.withIndex()) {
-            val isToggle = row.toggle == "checkbox" || row.toggle == "switch"
-            val isPinnedRight = pinnedRightIndices.contains(rowIndex)
+        fun appendSpacer(px: Int) {
+            if (px <= 0) return
+            val sp = SpannableString("\u200B")
+            sp.setSpan(SpacerSpan(px), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            rowsView.append(sp)
+        }
 
-            if (row.line) {
-                finalizeGroup(rowsView.length())
-                if (hasContent) {
+        fun buildZone(items: List<Int>): Pair<List<Pair<Int, RowSpanResult>>, Float> {
+            var width = 0f
+            val built = ArrayList<Pair<Int, RowSpanResult>>()
+            items.forEachIndexed { i, idx ->
+                if (i > 0) {
+                    width += rowsView.paint.measureText(" ")
+                }
+                val result = buildRowSpan(context, rowsView, extraIconView, rows, config, htmlContainer, rows[idx], idx, dynamicTextResults, dynamicIconResults, animatedRowIcons)
+                built.add(idx to result)
+                width += result.width
+            }
+            return Pair(built, width)
+        }
+
+        fun appendZone(built: List<Pair<Int, RowSpanResult>>) {
+            built.forEachIndexed { i, pair ->
+                val (idx, result) = pair
+                if (i > 0) {
+                    rowsView.append(" ")
+                }
+                val start = rowsView.length()
+                rowsView.append(result.spannable)
+                rowRanges[idx] = intArrayOf(start, rowsView.length())
+                zoneGroupRows.add(idx)
+            }
+        }
+
+        val lineGroups = splitIntoLineGroups(rows)
+
+        for (group in lineGroups) {
+            val firstRow = rows[group.first()]
+
+            if (firstRow.line) {
+                if (rowsView.length() > 0) {
                     rowsView.append("\n")
                 }
                 val dividerLine = SpannableString(" ")
                 dividerLine.setSpan(DividerSpan(context), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 rowsView.append(dividerLine)
                 rowsView.append("\n")
-                hasContent = true
-                groupStart = rowsView.length()
-                groupAlign = Layout.Alignment.ALIGN_NORMAL
-                groupContentWidth = 0f
+            } else if (rowsView.length() > 0) {
+                rowsView.append("\n")
             }
 
-            val startsNewGroup = row.line || row.marginTop > 0 || row.breakRow || previousHadMarginBottom || !hasContent
-            if (startsNewGroup) {
-                finalizeGroup(rowsView.length())
-                if (hasContent && !row.line) {
-                    rowsView.append("\n")
-                }
-                groupStart = rowsView.length()
-                groupAlign = row.align
-                groupContentWidth = 0f
-            } else if (!isPinnedRight) {
-                if (groupAlign == Layout.Alignment.ALIGN_NORMAL && row.align != Layout.Alignment.ALIGN_NORMAL) {
-                    groupAlign = row.align
-                }
-                if (groupContentWidth > 0f) {
-                    val gap = " "
-                    rowsView.append(gap)
-                    groupContentWidth += rowsView.paint.measureText(gap)
-                }
-            }
+            val groupTextStart = rowsView.length()
 
-            if (isPinnedRight) {
-                val pinnedLabel = if (row.dynamicTextSh.isNotEmpty()) (dynamicTextResults[rowIndex] ?: "") else row.text
-                if (pinnedLabel.isNotEmpty()) {
-                    val pinnedPaint = measurePaintForRow(rowsView.paint, row)
-                    var pinnedColor = if (row.color != -1) row.color else rowsView.currentTextColor
-                    if (row.alpha in 0f..1f) {
-                        val a = (row.alpha * 255).toInt().coerceIn(0, 255)
-                        pinnedColor = (pinnedColor and 0x00FFFFFF) or (a shl 24)
+            val leftIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_NORMAL }
+            val centerIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_CENTER }
+            val rightIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_OPPOSITE }
+            val zoneEligible = leftIdx.size <= 2 && centerIdx.size <= 2 && rightIdx.size <= 2 &&
+                (centerIdx.isNotEmpty() || rightIdx.isNotEmpty())
+
+            if (zoneEligible) {
+                val (leftBuilt, leftWidth) = buildZone(leftIdx)
+                val (centerBuilt, centerWidth) = buildZone(centerIdx)
+                val (rightBuilt, rightWidth) = buildZone(rightIdx)
+                val availableWidth = rowsView.width - rowsView.paddingLeft - rowsView.paddingRight
+
+                if (availableWidth <= 0) {
+                    needsRebindAfterLayout = true
+                    appendZone(leftBuilt)
+                    if (centerBuilt.isNotEmpty()) {
+                        rowsView.append(" ")
+                        appendZone(centerBuilt)
                     }
-                    val availableWidth = rowsView.width - rowsView.paddingLeft - rowsView.paddingRight
-                    val pinnedSpannable: SpannableString
-                    val labelStart: Int
-                    if (availableWidth <= 0) {
-                        needsRebindAfterLayout = true
-                        pinnedSpannable = SpannableString(pinnedLabel)
-                        labelStart = 0
+                    if (rightBuilt.isNotEmpty()) {
+                        rowsView.append(" ")
+                        appendZone(rightBuilt)
+                    }
+                } else {
+                    appendZone(leftBuilt)
+                    if (centerBuilt.isEmpty()) {
+                        if (rightBuilt.isNotEmpty()) {
+                            val spacer = (availableWidth - leftWidth - rightWidth).toInt().coerceAtLeast(0)
+                            appendSpacer(spacer)
+                            appendZone(rightBuilt)
+                        }
                     } else {
-                        val rightWidth = pinnedPaint.measureText(pinnedLabel)
-                        val spacerWidth = (availableWidth - groupContentWidth - rightWidth).toInt().coerceAtLeast(0)
-                        pinnedSpannable = SpannableString("\u200B$pinnedLabel")
-                        pinnedSpannable.setSpan(SpacerSpan(spacerWidth), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                        labelStart = 1
+                        val centerStart = (availableWidth - centerWidth) / 2f
+                        val spacer1 = (centerStart - leftWidth).toInt().coerceAtLeast(0)
+                        appendSpacer(spacer1)
+                        appendZone(centerBuilt)
+                        if (rightBuilt.isNotEmpty()) {
+                            val rightStart = availableWidth - rightWidth
+                            val usedSoFar = leftWidth + spacer1 + centerWidth
+                            val spacer2 = (rightStart - usedSoFar).toInt().coerceAtLeast(0)
+                            appendSpacer(spacer2)
+                            appendZone(rightBuilt)
+                        }
                     }
-                    pinnedSpannable.setSpan(ForegroundColorSpan(pinnedColor), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    if (row.bold && row.italic) {
-                        pinnedSpannable.setSpan(StyleSpan(Typeface.BOLD_ITALIC), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    } else if (row.bold) {
-                        pinnedSpannable.setSpan(StyleSpan(Typeface.BOLD), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    } else if (row.italic) {
-                        pinnedSpannable.setSpan(StyleSpan(Typeface.ITALIC), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                    if (row.monospace) {
-                        @Suppress("DEPRECATION")
-                        pinnedSpannable.setSpan(TypefaceSpan("monospace"), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                    if (row.size != -1) {
-                        pinnedSpannable.setSpan(AbsoluteSizeSpan(row.size, true), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                    if (row.letterSpacing != 0f) {
-                        pinnedSpannable.setSpan(LetterSpacingSpan(row.letterSpacing), labelStart, pinnedSpannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                    rowsView.append(pinnedSpannable)
-                    hasContent = true
                 }
-                previousHadMarginBottom = true
-                continue
-            }
-            previousHadMarginBottom = false
-            val rawLabel = if (row.dynamicTextSh.isNotEmpty()) {
-                dynamicTextResults[rowIndex] ?: ""
             } else {
-                row.text
-            }
-
-            val markdownSpans: List<MarkdownInlineHelper.MarkdownSpanInfo>
-            val label: String
-            if (row.markdown && rawLabel.isNotEmpty()) {
-                val (plain, spans) = MarkdownInlineHelper.parse(rawLabel)
-                label = plain
-                markdownSpans = spans
-            } else {
-                label = rawLabel
-                markdownSpans = emptyList()
-            }
-
-            val effectiveIcon = if (row.iconSh.isNotEmpty()) (dynamicIconResults[rowIndex] ?: "") else row.icon
-            val hasIcon = !isToggle && effectiveIcon.isNotEmpty()
-            val rowIconDrawableRaw = if (hasIcon) buildRowIconDrawable(context, effectiveIcon, row, config) else null
-            val showIcon = rowIconDrawableRaw != null
-
-            val text = when {
-                isToggle -> "$label \u2002 "
-                showIcon && row.iconPosition == "before" -> "\u2002 $label"
-                showIcon -> "$label \u2002"
-                else -> label
-            }
-            val length = text.length
-            val spannableString = SpannableString(text)
-            val markdownOffset = if (showIcon && row.iconPosition == "before") 2 else 0
-
-            var toggleDrawable: Drawable? = null
-            if (isToggle) {
-                val iconIndex = length - 2
-                toggleDrawable = buildToggleDrawable(context, row)
-                spannableString.setSpan(VerticalCenterImageSpan(toggleDrawable), iconIndex, iconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            var rowIconDrawable: Drawable? = null
-            if (showIcon && rowIconDrawableRaw != null) {
-                rowIconDrawable = rowIconDrawableRaw
-                val iconIndex = if (row.iconPosition == "before") 0 else length - 1
-                spannableString.setSpan(VerticalCenterImageSpan(rowIconDrawable), iconIndex, iconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                val isRealGifDrawable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && rowIconDrawable is AnimatedImageDrawable
-                if (rowIconDrawable is AnimationDrawable || isRealGifDrawable) {
-                    GifPlaybackHelper.bindToTextView(rowsView, rowIconDrawable, row.iconGifAutoplay, row.iconGifLoopCount)
-                    animatedRowIcons.add(rowIconDrawable as Animatable)
+                group.forEachIndexed { i, idx ->
+                    if (i > 0) {
+                        rowsView.append(" ")
+                    }
+                    val result = buildRowSpan(context, rowsView, extraIconView, rows, config, htmlContainer, rows[idx], idx, dynamicTextResults, dynamicIconResults, animatedRowIcons)
+                    val start = rowsView.length()
+                    rowsView.append(result.spannable)
+                    rowRanges[idx] = intArrayOf(start, rowsView.length())
+                }
+                if (firstRow.align != Layout.Alignment.ALIGN_NORMAL) {
+                    (rowsView.text as? Spannable)?.setSpan(AlignmentSpan.Standard(firstRow.align), groupTextStart, rowsView.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
+        }
 
-            if (extraIconView != null) {
-                extraIconView.visibility = View.GONE
-                val effectivePhoto = if (row.photoSh.isNotEmpty()) (dynamicPhotoResults[rowIndex] ?: "") else row.photo
+        if (extraIconView != null) {
+            extraIconView.visibility = View.GONE
+            rows.forEachIndexed { index, row ->
+                val effectivePhoto = if (row.photoSh.isNotEmpty()) (dynamicPhotoResults[index] ?: "") else row.photo
                 if (effectivePhoto.isNotEmpty()) {
                     IconPathAnalysis().loadtextPhoto(context, effectivePhoto, row, config.pageConfigDir)?.run {
                         extraIconView.setImageDrawable(this)
@@ -275,168 +240,10 @@ object RowsRenderHelper {
                     }
                 }
             }
-
-            if (row.underline) {
-                spannableString.setSpan(UnderlineSpan(), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (row.strikethrough) {
-                spannableString.setSpan(StrikethroughSpan(), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (row.monospace) {
-                @Suppress("DEPRECATION")
-                spannableString.setSpan(TypefaceSpan("monospace"), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (isToggle) {
-                spannableString.setSpan(object : ClickableSpan() {
-                    override fun onClick(widget: View) {
-                        runRowAction(context, row.confirm) {
-                            row.checked = !row.checked
-                            if (row.onChangeSh.isNotEmpty()) {
-                                val result = ScriptEnvironmen.executeResultRoot(context, row.onChangeSh, config, object : HashMap<String, String>() {
-                                    init { put("state", if (row.checked) "1" else "0") }
-                                })
-                                if (result.trim().isNotEmpty()) {
-                                    DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
-                                }
-                            }
-                            bind(context, rowsView, extraIconView, rows, config, htmlContainer)
-                        }
-                    }
-
-                    override fun updateDrawState(ds: TextPaint) {
-                        ds.isUnderlineText = false
-                    }
-                }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            } else if (row.link.isNotEmpty()) {
-                spannableString.setSpan(object : ClickableSpan() {
-                    override fun onClick(widget: View) {
-                        if (row.link.isNotEmpty()) {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(row.link))
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } catch (ex: Exception) {
-                                Toast.makeText(context, context.getString(R.string.kr_slice_activity_fail), Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
-
-                    override fun updateDrawState(ds: TextPaint) {
-                        ds.color = if (row.color != -1) row.color else ds.linkColor
-                        ds.isUnderlineText = row.underline
-                    }
-                }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (!isToggle && row.activity.isNotEmpty()) {
-                spannableString.setSpan(object : ClickableSpan() {
-                    override fun onClick(widget: View) {
-                        TryOpenActivity(context, row.activity).tryOpen()
-                    }
-
-                    override fun updateDrawState(ds: TextPaint) {
-                        ds.color = if (row.color != -1) row.color else ds.linkColor
-                        ds.isUnderlineText = row.underline
-                    }
-                }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (!isToggle && row.onClickScript.isNotEmpty()) {
-                spannableString.setSpan(object : ClickableSpan() {
-                    override fun onClick(widget: View) {
-                        runRowAction(context, row.confirm) {
-                            val result = ScriptEnvironmen.executeResultRoot(context, row.onClickScript, config)
-                            if (result.trim().isNotEmpty()) {
-                                DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
-                            }
-                        }
-                    }
-
-                    override fun updateDrawState(ds: TextPaint) {
-                        ds.color = if (row.color != -1) row.color else ds.linkColor
-                        ds.isUnderlineText = row.underline
-                    }
-                }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (row.color != -1) {
-                spannableString.setSpan(ForegroundColorSpan(row.color), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (row.bgColor != -1) {
-                spannableString.setSpan(BackgroundColorSpan(row.bgColor), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (row.bold && row.italic) {
-                spannableString.setSpan(StyleSpan(Typeface.BOLD_ITALIC), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            } else if (row.bold) {
-                spannableString.setSpan(StyleSpan(Typeface.BOLD), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            } else if (row.italic) {
-                spannableString.setSpan(StyleSpan(Typeface.ITALIC), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (row.size != -1) {
-                spannableString.setSpan(AbsoluteSizeSpan(row.size, true), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (row.letterSpacing != 0f) {
-                spannableString.setSpan(LetterSpacingSpan(row.letterSpacing), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (row.lineHeight != 0f) {
-                spannableString.setSpan(LineHeightMultiplierSpan(row.lineHeight), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (row.marginTop > 0) {
-                spannableString.setSpan(TopExtraSpaceSpan(dpToPx(context, row.marginTop)), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-            if (row.marginBottom > 0) {
-                spannableString.setSpan(BottomExtraSpaceSpan(dpToPx(context, row.marginBottom)), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (row.alpha in 0f..1f) {
-                spannableString.setSpan(TextAlphaSpan(row.alpha), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            if (markdownSpans.isNotEmpty()) {
-                applyMarkdownSpans(context, spannableString, markdownSpans, markdownOffset, length)
-            }
-
-            rowsView.append(spannableString)
-            hasContent = true
-
-            val measurePaint = measurePaintForRow(rowsView.paint, row)
-            groupContentWidth += when {
-                isToggle && toggleDrawable != null -> {
-                    val placeholderIndex = text.length - 2
-                    val beforeIcon = text.substring(0, placeholderIndex)
-                    val afterIcon = text.substring(placeholderIndex + 1)
-                    measurePaint.measureText(beforeIcon) + toggleDrawable.bounds.width() + measurePaint.measureText(afterIcon)
-                }
-                showIcon && rowIconDrawable != null -> {
-                    val iconIdx = if (row.iconPosition == "before") 0 else text.length - 1
-                    val beforeIcon = text.substring(0, iconIdx)
-                    val afterIcon = text.substring(iconIdx + 1)
-                    measurePaint.measureText(beforeIcon) + rowIconDrawable.bounds.width() + measurePaint.measureText(afterIcon)
-                }
-                else -> measurePaint.measureText(text)
-            }
-
-            if (row.marginBottom > 0) {
-                previousHadMarginBottom = true
-            }
         }
 
-        finalizeGroup(rowsView.length())
-
-        rowsView.isHapticFeedbackEnabled = false
-        rowsView.setOnLongClickListener {
-            true
-        }
-        rowsView.tag = animatedRowIcons
+        rowsView.setOnLongClickListener(null)
+        rowsView.tag = RowsRenderState(animatedRowIcons, rowRanges, zoneGroupRows)
 
         if (needsRebindAfterLayout) {
             rowsView.post {
@@ -460,39 +267,306 @@ object RowsRenderHelper {
         }
     }
 
+    fun resetRow(
+        context: Context,
+        rowsView: TextView?,
+        extraIconView: ImageView?,
+        rows: List<TextNode.TextRow>,
+        config: NodeInfoBase,
+        rowIndex: Int,
+        htmlContainer: FrameLayout? = null
+    ) {
+        if (rowsView == null || rowIndex !in rows.indices) {
+            return
+        }
+        val state = rowsView.tag as? RowsRenderState
+        val range = state?.rowRanges?.get(rowIndex)
+        val editable = rowsView.text as? Editable
+        if (state == null || range == null || editable == null || state.zoneGroupRows.contains(rowIndex) ||
+            range[0] < 0 || range[1] > editable.length || range[0] > range[1]
+        ) {
+            bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+            return
+        }
+
+        val row = rows[rowIndex]
+        val scripts = LinkedHashMap<String, String>()
+        if (row.dynamicTextSh.isNotEmpty()) scripts["text"] = row.dynamicTextSh
+        if (row.iconSh.isNotEmpty()) scripts["icon"] = row.iconSh
+        val results = if (scripts.isEmpty()) emptyMap() else ScriptEnvironmen.executeMultipleResultRoot(context, scripts, config)
+        val textMap = results["text"]?.let { mapOf(rowIndex to it) } ?: emptyMap()
+        val iconMap = results["icon"]?.let { mapOf(rowIndex to it) } ?: emptyMap()
+
+        val animated = ArrayList<Animatable>()
+        val rendered = buildRowSpan(context, rowsView, extraIconView, rows, config, htmlContainer, row, rowIndex, textMap, iconMap, animated)
+
+        val start = range[0]
+        val end = range[1]
+        editable.replace(start, end, rendered.spannable)
+        val delta = rendered.spannable.length - (end - start)
+
+        val newRanges = HashMap<Int, IntArray>()
+        state.rowRanges.forEach { (idx, r) ->
+            newRanges[idx] = when {
+                idx == rowIndex -> intArrayOf(start, start + rendered.spannable.length)
+                r[0] >= end -> intArrayOf(r[0] + delta, r[1] + delta)
+                else -> r
+            }
+        }
+        state.animatedIcons.addAll(animated)
+        rowsView.tag = RowsRenderState(state.animatedIcons, newRanges, state.zoneGroupRows)
+
+        if (extraIconView != null && row.photoSh.isNotEmpty()) {
+            val effectivePhoto = ScriptEnvironmen.executeResultRoot(context, row.photoSh, config)
+            if (effectivePhoto.isNotEmpty()) {
+                IconPathAnalysis().loadtextPhoto(context, effectivePhoto, row, config.pageConfigDir)?.run {
+                    extraIconView.setImageDrawable(this)
+                    extraIconView.visibility = View.VISIBLE
+                    applyPhotoRealSize(extraIconView, row.photoRealSize)
+                    GifPlaybackHelper.bind(extraIconView, row.photoGifAutoplay, row.photoGifLoopCount)
+                }
+            }
+        }
+    }
+
+    private fun splitIntoLineGroups(rows: List<TextNode.TextRow>): List<List<Int>> {
+        val groups = ArrayList<List<Int>>()
+        var current = ArrayList<Int>()
+        for (i in rows.indices) {
+            val row = rows[i]
+            val startsNewGroup = i == 0 || row.line || row.marginTop > 0 || row.breakRow || rows[i - 1].marginBottom > 0
+            if (startsNewGroup && current.isNotEmpty()) {
+                groups.add(current)
+                current = ArrayList()
+            }
+            current.add(i)
+        }
+        if (current.isNotEmpty()) {
+            groups.add(current)
+        }
+        return groups
+    }
+
+    private fun buildRowSpan(
+        context: Context,
+        rowsView: TextView,
+        extraIconView: ImageView?,
+        rows: List<TextNode.TextRow>,
+        config: NodeInfoBase,
+        htmlContainer: FrameLayout?,
+        row: TextNode.TextRow,
+        rowIndex: Int,
+        dynamicTextResults: Map<Int, String>,
+        dynamicIconResults: Map<Int, String>,
+        animatedRowIcons: MutableList<Animatable>
+    ): RowSpanResult {
+        val isToggle = row.toggle == "checkbox" || row.toggle == "switch"
+        val rawLabel = if (row.dynamicTextSh.isNotEmpty()) {
+            dynamicTextResults[rowIndex] ?: ""
+        } else {
+            row.text
+        }
+
+        val markdownSpans: List<MarkdownInlineHelper.MarkdownSpanInfo>
+        val label: String
+        if (row.markdown && rawLabel.isNotEmpty()) {
+            val (plain, spans) = MarkdownInlineHelper.parse(rawLabel)
+            label = plain
+            markdownSpans = spans
+        } else {
+            label = rawLabel
+            markdownSpans = emptyList()
+        }
+
+        val effectiveIcon = if (row.iconSh.isNotEmpty()) (dynamicIconResults[rowIndex] ?: "") else row.icon
+        val hasIcon = !isToggle && effectiveIcon.isNotEmpty()
+        val rowIconDrawableRaw = if (hasIcon) buildRowIconDrawable(context, effectiveIcon, row, config) else null
+        val showIcon = rowIconDrawableRaw != null
+
+        val text = when {
+            isToggle -> "$label \u2002 "
+            showIcon && row.iconPosition == "before" -> "\u2002 $label"
+            showIcon -> "$label \u2002"
+            else -> label
+        }
+        val length = text.length
+        val spannableString = SpannableString(text)
+        val markdownOffset = if (showIcon && row.iconPosition == "before") 2 else 0
+
+        var toggleDrawable: Drawable? = null
+        if (isToggle) {
+            val iconIndex = length - 2
+            toggleDrawable = buildToggleDrawable(context, row)
+            spannableString.setSpan(VerticalCenterImageSpan(toggleDrawable), iconIndex, iconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        var rowIconDrawable: Drawable? = null
+        if (showIcon && rowIconDrawableRaw != null) {
+            rowIconDrawable = rowIconDrawableRaw
+            val iconIndex = if (row.iconPosition == "before") 0 else length - 1
+            spannableString.setSpan(VerticalCenterImageSpan(rowIconDrawable), iconIndex, iconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val isRealGifDrawable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && rowIconDrawable is AnimatedImageDrawable
+            if (rowIconDrawable is AnimationDrawable || isRealGifDrawable) {
+                GifPlaybackHelper.bindToTextView(rowsView, rowIconDrawable, row.iconGifAutoplay, row.iconGifLoopCount)
+                animatedRowIcons.add(rowIconDrawable as Animatable)
+            }
+        }
+
+        if (row.underline) {
+            spannableString.setSpan(UnderlineSpan(), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (row.strikethrough) {
+            spannableString.setSpan(StrikethroughSpan(), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (row.monospace) {
+            @Suppress("DEPRECATION")
+            spannableString.setSpan(TypefaceSpan("monospace"), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (isToggle) {
+            spannableString.setSpan(object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    runRowAction(context, row.confirm) {
+                        row.checked = !row.checked
+                        if (row.onChangeSh.isNotEmpty()) {
+                            val result = ScriptEnvironmen.executeResultRoot(context, row.onChangeSh, config, object : HashMap<String, String>() {
+                                init { put("state", if (row.checked) "1" else "0") }
+                            })
+                            if (result.trim().isNotEmpty()) {
+                                DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                            }
+                        }
+                        bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+                    }
+                }
+
+                override fun updateDrawState(ds: TextPaint) {
+                    ds.isUnderlineText = false
+                }
+            }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        } else if (row.link.isNotEmpty()) {
+            spannableString.setSpan(object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    if (row.link.isNotEmpty()) {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(row.link))
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(intent)
+                        } catch (ex: Exception) {
+                            Toast.makeText(context, context.getString(R.string.kr_slice_activity_fail), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+
+                override fun updateDrawState(ds: TextPaint) {
+                    ds.color = if (row.color != -1) row.color else ds.linkColor
+                    ds.isUnderlineText = row.underline
+                }
+            }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (!isToggle && row.activity.isNotEmpty()) {
+            spannableString.setSpan(object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    TryOpenActivity(context, row.activity).tryOpen()
+                }
+
+                override fun updateDrawState(ds: TextPaint) {
+                    ds.color = if (row.color != -1) row.color else ds.linkColor
+                    ds.isUnderlineText = row.underline
+                }
+            }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (!isToggle && row.onClickScript.isNotEmpty()) {
+            spannableString.setSpan(object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    runRowAction(context, row.confirm) {
+                        val result = ScriptEnvironmen.executeResultRoot(context, row.onClickScript, config)
+                        if (result.trim().isNotEmpty()) {
+                            DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                        }
+                    }
+                }
+
+                override fun updateDrawState(ds: TextPaint) {
+                    ds.color = if (row.color != -1) row.color else ds.linkColor
+                    ds.isUnderlineText = row.underline
+                }
+            }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (row.color != -1) {
+            spannableString.setSpan(ForegroundColorSpan(row.color), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (row.bgColor != -1) {
+            spannableString.setSpan(BackgroundColorSpan(row.bgColor), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (row.bold && row.italic) {
+            spannableString.setSpan(StyleSpan(Typeface.BOLD_ITALIC), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        } else if (row.bold) {
+            spannableString.setSpan(StyleSpan(Typeface.BOLD), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        } else if (row.italic) {
+            spannableString.setSpan(StyleSpan(Typeface.ITALIC), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (row.size != -1) {
+            spannableString.setSpan(AbsoluteSizeSpan(row.size, true), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (row.letterSpacing != 0f) {
+            spannableString.setSpan(LetterSpacingSpan(row.letterSpacing), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (row.lineHeight != 0f) {
+            spannableString.setSpan(LineHeightMultiplierSpan(row.lineHeight), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (row.marginTop > 0) {
+            spannableString.setSpan(TopExtraSpaceSpan(dpToPx(context, row.marginTop)), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        if (row.marginBottom > 0) {
+            spannableString.setSpan(BottomExtraSpaceSpan(dpToPx(context, row.marginBottom)), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (row.alpha in 0f..1f) {
+            spannableString.setSpan(TextAlphaSpan(row.alpha), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (markdownSpans.isNotEmpty()) {
+            applyMarkdownSpans(context, spannableString, markdownSpans, markdownOffset, length)
+        }
+
+        val measurePaint = measurePaintForRow(rowsView.paint, row)
+        val width = when {
+            isToggle && toggleDrawable != null -> {
+                val placeholderIndex = text.length - 2
+                val beforeIcon = text.substring(0, placeholderIndex)
+                val afterIcon = text.substring(placeholderIndex + 1)
+                measurePaint.measureText(beforeIcon) + toggleDrawable.bounds.width() + measurePaint.measureText(afterIcon)
+            }
+            showIcon && rowIconDrawable != null -> {
+                val iconIdx = if (row.iconPosition == "before") 0 else text.length - 1
+                val beforeIcon = text.substring(0, iconIdx)
+                val afterIcon = text.substring(iconIdx + 1)
+                measurePaint.measureText(beforeIcon) + rowIconDrawable.bounds.width() + measurePaint.measureText(afterIcon)
+            }
+            else -> measurePaint.measureText(text)
+        }
+
+        return RowSpanResult(spannableString, width)
+    }
+
     private fun runRowAction(context: Context, confirmMessage: String, action: () -> Unit) {
         if (confirmMessage.isEmpty()) {
             action()
         } else {
             DialogHelper.confirm(context, message = confirmMessage, onConfirm = Runnable { action() })
         }
-    }
-
-    private fun computePinnedRightIndices(rows: List<TextNode.TextRow>): Set<Int> {
-        val result = HashSet<Int>()
-        for (i in 0 until rows.size - 1) {
-            val left = rows[i]
-            val right = rows[i + 1]
-            val joinsDefault = !right.line && right.marginTop <= 0 && !right.breakRow && left.marginBottom <= 0 && !result.contains(i)
-            if (left.align == Layout.Alignment.ALIGN_NORMAL &&
-                right.align == Layout.Alignment.ALIGN_OPPOSITE &&
-                joinsDefault &&
-                right.toggle.isEmpty() &&
-                right.icon.isEmpty() &&
-                right.iconSh.isEmpty() &&
-                right.photo.isEmpty() &&
-                right.photoSh.isEmpty() &&
-                !right.markdown &&
-                right.link.isEmpty() &&
-                right.activity.isEmpty() &&
-                right.onClickScript.isEmpty() &&
-                !right.underline &&
-                !right.strikethrough
-            ) {
-                result.add(i + 1)
-            }
-        }
-        return result
     }
 
     private class SpacerSpan(private val width: Int) : ReplacementSpan() {
@@ -605,6 +679,7 @@ object RowsRenderHelper {
         }
     }
 
+
     private fun measurePaintForRow(basePaint: TextPaint, row: TextNode.TextRow): TextPaint {
         if (!row.bold && !row.italic && !row.monospace && row.size == -1 && row.letterSpacing == 0f) {
             return basePaint
@@ -630,21 +705,6 @@ object RowsRenderHelper {
         return paint
     }
 
-    private fun computeGroupLeadingMargin(rowsView: TextView, align: Layout.Alignment, contentWidth: Float): Int? {
-        val available = rowsView.width - rowsView.paddingLeft - rowsView.paddingRight
-        if (available <= 0) {
-            return null
-        }
-        val extra = available - contentWidth
-        if (extra <= 0) {
-            return null
-        }
-        return when (align) {
-            Layout.Alignment.ALIGN_OPPOSITE -> extra.toInt()
-            Layout.Alignment.ALIGN_CENTER -> (extra / 2f).toInt()
-            else -> null
-        }
-    }
 
     private fun applyMarkdownSpans(
         context: Context,
