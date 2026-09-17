@@ -177,7 +177,7 @@ object RowsRenderHelper {
             val leftIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_NORMAL }
             val centerIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_CENTER }
             val rightIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_OPPOSITE }
-            val zoneEligible = leftIdx.size <= 2 && centerIdx.size <= 2 && rightIdx.size <= 2 &&
+            val zoneEligible = leftIdx.size <= 4 && centerIdx.size <= 4 && rightIdx.size <= 4 &&
                 (centerIdx.isNotEmpty() || rightIdx.isNotEmpty())
 
             if (zoneEligible) {
