@@ -41,6 +41,9 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         // Nếu true: vẽ 1 đường kẻ mảnh ngang qua hết chiều rộng NGAY TRƯỚC row này, dùng để
         // tách riêng phần rows (hoặc tách nhóm row) khỏi nội dung phía trên
         internal var line: Boolean = false
+        // Nếu true (ở BẤT KỲ row nào trong danh sách rows): cho phép người dùng bấm giữ để
+        // chọn/copy văn bản trong toàn bộ khối rows (mặc định KHÔNG cho phép)
+        internal var copy: Boolean = false
         // 对齐方式
         internal var align: Layout.Alignment = Layout.Alignment.ALIGN_NORMAL
         // 点击后要跳转的网页链接

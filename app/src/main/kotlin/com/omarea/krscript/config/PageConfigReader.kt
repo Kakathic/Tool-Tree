@@ -1043,6 +1043,7 @@ class PageConfigReader {
         tomlGet(table, "size")?.let { row.size = it.trim().toIntOrNull() ?: row.size }
         tomlGet(table, "break")?.let { row.breakRow = tomlTruthy(it, "break") }
         tomlGet(table, "line", "divider", "separator")?.let { row.line = tomlTruthy(it, "line", "divider", "separator") }
+        tomlGet(table, "copy")?.let { row.copy = tomlTruthy(it, "copy") }
         tomlGet(table, "link", "href")?.let { row.link = it }
         tomlGet(table, "activity", "a", "intent")?.let { row.activity = it }
         tomlGet(table, "photo", "photo-path")?.let { row.photo = it.trim() }

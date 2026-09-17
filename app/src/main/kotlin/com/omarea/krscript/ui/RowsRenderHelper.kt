@@ -72,12 +72,20 @@ object RowsRenderHelper {
         (rowsView.tag as? RowsRenderState)?.animatedIcons?.forEach { it.stop() }
         val animatedRowIcons = ArrayList<Animatable>()
         (rowsView.getTag(R.id.kr_rows_refresh_runnable) as? Runnable)?.let { rowsView.removeCallbacks(it) }
-        rowsView.setTextIsSelectable(true)
+        val allowCopy = rows.any { it.copy }
+        rowsView.setTextIsSelectable(allowCopy)
         rowsView.movementMethod = BoundedLinkMovementMethod.instance
         rowsView.visibility = View.VISIBLE
 
         rowsView.isClickable = true
         rowsView.setOnClickListener { }
+        if (allowCopy) {
+            rowsView.isHapticFeedbackEnabled = true
+            rowsView.setOnLongClickListener(null)
+        } else {
+            rowsView.isHapticFeedbackEnabled = false
+            rowsView.setOnLongClickListener { true }
+        }
 
         var needsRebindAfterLayout = false
 
@@ -242,7 +250,6 @@ object RowsRenderHelper {
             }
         }
 
-        rowsView.setOnLongClickListener(null)
         rowsView.tag = RowsRenderState(animatedRowIcons, rowRanges, zoneGroupRows)
 
         if (needsRebindAfterLayout) {
