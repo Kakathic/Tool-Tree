@@ -1,7 +1,6 @@
 package com.omarea.krscript.config
 
 import android.content.Context
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.Layout
@@ -1099,7 +1098,7 @@ class PageConfigReader {
         tomlGet(table, "set", "setstate")?.let { row.onChangeSh = it }
         tomlGet(table, "align")?.let {
             when (it) {
-                "opposite" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) row.align = Layout.Alignment.ALIGN_OPPOSITE
+                "opposite" -> row.align = Layout.Alignment.ALIGN_OPPOSITE
                 "center" -> row.align = Layout.Alignment.ALIGN_CENTER
                 "normal" -> row.align = Layout.Alignment.ALIGN_NORMAL
             }

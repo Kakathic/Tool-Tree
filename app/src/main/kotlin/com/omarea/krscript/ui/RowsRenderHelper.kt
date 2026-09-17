@@ -177,7 +177,7 @@ object RowsRenderHelper {
             val leftIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_NORMAL }
             val centerIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_CENTER }
             val rightIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_OPPOSITE }
-            val zoneEligible = leftIdx.size <= 4 && centerIdx.size <= 4 && rightIdx.size <= 4 &&
+            val zoneEligible = leftIdx.size <= 5 && centerIdx.size <= 5 && rightIdx.size <= 5 &&
                 (centerIdx.isNotEmpty() || rightIdx.isNotEmpty())
 
             if (zoneEligible) {
@@ -606,15 +606,6 @@ object RowsRenderHelper {
 
         override fun updateMeasureState(tp: TextPaint) {
             tp.letterSpacing = spacing
-        }
-    }
-
-    private class VerticalSpaceSpan(private val heightPx: Int) : LineHeightSpan {
-        override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
-            fm.ascent = -heightPx
-            fm.top = fm.ascent
-            fm.descent = 0
-            fm.bottom = fm.descent
         }
     }
 

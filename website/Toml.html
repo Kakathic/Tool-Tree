@@ -1023,9 +1023,11 @@ italic = true
 <tr><td class="field-name">size</td><td>-</td><td class="field-type">Int</td><td>-1</td><td>Font size (sp)</td></tr>
 <tr><td class="field-name">break</td><td>-</td><td class="field-type">Bool</td><td>false</td><td>Line break after this row</td></tr>
 <tr><td class="field-name">line</td><td>divider, separator</td><td class="field-type">Bool</td><td>false</td><td>Draw a horizontal divider before this row</td></tr>
-<tr><td class="field-name">align</td><td>-</td><td class="field-type">String</td><td>normal</td><td><code>normal</code>/<code>center</code>/<code>opposite</code>. A <code>normal</code> row immediately followed by an <code>opposite</code> row on the same line gets a special two-column layout - see <a href="#text-rows">section 12.5</a></td></tr>
+<tr><td class="field-name">align</td><td>-</td><td class="field-type">String</td><td>normal</td><td><code>normal</code>/<code>center</code>/<code>opposite</code>. Rows sharing the same line are grouped by <code>align</code> into up to 3 zones (left/center/right, <strong>max 4 rows each</strong>) and pinned accordingly - see <a href="#text-rows">section 12.5</a></td></tr>
 <tr><td class="field-name">link</td><td>href</td><td class="field-type">String</td><td>""</td><td>URL to open on click</td></tr>
 <tr><td class="field-name">activity</td><td>a, intent</td><td class="field-type">String</td><td>""</td><td>Intent to open on click</td></tr>
+<tr><td class="field-name">copy</td><td>-</td><td class="field-type">Bool</td><td>false</td><td><span class="badge new">new</span> Allow the user to long-press and select/copy text. Applies to the WHOLE <code>[[text.rows]]</code> block at once (all rows share one text view) - setting it on <strong>any single row</strong> turns on selection for the entire block</td></tr>
+<tr><td class="field-name">reset</td><td>-</td><td class="field-type">Int</td><td>-1</td><td><span class="badge new">new</span> Row index (0-based, within the same <code>[[text.rows]]</code> list) to refresh when THIS row is clicked - re-runs that row's <code>sh</code>/<code>icon-sh</code> only, without rebinding the whole block. Combine with <code>script</code> to run a script first, then refresh the target row. See <a href="#text-rows">section 12.6</a></td></tr>
 <tr><td class="field-name">photo</td><td>photo-path</td><td class="field-type">String</td><td>""</td><td>Large image (own line, separate from text)</td></tr>
 <tr><td class="field-name">photo-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the row's photo path dynamically. Re-runs every time the rows are re-rendered (batched with text-sh/icon-sh, NOT cached - unlike node-level photo-sh); overrides <code>photo</code></td></tr>
 <tr><td class="field-name">photo-real-size</td><td>photo-original-size</td><td class="field-type">Bool</td><td>false</td><td>Show image at real size</td></tr>
@@ -1154,8 +1156,8 @@ markdown = true
 </code></pre>
 <div class="callout warn">Nesting only works inside single backticks (<code>`...`</code>) - triple backticks (<code>```...```</code>) always keep their content literal, by design, so they can be used to show raw Markdown symbols without any of them being interpreted.</div>
 
-<h3>12.5. Two rows pinned to opposite ends of the same line</h3>
-<p><span class="badge new">new</span> A row with <code>align = "normal"</code> (the default) immediately followed by a row with <code>align = "opposite"</code> that would join the same line by default (no <code>break</code>/<code>line</code>/<code>margin-top</code> on the second row, and no <code>margin-bottom</code> on the first) are rendered as a true two-column line: the first row stays on the left, the second is pinned to the right edge of the row - instead of the old behavior where <code>align</code> on either row applied to the whole shared line.</p>
+<h3>12.5. Pinning rows to the left / center / right of the same line</h3>
+<p><span class="badge new">new</span> Rows that would join the same line by default (no <code>break</code>/<code>line</code>/<code>margin-top</code> on a later row, no <code>margin-bottom</code> on an earlier one) are grouped, then bucketed by <code>align</code> into up to 3 zones: <code>normal</code> = left, <code>center</code> = center, <code>opposite</code> = right. If <strong>each zone has at most 4 rows</strong> and at least one row uses <code>center</code>/<code>opposite</code>, the group renders as a true multi-column line: left content stays flush left, center is centered across the full line width, right is flush against the right edge - regardless of how many rows end up in each zone (1 to 4). Unlike the earlier version of this feature, a pinned row can now have anything a normal row can: <code>icon</code>/<code>icon-sh</code>/<code>toggle</code>/<code>link</code>/<code>activity</code>/<code>script</code>/<code>markdown</code>/<code>underline</code>/<code>strikethrough</code> all work in any zone.</p>
 <pre><code>[[text.rows]]
 text = "kkkkk"
 
@@ -1163,7 +1165,36 @@ text = "kkkkk"
 text = "ffffffg"
 align = "opposite"
 </code></pre>
-<div class="callout warn">The right-hand (<code>opposite</code>) row supports <strong>plain text only</strong> for now - if it also sets <code>icon</code>/<code>icon-sh</code>/<code>photo</code>/<code>photo-sh</code>/<code>toggle</code>/<code>link</code>/<code>activity</code>/<code>run</code>/<code>markdown</code>/<code>underline</code>/<code>strikethrough</code>, it silently falls back to the old shared-line <code>align</code> behavior instead. A row following the pinned pair always starts on a new line, even without <code>break</code>.</div>
+<p>Up to 4 rows per zone, mixed content, three zones at once:</p>
+<pre><code>[[text.rows]]
+text = "CPU"
+
+[[text.rows]]
+text = "68°C"
+
+[[text.rows]]
+text = "Governor"
+align = "center"
+
+[[text.rows]]
+text = "Details"
+align = "opposite"
+link = "https://example.com/cpu"
+</code></pre>
+<div class="callout warn">If any single zone ends up with <strong>more than 4 rows</strong> (e.g. 5 rows all left-aligned in the same group), the whole group silently falls back to the old shared-line behavior instead: every row is simply joined left-to-right in declaration order, and <code>align</code> on the first row of the group decides the alignment of the group as a whole (no more per-zone pinning for that group). A row following a pinned group always starts on a new line, even without <code>break</code>. This layout assumes each zone's content is short enough to fit on one line - if a zone's text is long enough to wrap, the wrapped portion will not stay aligned to that zone.</div>
+
+<h3>12.6. Reset a single row on demand (<code>reset</code>)</h3>
+<p><span class="badge new">new</span> A row with <code>reset = N</code> acts as a refresh button for row index <code>N</code> (0-based, within the same <code>[[text.rows]]</code> list): tapping it re-runs only that row's <code>sh</code>/<code>icon-sh</code> and updates just that row's text, without rebinding the whole block (icons/GIFs/other rows are left untouched). Combine with <code>script</code> to run a script first and then refresh the row that displays its result.</p>
+<pre><code>[[text.rows]]
+sh = "cat /sys/class/thermal/thermal_zone0/temp"
+icon = "ic_temperature"
+
+[[text.rows]]
+text = "🔄 Refresh"
+align = "opposite"
+reset = 0
+</code></pre>
+<div class="callout warn">If the target row happens to be part of a group using the multi-column pin layout from <a href="#text-rows">section 12.5</a>, <code>reset</code> automatically rebinds that whole block instead of just the one row, to avoid breaking the column spacing - this is expected, not a bug.</div>
 </section>
 
 <section id="editor">
@@ -1795,6 +1826,9 @@ script = "sh $state"
   <li><code>html-file</code>, <code>html-url</code>, <code>html-height</code> - render a full HTML page inline in its own WebView block below the row's text (local file or http/https link, one block per item, follows app theme, transparent background). See <a href="#text-rows">§12.3</a>.</li>
   <li><code>confirm</code> - confirmation dialog shown before running the row's <code>script</code> or applying a toggle change; empty = no confirmation, unchanged from before.</li>
   <li><code>refresh-interval</code> - auto re-runs <code>sh</code>/<code>icon-sh</code>/<code>photo-sh</code> and redraws the row on a fixed interval (seconds), independent of the item rebinding.</li>
+  <li><code>align</code> - rows sharing a line are now grouped into up to 3 zones (left/center/right, max 4 rows each) and pinned accordingly, supporting icon/toggle/link/markdown in any zone. See <a href="#text-rows">§12.5</a>.</li>
+  <li><code>copy</code> - allow long-press select/copy of the row text; applies to the whole <code>[[text.rows]]</code> block if set on any one row.</li>
+  <li><code>reset</code> - row acts as a refresh button for another row (by index), re-running just that row's <code>sh</code>/<code>icon-sh</code> without a full rebind. See <a href="#text-rows">§12.6</a>.</li>
 </ul>
 
 <h3>26.6. <a href="#depend">§17 Dependencies</a></h3>
