@@ -1,71 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:overScrollMode="never"
+    style="@style/dialogRootSmall"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
     <LinearLayout
+        android:alpha="0.9"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="12dp">
+        android:minHeight="150dp"
+        android:background="@drawable/krscript_item_ripple_kon"
+        android:orientation="vertical">
 
-        <LinearLayout
-            android:alpha="0.9"
+        <TextView
+            android:id="@+id/confirm_title"
+            style="@style/textTitle"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="16dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="150dp"
-            android:layout_marginTop="6dp"
-            android:background="@drawable/krscript_item_ripple_kon"
-            android:orientation="vertical">
+            android:text="@string/confirm_title" />
 
-            <TextView
-                android:id="@+id/confirm_title"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:paddingTop="16dp"
-                style="@style/textTitle"
+        <!-- Khu vực cuộn chứa message + custom view -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true"
+            android:requiresFadingEdge="vertical"
+            android:overScrollMode="never"
+            android:scrollbars="none">
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/confirm_title" />
-            <TextView
-                android:id="@+id/confirm_message"
-                android:textIsSelectable="true"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="16dp"
-                android:text="@string/confirm_message"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:orientation="vertical">
 
-            <FrameLayout
-                android:id="@+id/confirm_custom_view"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-                
-            <!-- Đường kẻ phân cách -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="16dp"
-                android:background="?android:attr/listDivider" />
-                
-            <LinearLayout
-                android:layout_margin="16dp"
-                android:orientation="horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                <TextView
+                    android:id="@+id/confirm_message"
+                    android:textIsSelectable="true"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="16dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/confirm_message" />
 
-                <Button
-                    android:id="@+id/btn_confirm"
-                    style="@style/dialogConfirmBtn"
-                    android:text="@string/btn_confirm">
-                </Button>
+                <FrameLayout
+                    android:id="@+id/confirm_custom_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
             </LinearLayout>
-        </LinearLayout>
+        </ScrollView>
 
+        <!-- Đường kẻ phân cách -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="16dp"
+            android:background="?android:attr/listDivider" />
+
+        <LinearLayout
+            android:layout_margin="16dp"
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <Button
+                android:id="@+id/btn_confirm"
+                style="@style/dialogConfirmBtn"
+                android:text="@string/btn_confirm" />
+        </LinearLayout>
     </LinearLayout>
-</ScrollView>
+</LinearLayout>

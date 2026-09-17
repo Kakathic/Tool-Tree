@@ -1072,7 +1072,23 @@ class PageConfigReader {
         tomlGet(table, "sh", "text-sh")?.let { row.dynamicTextSh = it }
         tomlGet(table, "confirm", "confirm-text", "confirm-message")?.let { row.confirm = StringResRef.resolve(context, it) }
         tomlGet(table, "refresh-interval", "refresh", "interval")?.let { row.refreshInterval = it.trim().toIntOrNull() ?: row.refreshInterval }
-        tomlGet(table, "reset")?.let { row.resetTarget = it.trim().toIntOrNull() ?: row.resetTarget }
+        tomlGet(table, "reset")?.let {
+            val v = it.trim()
+            row.resetTarget = when {
+                v.equals("self", ignoreCase = true) || v.equals("this", ignoreCase = true) -> -2
+                v.equals("all", ignoreCase = true) -> -3
+                else -> v.toIntOrNull() ?: row.resetTarget
+            }
+        }
+        tomlGet(table, "progress")?.let { row.progress = it.trim().toFloatOrNull() ?: row.progress }
+        tomlGet(table, "progress-sh")?.let { row.progressSh = it }
+        tomlGet(table, "progress-max", "progressmax")?.let { row.progressMax = it.trim().toFloatOrNull() ?: row.progressMax }
+        tomlGet(table, "progress-color")?.let { try { row.progressColor = it.toColorInt() } catch (_: Exception) {} }
+        tomlGet(table, "progress-track-color", "progress-bg")?.let { try { row.progressTrackColor = it.toColorInt() } catch (_: Exception) {} }
+        tomlGet(table, "progress-width")?.let { row.progressWidth = it.trim().toIntOrNull() ?: row.progressWidth }
+        tomlGet(table, "progress-height")?.let { row.progressHeight = it.trim().toIntOrNull() ?: row.progressHeight }
+        tomlGet(table, "flash")?.let { row.flash = tomlTruthy(it, "flash") }
+        tomlGet(table, "flash-color")?.let { try { row.flashColor = it.toColorInt() } catch (_: Exception) {} }
         tomlGet(table, "markdown", "md")?.let { row.markdown = tomlTruthy(it, "markdown", "md") }
         tomlGet(table, "html-file", "html-path")?.let { row.htmlFile = it.trim() }
         tomlGet(table, "html-url", "html-link")?.let { row.htmlUrl = it.trim() }

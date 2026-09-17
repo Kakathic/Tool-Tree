@@ -1,10 +1,12 @@
 package com.omarea.krscript.ui
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.AnimatedImageDrawable
@@ -40,7 +42,8 @@ object RowsRenderHelper {
     private class RowsRenderState(
         val animatedIcons: MutableList<Animatable>,
         val rowRanges: Map<Int, IntArray>,
-        val zoneGroupRows: Set<Int>
+        val zoneGroupRows: Set<Int>,
+        val flashAnimators: MutableList<ValueAnimator> = ArrayList()
     )
 
     private class RowSpanResult(
@@ -70,6 +73,7 @@ object RowsRenderHelper {
 
         rowsView.text = ""
         (rowsView.tag as? RowsRenderState)?.animatedIcons?.forEach { it.stop() }
+        (rowsView.tag as? RowsRenderState)?.flashAnimators?.forEach { it.cancel() }
         val animatedRowIcons = ArrayList<Animatable>()
         (rowsView.getTag(R.id.kr_rows_refresh_runnable) as? Runnable)?.let { rowsView.removeCallbacks(it) }
         val allowCopy = rows.any { it.copy }
@@ -92,17 +96,20 @@ object RowsRenderHelper {
         val dynamicTextResults: Map<Int, String>
         val dynamicIconResults: Map<Int, String>
         val dynamicPhotoResults: Map<Int, String>
+        val dynamicProgressResults: Map<Int, String>
         run {
             val scripts = LinkedHashMap<String, String>()
             rows.forEachIndexed { index, row ->
                 if (row.dynamicTextSh.isNotEmpty()) scripts["text:$index"] = row.dynamicTextSh
                 if (row.iconSh.isNotEmpty()) scripts["icon:$index"] = row.iconSh
                 if (row.photoSh.isNotEmpty()) scripts["photo:$index"] = row.photoSh
+                if (row.progressSh.isNotEmpty()) scripts["progress:$index"] = row.progressSh
             }
             val results = if (scripts.isEmpty()) emptyMap() else ScriptEnvironmen.executeMultipleResultRoot(context, scripts, config)
             val textMap = HashMap<Int, String>()
             val iconMap = HashMap<Int, String>()
             val photoMap = HashMap<Int, String>()
+            val progressMap = HashMap<Int, String>()
             results.forEach { (key, value) ->
                 val sepIndex = key.indexOf(':')
                 val prefix = key.substring(0, sepIndex)
@@ -111,11 +118,13 @@ object RowsRenderHelper {
                     "text" -> textMap[index] = value
                     "icon" -> iconMap[index] = value
                     "photo" -> photoMap[index] = value
+                    "progress" -> progressMap[index] = value
                 }
             }
             dynamicTextResults = textMap
             dynamicIconResults = iconMap
             dynamicPhotoResults = photoMap
+            dynamicProgressResults = progressMap
         }
 
         val rowRanges = HashMap<Int, IntArray>()
@@ -135,7 +144,7 @@ object RowsRenderHelper {
                 if (i > 0) {
                     width += rowsView.paint.measureText(" ")
                 }
-                val result = buildRowSpan(context, rowsView, extraIconView, rows, config, htmlContainer, rows[idx], idx, dynamicTextResults, dynamicIconResults, animatedRowIcons)
+                val result = buildRowSpan(context, rowsView, extraIconView, rows, config, htmlContainer, rows[idx], idx, dynamicTextResults, dynamicIconResults, dynamicProgressResults, animatedRowIcons)
                 built.add(idx to result)
                 width += result.width
             }
@@ -177,7 +186,7 @@ object RowsRenderHelper {
             val leftIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_NORMAL }
             val centerIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_CENTER }
             val rightIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_OPPOSITE }
-            val zoneEligible = leftIdx.size <= 5 && centerIdx.size <= 5 && rightIdx.size <= 5 &&
+            val zoneEligible = leftIdx.size <= 4 && centerIdx.size <= 4 && rightIdx.size <= 4 &&
                 (centerIdx.isNotEmpty() || rightIdx.isNotEmpty())
 
             if (zoneEligible) {
@@ -224,7 +233,7 @@ object RowsRenderHelper {
                     if (i > 0) {
                         rowsView.append(" ")
                     }
-                    val result = buildRowSpan(context, rowsView, extraIconView, rows, config, htmlContainer, rows[idx], idx, dynamicTextResults, dynamicIconResults, animatedRowIcons)
+                    val result = buildRowSpan(context, rowsView, extraIconView, rows, config, htmlContainer, rows[idx], idx, dynamicTextResults, dynamicIconResults, dynamicProgressResults, animatedRowIcons)
                     val start = rowsView.length()
                     rowsView.append(result.spannable)
                     rowRanges[idx] = intArrayOf(start, rowsView.length())
@@ -300,28 +309,40 @@ object RowsRenderHelper {
         val scripts = LinkedHashMap<String, String>()
         if (row.dynamicTextSh.isNotEmpty()) scripts["text"] = row.dynamicTextSh
         if (row.iconSh.isNotEmpty()) scripts["icon"] = row.iconSh
+        if (row.progressSh.isNotEmpty()) scripts["progress"] = row.progressSh
         val results = if (scripts.isEmpty()) emptyMap() else ScriptEnvironmen.executeMultipleResultRoot(context, scripts, config)
         val textMap = results["text"]?.let { mapOf(rowIndex to it) } ?: emptyMap()
         val iconMap = results["icon"]?.let { mapOf(rowIndex to it) } ?: emptyMap()
+        val progressMap = results["progress"]?.let { mapOf(rowIndex to it) } ?: emptyMap()
 
         val animated = ArrayList<Animatable>()
-        val rendered = buildRowSpan(context, rowsView, extraIconView, rows, config, htmlContainer, row, rowIndex, textMap, iconMap, animated)
+        val rendered = buildRowSpan(context, rowsView, extraIconView, rows, config, htmlContainer, row, rowIndex, textMap, iconMap, progressMap, animated)
 
         val start = range[0]
         val end = range[1]
+        val oldText = editable.subSequence(start, end).toString()
         editable.replace(start, end, rendered.spannable)
         val delta = rendered.spannable.length - (end - start)
+        val newEnd = start + rendered.spannable.length
+
+        if (row.flash && oldText != rendered.spannable.toString()) {
+            val flashColor = if (row.flashColor != -1) row.flashColor else 0xFFFFC107.toInt()
+            val flashSpan = FlashBackgroundSpan(rowsView, flashColor)
+            editable.setSpan(flashSpan, start, newEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            flashSpan.start()
+            state.flashAnimators.add(flashSpan.animator)
+        }
 
         val newRanges = HashMap<Int, IntArray>()
         state.rowRanges.forEach { (idx, r) ->
             newRanges[idx] = when {
-                idx == rowIndex -> intArrayOf(start, start + rendered.spannable.length)
+                idx == rowIndex -> intArrayOf(start, newEnd)
                 r[0] >= end -> intArrayOf(r[0] + delta, r[1] + delta)
                 else -> r
             }
         }
         state.animatedIcons.addAll(animated)
-        rowsView.tag = RowsRenderState(state.animatedIcons, newRanges, state.zoneGroupRows)
+        rowsView.tag = RowsRenderState(state.animatedIcons, newRanges, state.zoneGroupRows, state.flashAnimators)
 
         if (extraIconView != null && row.photoSh.isNotEmpty()) {
             val effectivePhoto = ScriptEnvironmen.executeResultRoot(context, row.photoSh, config)
@@ -365,6 +386,7 @@ object RowsRenderHelper {
         rowIndex: Int,
         dynamicTextResults: Map<Int, String>,
         dynamicIconResults: Map<Int, String>,
+        dynamicProgressResults: Map<Int, String>,
         animatedRowIcons: MutableList<Animatable>
     ): RowSpanResult {
         val isToggle = row.toggle == "checkbox" || row.toggle == "switch"
@@ -390,33 +412,58 @@ object RowsRenderHelper {
         val rowIconDrawableRaw = if (hasIcon) buildRowIconDrawable(context, effectiveIcon, row, config) else null
         val showIcon = rowIconDrawableRaw != null
 
-        val text = when {
+        val effectiveProgress = if (row.progressSh.isNotEmpty()) {
+            dynamicProgressResults[rowIndex]?.trim()?.toFloatOrNull() ?: -1f
+        } else {
+            row.progress
+        }
+        val hasProgress = effectiveProgress >= 0f
+        val textBase = when {
             isToggle -> "$label \u2002 "
             showIcon && row.iconPosition == "before" -> "\u2002 $label"
             showIcon -> "$label \u2002"
             else -> label
         }
+        val text = if (hasProgress) {
+            if (textBase.isEmpty()) "\u2002" else "$textBase \u2002"
+        } else {
+            textBase
+        }
         val length = text.length
         val spannableString = SpannableString(text)
         val markdownOffset = if (showIcon && row.iconPosition == "before") 2 else 0
 
+        var toggleIconIndex = -1
         var toggleDrawable: Drawable? = null
         if (isToggle) {
-            val iconIndex = length - 2
+            toggleIconIndex = textBase.length - 2
             toggleDrawable = buildToggleDrawable(context, row)
-            spannableString.setSpan(VerticalCenterImageSpan(toggleDrawable), iconIndex, iconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannableString.setSpan(VerticalCenterImageSpan(toggleDrawable), toggleIconIndex, toggleIconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
+        var rowIconIndex = -1
         var rowIconDrawable: Drawable? = null
         if (showIcon && rowIconDrawableRaw != null) {
             rowIconDrawable = rowIconDrawableRaw
-            val iconIndex = if (row.iconPosition == "before") 0 else length - 1
-            spannableString.setSpan(VerticalCenterImageSpan(rowIconDrawable), iconIndex, iconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            rowIconIndex = if (row.iconPosition == "before") 0 else textBase.length - 1
+            spannableString.setSpan(VerticalCenterImageSpan(rowIconDrawable), rowIconIndex, rowIconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             val isRealGifDrawable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && rowIconDrawable is AnimatedImageDrawable
             if (rowIconDrawable is AnimationDrawable || isRealGifDrawable) {
                 GifPlaybackHelper.bindToTextView(rowsView, rowIconDrawable, row.iconGifAutoplay, row.iconGifLoopCount)
                 animatedRowIcons.add(rowIconDrawable as Animatable)
             }
+        }
+
+        var progressIndex = -1
+        var progressWidthPx = 0
+        if (hasProgress) {
+            progressIndex = length - 1
+            progressWidthPx = dpToPx(context, row.progressWidth)
+            val progressHeightPx = dpToPx(context, row.progressHeight)
+            val fillColor = if (row.progressColor != -1) row.progressColor else 0xFF4CAF50.toInt()
+            val trackColor = if (row.progressTrackColor != -1) row.progressTrackColor else 0x33888888
+            val ratio = if (row.progressMax > 0f) effectiveProgress / row.progressMax else 0f
+            spannableString.setSpan(ProgressBarSpan(progressWidthPx, progressHeightPx, ratio, fillColor, trackColor), progressIndex, progressIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
         if (row.underline) {
@@ -497,8 +544,11 @@ object RowsRenderHelper {
                                 DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
                             }
                         }
-                        if (row.resetTarget != -1) {
-                            resetRow(context, rowsView, extraIconView, rows, config, row.resetTarget, htmlContainer)
+                        when (row.resetTarget) {
+                            -1 -> {}
+                            -2 -> resetRow(context, rowsView, extraIconView, rows, config, rowIndex, htmlContainer)
+                            -3 -> bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+                            else -> resetRow(context, rowsView, extraIconView, rows, config, row.resetTarget, htmlContainer)
                         }
                     }
                 }
@@ -554,20 +604,29 @@ object RowsRenderHelper {
         }
 
         val measurePaint = measurePaintForRow(rowsView.paint, row)
-        val width = when {
-            isToggle && toggleDrawable != null -> {
-                val placeholderIndex = text.length - 2
-                val beforeIcon = text.substring(0, placeholderIndex)
-                val afterIcon = text.substring(placeholderIndex + 1)
-                measurePaint.measureText(beforeIcon) + toggleDrawable.bounds.width() + measurePaint.measureText(afterIcon)
+        val specialSlots = ArrayList<Pair<Int, Float>>()
+        if (toggleIconIndex != -1 && toggleDrawable != null) {
+            specialSlots.add(toggleIconIndex to toggleDrawable.bounds.width().toFloat())
+        }
+        if (rowIconIndex != -1 && rowIconDrawable != null) {
+            specialSlots.add(rowIconIndex to rowIconDrawable.bounds.width().toFloat())
+        }
+        if (progressIndex != -1) {
+            specialSlots.add(progressIndex to progressWidthPx.toFloat())
+        }
+        specialSlots.sortBy { it.first }
+
+        var width = 0f
+        var cursor = 0
+        for ((idx, slotWidth) in specialSlots) {
+            if (idx > cursor) {
+                width += measurePaint.measureText(text, cursor, idx)
             }
-            showIcon && rowIconDrawable != null -> {
-                val iconIdx = if (row.iconPosition == "before") 0 else text.length - 1
-                val beforeIcon = text.substring(0, iconIdx)
-                val afterIcon = text.substring(iconIdx + 1)
-                measurePaint.measureText(beforeIcon) + rowIconDrawable.bounds.width() + measurePaint.measureText(afterIcon)
-            }
-            else -> measurePaint.measureText(text)
+            width += slotWidth
+            cursor = idx + 1
+        }
+        if (cursor < text.length) {
+            width += measurePaint.measureText(text, cursor, text.length)
         }
 
         return RowSpanResult(spannableString, width)
@@ -585,6 +644,51 @@ object RowsRenderHelper {
         override fun getSize(paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int = width
 
         override fun draw(canvas: Canvas, text: CharSequence?, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
+        }
+    }
+
+    private class ProgressBarSpan(
+        private val widthPx: Int,
+        private val heightPx: Int,
+        private val progress: Float,
+        private val fillColor: Int,
+        private val trackColor: Int
+    ) : ReplacementSpan() {
+        override fun getSize(paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int = widthPx
+
+        override fun draw(canvas: Canvas, text: CharSequence?, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
+            val cy = (top + bottom) / 2f
+            val halfH = heightPx / 2f
+            val radius = halfH
+            val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = trackColor }
+            canvas.drawRoundRect(RectF(x, cy - halfH, x + widthPx, cy + halfH), radius, radius, trackPaint)
+            val fillWidth = widthPx * progress.coerceIn(0f, 1f)
+            if (fillWidth > 0f) {
+                val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = fillColor }
+                canvas.drawRoundRect(RectF(x, cy - halfH, x + fillWidth, cy + halfH), radius, radius, fillPaint)
+            }
+        }
+    }
+
+    private class FlashBackgroundSpan(private val view: TextView, color: Int) : CharacterStyle(), UpdateAppearance {
+        private val baseColor = color and 0x00FFFFFF
+        private var currentAlpha = 0
+        val animator: ValueAnimator = ValueAnimator.ofInt(0x80, 0).apply {
+            duration = 700
+            addUpdateListener {
+                currentAlpha = it.animatedValue as Int
+                view.invalidate()
+            }
+        }
+
+        fun start() {
+            animator.start()
+        }
+
+        override fun updateDrawState(tp: TextPaint) {
+            if (currentAlpha > 0) {
+                tp.bgColor = (currentAlpha shl 24) or baseColor
+            }
         }
     }
 

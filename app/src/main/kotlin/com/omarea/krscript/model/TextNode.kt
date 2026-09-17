@@ -127,7 +127,34 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         // RowsRenderHelper.resetRow() cho ĐÚNG row có index bằng giá trị này (0-based, tính theo
         // thứ tự trong [[page.rows]]) - dùng để làm "nút làm mới" cho 1 row khác hiển thị dữ liệu
         // động (text-sh/icon-sh). Có thể kết hợp chung với "script" (chạy script xong rồi mới
-        // reset). Khai báo bằng "reset" trong TOML.
+        // reset). Khai báo bằng "reset" trong TOML. 2 giá trị đặc biệt: -2 = tự reset CHÍNH row
+        // này (khai "reset = \"self\"" trong TOML), -3 = reset lại TOÀN BỘ danh sách rows hiện tại,
+        // tương đương bind() lại từ đầu (khai "reset = \"all\"" trong TOML).
         internal var resetTarget: Int = -1
+        // -1 (mặc định) = không hiện thanh tiến trình. Khác -1: hiện 1 thanh tiến trình nhỏ nằm
+        // NGAY SAU text/icon của row, giá trị 0..progressMax. Khai báo bằng "progress" trong TOML.
+        internal var progress: Float = -1f
+        // Nếu khai (không rỗng): chạy script này để LẤY ĐỘNG giá trị progress (kết quả script phải
+        // là 1 số, ví dụ "62") thay vì dùng "progress" tĩnh - giống cơ chế text-sh/icon-sh. Khai
+        // báo bằng "progress-sh" trong TOML.
+        internal var progressSh: String = ""
+        // Giá trị tối đa tương ứng progress=100%. Mặc định 100 (dùng progress như %). Khai báo
+        // bằng "progress-max" trong TOML.
+        internal var progressMax: Float = 100f
+        // Màu phần đã đầy của thanh tiến trình. -1 = màu mặc định. Khai báo bằng "progress-color".
+        internal var progressColor: Int = -1
+        // Màu nền/track của thanh tiến trình. -1 = màu mặc định. Khai báo bằng "progress-track-color".
+        internal var progressTrackColor: Int = -1
+        // Bề rộng thanh tiến trình (dp). Khai báo bằng "progress-width".
+        internal var progressWidth: Int = 120
+        // Chiều cao thanh tiến trình (dp). Khai báo bằng "progress-height".
+        internal var progressHeight: Int = 8
+        // true (mặc định): khi row này được RowsRenderHelper.resetRow() cập nhật VÀ nội dung text
+        // thực sự đổi khác trước, nháy nhẹ 1 lớp màu nền rồi mờ dần để người dùng nhận ra vừa có
+        // giá trị mới. false: tắt hiệu ứng này cho riêng row. Khai báo bằng "flash" trong TOML.
+        internal var flash: Boolean = true
+        // Màu dùng cho hiệu ứng nhấp nháy ở trên. -1 = màu mặc định (hổ phách/amber). Khai báo
+        // bằng "flash-color" trong TOML.
+        internal var flashColor: Int = -1
     }
 }

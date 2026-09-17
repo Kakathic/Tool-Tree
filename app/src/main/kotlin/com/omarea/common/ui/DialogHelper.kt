@@ -116,6 +116,7 @@ class DialogHelper {
                 if (message.isNotEmpty()) {
                     text = message
                     visibility = View.VISIBLE
+                    setTextIsSelectable(true)
                 } else {
                     visibility = View.GONE
                 }
