@@ -1073,6 +1073,7 @@ class PageConfigReader {
         tomlGet(table, "sh", "text-sh")?.let { row.dynamicTextSh = it }
         tomlGet(table, "confirm", "confirm-text", "confirm-message")?.let { row.confirm = StringResRef.resolve(context, it) }
         tomlGet(table, "refresh-interval", "refresh", "interval")?.let { row.refreshInterval = it.trim().toIntOrNull() ?: row.refreshInterval }
+        tomlGet(table, "reset")?.let { row.resetTarget = it.trim().toIntOrNull() ?: row.resetTarget }
         tomlGet(table, "markdown", "md")?.let { row.markdown = tomlTruthy(it, "markdown", "md") }
         tomlGet(table, "html-file", "html-path")?.let { row.htmlFile = it.trim() }
         tomlGet(table, "html-url", "html-link")?.let { row.htmlUrl = it.trim() }

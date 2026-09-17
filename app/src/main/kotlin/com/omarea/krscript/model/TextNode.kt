@@ -123,5 +123,11 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         // cả item được bind lại (list cuộn/rebind). 0 (mặc định) = không tự làm mới. Khai báo
         // bằng "refresh-interval" trong TOML.
         internal var refreshInterval: Int = 0
+        // -1 (mặc định) = không phải nút reset. Khác -1: bấm vào row này sẽ gọi
+        // RowsRenderHelper.resetRow() cho ĐÚNG row có index bằng giá trị này (0-based, tính theo
+        // thứ tự trong [[page.rows]]) - dùng để làm "nút làm mới" cho 1 row khác hiển thị dữ liệu
+        // động (text-sh/icon-sh). Có thể kết hợp chung với "script" (chạy script xong rồi mới
+        // reset). Khai báo bằng "reset" trong TOML.
+        internal var resetTarget: Int = -1
     }
 }

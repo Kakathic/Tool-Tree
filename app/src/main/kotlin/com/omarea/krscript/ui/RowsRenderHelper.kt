@@ -487,13 +487,18 @@ object RowsRenderHelper {
             }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
-        if (!isToggle && row.onClickScript.isNotEmpty()) {
+        if (!isToggle && (row.onClickScript.isNotEmpty() || row.resetTarget != -1)) {
             spannableString.setSpan(object : ClickableSpan() {
                 override fun onClick(widget: View) {
                     runRowAction(context, row.confirm) {
-                        val result = ScriptEnvironmen.executeResultRoot(context, row.onClickScript, config)
-                        if (result.trim().isNotEmpty()) {
-                            DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                        if (row.onClickScript.isNotEmpty()) {
+                            val result = ScriptEnvironmen.executeResultRoot(context, row.onClickScript, config)
+                            if (result.trim().isNotEmpty()) {
+                                DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                            }
+                        }
+                        if (row.resetTarget != -1) {
+                            resetRow(context, rowsView, extraIconView, rows, config, row.resetTarget, htmlContainer)
                         }
                     }
                 }
