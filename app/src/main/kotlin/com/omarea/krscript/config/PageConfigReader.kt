@@ -1115,7 +1115,7 @@ class PageConfigReader {
         tomlGet(table, "set", "setstate")?.let { row.onChangeSh = it }
         tomlGet(table, "align")?.let {
             when (it) {
-                "opposite" -> row.align = Layout.Alignment.ALIGN_OPPOSITE
+                "right" -> row.align = Layout.Alignment.ALIGN_OPPOSITE
                 "center" -> row.align = Layout.Alignment.ALIGN_CENTER
                 "normal" -> row.align = Layout.Alignment.ALIGN_NORMAL
             }

@@ -1048,7 +1048,7 @@ italic = true
 <tr><td class="field-name">size</td><td>-</td><td class="field-type">Int</td><td>-1</td><td>Font size (sp)</td></tr>
 <tr><td class="field-name">break</td><td>-</td><td class="field-type">Bool</td><td>false</td><td>Line break after this row</td></tr>
 <tr><td class="field-name">line</td><td>divider, separator</td><td class="field-type">Bool</td><td>false</td><td>Draw a horizontal divider before this row</td></tr>
-<tr><td class="field-name">align</td><td>-</td><td class="field-type">String</td><td>normal</td><td><code>normal</code>/<code>center</code>/<code>opposite</code>. Rows sharing the same line are grouped by <code>align</code> into up to 3 zones (left/center/right, <strong>max 4 rows each</strong>) and pinned accordingly - see <a href="#text-rows">section 12.5</a></td></tr>
+<tr><td class="field-name">align</td><td>-</td><td class="field-type">String</td><td>normal</td><td><code>normal</code>/<code>center</code>/<code>right</code>. Rows sharing the same line are grouped by <code>align</code> into up to 3 zones (left/center/right, <strong>max 4 rows each</strong>) and pinned accordingly - see <a href="#text-rows">section 12.5</a></td></tr>
 <tr><td class="field-name">link</td><td>href</td><td class="field-type">String</td><td>""</td><td>URL to open on click</td></tr>
 <tr><td class="field-name">activity</td><td>a, intent</td><td class="field-type">String</td><td>""</td><td>Intent to open on click</td></tr>
 <tr><td class="field-name">copy</td><td>-</td><td class="field-type">Bool</td><td>false</td><td><span class="badge new">new</span> Allow the user to long-press and select/copy text. Applies to the WHOLE <code>[[text.rows]]</code> block at once (all rows share one text view) - setting it on <strong>any single row</strong> turns on selection for the entire block</td></tr>
@@ -1192,13 +1192,13 @@ markdown = true
 <div class="callout warn">Nesting only works inside single backticks (<code>`...`</code>) - triple backticks (<code>```...```</code>) always keep their content literal, by design, so they can be used to show raw Markdown symbols without any of them being interpreted.</div>
 
 <h3>12.5. Pinning rows to the left / center / right of the same line</h3>
-<p><span class="badge new">new</span> Rows that would join the same line by default (no <code>break</code>/<code>line</code>/<code>margin-top</code> on a later row, no <code>margin-bottom</code> on an earlier one) are grouped, then bucketed by <code>align</code> into up to 3 zones: <code>normal</code> = left, <code>center</code> = center, <code>opposite</code> = right. If <strong>each zone has at most 4 rows</strong> and at least one row uses <code>center</code>/<code>opposite</code>, the group renders as a true multi-column line: left content stays flush left, center is centered across the full line width, right is flush against the right edge - regardless of how many rows end up in each zone (1 to 4). Unlike the earlier version of this feature, a pinned row can now have anything a normal row can: <code>icon</code>/<code>icon-sh</code>/<code>toggle</code>/<code>link</code>/<code>activity</code>/<code>script</code>/<code>markdown</code>/<code>underline</code>/<code>strikethrough</code> all work in any zone.</p>
+<p><span class="badge new">new</span> Rows that would join the same line by default (no <code>break</code>/<code>line</code>/<code>margin-top</code> on a later row, no <code>margin-bottom</code> on an earlier one) are grouped, then bucketed by <code>align</code> into up to 3 zones: <code>normal</code> = left, <code>center</code> = center, <code>right</code> = right. If <strong>each zone has at most 4 rows</strong> and at least one row uses <code>center</code>/<code>right</code>, the group renders as a true multi-column line: left content stays flush left, center is centered across the full line width, right is flush against the right edge - regardless of how many rows end up in each zone (1 to 4). Unlike the earlier version of this feature, a pinned row can now have anything a normal row can: <code>icon</code>/<code>icon-sh</code>/<code>toggle</code>/<code>link</code>/<code>activity</code>/<code>script</code>/<code>markdown</code>/<code>underline</code>/<code>strikethrough</code> all work in any zone.</p>
 <pre><code>[[text.rows]]
 text = "kkkkk"
 
 [[text.rows]]
 text = "ffffffg"
-align = "opposite"
+align = "right"
 </code></pre>
 <p>Up to 4 rows per zone, mixed content, three zones at once:</p>
 <pre><code>[[text.rows]]
@@ -1213,7 +1213,7 @@ align = "center"
 
 [[text.rows]]
 text = "Details"
-align = "opposite"
+align = "right"
 link = "https://example.com/cpu"
 </code></pre>
 <div class="callout warn">If any single zone ends up with <strong>more than 4 rows</strong> (e.g. 5 rows all left-aligned in the same group), the whole group silently falls back to the old shared-line behavior instead: every row is simply joined left-to-right in declaration order, and <code>align</code> on the first row of the group decides the alignment of the group as a whole (no more per-zone pinning for that group). A row following a pinned group always starts on a new line, even without <code>break</code>. This layout assumes each zone's content is short enough to fit on one line - if a zone's text is long enough to wrap, the wrapped portion will not stay aligned to that zone.</div>
@@ -1226,7 +1226,7 @@ icon = "ic_temperature"
 
 [[text.rows]]
 text = "🔄 Refresh"
-align = "opposite"
+align = "right"
 reset = 0
 </code></pre>
 <p>Besides a numeric index, <code>reset</code> also accepts two special string values:</p>
@@ -1256,7 +1256,7 @@ progress-height = 8
 
 [[text.rows]]
 text = "🔄 Refresh"
-align = "opposite"
+align = "right"
 reset = "all"
 </code></pre>
 <div class="callout tip">Like <code>text-sh</code>/<code>icon-sh</code>/<code>photo-sh</code> of a row, <code>progress-sh</code> is re-evaluated on every rows render (batched into one shell round-trip) and by <code>refresh-interval</code> timers - the bar updates live together with the row's text. The output must be a plain number; when combined with <code>refresh-interval</code> + <code>reset</code> you get a self-updating gauge.</div>
