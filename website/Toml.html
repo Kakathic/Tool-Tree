@@ -474,6 +474,28 @@ desc = "@string:switch_fast_charge_desc"
 get = "getprop sys.fastcharge"
 set = "setprop sys.fastcharge $state"</code></pre>
 <div class="callout tip">Both <code>@string/name</code> and <code>@string:name</code> point to the same resource lookup - use whichever separator you prefer, they are interchangeable.</div>
+
+<h3>2.7. <code>load-key</code> - inline key/value substitution (i18n)</h3>
+<p><span class="badge new">new</span> A page may declare <strong>one</strong> directive line anywhere in the document (typically at the very top):</p>
+<pre><code>load-key = "strings_{LANG}.txt"
+
+[[switch]]
+title = "$wifi_title"
+get = "settings get global wifi_on"
+set = "settings put global wifi_on $state"</code></pre>
+<p>Before the TOML is parsed, the parser reads the key file and substitutes every <code>$name</code> token in the <strong>whole document</strong> with the matching value. This is a plain text pre-processing step (it runs on the raw file, before <code>Toml.parse()</code>), so <code>$name</code> works inside any string field - titles, descs, scripts, options...</p>
+<div class="tbl-container">
+<table class="tbl">
+<tr><th>Directive</th><th>Description</th></tr>
+<tr><td><code>load-key = "path"</code></td><td>Path of the key file - resolved like every other path (relative to the page config dir, app-private dir, APK assets, or absolute). The special placeholder <code>{LANG}</code> is tried in order: <em>language-country</em> (e.g. <code>strings_zh-CN.txt</code>) &rarr; <em>language</em> (e.g. <code>strings_zh.txt</code>) &rarr; <code>strings_default.txt</code> - the <strong>first file that exists</strong> wins, so one config can ship per-locale strings</td></tr>
+<tr><td><code>load-key-sh = "script"</code></td><td><span class="badge shell">shell</span> Script whose output is the key file path instead of a static path</td></tr>
+</table>
+</div>
+<p>The key file itself is a simple list of lines <code>name = "value"</code> (name starts with a letter/underscore; value is quoted; <code>\</code> escape sequences are supported):</p>
+<pre><code># strings_en.txt
+wifi_title = "Wi-Fi booster"
+wifi_desc = "Keep Wi-Fi on during sleep"</code></pre>
+<div class="callout tip">Substitution details: unknown <code>$name</code> references are left untouched; values are re-escaped (<code>\</code> &rarr; <code>\\</code>, <code>"</code> &rarr; <code>\"</code>) so they are safe inside TOML strings; the directive line itself is removed from the document after processing. Only the <strong>first</strong> directive line is applied - later ones are ignored.</div>
 </section>
 
 <section id="overview">
@@ -743,7 +765,7 @@ auto-off = true
 <tr><td class="field-name">desc-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces desc</td></tr>
 <tr><td class="field-name">desc-on</td><td>on-desc, desc-checked</td><td class="field-type">String</td><td><span class="badge new">new</span> Note shown SPECIFICALLY when the checkbox/switch is ON (only for type=bool/checkbox/switch)</td></tr>
 <tr><td class="field-name">desc-on-sh</td><td>on-desc-sh, desc-checked-sh</td><td class="field-type">String</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces desc-on</td></tr>
-<tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td>Input type: <code>text</code>/<code>bool</code>/<code>checkbox</code>/<code>switch</code>/<code>seekbar</code>/<code>file</code>/<code>folder</code>/<code>app</code>/<code>spinner</code>/<code>single-select</code>/<code>multi-select</code></td></tr>
+<tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td>Input type: <code>text</code>/<code>int</code>/<code>number</code>/<code>bool</code>/<code>checkbox</code>/<code>switch</code>/<code>seekbar</code>/<code>file</code>/<code>folder</code>/<code>app</code>/<code>packages</code>/<code>spinner</code>/<code>single-select</code>/<code>multi-select</code>/<code>color</code></td></tr>
 <tr><td class="field-name">value</td><td>-</td><td class="field-type">String</td><td>Default value</td></tr>
 <tr><td class="field-name">value-sh</td><td>value-su</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that fetches value dynamically (runs when dialog opens)</td></tr>
 <tr><td class="field-name">placeholder</td><td>-</td><td class="field-type">String</td><td>Hint when empty</td></tr>
@@ -773,6 +795,7 @@ auto-off = true
 <table class="tbl">
 <tr><th>type</th><th>UI</th><th>Related fields</th></tr>
 <tr><td><code>text</code></td><td>Text input</td><td><code>value</code>, <code>placeholder</code>, <code>maxlength</code>, <code>required</code></td></tr>
+<tr><td><code>int</code> / <code>number</code></td><td><span class="badge new">new</span> Numeric text input - value is validated against <code>min</code>/<code>max</code> when the dialog is confirmed (out-of-range blocks OK, empty = no validation)</td><td><code>value</code>, <code>min</code>, <code>max</code>, <code>required</code></td></tr>
 <tr><td><code>bool</code> / <code>checkbox</code> / <code>switch</code></td><td>Toggle ON/OFF</td><td><code>value</code> = "1"/"0", <code>desc-on</code> for ON-state note</td></tr>
 <tr><td><code>seekbar</code></td><td>Slider</td><td><code>min</code>, <code>max</code>, <code>value</code></td></tr>
 <tr><td><code>file</code></td><td>File picker</td><td><code>suffix</code>, <code>mime</code>, <code>path-home</code>, <code>multiple</code>, <code>editable</code></td></tr>
@@ -780,6 +803,8 @@ auto-off = true
 <tr><td><code>app</code></td><td>App picker</td><td><code>multiple</code></td></tr>
 <tr><td><code>spinner</code> / <code>single-select</code></td><td>Dropdown single choice</td><td><code>options</code>/<code>options-sh</code>, <code>allow-no-selection</code></td></tr>
 <tr><td><code>multi-select</code></td><td>Checkbox list multi choice</td><td><code>options</code>, <code>multiple=true</code>, <code>separator</code></td></tr>
+<tr><td><code>color</code></td><td><span class="badge new">new</span> Color picker widget - accepts <code>#RRGGBB</code>/<code>#AARRGGBB</code> hex or a resource reference (<code>@color/name</code>, <code>@android:color/name</code>); an invalid value blocks OK</td><td><code>value</code> (default color)</td></tr>
+<tr><td><code>packages</code></td><td><span class="badge new">new</span> Alias of <code>app</code> - same app-chooser UI and behavior</td><td><code>multiple</code></td></tr>
 </table>
 </div>
 
@@ -1027,14 +1052,14 @@ italic = true
 <tr><td class="field-name">link</td><td>href</td><td class="field-type">String</td><td>""</td><td>URL to open on click</td></tr>
 <tr><td class="field-name">activity</td><td>a, intent</td><td class="field-type">String</td><td>""</td><td>Intent to open on click</td></tr>
 <tr><td class="field-name">copy</td><td>-</td><td class="field-type">Bool</td><td>false</td><td><span class="badge new">new</span> Allow the user to long-press and select/copy text. Applies to the WHOLE <code>[[text.rows]]</code> block at once (all rows share one text view) - setting it on <strong>any single row</strong> turns on selection for the entire block</td></tr>
-<tr><td class="field-name">reset</td><td>-</td><td class="field-type">Int</td><td>-1</td><td><span class="badge new">new</span> Row index (0-based, within the same <code>[[text.rows]]</code> list) to refresh when THIS row is clicked - re-runs that row's <code>sh</code>/<code>icon-sh</code> only, without rebinding the whole block. Combine with <code>script</code> to run a script first, then refresh the target row. See <a href="#text-rows">section 12.6</a></td></tr>
+<tr><td class="field-name">reset</td><td>-</td><td class="field-type">Int|String</td><td>-1</td><td><span class="badge new">new</span> Row index (0-based, within the same <code>[[text.rows]]</code> list) to refresh when THIS row is clicked - re-runs that row's <code>sh</code>/<code>icon-sh</code>/<code>progress-sh</code> only, without rebinding the whole block. Combine with <code>script</code> to run a script first, then refresh the target row. Also accepts the special values <code>"self"</code>/<code>"this"</code> (= refresh THIS row itself) and <code>"all"</code> (= rebind the whole rows list from scratch). See <a href="#text-rows">section 12.6</a></td></tr>
 <tr><td class="field-name">photo</td><td>photo-path</td><td class="field-type">String</td><td>""</td><td>Large image (own line, separate from text)</td></tr>
 <tr><td class="field-name">photo-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the row's photo path dynamically. Re-runs every time the rows are re-rendered (batched with text-sh/icon-sh, NOT cached - unlike node-level photo-sh); overrides <code>photo</code></td></tr>
 <tr><td class="field-name">photo-real-size</td><td>photo-original-size</td><td class="field-type">Bool</td><td>false</td><td>Show image at real size</td></tr>
-<tr><td class="field-name">photo-gif-num</td><td>gif-num</td><td class="field-type">Int</td><td>0</td><td>&gt;0: image is animated (photo_1.png...)</td></tr>
-<tr><td class="field-name">photo-gif-time</td><td>gif-time</td><td class="field-type">Int</td><td>300</td><td>Time per frame (ms)</td></tr>
-<tr><td class="field-name">photo-gif-autoplay</td><td>gif-autoplay</td><td class="field-type">Bool</td><td>true</td><td>Auto-play the GIF</td></tr>
-<tr><td class="field-name">photo-gif-loop</td><td>photo-gif-loop-count, gif-loop, gif-loop-count</td><td class="field-type">Int</td><td>0</td><td>Loop count (0=infinite)</td></tr>
+<tr><td class="field-name">photo-gif-num</td><td>gif-num, gif_num</td><td class="field-type">Int</td><td>0</td><td>&gt;0: image is animated (photo_1.png...)</td></tr>
+<tr><td class="field-name">photo-gif-time</td><td>gif-time, gif_time</td><td class="field-type">Int</td><td>300</td><td>Time per frame (ms)</td></tr>
+<tr><td class="field-name">photo-gif-autoplay</td><td>gif-autoplay, gif_autoplay</td><td class="field-type">Bool</td><td>true</td><td>Auto-play the GIF</td></tr>
+<tr><td class="field-name">photo-gif-loop</td><td>photo-gif-loop-count, gif-loop, gif-loop-count, gif_loop_count</td><td class="field-type">Int</td><td>0</td><td>Loop count (0=infinite)</td></tr>
 <tr><td class="field-name">photo-real-gif</td><td>real-gif, photo-gif-real</td><td class="field-type">Bool</td><td>false</td><td><span class="badge new">new</span> true: row's <code>photo</code> is a REAL <code>.gif</code> file (via <code>AnimatedImageDrawable</code>), not the simulated frame-sequence GIF above. <strong>Android 9/API 28+ only</strong> - older devices fall back to a static first frame</td></tr>
 <tr><td class="field-name">html-file</td><td>html-path</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> Local <code>.html</code> file rendered inline in its own WebView block below the row's text (resolved like <code>photo</code>: relative to the page config dir, app-private dir, assets, or an absolute path). Ignored if <code>html-url</code> is also set</td></tr>
 <tr><td class="field-name">html-url</td><td>html-link</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> http/https page loaded directly into the WebView block. Takes priority over <code>html-file</code> if both are set</td></tr>
@@ -1054,6 +1079,15 @@ italic = true
 <tr><td class="field-name">set</td><td>setstate</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script run when the user toggles (receives <code>$state</code> = "1"/"0")</td></tr>
 <tr><td class="field-name">confirm</td><td>confirm-text, confirm-message</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> Confirmation message shown before running <code>script</code> or before applying a toggle change (<code>set</code>) - "Cancel" runs nothing. "" (default) = execute immediately, no confirmation</td></tr>
 <tr><td class="field-name">refresh-interval</td><td>refresh, interval</td><td class="field-type">Int</td><td>0</td><td><span class="badge new">new</span> Seconds interval to automatically re-run this row's <code>sh</code>/<code>icon-sh</code>/<code>photo-sh</code> and redraw it, without waiting for the whole item to rebind (e.g. list scroll). 0 (default) = no auto refresh; when several rows declare it, the shortest interval wins</td></tr>
+<tr><td class="field-name">progress</td><td>-</td><td class="field-type">Float</td><td>-1</td><td><span class="badge new">new</span> -1 (default) = no progress bar; any value &gt;= 0 draws a small inline progress bar <strong>right after the row's text/icon</strong>, filled to <code>progress / progress-max</code></td></tr>
+<tr><td class="field-name">progress-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the progress value dynamically (output must be a number). Re-runs on every rows render (batched with <code>text-sh</code>/<code>icon-sh</code>/<code>photo-sh</code>) and on <code>reset</code> refreshes; overrides <code>progress</code></td></tr>
+<tr><td class="field-name">progress-max</td><td>progressmax</td><td class="field-type">Float</td><td>100</td><td><span class="badge new">new</span> Value that corresponds to a 100% full bar. Default <code>100</code> (so <code>progress</code> acts as a percentage)</td></tr>
+<tr><td class="field-name">progress-color</td><td>-</td><td class="field-type">String</td><td>default green</td><td><span class="badge new">new</span> Fill color of the bar (e.g. <code>#4CAF50</code>). Default: material green</td></tr>
+<tr><td class="field-name">progress-track-color</td><td>progress-bg</td><td class="field-type">String</td><td>default grey</td><td><span class="badge new">new</span> Track (background) color of the bar. Default: translucent grey</td></tr>
+<tr><td class="field-name">progress-width</td><td>-</td><td class="field-type">Int</td><td>120</td><td><span class="badge new">new</span> Width of the progress bar (dp)</td></tr>
+<tr><td class="field-name">progress-height</td><td>-</td><td class="field-type">Int</td><td>8</td><td><span class="badge new">new</span> Height of the progress bar (dp)</td></tr>
+<tr><td class="field-name">flash</td><td>-</td><td class="field-type">Bool</td><td>true</td><td><span class="badge new">new</span> When this row is refreshed via another row's <code>reset</code> and its text <strong>actually changed</strong>, briefly flash a background highlight that fades out - so the user notices the new value. <code>false</code> = disable the effect for this row</td></tr>
+<tr><td class="field-name">flash-color</td><td>-</td><td class="field-type">String</td><td>amber</td><td><span class="badge new">new</span> Highlight color used by the flash effect (e.g. <code>#FFC107</code>). Default: amber</td></tr>
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>true</td><td>Hide/show the row</td></tr>
 </table>
 </div>
@@ -1184,7 +1218,7 @@ link = "https://example.com/cpu"
 <div class="callout warn">If any single zone ends up with <strong>more than 4 rows</strong> (e.g. 5 rows all left-aligned in the same group), the whole group silently falls back to the old shared-line behavior instead: every row is simply joined left-to-right in declaration order, and <code>align</code> on the first row of the group decides the alignment of the group as a whole (no more per-zone pinning for that group). A row following a pinned group always starts on a new line, even without <code>break</code>. This layout assumes each zone's content is short enough to fit on one line - if a zone's text is long enough to wrap, the wrapped portion will not stay aligned to that zone.</div>
 
 <h3>12.6. Reset a single row on demand (<code>reset</code>)</h3>
-<p><span class="badge new">new</span> A row with <code>reset = N</code> acts as a refresh button for row index <code>N</code> (0-based, within the same <code>[[text.rows]]</code> list): tapping it re-runs only that row's <code>sh</code>/<code>icon-sh</code> and updates just that row's text, without rebinding the whole block (icons/GIFs/other rows are left untouched). Combine with <code>script</code> to run a script first and then refresh the row that displays its result.</p>
+<p><span class="badge new">new</span> A row with <code>reset = N</code> acts as a refresh button for row index <code>N</code> (0-based, within the same <code>[[text.rows]]</code> list): tapping it re-runs only that row's <code>sh</code>/<code>icon-sh</code>/<code>progress-sh</code> and updates just that row's text, without rebinding the whole block (icons/GIFs/other rows are left untouched). Combine with <code>script</code> to run a script first and then refresh the row that displays its result.</p>
 <pre><code>[[text.rows]]
 sh = "cat /sys/class/thermal/thermal_zone0/temp"
 icon = "ic_temperature"
@@ -1194,7 +1228,38 @@ text = "🔄 Refresh"
 align = "opposite"
 reset = 0
 </code></pre>
+<p>Besides a numeric index, <code>reset</code> also accepts two special string values:</p>
+<div class="tbl-container">
+<table class="tbl">
+<tr><th>Value</th><th>Behavior</th></tr>
+<tr><td><code>reset = "self"</code> (or <code>"this"</code>)</td><td>Refreshing THIS row itself - re-runs its own <code>sh</code>/<code>icon-sh</code>/<code>progress-sh</code> in place. A row can therefore be <em>both</em> the data source and its own refresh button (with <code>script</code> running first)</td></tr>
+<tr><td><code>reset = "all"</code></td><td>Rebinds the ENTIRE <code>[[text.rows]]</code> list from scratch - equivalent to a full block re-render (all rows' dynamic scripts re-run)</td></tr>
+</table>
+</div>
 <div class="callout warn">If the target row happens to be part of a group using the multi-column pin layout from <a href="#text-rows">section 12.5</a>, <code>reset</code> automatically rebinds that whole block instead of just the one row, to avoid breaking the column spacing - this is expected, not a bug.</div>
+
+<h3>12.7. Inline progress bar (<code>progress</code>) and flash highlight (<code>flash</code>)</h3>
+<p><span class="badge new">new</span> A row can embed a small horizontal progress bar <strong>inline, right after its text/icon</strong> - useful for battery/thermal/storage gauges without leaving the text flow. The bar is driven either statically or by a script:</p>
+<pre><code>[[text]]
+title = "Storage"
+
+[[text.rows]]
+sh = "df -h /data | tail -1 | awk '{print $5}'"
+text = "/data usage"
+progress-sh = "df /data | tail -1 | awk '{gsub(\"%\",\"\"); print $5}'"
+progress-max = 100
+progress-color = "#FF9800"
+progress-track-color = "#33888888"
+progress-width = 120
+progress-height = 8
+
+[[text.rows]]
+text = "🔄 Refresh"
+align = "opposite"
+reset = "all"
+</code></pre>
+<div class="callout tip">Like <code>text-sh</code>/<code>icon-sh</code>/<code>photo-sh</code> of a row, <code>progress-sh</code> is re-evaluated on every rows render (batched into one shell round-trip) and by <code>refresh-interval</code> timers - the bar updates live together with the row's text. The output must be a plain number; when combined with <code>refresh-interval</code> + <code>reset</code> you get a self-updating gauge.</div>
+<p>The companion <code>flash</code> effect makes a reset-driven value change visible: whenever a row is updated through <code>reset</code> and its rendered text actually differs from before, a highlight rectangle is drawn behind the new text and fades out over a short animation. It is <strong>on by default</strong> - set <code>flash = false</code> on a row to opt out, or <code>flash-color</code> to use a custom color instead of the default amber.</p>
 </section>
 
 <section id="editor">
@@ -1342,6 +1407,7 @@ script = "sh /data/data/com.tool.tree/files/run.sh"
 <table class="tbl">
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Description</th></tr>
 <tr><td class="field-name">title</td><td>text</td><td class="field-type">String</td><td>Title</td></tr>
+<tr><td class="field-name">key</td><td>index, id</td><td class="field-type">String</td><td><span class="badge new">new</span> Item ID. Passed to the item's script as <code>$state</code> and <code>$menu_id</code> when clicked (spinner items get <code>$state</code> = the chosen value instead, file items also get <code>$file</code>/<code>$folder</code> = the picked path). If omitted, an auto key is derived from the title (or <code>"menu"</code>/<code>"fab"</code> when the title is empty); auto keys that would collide get a <code>#menu2</code>/<code>#fab2</code>... suffix so two items never share one. Explicitly declared keys are kept as-is even when duplicated</td></tr>
 <tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td><code>refresh</code>/<code>reload</code> (rerun the page), <code>restart</code> (restart the app), <code>finish</code>/<code>exit</code>/<code>close</code> (close the page), <code>killapp</code> (kill the app process), <code>file</code>/<code>folder</code>, <code>spinner</code>, <code>checkbox</code></td></tr>
 <tr><td class="field-name">style</td><td>-</td><td class="field-type">String</td><td>Set to <code>fab</code> to render this item as a floating action button (useful inside <code>[[menu]]</code>)</td></tr>
 <tr><td class="field-name">script</td><td>set, setstate</td><td class="field-type">String</td><td>Script to run on click. If empty, uses the group's <code>handler</code></td></tr>
@@ -1562,6 +1628,7 @@ depend-value = "folder"
 <tr><td class="field-name">bg-sh</td><td>ClickableNode (page, action, switch, picker, download, editor)</td><td>Produce background image path dynamically - runs during parse, batched</td></tr>
 <tr><td class="field-name">icon-sh (row)</td><td>TextRow</td><td>Produce row's inline icon path dynamically - re-runs every render (batched with text-sh/photo-sh of the row, not cached)</td></tr>
 <tr><td class="field-name">photo-sh (row)</td><td>TextRow</td><td>Produce row's photo path dynamically - re-runs every render (batched, not cached)</td></tr>
+<tr><td class="field-name">progress-sh (row)</td><td>TextRow</td><td><span class="badge new">new</span> Produce the row's inline progress-bar value dynamically (a number) - re-runs every render (batched with text-sh/icon-sh/photo-sh)</td></tr>
 <tr><td class="field-name">url-sh</td><td>DownloadNode</td><td>Produce download URL dynamically - runs once on first tap, cached into <code>url</code> for the rest of that page visit</td></tr>
 <tr><td class="field-name">support / visible</td><td>All nodes, row, param</td><td>Hide/show (accepts shell too)</td></tr>
 </table>
@@ -1575,7 +1642,7 @@ depend-value = "folder"
 
 <section id="pending-states">
 <h2>20. Pending states</h2>
-<p>To maximize performance when parsing large configuration files, the parser does not run every dynamic shell evaluation synchronously. Five queues collect the deferred work while parsing:</p>
+<p>To maximize performance when parsing large configuration files, the parser does not run every dynamic shell evaluation synchronously. Six queues collect the deferred work while parsing:</p>
 <div class="tbl-container">
 <table class="tbl">
 <tr><th>Queue</th><th>Collected from</th><th>Result applied to</th></tr>
@@ -1584,6 +1651,7 @@ depend-value = "folder"
 <tr><td><code>pendingRowCheckedStates</code></td><td>row <code>get</code> (toggle)</td><td>row <code>checked</code> = (output trimmed == "1")</td></tr>
 <tr><td><code>pendingRowVisibleStates</code></td><td>row <code>support</code> (non-boolean value)</td><td>row removed from its list when output != "1"</td></tr>
 <tr><td><code>pendingDynamicStrings</code></td><td><code>title-sh</code>/<code>desc-sh</code>/<code>summary-sh</code> of nodes, <code>warn-sh</code> of runnable nodes, <code>title-sh</code> of picker/param options</td><td>replaces the static string</td></tr>
+<tr><td><code>pendingCheckboxStates</code></td><td><span class="badge new">new</span> <code>get</code> of <code>[[menu]]</code>/<code>[[fab]]</code> checkbox items</td><td>item <code>checked</code> = true when output is "1"/"true" (and not "error") - so the tick is correct immediately at page load, before the async refresh pass runs</td></tr>
 </table>
 </div>
 <p>After the whole document is parsed, <code>resolvePendingStates()</code> submits ALL collected scripts in a single batch via <code>ScriptEnvironmen.executeMultipleResultRoot()</code> - one shell round-trip instead of N - and then distributes the results to each node before the page is displayed.</p>
@@ -1795,30 +1863,36 @@ script = "sh $state"
 <h2>26. Changelog - recently added fields</h2>
 <p>Fields marked with the <span class="badge new">new</span> badge throughout this guide are summarized here, grouped by section, for quick reference when upgrading an existing config.</p>
 
-<h3>26.1. <a href="#shared-fields">§4 Shared fields</a></h3>
+<h3>26.1. <a href="#rules">§2 Syntax rules</a></h3>
+<ul>
+  <li><code>load-key</code>, <code>load-key-sh</code> - pre-parse directive that loads a <code>name = "value"</code> key file and substitutes every <code>$name</code> token in the whole document (i18n-friendly; supports the <code>{LANG}</code> placeholder with language-country &rarr; language &rarr; default fallback). See <a href="#rules">§2.7</a>.</li>
+</ul>
+
+<h3>26.2. <a href="#shared-fields">§4 Shared fields</a></h3>
 <ul>
   <li><code>icon-sh</code>, <code>photo-sh</code>, <code>bg-sh</code> - resolve the icon/photo/background path from a shell script at parse time, instead of a static path.</li>
   <li><code>icon-real-gif</code>, <code>photo-real-gif</code> - decode <code>icon</code>/<code>photo</code> as a real animated <code>.gif</code> file via <code>AnimatedImageDrawable</code>. Requires Android 9 / API 28+; older devices fall back to a static first frame.</li>
 </ul>
 
-<h3>26.2. <a href="#page">§6 [[page]]</a></h3>
+<h3>26.3. <a href="#page">§6 [[page]]</a></h3>
 <ul>
   <li><code>process</code> - controls whether the sub-page loads progressively in place or is preloaded before navigation. See <a href="#process">section 21</a>.</li>
   <li><code>placeholder-count</code> - number of skeleton placeholders shown while <code>process = true</code> waits for the first real item; hidden as soon as that first item loads. Defaults to <code>1</code> when omitted. See <a href="#process">section 21</a>.</li>
 </ul>
 
-<h3>26.3. <a href="#action">§7 [[action]]</a></h3>
+<h3>26.4. <a href="#action">§7 [[action]]</a></h3>
 <ul>
   <li><code>menu</code>, <code>show</code> - move an action into the page's overflow menu / auto-open its dialog on page load. These two are independent and can be combined.</li>
 </ul>
 
-<h3>26.4. <a href="#action-params">§8 [[action.params]]</a></h3>
+<h3>26.5. <a href="#action-params">§8 [[action.params]]</a></h3>
 <ul>
   <li><code>desc-on</code>, <code>desc-on-sh</code> - alternate description shown while a toggle/value is in its "on" state.</li>
   <li><code>sort</code>, <code>allow-no-selection</code> - control ordering and whether a selector can be left with nothing chosen.</li>
+  <li><code>type = "int"</code>/<code>"number"</code> - numeric text input validated against <code>min</code>/<code>max</code> on confirm; <code>type = "color"</code> - color picker accepting hex or <code>@color/...</code> references; <code>type = "packages"</code> - alias of <code>app</code>.</li>
 </ul>
 
-<h3>26.5. <a href="#text-rows">§12 [[text.rows]]</a></h3>
+<h3>26.6. <a href="#text-rows">§12 [[text.rows]]</a></h3>
 <ul>
   <li><code>icon</code>, <code>icon-sh</code> - inline icon shown next to a text row (distinct from the row's full-width <code>photo</code>), with dynamic script-based path support.</li>
   <li><code>icon-gif-num</code>, <code>icon-gif-time</code>, <code>icon-gif-autoplay</code>, <code>icon-gif-loop</code>, <code>icon-real-gif</code> - animation controls for the inline icon, mirroring the row's <code>photo-gif-*</code> fields.</li>
@@ -1828,10 +1902,17 @@ script = "sh $state"
   <li><code>refresh-interval</code> - auto re-runs <code>sh</code>/<code>icon-sh</code>/<code>photo-sh</code> and redraws the row on a fixed interval (seconds), independent of the item rebinding.</li>
   <li><code>align</code> - rows sharing a line are now grouped into up to 3 zones (left/center/right, max 4 rows each) and pinned accordingly, supporting icon/toggle/link/markdown in any zone. See <a href="#text-rows">§12.5</a>.</li>
   <li><code>copy</code> - allow long-press select/copy of the row text; applies to the whole <code>[[text.rows]]</code> block if set on any one row.</li>
-  <li><code>reset</code> - row acts as a refresh button for another row (by index), re-running just that row's <code>sh</code>/<code>icon-sh</code> without a full rebind. See <a href="#text-rows">§12.6</a>.</li>
+  <li><code>reset</code> - row acts as a refresh button for another row (by index), re-running just that row's <code>sh</code>/<code>icon-sh</code>/<code>progress-sh</code> without a full rebind; also accepts <code>"self"</code>/<code>"this"</code> (refresh itself) and <code>"all"</code> (rebind the whole block). See <a href="#text-rows">§12.6</a>.</li>
+  <li><code>progress</code>, <code>progress-sh</code>, <code>progress-max</code>, <code>progress-color</code>, <code>progress-track-color</code>, <code>progress-width</code>, <code>progress-height</code> - small inline progress bar drawn right after the row's text/icon (static value or script-driven, re-evaluated on every render). See <a href="#text-rows">§12.7</a>.</li>
+  <li><code>flash</code>, <code>flash-color</code> - brief background highlight (default amber) when a <code>reset</code> refresh actually changes the row's text; <code>flash = false</code> opts out. See <a href="#text-rows">§12.7</a>.</li>
 </ul>
 
-<h3>26.6. <a href="#depend">§17 Dependencies</a></h3>
+<h3>26.7. <a href="#menu-fab">§16 [[menu]] / [[fab]]</a></h3>
+<ul>
+  <li><code>key</code> (on items) - explicit item ID passed to scripts as <code>$state</code>/<code>$menu_id</code>; auto keys derived from the title are now de-duplicated with a <code>#menu2</code>/<code>#fab2</code> suffix so two items can never share one.</li>
+</ul>
+
+<h3>26.8. <a href="#depend">§17 Dependencies</a></h3>
 <ul>
   <li><code>depend-readonly</code>, <code>depend-sort</code> - dim and lock a dependent param instead of hiding it, and optionally move locked params to the bottom of the list.</li>
 </ul>

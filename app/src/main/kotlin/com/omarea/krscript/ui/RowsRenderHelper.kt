@@ -42,6 +42,10 @@ import java.util.WeakHashMap
 
 object RowsRenderHelper {
 
+    // Khớp paddingLeft/paddingRight của android:id/content trong kr_group_list_root.xml - xem
+    // comment trong estimateAvailableWidth(). Đổi giá trị ở đây nếu XML đó đổi padding.
+    private const val ROOT_CONTENT_PADDING_DP = 16
+
     @Volatile
     private var pageReady = true
     private val pendingRefreshViews: MutableSet<TextView> = Collections.newSetFromMap(WeakHashMap())
@@ -143,8 +147,9 @@ object RowsRenderHelper {
     // luôn = 0 lúc này, không phải do chưa kịp layout. Ước lượng thay vì đợi 1 layout pass thật
     // (post{} + build lại lần 2 như bản cũ): lấy bề rộng MÀN HÌNH THẬT (luôn có sẵn, không phụ
     // thuộc trạng thái attach) rồi trừ dần padding/margin của từng lớp cha giữa rowsView và gốc
-    // card (layout riêng của item) - phần "lơ lửng" chưa biết thật sự chỉ là card/rootGroup/
-    // ScrollView đều match_parent nên cuối cùng bằng đúng bề rộng màn hình.
+    // card (layout riêng của item), CỘNG THÊM phần padding cố định của content container
+    // (rootGroup) mà lúc này chưa addView() nên vòng lặp không tự thấy được - xem 2 đoạn comment
+    // bên trong.
     private fun estimateAvailableWidth(rowsView: TextView): Int {
         val measured = rowsView.width
         if (measured > 0) {
@@ -169,6 +174,14 @@ object RowsRenderHelper {
             }
             node = parent
         }
+        // Card (layout riêng của item) LUÔN kết thúc bên trong content (android:id/content) của
+        // rootGroup (dù có lồng qua sub-group hay không - kr_group_list_item.xml không cộng
+        // thêm padding trái/phải nào) - mà content này chỉ addView() card vào SAU KHI bind() đã
+        // chạy xong (xem PageLayoutRender.renderNode()), nên vòng lặp parent-chain ở trên không
+        // bao giờ thấy được padding trái/phải 16dp của nó (kr_group_list_root.xml) - phải trừ
+        // thủ công tại đây, nếu không availableWidth vẫn bị ước lượng thừa ra đúng phần padding
+        // này dù margin của rowsView đã tính đúng.
+        width -= dpToPx(rowsView.context, ROOT_CONTENT_PADDING_DP * 2)
         return width.coerceAtLeast(0)
     }
 
