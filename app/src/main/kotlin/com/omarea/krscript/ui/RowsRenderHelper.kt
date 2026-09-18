@@ -312,9 +312,7 @@ object RowsRenderHelper {
         rowsView.tag = RowsRenderState(animatedRowIcons, rowRanges, zoneGroupRows, lastRefreshTimes = lastRefreshTimes, refreshIntervalMs = refreshIntervalMs)
 
         if (needsRebindAfterLayout) {
-            rowsView.visibility = View.INVISIBLE
             val extraIconRealVisibility = extraIconView?.visibility
-            extraIconView?.visibility = View.INVISIBLE
             rowsView.post {
                 if (rowsView.width > 0) {
                     renderRows(context, rowsView, extraIconView, rows, config, htmlContainer, dynamic)
