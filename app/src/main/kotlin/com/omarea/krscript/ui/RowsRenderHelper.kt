@@ -24,6 +24,7 @@ import android.text.method.LinkMovementMethod
 import android.text.style.*
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
@@ -136,6 +137,33 @@ object RowsRenderHelper {
         return DynamicResults(textMap, iconMap, photoMap, progressMap)
     }
 
+    // renderRows() (build lần đầu, gọi từ ListItem*.init{}) LUÔN chạy TRƯỚC KHI rowsView (và
+    // cả card cha của nó) được addView() vào rootGroup (xem PageLayoutRender.renderNode(): tạo
+    // xong ListItem* - kéo theo chạy hết init{} - RỒI MỚI parent.addView()) - nên rowsView.width
+    // luôn = 0 lúc này, không phải do chưa kịp layout. Ước lượng thay vì đợi 1 layout pass thật
+    // (post{} + build lại lần 2 như bản cũ): lấy bề rộng MÀN HÌNH THẬT (luôn có sẵn, không phụ
+    // thuộc trạng thái attach) rồi trừ dần padding/margin của từng lớp cha giữa rowsView và gốc
+    // card (layout riêng của item) - phần "lơ lửng" chưa biết thật sự chỉ là card/rootGroup/
+    // ScrollView đều match_parent nên cuối cùng bằng đúng bề rộng màn hình.
+    private fun estimateAvailableWidth(rowsView: TextView): Int {
+        val measured = rowsView.width
+        if (measured > 0) {
+            return measured - rowsView.paddingLeft - rowsView.paddingRight
+        }
+        var width = rowsView.context.resources.displayMetrics.widthPixels
+        width -= rowsView.paddingLeft + rowsView.paddingRight
+        var node: View = rowsView
+        while (true) {
+            val parent = node.parent as? ViewGroup ?: break
+            width -= parent.paddingLeft + parent.paddingRight
+            (node.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
+                width -= it.leftMargin + it.rightMargin
+            }
+            node = parent
+        }
+        return width.coerceAtLeast(0)
+    }
+
     private fun renderRows(
         context: Context,
         rowsView: TextView,
@@ -168,8 +196,6 @@ object RowsRenderHelper {
             rowsView.isHapticFeedbackEnabled = false
             rowsView.setOnLongClickListener { true }
         }
-
-        var needsRebindAfterLayout = false
 
         val rowRanges = HashMap<Int, IntArray>()
         val zoneGroupRows = HashSet<Int>()
@@ -237,10 +263,12 @@ object RowsRenderHelper {
                 val (leftBuilt, leftWidth) = buildZone(leftIdx)
                 val (centerBuilt, centerWidth) = buildZone(centerIdx)
                 val (rightBuilt, rightWidth) = buildZone(rightIdx)
-                val availableWidth = rowsView.width - rowsView.paddingLeft - rowsView.paddingRight
+                val availableWidth = estimateAvailableWidth(rowsView)
 
                 if (availableWidth <= 0) {
-                    needsRebindAfterLayout = true
+                    // Phòng hờ (thực tế gần như không xảy ra nhờ estimateAvailableWidth() luôn
+                    // ước lượng được 1 số dương ngay cả lúc rowsView chưa gắn vào cây view thật)
+                    // - không center/canh phải được thì vẫn hiện tạm nối liên tiếp còn hơn crash.
                     appendZone(leftBuilt)
                     if (centerBuilt.isNotEmpty()) {
                         rowsView.append(" ")
@@ -311,17 +339,10 @@ object RowsRenderHelper {
         rows.forEachIndexed { idx, r -> if (r.refreshInterval > 0) lastRefreshTimes[idx] = now }
         rowsView.tag = RowsRenderState(animatedRowIcons, rowRanges, zoneGroupRows, lastRefreshTimes = lastRefreshTimes, refreshIntervalMs = refreshIntervalMs)
 
-        // Trước đây ẩn INVISIBLE trong lúc chờ layout pass để tránh lộ zone canh sai 1 khung
-        // hình, nhưng Kakathic muốn hiện luôn ngay (chấp nhận có thể thấy zone lệch đúng 1
-        // khung hình trước khi renderRows() chạy lại với width thật và tự canh đúng).
+        // estimateAvailableWidth() đã cho canh zone đúng ngay từ lần dựng đầu tiên (không cần
+        // đợi 1 layout pass thật + build lại lần 2 như bản cũ) nên không còn cần ẩn/rebuild gì
+        // thêm ở đây nữa - hiện luôn.
         rowsView.visibility = View.VISIBLE
-        if (needsRebindAfterLayout) {
-            rowsView.post {
-                if (rowsView.width > 0) {
-                    renderRows(context, rowsView, extraIconView, rows, config, htmlContainer, dynamic)
-                }
-            }
-        }
 
         if (minRefreshInterval != null) {
             lateinit var tickRunnable: Runnable
