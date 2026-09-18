@@ -36,19 +36,54 @@ import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.model.NodeInfoBase
 import com.omarea.krscript.model.TextNode
 import com.tool.tree.R
+import java.util.Collections
+import java.util.WeakHashMap
 
 object RowsRenderHelper {
+
+    @Volatile
+    private var pageReady = true
+    private val pendingRefreshViews: MutableSet<TextView> = Collections.newSetFromMap(WeakHashMap())
+
+    fun beginPageLoad() {
+        pageReady = false
+        pendingRefreshViews.clear()
+    }
+
+    fun endPageLoad() {
+        pageReady = true
+        val views = ArrayList(pendingRefreshViews)
+        pendingRefreshViews.clear()
+        views.forEach { rowsView ->
+            if (rowsView.isAttachedToWindow) {
+                val runnable = rowsView.getTag(R.id.kr_rows_refresh_runnable) as? Runnable
+                val delayMs = (rowsView.tag as? RowsRenderState)?.refreshIntervalMs ?: 0L
+                if (runnable != null && delayMs > 0L) {
+                    rowsView.postDelayed(runnable, delayMs)
+                }
+            }
+        }
+    }
 
     private class RowsRenderState(
         val animatedIcons: MutableList<Animatable>,
         val rowRanges: Map<Int, IntArray>,
         val zoneGroupRows: Set<Int>,
-        val flashAnimators: MutableList<ValueAnimator> = ArrayList()
+        val flashAnimators: MutableList<ValueAnimator> = ArrayList(),
+        val lastRefreshTimes: MutableMap<Int, Long> = HashMap(),
+        val refreshIntervalMs: Long = 0L
     )
 
     private class RowSpanResult(
         val spannable: SpannableString,
         val width: Float
+    )
+
+    private class DynamicResults(
+        val text: Map<Int, String>,
+        val icon: Map<Int, String>,
+        val photo: Map<Int, String>,
+        val progress: Map<Int, String>
     )
 
     fun bind(
@@ -70,6 +105,50 @@ object RowsRenderHelper {
             rowsView.setTag(R.id.kr_rows_refresh_runnable, null)
             return
         }
+        val dynamic = fetchDynamicResults(context, rows, config)
+        renderRows(context, rowsView, extraIconView, rows, config, htmlContainer, dynamic)
+    }
+
+    private fun fetchDynamicResults(context: Context, rows: List<TextNode.TextRow>, config: NodeInfoBase): DynamicResults {
+        val scripts = LinkedHashMap<String, String>()
+        rows.forEachIndexed { index, row ->
+            if (row.dynamicTextSh.isNotEmpty()) scripts["text:$index"] = row.dynamicTextSh
+            if (row.iconSh.isNotEmpty()) scripts["icon:$index"] = row.iconSh
+            if (row.photoSh.isNotEmpty()) scripts["photo:$index"] = row.photoSh
+            if (row.progressSh.isNotEmpty()) scripts["progress:$index"] = row.progressSh
+        }
+        val results = if (scripts.isEmpty()) emptyMap() else ScriptEnvironmen.executeMultipleResultRoot(context, scripts, config)
+        val textMap = HashMap<Int, String>()
+        val iconMap = HashMap<Int, String>()
+        val photoMap = HashMap<Int, String>()
+        val progressMap = HashMap<Int, String>()
+        results.forEach { (key, value) ->
+            val sepIndex = key.indexOf(':')
+            val prefix = key.substring(0, sepIndex)
+            val index = key.substring(sepIndex + 1).toInt()
+            when (prefix) {
+                "text" -> textMap[index] = value
+                "icon" -> iconMap[index] = value
+                "photo" -> photoMap[index] = value
+                "progress" -> progressMap[index] = value
+            }
+        }
+        return DynamicResults(textMap, iconMap, photoMap, progressMap)
+    }
+
+    private fun renderRows(
+        context: Context,
+        rowsView: TextView,
+        extraIconView: ImageView?,
+        rows: List<TextNode.TextRow>,
+        config: NodeInfoBase,
+        htmlContainer: FrameLayout?,
+        dynamic: DynamicResults
+    ) {
+        val dynamicTextResults = dynamic.text
+        val dynamicIconResults = dynamic.icon
+        val dynamicPhotoResults = dynamic.photo
+        val dynamicProgressResults = dynamic.progress
 
         rowsView.text = ""
         (rowsView.tag as? RowsRenderState)?.animatedIcons?.forEach { it.stop() }
@@ -79,7 +158,6 @@ object RowsRenderHelper {
         val allowCopy = rows.any { it.copy }
         rowsView.setTextIsSelectable(allowCopy)
         rowsView.movementMethod = BoundedLinkMovementMethod.instance
-        rowsView.visibility = View.VISIBLE
 
         rowsView.isClickable = true
         rowsView.setOnClickListener { }
@@ -92,40 +170,6 @@ object RowsRenderHelper {
         }
 
         var needsRebindAfterLayout = false
-
-        val dynamicTextResults: Map<Int, String>
-        val dynamicIconResults: Map<Int, String>
-        val dynamicPhotoResults: Map<Int, String>
-        val dynamicProgressResults: Map<Int, String>
-        run {
-            val scripts = LinkedHashMap<String, String>()
-            rows.forEachIndexed { index, row ->
-                if (row.dynamicTextSh.isNotEmpty()) scripts["text:$index"] = row.dynamicTextSh
-                if (row.iconSh.isNotEmpty()) scripts["icon:$index"] = row.iconSh
-                if (row.photoSh.isNotEmpty()) scripts["photo:$index"] = row.photoSh
-                if (row.progressSh.isNotEmpty()) scripts["progress:$index"] = row.progressSh
-            }
-            val results = if (scripts.isEmpty()) emptyMap() else ScriptEnvironmen.executeMultipleResultRoot(context, scripts, config)
-            val textMap = HashMap<Int, String>()
-            val iconMap = HashMap<Int, String>()
-            val photoMap = HashMap<Int, String>()
-            val progressMap = HashMap<Int, String>()
-            results.forEach { (key, value) ->
-                val sepIndex = key.indexOf(':')
-                val prefix = key.substring(0, sepIndex)
-                val index = key.substring(sepIndex + 1).toInt()
-                when (prefix) {
-                    "text" -> textMap[index] = value
-                    "icon" -> iconMap[index] = value
-                    "photo" -> photoMap[index] = value
-                    "progress" -> progressMap[index] = value
-                }
-            }
-            dynamicTextResults = textMap
-            dynamicIconResults = iconMap
-            dynamicPhotoResults = photoMap
-            dynamicProgressResults = progressMap
-        }
 
         val rowRanges = HashMap<Int, IntArray>()
         val zoneGroupRows = HashSet<Int>()
@@ -259,25 +303,53 @@ object RowsRenderHelper {
             }
         }
 
-        rowsView.tag = RowsRenderState(animatedRowIcons, rowRanges, zoneGroupRows)
+        val minRefreshInterval = rows.filter { it.refreshInterval > 0 }.minOfOrNull { it.refreshInterval }
+        val refreshIntervalMs = (minRefreshInterval ?: 0) * 1000L
+
+        val now = System.currentTimeMillis()
+        val lastRefreshTimes = HashMap<Int, Long>()
+        rows.forEachIndexed { idx, r -> if (r.refreshInterval > 0) lastRefreshTimes[idx] = now }
+        rowsView.tag = RowsRenderState(animatedRowIcons, rowRanges, zoneGroupRows, lastRefreshTimes = lastRefreshTimes, refreshIntervalMs = refreshIntervalMs)
 
         if (needsRebindAfterLayout) {
+            rowsView.visibility = View.INVISIBLE
             rowsView.post {
                 if (rowsView.width > 0) {
-                    bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+                    renderRows(context, rowsView, extraIconView, rows, config, htmlContainer, dynamic)
+                } else {
+                    rowsView.visibility = View.VISIBLE
                 }
             }
+        } else {
+            rowsView.visibility = View.VISIBLE
         }
 
-        val minRefreshInterval = rows.filter { it.refreshInterval > 0 }.minOfOrNull { it.refreshInterval }
         if (minRefreshInterval != null) {
-            val refreshRunnable = Runnable {
-                if (rowsView.isAttachedToWindow) {
-                    bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+            lateinit var tickRunnable: Runnable
+            tickRunnable = Runnable {
+                if (rowsView.isAttachedToWindow && rowsView.getTag(R.id.kr_rows_refresh_runnable) === tickRunnable) {
+                    val tick = System.currentTimeMillis()
+                    for ((idx, r) in rows.withIndex()) {
+                        if (rowsView.getTag(R.id.kr_rows_refresh_runnable) !== tickRunnable) break
+                        if (r.refreshInterval > 0) {
+                            val last = (rowsView.tag as? RowsRenderState)?.lastRefreshTimes?.get(idx) ?: 0L
+                            if (tick - last >= r.refreshInterval * 1000L) {
+                                resetRow(context, rowsView, extraIconView, rows, config, idx, htmlContainer)
+                                (rowsView.tag as? RowsRenderState)?.lastRefreshTimes?.set(idx, tick)
+                            }
+                        }
+                    }
+                    if (rowsView.getTag(R.id.kr_rows_refresh_runnable) === tickRunnable) {
+                        rowsView.postDelayed(tickRunnable, refreshIntervalMs)
+                    }
                 }
             }
-            rowsView.setTag(R.id.kr_rows_refresh_runnable, refreshRunnable)
-            rowsView.postDelayed(refreshRunnable, minRefreshInterval * 1000L)
+            rowsView.setTag(R.id.kr_rows_refresh_runnable, tickRunnable)
+            if (pageReady) {
+                rowsView.postDelayed(tickRunnable, refreshIntervalMs)
+            } else {
+                pendingRefreshViews.add(rowsView)
+            }
         } else {
             rowsView.setTag(R.id.kr_rows_refresh_runnable, null)
         }
@@ -342,7 +414,7 @@ object RowsRenderHelper {
             }
         }
         state.animatedIcons.addAll(animated)
-        rowsView.tag = RowsRenderState(state.animatedIcons, newRanges, state.zoneGroupRows, state.flashAnimators)
+        rowsView.tag = RowsRenderState(state.animatedIcons, newRanges, state.zoneGroupRows, state.flashAnimators, state.lastRefreshTimes, state.refreshIntervalMs)
 
         if (extraIconView != null && row.photoSh.isNotEmpty()) {
             val effectivePhoto = ScriptEnvironmen.executeResultRoot(context, row.photoSh, config)
