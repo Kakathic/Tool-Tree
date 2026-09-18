@@ -313,11 +313,16 @@ object RowsRenderHelper {
 
         if (needsRebindAfterLayout) {
             rowsView.visibility = View.INVISIBLE
+            val extraIconRealVisibility = extraIconView?.visibility
+            extraIconView?.visibility = View.INVISIBLE
             rowsView.post {
                 if (rowsView.width > 0) {
                     renderRows(context, rowsView, extraIconView, rows, config, htmlContainer, dynamic)
                 } else {
                     rowsView.visibility = View.VISIBLE
+                    if (extraIconRealVisibility != null) {
+                        extraIconView.visibility = extraIconRealVisibility
+                    }
                 }
             }
         } else {
