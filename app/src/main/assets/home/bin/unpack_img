@@ -152,13 +152,13 @@ elif [ "$dang_tep" == 'super' ]; then
     else
         file_img_tmp="$TMP"
     fi
-    lpunpack -p "$PVUGBIN" "$INPUT" "$file_img_tmp" || killtree "Extract $PVUGBIN super error"
+    lpunpack -p "$PVUGBIN" "$INPUT" "$file_img_tmp" >$TMP/super_unpack.log|| killtree "Extract $PVUGBIN super error"
     if [[ $PVUGBIN == *_a ]]; then
-    echo "Extract: $PVUGBIN ➠ ${PVUGBIN%_a}"
+    echo "Move: $PVUGBIN ➠ ${PVUGBIN%_a}"
     mv "$file_img_tmp/$PVUGBIN.img" "$file_img_tmp/${PVUGBIN%_a}.img"
     file_img="$file_img_tmp/${PVUGBIN%_a}.img"
     else
-    echo "Extract: $PVUGBIN ➠ ${PVUGBIN%_b}"
+    echo "Move: $PVUGBIN ➠ ${PVUGBIN%_b}"
     mv "$file_img_tmp/$PVUGBIN.img" "$file_img_tmp/${PVUGBIN%_b}.img"
     file_img="$file_img_tmp/${PVUGBIN%_b}.img"
     fi

@@ -965,6 +965,13 @@ object RowsRenderHelper {
                 if (layout != null) {
                     val x = event.x.toInt() - widget.totalPaddingLeft + widget.scrollX
                     val y = event.y.toInt() - widget.totalPaddingTop + widget.scrollY
+                    // getLineForVertical() luôn clamp về dòng đầu/cuối kể cả khi y nằm ngoài vùng
+                    // text thật (vd: khoảng đệm dưới do setTextIsSelectable(true) sinh ra cho
+                    // handle chọn văn bản) - phải tự chặn trước, nếu không tap vào khoảng đệm đó
+                    // vẫn bị quy nhầm về dòng đầu/cuối và có thể trúng ClickableSpan của dòng đó.
+                    if (y < 0 || y >= layout.height) {
+                        return false
+                    }
                     val line = layout.getLineForVertical(y)
                     if (x < layout.getLineLeft(line) || x > layout.getLineRight(line)) {
                         return false
