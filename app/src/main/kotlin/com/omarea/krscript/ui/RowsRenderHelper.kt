@@ -285,17 +285,8 @@ object RowsRenderHelper {
             val leftIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_NORMAL }
             val centerIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_CENTER }
             val rightIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_OPPOSITE }
-            // Nhánh "zone" (canh bằng spacer ước lượng width - xem buildZone()/appendSpacer())
-            // chỉ thật sự cần thiết khi 1 dòng phải TRỘN từ 2 vùng canh lề khác nhau trở lên
-            // (vd left+right, left+center...) - việc này không thể làm bằng AlignmentSpan
-            // thường (chỉ canh được nguyên cả dòng theo 1 hướng). Nếu group chỉ có ĐÚNG 1 loại
-            // align (chỉ toàn opposite, hoặc chỉ toàn center) thì rơi xuống nhánh else bên dưới,
-            // dùng AlignmentSpan.Standard thật của Android - canh đúng mép cho MỌI dòng kể cả
-            // khi bị wrap tự nhiên, không phụ thuộc ước lượng width (vốn không cộng đúng phần mở
-            // rộng do các span markdown như nền code-span sinh ra, gây lệch trái khi xuống dòng).
-            val nonEmptyZoneCount = listOf(leftIdx, centerIdx, rightIdx).count { it.isNotEmpty() }
             val zoneEligible = leftIdx.size <= 4 && centerIdx.size <= 4 && rightIdx.size <= 4 &&
-                nonEmptyZoneCount >= 2
+                (centerIdx.isNotEmpty() || rightIdx.isNotEmpty())
 
             if (zoneEligible) {
                 val (leftBuilt, leftWidth) = buildZone(leftIdx)
@@ -840,6 +831,29 @@ object RowsRenderHelper {
         }
         if (cursor < text.length) {
             width += measurePaint.measureText(text, cursor, text.length)
+        }
+
+        if (markdownSpans.isNotEmpty()) {
+            val codeExtraPx = dpToPx(context, 8) // paddingHorizontalDp(4dp) * 2 - khớp MarkdownCodeSpan.getSize()
+            for (info in markdownSpans) {
+                val start = (info.start + markdownOffset).coerceIn(0, length)
+                val end = (info.end + markdownOffset).coerceIn(start, length)
+                if (end <= start) continue
+                when (info.type) {
+                    MarkdownInlineHelper.MarkdownSpanType.CODE -> width += codeExtraPx
+                    MarkdownInlineHelper.MarkdownSpanType.BOLD -> {
+                        val styledPaint = TextPaint(measurePaint)
+                        styledPaint.typeface = Typeface.create(measurePaint.typeface, Typeface.BOLD)
+                        width += styledPaint.measureText(text, start, end) - measurePaint.measureText(text, start, end)
+                    }
+                    MarkdownInlineHelper.MarkdownSpanType.ITALIC -> {
+                        val styledPaint = TextPaint(measurePaint)
+                        styledPaint.typeface = Typeface.create(measurePaint.typeface, Typeface.ITALIC)
+                        width += styledPaint.measureText(text, start, end) - measurePaint.measureText(text, start, end)
+                    }
+                    else -> {}
+                }
+            }
         }
 
         return RowSpanResult(spannableString, width)
