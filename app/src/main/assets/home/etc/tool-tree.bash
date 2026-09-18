@@ -2115,7 +2115,7 @@ Addon() {
         [[download.rows]]
         toggle = "checkbox"
         line = true
-        align="opposite"
+        align="right"
         text = "'$hide_add_text'"
         get = "[ -f '$dirvad'/hide ] && echo 1"
         set = """
@@ -2157,7 +2157,7 @@ Addon() {
       toggle = "checkbox"
       text = "'$hide_add_text'"
       get = "[ -f '$dirvad'/hide ] && echo 1"
-      align="opposite"
+      align="right"
       line = true
       set = """
       if [ -f '$dirvad'/hide ]; then
