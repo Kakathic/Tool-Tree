@@ -311,20 +311,16 @@ object RowsRenderHelper {
         rows.forEachIndexed { idx, r -> if (r.refreshInterval > 0) lastRefreshTimes[idx] = now }
         rowsView.tag = RowsRenderState(animatedRowIcons, rowRanges, zoneGroupRows, lastRefreshTimes = lastRefreshTimes, refreshIntervalMs = refreshIntervalMs)
 
+        // Trước đây ẩn INVISIBLE trong lúc chờ layout pass để tránh lộ zone canh sai 1 khung
+        // hình, nhưng Kakathic muốn hiện luôn ngay (chấp nhận có thể thấy zone lệch đúng 1
+        // khung hình trước khi renderRows() chạy lại với width thật và tự canh đúng).
+        rowsView.visibility = View.VISIBLE
         if (needsRebindAfterLayout) {
-            val extraIconRealVisibility = extraIconView?.visibility
             rowsView.post {
                 if (rowsView.width > 0) {
                     renderRows(context, rowsView, extraIconView, rows, config, htmlContainer, dynamic)
-                } else {
-                    rowsView.visibility = View.VISIBLE
-                    if (extraIconRealVisibility != null) {
-                        extraIconView.visibility = extraIconRealVisibility
-                    }
                 }
             }
-        } else {
-            rowsView.visibility = View.VISIBLE
         }
 
         if (minRefreshInterval != null) {
@@ -432,6 +428,37 @@ object RowsRenderHelper {
         }
     }
 
+    // process = true: gọi thay cho bind() ở updateViewByShell() của ListItemAction/Page/
+    // Download/Text sau khi trang đã tải xong (resolvePendingStates() đã chạy, row.checked
+    // trong model đã đúng) - CHỈ vẽ lại đúng icon on/off của toggle (checkbox/switch) tại chỗ,
+    // không build lại cả row nên không chạy lại text-sh/icon-sh/photo-sh/progress-sh của row
+    // đó lần thứ 2 (khác bind() cũ, luôn rebuild toàn bộ row kéo theo chạy lại hết các sh này).
+    fun refreshToggleStates(context: Context, rowsView: TextView?, rows: List<TextNode.TextRow>) {
+        if (rowsView == null) return
+        val state = rowsView.tag as? RowsRenderState ?: return
+        val editable = rowsView.text as? Editable ?: return
+        var changed = false
+        rows.forEachIndexed { idx, row ->
+            if (row.toggle != "checkbox" && row.toggle != "switch") return@forEachIndexed
+            val range = state.rowRanges[idx] ?: return@forEachIndexed
+            val start = range[0]
+            val end = range[1]
+            if (start < 0 || end > editable.length || start > end) return@forEachIndexed
+            val spans = editable.getSpans(start, end, ToggleIconSpan::class.java)
+            val span = spans.firstOrNull() ?: return@forEachIndexed
+            val spanStart = editable.getSpanStart(span)
+            val spanEnd = editable.getSpanEnd(span)
+            val spanFlags = editable.getSpanFlags(span)
+            val newDrawable = buildToggleDrawable(context, row)
+            editable.removeSpan(span)
+            editable.setSpan(ToggleIconSpan(newDrawable), spanStart, spanEnd, spanFlags)
+            changed = true
+        }
+        if (changed) {
+            rowsView.invalidate()
+        }
+    }
+
     private fun splitIntoLineGroups(rows: List<TextNode.TextRow>): List<List<Int>> {
         val groups = ArrayList<List<Int>>()
         var current = ArrayList<Int>()
@@ -513,7 +540,7 @@ object RowsRenderHelper {
         if (isToggle) {
             toggleIconIndex = textBase.length - 2
             toggleDrawable = buildToggleDrawable(context, row)
-            spannableString.setSpan(VerticalCenterImageSpan(toggleDrawable), toggleIconIndex, toggleIconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannableString.setSpan(ToggleIconSpan(toggleDrawable), toggleIconIndex, toggleIconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
         var rowIconIndex = -1
@@ -846,7 +873,12 @@ object RowsRenderHelper {
         }
     }
 
-    private class VerticalCenterImageSpan(drawable: Drawable) : ImageSpan(drawable) {
+    // Đánh dấu riêng span icon của toggle (checkbox/switch trong row) để refreshToggleStates()
+    // tìm lại đúng vị trí của nó trong editable mà không cần build lại cả row - xem
+    // refreshToggleStates().
+    private class ToggleIconSpan(drawable: Drawable) : VerticalCenterImageSpan(drawable)
+
+    private open class VerticalCenterImageSpan(drawable: Drawable) : ImageSpan(drawable) {
         override fun draw(canvas: Canvas, text: CharSequence?, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
             val b = drawable
             canvas.save()
