@@ -965,16 +965,38 @@ object RowsRenderHelper {
                 if (layout != null) {
                     val x = event.x.toInt() - widget.totalPaddingLeft + widget.scrollX
                     val y = event.y.toInt() - widget.totalPaddingTop + widget.scrollY
-                    // getLineForVertical() luôn clamp về dòng đầu/cuối kể cả khi y nằm ngoài vùng
-                    // text thật (vd: khoảng đệm dưới do setTextIsSelectable(true) sinh ra cho
-                    // handle chọn văn bản) - phải tự chặn trước, nếu không tap vào khoảng đệm đó
-                    // vẫn bị quy nhầm về dòng đầu/cuối và có thể trúng ClickableSpan của dòng đó.
-                    if (y < 0 || y >= layout.height) {
-                        return false
-                    }
                     val line = layout.getLineForVertical(y)
                     if (x < layout.getLineLeft(line) || x > layout.getLineRight(line)) {
                         return false
+                    }
+                    // Không thể dừng ở check trên: khoảng trống canh trái/giữa/phải giữa các
+                    // "zone" trong 1 dòng được tạo bằng 1 ký tự SpacerSpan (xem appendSpacer())
+                    // chiếm hẳn 1 khoảng rộng pixel thật - vẫn nằm trong [getLineLeft,
+                    // getLineRight] nên check trên không loại được. super.onTouchEvent() (từ
+                    // LinkMovementMethod gốc) dùng layout.getOffsetForHorizontal(line, x) để
+                    // tìm ký tự - hàm này LÀM TRÒN VỀ KÝ TỰ GẦN NHẤT, nên nửa bên phải của
+                    // khoảng trống (SpacerSpan) bị làm tròn sang đúng ký tự đầu tiên của
+                    // ClickableSpan kế tiếp (checkbox/switch) - kích hoạt nhầm dù đang bấm vào
+                    // chỗ trống. Dò lại chính xác: x có thật sự nằm trong vùng pixel của ký tự
+                    // mà getOffsetForHorizontal() trả về (hoặc ký tự liền kề, phòng trường hợp
+                    // offset là điểm chèn giữa 2 ký tự) hay không, và ký tự đó có mang
+                    // ClickableSpan hay không - không thì coi như bấm vào chỗ trống, bỏ qua.
+                    val lineStart = layout.getLineStart(line)
+                    val lineEnd = layout.getLineEnd(line)
+                    if (lineEnd > lineStart) {
+                        val approx = layout.getOffsetForHorizontal(line, x.toFloat())
+                        var hasSpanAtTouch = false
+                        for (off in (approx - 1).coerceAtLeast(lineStart)..(approx).coerceAtMost(lineEnd - 1)) {
+                            val left = layout.getPrimaryHorizontal(off)
+                            val right = layout.getPrimaryHorizontal(off + 1)
+                            if (x >= minOf(left, right) && x < maxOf(left, right)) {
+                                hasSpanAtTouch = buffer.getSpans(off, off, ClickableSpan::class.java).isNotEmpty()
+                                break
+                            }
+                        }
+                        if (!hasSpanAtTouch) {
+                            return false
+                        }
                     }
                 }
             }
