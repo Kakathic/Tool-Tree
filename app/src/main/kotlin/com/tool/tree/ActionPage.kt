@@ -45,6 +45,7 @@ import com.omarea.krscript.shortcut.ActionShortcutManager
 import com.omarea.krscript.ui.ActionListFragment
 import com.omarea.krscript.ui.DialogLogFragment
 import com.omarea.krscript.ui.ParamsFileChooserRender
+import com.omarea.krscript.ui.RowRunProgressHost
 import com.tool.tree.databinding.ActivityActionPageBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,7 +53,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ActionPage : AppCompatActivity() {
+class ActionPage : AppCompatActivity(), RowRunProgressHost {
     companion object {
         // Icon fab đang xoay chờ tải trang - static để sống qua recreate().
         // != null = đang xoay, reset về null khi xong/lỗi/đóng trang.
@@ -1053,6 +1054,26 @@ class ActionPage : AppCompatActivity() {
 
     private fun hideLoadProgress() {
         loadProgressBar.visibility = View.GONE
+    }
+
+    // Số script (script/"run" của rows) đang chạy nền cùng lúc - dùng đếm thay vì set thẳng
+    // visibility để tránh row A chạy xong ẩn mất thanh tiến trình trong khi row B (bấm gần như
+    // đồng thời) vẫn còn đang chạy. Xem RowRunProgressHost/RowsRenderHelper.
+    private var rowRunProgressCount = 0
+
+    override fun showRowRunProgress() {
+        rowRunProgressCount++
+        loadProgressBar.apply {
+            isIndeterminate = true
+            visibility = View.VISIBLE
+        }
+    }
+
+    override fun hideRowRunProgress() {
+        rowRunProgressCount = (rowRunProgressCount - 1).coerceAtLeast(0)
+        if (rowRunProgressCount == 0) {
+            hideLoadProgress()
+        }
     }
 
     private fun updateActionList(items: ArrayList<NodeInfoBase>, showLoading: Boolean, onRendered: (() -> Unit)? = null) {

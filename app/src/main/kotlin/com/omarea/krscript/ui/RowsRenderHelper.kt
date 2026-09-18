@@ -682,21 +682,40 @@ object RowsRenderHelper {
             spannableString.setSpan(object : ClickableSpan() {
                 override fun onClick(widget: View) {
                     runRowAction(context, row.confirm) {
-                        if (row.onClickScript.isNotEmpty()) {
-                            val result = ScriptEnvironmen.executeResultRoot(context, row.onClickScript, config)
-                            if (result.trim().isNotEmpty()) {
-                                if (row.toastResult) {
-                                    Toast.makeText(context, result.trim(), Toast.LENGTH_SHORT).show()
-                                } else {
-                                    DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
-                                }
+                        fun applyResetTarget() {
+                            when (row.resetTarget) {
+                                -1 -> {}
+                                -2 -> resetRow(context, rowsView, extraIconView, rows, config, rowIndex, htmlContainer)
+                                -3 -> bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+                                else -> resetRow(context, rowsView, extraIconView, rows, config, row.resetTarget, htmlContainer)
                             }
                         }
-                        when (row.resetTarget) {
-                            -1 -> {}
-                            -2 -> resetRow(context, rowsView, extraIconView, rows, config, rowIndex, htmlContainer)
-                            -3 -> bind(context, rowsView, extraIconView, rows, config, htmlContainer)
-                            else -> resetRow(context, rowsView, extraIconView, rows, config, row.resetTarget, htmlContainer)
+                        if (row.onClickScript.isNotEmpty()) {
+                            // Chạy script ở thread nền - executeResultRoot() vốn chạy đồng bộ
+                            // (chặn hẳn thread gọi tới lúc script xong), nếu gọi thẳng trên main
+                            // thread như trước thì thanh tiến trình (showRowRunProgress()) sẽ
+                            // không kịp vẽ lên màn hình trước khi bị chặn. rowsView.post{} đưa
+                            // phần cập nhật UI (ẩn thanh tiến trình + toast/dialog + resetTarget)
+                            // về lại main thread sau khi script chạy xong.
+                            val progressHost = context as? RowRunProgressHost
+                            progressHost?.showRowRunProgress()
+                            Thread {
+                                val result = ScriptEnvironmen.executeResultRoot(context, row.onClickScript, config)
+                                rowsView.post {
+                                    progressHost?.hideRowRunProgress()
+                                    if (!rowsView.isAttachedToWindow) return@post
+                                    if (result.trim().isNotEmpty()) {
+                                        if (row.toastResult) {
+                                            Toast.makeText(context, result.trim(), Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                                        }
+                                    }
+                                    applyResetTarget()
+                                }
+                            }.start()
+                        } else {
+                            applyResetTarget()
                         }
                     }
                 }
