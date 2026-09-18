@@ -208,8 +208,16 @@ object RowsRenderHelper {
         rowsView.setTextIsSelectable(allowCopy)
         rowsView.movementMethod = BoundedLinkMovementMethod.instance
 
-        rowsView.isClickable = true
-        rowsView.setOnClickListener { }
+        // KHÔNG set isClickable / setOnClickListener cho rowsView nữa. Lý do:
+        // - Các ClickableSpan (toggle, link, activity, onClickScript/reset) vốn đã được
+        //   BoundedLinkMovementMethod.onTouchEvent() điều phối: ACTION_DOWN/UP bên trong
+        //   getLineLeft()..getLineRight() (chữ/icon thật) mới được xử lý, ngoài vùng đó
+        //   trả false ngay → không kích hoạt span nào.
+        // - Nếu set isClickable=true + setOnClickListener{} (bản cũ), TextView sẽ sinh
+        //   hiệu ứng "đã nhấn" (ripple/selectableItemBackground mặc định) cho BẤT KỲ điểm
+        //   chạm nào trên view, kể cả khoảng trống ngoài text/icon → hiện tượng "ấn vào
+        //   chỗ trống cũng báo đã nhấn" mà user đang gặp. Bỏ 2 dòng đó đi thì chỉ còn đúng
+        //   phần chữ/icon (nơi có ClickableSpan) mới phản hồi - khớp kỳ vọng user.
         if (allowCopy) {
             rowsView.isHapticFeedbackEnabled = true
             rowsView.setOnLongClickListener(null)
@@ -629,21 +637,50 @@ object RowsRenderHelper {
                     runRowAction(context, row.confirm) {
                         row.checked = !row.checked
                         if (row.onChangeSh.isNotEmpty()) {
-                            val result = ScriptEnvironmen.executeResultRoot(context, row.onChangeSh, config, object : HashMap<String, String>() {
-                                init { put("state", if (row.checked) "1" else "0") }
-                            })
-                            if (result.trim().isNotEmpty()) {
-                                DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
-                            }
+                            // Cùng cơ chế với onClickScript bên dưới: chạy script trên thread nền
+                            // (tránh chặn main thread) rồi trả kết quả về lại main thread để hiện
+                            // toast/dialog tuỳ theo row.toastResult. Áp dụng cho cả kết quả của
+                            // "set"/onChangeSh (toggle) lẫn "script"/"run" - không còn phân biệt
+                            // như bản cũ (trước đây toastResult chỉ tác động lên onClickScript).
+                            val progressHost = context as? RowRunProgressHost
+                            progressHost?.showRowRunProgress()
+                            val stateValue = if (row.checked) "1" else "0"
+                            Thread {
+                                val result = ScriptEnvironmen.executeResultRoot(context, row.onChangeSh, config, object : HashMap<String, String>() {
+                                    init { put("state", stateValue) }
+                                })
+                                rowsView.post {
+                                    progressHost?.hideRowRunProgress()
+                                    if (!rowsView.isAttachedToWindow) return@post
+                                    if (result.trim().isNotEmpty()) {
+                                        if (row.toastResult) {
+                                            Toast.makeText(context, result.trim(), Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                                        }
+                                    }
+                                    bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+                                }
+                            }.start()
+                        } else {
+                            bind(context, rowsView, extraIconView, rows, config, htmlContainer)
                         }
-                        bind(context, rowsView, extraIconView, rows, config, htmlContainer)
                     }
                 }
 
                 override fun updateDrawState(ds: TextPaint) {
                     ds.isUnderlineText = false
                 }
-            }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                // Phạm vi ClickableSpan CHỈ phủ phần "label + space + en-space chứa toggle icon"
+                // (0 .. toggleIconIndex+1) - KHÔNG bao gồm khoảng trắng đuôi của textBase
+                // ("$label \u2002 ") và cũng không đè lên vùng progress (\u2002 ở cuối nếu có).
+                // Lý do: LinkMovementMethod khi ACTION_DOWN trong vùng span sẽ gọi
+                // Selection.setSelection(buffer, spanStart, spanEnd) - highlight (nền) toàn
+                // bộ phạm vi span. Nếu span kéo dài tới hết length (kể cả khoảng trắng đuôi),
+                // người dùng bấm vào khoảng trắng đuôi vẫn thấy highlight cả row → hiện tượng
+                // "ấn vào chỗ trống cũng báo đã nhấn" mà user đang gặp. Thu hẹp span lại thì
+                // bấm đúng chữ hoặc đúng ô checkbox/switch mới được highlight - khớp kỳ vọng.
+            }, 0, toggleIconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         } else if (row.link.isNotEmpty()) {
             spannableString.setSpan(object : ClickableSpan() {
                 override fun onClick(widget: View) {
