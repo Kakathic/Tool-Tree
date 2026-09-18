@@ -52,20 +52,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var krScriptConfig = KrScriptConfig()
     private val hasRoot by lazy { KeepShellPublic.checkRoot() }
-    // private var openedSubPage = false
     private var isFavoritesTab = false
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
-    // Bản cập nhật mới nhất tìm được (từ SplashActivity) - điều khiển hiện/ẩn icon cập nhật
-    // (kèm dấu chấm đỏ) ở menu item option_menu_update, bên trái icon nguồn. null = không có
-    // bản mới -> ẩn icon.
+    
+    // Lưu thông tin bản cập nhật mới nhất (từ SplashActivity) để điều khiển ẩn/hiện icon cập nhật trên menu
     private var pendingUpdateInfo: AppUpdateInfo? = null
     private lateinit var toolbar: Toolbar
 
     private val ACTION_FILE_PATH_CHOOSER = 65400
     private val ACTION_FILE_PATH_CHOOSER_INNER = 65300
-    // Chờ blur nền xong rồi mới hiện dialog cập nhật, thêm 2s trễ sau đó để không hiện
-    // ngay lúc màn hình vừa vào.
-    private val updateDialogHandler = Handler(Looper.getMainLooper())
     private lateinit var adapter: MainPagerAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,8 +86,6 @@ class MainActivity : AppCompatActivity() {
             startService(Intent(this@MainActivity, WakeLockService::class.java).apply {
                 action = WakeLockService.ACTION_END_WAKELOCK
             })
-            // isEnabled = false
-            // onBackPressedDispatcher.onBackPressed()
             finish()
         }
 
@@ -107,8 +100,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Nếu Activity được mở từ việc bấm vào thông báo tiến trình đã ẩn (nút "Ẩn" trong
-     * DialogLogFragment), mở lại dialog log tương ứng thay vì chỉ đưa app lên foreground.
+     * Mở lại dialog log tương ứng nếu Activity được mở từ thông báo tiến trình đã ẩn.
      */
     private fun handleResumeNotificationIntent(intent: Intent?) {
         val notificationId = intent?.getIntExtra(DialogLogFragment.EXTRA_RESUME_NOTIFICATION_ID, -1) ?: -1
@@ -118,9 +110,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * SplashActivity kiểm tra cập nhật song song lúc tải data (AppUpdateChecker.fetchUpdateInfo)
-     * và chuyển kết quả qua Intent extra "pendingUpdate" nếu có bản mới - ở đây chỉ cần hiện
-     * dialog, không cần gọi mạng lại.
+     * Hiển thị dialog cập nhật ngay khi nền blur sẵn sàng nếu có bản cập nhật mới từ SplashActivity.
      */
     private fun showPendingUpdateIfAny() {
         @Suppress("DEPRECATION")
@@ -134,9 +124,9 @@ class MainActivity : AppCompatActivity() {
 
         if (updateInfo != null && !AppUpdateConfig(this).isDismissed(updateInfo.sha256)) {
             BlurEngine.runWhenBlurReady {
-                updateDialogHandler.postDelayed({
-                    if (!isFinishing && !isDestroyed) showUpdateDialog(updateInfo)
-                }, 1000)
+                if (!isFinishing && !isDestroyed) {
+                    showUpdateDialog(updateInfo)
+                }
             }
         }
     }
@@ -175,7 +165,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadTabs() {
-        // Ưu tiên dùng data đã preload từ SplashActivity
         @Suppress("DEPRECATION")
         val preloaded = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
             intent.getSerializableExtra("preloadedTabs", MainTabsPreloadedData::class.java)
@@ -183,10 +172,8 @@ class MainActivity : AppCompatActivity() {
             intent.getSerializableExtra("preloadedTabs") as? MainTabsPreloadedData
 
         if (preloaded != null) {
-            // Đã có sẵn data — hiện ngay, không cần dialog
             applyTabsData(preloaded.favorites, preloaded.pages, preloaded.tab3Items, preloaded.tab4Items)
         } else {
-            // Không có preload (vd: recreate, reload) — tải thẳng, không hiện dialog
             lifecycleScope.launch(Dispatchers.IO) {
                 val favorites = getItems(krScriptConfig.getFavoriteConfig())
                 val pages = getItems(krScriptConfig.getPageListConfig())
@@ -282,39 +269,25 @@ class MainActivity : AppCompatActivity() {
             binding.tabLayout.addTab(tab)
         }
 
-        // Chạm hoặc di chuyển ngón tay qua icon nào là chọn NGAY icon đó (không cần nhấc tay
-        // lên mới chọn, không cần giữ lâu). Phải gắn SAU khi các tab đã addTab() ở trên vì cần
-        // customView tồn tại.
         attachTabTouchSelect()
 
-        // FIX: Xử lý sự kiện click thủ công cho Custom Tab View
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
-                // Ép SwipePager chuyển trang khi ấn vào icon tab
                 if (binding.viewPager.currentItem != tab.position) {
                     binding.viewPager.setCurrentItem(tab.position, true)
                 }
-
-                // Cập nhật hiệu ứng hiển thị (màu sắc/scale) của tab
                 tabHelper.updateHighlight(binding.tabLayout, tab.position)
-
                 isFavoritesTab = (tab.position == 0)
             }
             override fun onTabUnselected(tab: TabLayout.Tab) {}
             override fun onTabReselected(tab: TabLayout.Tab) {}
         })
 
-        // Đồng bộ TabLayout khi trang được chọn do vuốt (SwipePager tự settle xong mới báo,
-        // tránh chọn tab liên tục theo từng pixel kéo giữa chừng).
         binding.viewPager.setOnPageChangeListener(object : SwipePager.OnPageChangeListener {
             override fun onPageSelected(position: Int) {
                 binding.tabLayout.getTabAt(position)?.select()
             }
 
-            // Đổi độ sáng icon NGAY khi vuốt qua quá nửa trang (không đợi settle xong hẳn mới
-            // đổi như onPageSelected). CHỈ gọi updateHighlight() (chỉ đổi alpha icon) - KHÔNG
-            // gọi tab.select() ở đây, vì .select() sẽ kích hoạt luôn setCurrentItem() ép chuyển
-            // trang trong onTabSelected() bên trên, xung đột với thao tác kéo tay đang diễn ra.
             override fun onPageScrolled(position: Int, offset: Float) {
                 val highlightPosition = if (offset > 0.5f) position + 1 else position
                 tabHelper.updateHighlight(binding.tabLayout, highlightPosition)
@@ -322,8 +295,6 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    // Gắn touch listener lên từng icon tab: chạm xuống hoặc di ngón tay qua icon nào là chọn
-    // NGAY icon đó (dựa theo vị trí tay thực tế trên màn hình - rawX), không cần đợi nhấc tay.
     private fun attachTabTouchSelect() {
         for (position in 0 until binding.tabLayout.tabCount) {
             val customView = binding.tabLayout.getTabAt(position)?.customView ?: continue
@@ -351,7 +322,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Tìm icon tab đang nằm dưới toạ độ X thực tế trên màn hình (rawX).
     private fun findTabAt(rawX: Float): Int? {
         val loc = IntArray(2)
         for (i in 0 until binding.tabLayout.tabCount) {
@@ -504,11 +474,7 @@ class MainActivity : AppCompatActivity() {
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         val rebootItem = menu.findItem(R.id.option_menu_reboot)
         rebootItem?.isEnabled = hasRoot
-        // isEnabled=false không tự làm mờ icon (icon không phải state-list drawable) - tự set alpha
-        // 97/255 (~38%, mức alpha chuẩn Material cho icon disabled) để phản ánh đúng trạng thái không root.
         rebootItem?.icon?.alpha = if (hasRoot) 255 else 97
-        // Icon cập nhật (kèm dấu chấm đỏ ghép sẵn trong ic_update_badge) chỉ hiện khi có bản
-        // mới - nằm bên trái, sát cạnh icon nguồn (xem order trong res/menu/main.xml).
         menu.findItem(R.id.option_menu_update)?.isVisible = pendingUpdateInfo != null
         return super.onPrepareOptionsMenu(menu)
     }
@@ -516,10 +482,6 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.option_menu_update -> {
-                // Trước đó gọi thẳng showUpdateDialog() không chờ blur - nền dialog hiện
-                // trong suốt rồi mới đổi sang blur khi capture xong, giống lỗi luồng tự động
-                // đã fix (showPendingUpdateIfAny). Bọc runWhenBlurReady() giống vậy, không
-                // cần postDelayed(2000) vì đây là bấm tay, không phải tự bật lúc mở app.
                 pendingUpdateInfo?.let { info ->
                     BlurEngine.runWhenBlurReady {
                         if (!isFinishing && !isDestroyed) showUpdateDialog(info)
@@ -532,14 +494,6 @@ class MainActivity : AppCompatActivity() {
             else -> super.onOptionsItemSelected(item)
         }
     }
-
-    // override fun onRestart() {
-        // super.onRestart()
-        // if (openedSubPage) {
-            // openedSubPage = false
-            // reloadTabs()
-        // }
-    // }
 
     private fun showSettingsDialog() {
         val layout = LayoutInflater.from(this).inflate(R.layout.dialog_about, null)
@@ -587,7 +541,6 @@ class MainActivity : AppCompatActivity() {
                 themeConfig.setAllowNotificationUI(isChecked)
             }
         }
-
 
         layout.findViewById<TextView>(R.id.appliction_authorText).setOnClickListener {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://Kakathic.github.io/Tool-Tree/website/Information.html")))
