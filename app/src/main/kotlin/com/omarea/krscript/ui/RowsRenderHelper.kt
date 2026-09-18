@@ -157,7 +157,15 @@ object RowsRenderHelper {
             val parent = node.parent as? ViewGroup ?: break
             width -= parent.paddingLeft + parent.paddingRight
             (node.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
-                width -= it.leftMargin + it.rightMargin
+                // marginStart/marginEnd (nếu XML khai bằng marginStart/End thay vì marginLeft/
+                // Right) chỉ được Android resolve thành leftMargin/rightMargin sau 1 lượt
+                // layout pass thật (resolveLayoutDirection()) - mà lúc ước lượng này view còn
+                // detached hoàn toàn, chưa từng qua layout pass nào, nên leftMargin/rightMargin
+                // vẫn đang là 0. Đọc thẳng marginStart/marginEnd (luôn có giá trị đúng ngay từ
+                // lúc inflate) để tránh ước lượng thừa ra đúng phần margin start/end này.
+                val marginLeft = if (it.marginStart != Int.MIN_VALUE) it.marginStart else it.leftMargin
+                val marginRight = if (it.marginEnd != Int.MIN_VALUE) it.marginEnd else it.rightMargin
+                width -= marginLeft + marginRight
             }
             node = parent
         }
