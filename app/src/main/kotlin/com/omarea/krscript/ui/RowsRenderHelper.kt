@@ -685,7 +685,11 @@ object RowsRenderHelper {
                         if (row.onClickScript.isNotEmpty()) {
                             val result = ScriptEnvironmen.executeResultRoot(context, row.onClickScript, config)
                             if (result.trim().isNotEmpty()) {
-                                DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                                if (row.toastResult) {
+                                    Toast.makeText(context, result.trim(), Toast.LENGTH_SHORT).show()
+                                } else {
+                                    DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                                }
                             }
                         }
                         when (row.resetTarget) {

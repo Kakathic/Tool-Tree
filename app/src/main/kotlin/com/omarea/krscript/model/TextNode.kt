@@ -59,6 +59,10 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         internal var markdown: Boolean = false
         // 点击后执行的脚本
         internal var onClickScript: String = ""
+        // Nếu true: kết quả (không rỗng) của "script"/"run" khi bấm row được hiện bằng Toast
+        // ngắn gọn thay vì dialog log như mặc định. Không ảnh hưởng tới kết quả của toggle
+        // (onChangeSh/"set") - chỉ áp dụng cho onClickScript. Khai báo bằng "toast" trong TOML.
+        internal var toastResult: Boolean = false
         internal var photo: String = ""
         // "photo-sh": script trả về đường dẫn photo động cho row - gộp batch cùng text-sh/icon-sh
         // trong RowsRenderHelper.bind() mỗi lần render (không cache, giống text-sh).

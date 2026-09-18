@@ -1074,6 +1074,7 @@ italic = true
 <tr><td class="field-name">icon-gif-loop</td><td>icon-gif-loop-count, icon-gif_loop_count</td><td class="field-type">Int</td><td>0</td><td><span class="badge new">new</span> Loop count (0=infinite)</td></tr>
 <tr><td class="field-name">icon-real-gif</td><td>icon-gif-real</td><td class="field-type">Bool</td><td>false</td><td><span class="badge new">new</span> Same as <code>photo-real-gif</code> but for the row's inline icon - REAL <code>.gif</code> file, Android 9/API 28+ only</td></tr>
 <tr><td class="field-name">script</td><td>run</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script to run when the row is clicked</td></tr>
+<tr><td class="field-name">toast</td><td>toast-result</td><td class="field-type">Bool</td><td>false</td><td><span class="badge new">new</span> true: show the (non-empty) result of <code>script</code>/<code>run</code> as a short Toast instead of the default log dialog. Only applies to <code>script</code>'s result - does not affect a toggle's <code>set</code> result</td></tr>
 <tr><td class="field-name">toggle</td><td>toggle-type</td><td class="field-type">String</td><td>""</td><td><code>checkbox</code>/<code>switch</code> = show a small toggle next to the row</td></tr>
 <tr><td class="field-name">get</td><td>getstate</td><td class="field-type">Bool|Shell</td><td>false</td><td>Toggle initial state. A shell returning exactly <code>"1"</code> = checked (queued into pending states - see <a href="#pending-states">section 20</a>)</td></tr>
 <tr><td class="field-name">set</td><td>setstate</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script run when the user toggles (receives <code>$state</code> = "1"/"0")</td></tr>
@@ -1905,6 +1906,7 @@ script = "sh $state"
   <li><code>reset</code> - row acts as a refresh button for another row (by index), re-running just that row's <code>sh</code>/<code>icon-sh</code>/<code>progress-sh</code> without a full rebind; also accepts <code>"self"</code>/<code>"this"</code> (refresh itself) and <code>"all"</code> (rebind the whole block). See <a href="#text-rows">§12.6</a>.</li>
   <li><code>progress</code>, <code>progress-sh</code>, <code>progress-max</code>, <code>progress-color</code>, <code>progress-track-color</code>, <code>progress-width</code>, <code>progress-height</code> - small inline progress bar drawn right after the row's text/icon (static value or script-driven, re-evaluated on every render). See <a href="#text-rows">§12.7</a>.</li>
   <li><code>flash</code>, <code>flash-color</code> - brief background highlight (default amber) when a <code>reset</code> refresh actually changes the row's text; <code>flash = false</code> opts out. See <a href="#text-rows">§12.7</a>.</li>
+  <li><code>toast</code> - show the (non-empty) result of a row's <code>script</code>/<code>run</code> as a short Toast instead of the default log dialog.</li>
 </ul>
 
 <h3>26.7. <a href="#menu-fab">§16 [[menu]] / [[fab]]</a></h3>
