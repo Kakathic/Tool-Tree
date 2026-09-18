@@ -418,4 +418,4 @@ if __name__ == '__main__':
             os.makedirs("out", exist_ok=True)
         Extractor().main(sys.argv[1], "out" + os.sep + os.path.basename(sys.argv[1]).split('.')[0])
     else:
-        print("Sử dụng: python imgextractor.py <file_img> [thư_mục_đầu_ra]")
+        print("Usage: python imgextractor.py <file_img> [output_directory]")

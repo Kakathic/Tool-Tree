@@ -201,7 +201,8 @@ if [ "$NODECO" != 1 ] && [ -f "$file_img" ] && [ "$dang_file" != "unknow" ] && [
             imgkit_scuti unpack -i "$file_img" -o "$OUTPUT" || killtree "imgkit_scuti error"
             echo
         else
-            imgextractor "$file_img" "$OUTPUT" >"$TMP/imgextractor_ext.log"
+            imgextractor "$file_img" "$OUTPUT"
+            echo
         fi
         echo "$dang_file" > "$info"
     elif [ "$dang_file" == 'f2fs' ]; then
