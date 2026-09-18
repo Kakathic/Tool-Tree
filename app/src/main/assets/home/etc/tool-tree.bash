@@ -2172,6 +2172,7 @@ Addon() {
       [ -f "$dirvad/nodelete" ] || delete_add='
       [[page.rows]]
       toggle = "switch"
+      toast = true
       text = "'$deleted_text'"
       get = "[ -f '$dirvad'/delete ] && echo 1"
       set = """

@@ -153,8 +153,16 @@ elif [ "$dang_tep" == 'super' ]; then
         file_img_tmp="$TMP"
     fi
     lpunpack -p "$PVUGBIN" "$INPUT" "$file_img_tmp" || killtree "Extract $PVUGBIN super error"
-    [[ $PVUGBIN == *_a ]] && mv "$file_img_tmp/$PVUGBIN.img" "$file_img_tmp/${PVUGBIN%_a}.img"
+    if [[ $PVUGBIN == *_a ]]; then
+    echo "Extract: $PVUGBIN ➠ ${PVUGBIN%_a}"
+    mv "$file_img_tmp/$PVUGBIN.img" "$file_img_tmp/${PVUGBIN%_a}.img"
     file_img="$file_img_tmp/${PVUGBIN%_a}.img"
+    else
+    echo "Extract: $PVUGBIN ➠ ${PVUGBIN%_b}"
+    mv "$file_img_tmp/$PVUGBIN.img" "$file_img_tmp/${PVUGBIN%_b}.img"
+    file_img="$file_img_tmp/${PVUGBIN%_b}.img"
+    fi
+    echo
 elif [ "$dang_tep" == 'amlogic' ]; then
     echo -e "$unpack_text_1 (${INPUT##*/}) ➠ (unpack)...\n"
     ten_paion="$(echo "${INPUT##*/}" | cut -d. -f1)"
