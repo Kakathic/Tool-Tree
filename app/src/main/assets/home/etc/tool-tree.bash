@@ -12,7 +12,7 @@ echo '
 
   [[page]]
   title = "Demo tính năng"
-  desc = "Hướng dẫn dành cho nhà phát triển add-on"
+  desc = "Hướng dẫn dành cho nhà phát triển"
   icon = "'$urlicon'/addon.png"
   config-sh = "'$ETC'/tool-tree.bash"
   
@@ -179,7 +179,7 @@ echo '
   markdown = true
   
   [[text.rows]]
-  text = "'$operating_system': {Android '$ANDROID_RELEASE' - SDK '$API'}(#0dbda2)"
+  text = "APP UID: {'$APP_UID'}(#0dbda2)"
   break = true
   size = 13
   bold = true
