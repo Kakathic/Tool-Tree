@@ -6,27 +6,32 @@ echo '
   [[group]]
   [[page]]
   title = "Tài khoản"
-  desc = "Nơi này để tạo tài khoản và upload add-on"
+  desc = "Đăng ký tài khoản và upload add-on"
   icon = "'$urlicon'/addon.png"
   config-sh = "'$ETC'/tool-tree.bash"
 
+  [[page]]
+  title = "Demo tính năng"
+  desc = "Hướng dẫn dành cho nhà phát triển add-on"
+  icon = "'$urlicon'/addon.png"
+  config-sh = "'$ETC'/tool-tree.bash"
+  
   [[group]]
   [[page]]
   title = "Add-on có sẵn"
-  desc = "'$home_text_4'"
+  desc = "Đây là các add-on do tác giả tạo ra"
   icon = "'$urlicon'/addon.png"
   process = true
   config-sh = "'$ETC'/tool-tree.bash Addon $UPL"
 
   [[group]]
   [[page]]
-  title = "Add-on người dùng tải lên"
-  desc = "'$home_text_4'"
+  title = "Add-on online"
+  desc = "Đây là các add-on do người dùng tải lên"
   icon = "'$urlicon'/addon.png"
   process = true
   config-sh = "'$ETC'/tool-tree.bash Addon $UZE"
-'
-
+  '
 }
 
 show_sett() {
@@ -147,7 +152,6 @@ echo '
   size = 13
   bold = true
   line-height = 1.3
-  margin-bottom = 6
   icon = "'$urlicon'/1cpu.png"
   markdown = true
   '
@@ -189,7 +193,6 @@ echo '
   size = 13
   bold = true
   line-height = 1.3
-  margin-bottom = 6
   icon = "'$urlicon'/1cpu.png"
   markdown = true
   '
