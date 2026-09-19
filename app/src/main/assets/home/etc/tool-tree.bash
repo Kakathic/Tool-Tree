@@ -115,23 +115,6 @@ inforkk() {
 echo '
   [[group]]
   [[text.rows]]
-  text = "'$infor_text'"
-  size = 16
-  bold = true
-  alpha = 1
-  line-height = 1.3
-  margin-top = 6
-  
-  [[text.rows]]
-  text = "|"
-  size = 14
-  
-  [[text.rows]]
-  text = "'$system_text'"
-  size = 16
-  bold = true
-  
-  [[text.rows]]
   size = 13
   text = "'$root_text': {'${ROOT^}'}(#0dbda2)"
   bold = true
@@ -173,23 +156,6 @@ echo '
 inforka() {
 echo '
   [[group]]
-  [[text.rows]]
-  text = "'$infor_text'"
-  size = 16
-  bold = true
-  line-height = 1.3
-  margin-top = 6
-  
-  [[text.rows]]
-  text = "|"
-  size = 14
-  
-  [[text.rows]]
-  text = "'$system_text'"
-  size = 16
-  alpha = 1
-  bold = true
-  
   [[text.rows]]
   size = 13
   text = "Selinux: {'$SELINUX'}(#0dbda2)"
@@ -2104,7 +2070,7 @@ Addon() {
     '$croot_add'
     icon = "'$icon_vb'"
     title = "'$name'"
-    summary = "'$version', '$author'"
+    summary = "'$version' '$author'"
     reload = true
     url = "'$url'"
     script = """
@@ -2200,7 +2166,7 @@ Addon() {
       [[group]]
       [[page]]
       title = "'$name'"
-      summary = "'$version', '$author'"
+      summary = "'$version' '$author'"
       icon = "'$icon_vb'"
       process = "'$process'"
       '$croot_add'

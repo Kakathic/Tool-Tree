@@ -49,9 +49,11 @@ import com.omarea.krscript.ui.RowRunProgressHost
 import com.tool.tree.databinding.ActivityActionPageBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 
 class ActionPage : AppCompatActivity(), RowRunProgressHost {
     companion object {
@@ -60,6 +62,9 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         private var pendingSpinIcon: android.graphics.drawable.Drawable? = null
         // Xem scheduleCheckboxRefresh().
         private const val CHECKBOX_REFRESH_DEBOUNCE_MS = 1000L
+        // Trang process = false: số ô skeleton tối đa và độ trễ để skeleton kịp vẽ trước khi dựng item đầu tiên.
+        private const val SKELETON_AFTER_DIALOG_MAX = 5
+        private const val SKELETON_FIRST_FRAME_DELAY_MS = 48L
     }
 
     private val progressBarDialog by lazy { ProgressBarDialog(this) }
@@ -808,14 +813,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     private fun loadPageConfig(showLoading: Boolean = true) {
         val config = currentPageConfig ?: return
 
-        // Nhiều mục hoàn tất gần như đồng thời (vd 2+ [[download]] cùng dùng reload=true) có
-        // thể gọi loadPageConfig() liên tiếp trong lúc 1 lượt tải trang trước đó CHƯA XONG.
-        // Trước đây luôn cancel() job cũ rồi chạy job mới ngay -> nhiều lượt tải trang chồng
-        // lấn, có thể cắt ngang beforeRead/afterRead (script root không đảm bảo idempotent)
-        // giữa chừng, hoặc để dở progressive list/dialog loading. Giờ: nếu đang có 1 lượt tải
-        // trang chạy dở, KHÔNG huỷ nó - chỉ đánh dấu "cần tải lại sau" rồi return; khi job hiện
-        // tại xong sẽ tự gọi lại đúng 1 lần (dedupe nhiều yêu cầu chồng lấn thành 1 lần tải lại
-        // duy nhất, trạng thái cuối vẫn phản ánh đủ mọi thay đổi).
+        // Job tải cũ còn chạy (kể cả lúc đang dựng dần item sau dialog): chỉ đánh dấu tải lại sau.
         if (loadPageJob?.isActive == true) {
             pendingReloadWhileLoading = true
             return
@@ -830,7 +828,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         val useProgressiveLoad = showLoading && config.process
 
         loadPageJob = lifecycleScope.launch(Dispatchers.IO) {
-            // Progressive mode có thanh inline -> không cần dialog che kín.
             if (showLoading && !useProgressiveLoad) {
                 withContext(Dispatchers.Main) {
                     hideLoadProgress()
@@ -865,7 +862,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                     if (node != null) {
                         try { prewarmNodeImages(node) } catch (_: Exception) {}
                     }
-                    // Post lên Main thread fire-and-forget (không block IO thread).
                     if (!isFinishing && !isDestroyed) {
                         handler.post {
                             if (!isFinishing && !isDestroyed) {
@@ -912,10 +908,14 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                 ScriptEnvironmen.executeResultRoot(this@ActionPage, config.afterRead, config)
             }
 
+            // Giải mã ảnh icon/logo ngay ở luồng IO (dialog còn hiện) để lúc dựng item trên main thread nhẹ hơn.
+            if (showLoading && !useProgressiveLoad) {
+                items?.forEach { node -> try { prewarmNodeImages(node) } catch (_: Exception) {} }
+            }
+
             withContext(Dispatchers.Main) {
                 if (!isActive || isFinishing) return@withContext
 
-                // Trang rỗng vẫn hợp lệ nếu có menu/fab.
                 val hasMenuOrFab = loadedMenuOptions?.isNotEmpty() == true || loadedHeaderActions?.isNotEmpty() == true
                 if (items != null && (items.isNotEmpty() || hasMenuOrFab)) {
                     if (config.loadSuccess.isNotEmpty()) {
@@ -929,22 +929,31 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                         if (!hasDeferredLoad) hideLoadProgress()
                         tryAutoShowActions()
                     } else if (showLoading) {
+                        // Dialog vừa tắt: hiện skeleton rồi dựng dần từng item (mỗi item 1 lượt main thread)
+                        // để skeleton kịp vẽ/chuyển động thay vì dựng một lượt làm đứng trang.
+                        // Dựng lại toolbar/fab ngay để không phải đợi dựng xong toàn bộ item.
+                        rebuildMenuAfterLoad()
                         loadProgressBar.apply {
                             isIndeterminate = true
                             visibility = View.VISIBLE
                         }
-                        updateActionList(items, showLoading) {
-                            if (!hasDeferredLoad) hideLoadProgress()
-                            tryAutoShowActions()
+                        val skeletonCount = if (config.placeholderCount > 1) config.placeholderCount
+                        else items.size.coerceAtMost(SKELETON_AFTER_DIALOG_MAX)
+                        val fragment = beginProgressiveList(skeletonCount)
+                        if (items.isNotEmpty()) delay(SKELETON_FIRST_FRAME_DELAY_MS)
+                        for (node in items) {
+                            if (!isActive || isFinishing || isDestroyed) return@withContext
+                            fragment.appendProgressiveItem(node)
+                            yield()
                         }
+                        fragment.finishPrebuiltList()
+                        actionsLoaded = true
+                        if (!hasDeferredLoad) hideLoadProgress()
+                        tryAutoShowActions()
                     } else {
                         updateActionList(items, showLoading) { tryAutoShowActions() }
                     }
-                    // Menu/fab vừa đọc xong -> rebuild toolbar.
-                    menuOptions = null
-                    headerActions = null
-                    invalidateOptionsMenu()
-                    scheduleCheckboxRefresh()
+                    rebuildMenuAfterLoad()
                 } else {
                     handleLoadError(config)
                     hideLoadProgress()
@@ -956,22 +965,20 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                 pendingReloadWhileLoading = false
                 withContext(Dispatchers.Main) {
                     if (!isFinishing && !isDestroyed) {
-                        // Gọi lại loadPageConfig() ngay TẠI ĐÂY - vẫn đang nằm trong chính
-                        // coroutine của loadPageJob hiện tại (job này chưa thật sự hoàn tất,
-                        // isActive vẫn true) nên nếu để nguyên, guard "loadPageJob?.isActive"
-                        // ở đầu loadPageConfig() sẽ tưởng nhầm là "vẫn còn 1 lượt tải đang
-                        // chạy" (chính là bản thân job này) -> chỉ set lại
-                        // pendingReloadWhileLoading = true rồi return, KHÔNG thực sự tải lại,
-                        // và cờ đó bị bỏ quên (không ai kiểm tra lại) cho tới lần
-                        // loadPageConfig() kế tiếp được gọi từ bên ngoài. Coi job hiện tại như
-                        // đã xong việc bằng cách xoá tham chiếu trước khi gọi lại, để guard ở
-                        // trên chắc chắn cho lượt tải mới này chạy thật.
+                        // Coi job hiện tại đã xong để guard ở đầu hàm cho phép lượt tải mới chạy thật.
                         loadPageJob = null
                         loadPageConfig(true)
                     }
                 }
             }
         }
+    }
+
+    private fun rebuildMenuAfterLoad() {
+        menuOptions = null
+        headerActions = null
+        invalidateOptionsMenu()
+        scheduleCheckboxRefresh()
     }
 
     private fun prewarmNodeImages(node: NodeInfoBase) {

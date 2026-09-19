@@ -203,6 +203,16 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         triggerAction(autoRunTask)
     }
 
+    // Trang process = false dựng dần item sau dialog: item đã build và resolve trạng thái đủ từ
+    // trước nên KHÔNG gọi triggerUpdate() (tránh chạy lại title-sh/desc-sh/get lần 2 trên main
+    // thread) - chỉ gỡ skeleton dư rồi chạy autoRunTask, giống đuôi của renderInterface().
+    fun finishPrebuiltList() {
+        if (::rootGroup.isInitialized) {
+            pageLayoutRender?.clearLoadingPlaceholders()
+            triggerAction(autoRunTask)
+        }
+    }
+
     // load-after: chèn 1 mục bị hoãn (đã build xong) vào ĐÚNG vị trí sau khi trang đã tải xong -
     // xem ActionPage.startDeferredLoadIfNeeded()/PageConfigReader.buildDeferredNodes(). Gọi này
     // luôn diễn ra SAU tryAutoShowActions() nên renderInterface()/pageLayoutRender chắc chắn đã

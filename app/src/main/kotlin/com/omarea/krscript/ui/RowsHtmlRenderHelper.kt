@@ -55,10 +55,12 @@ object RowsHtmlRenderHelper {
         }
         webView.tag = cacheKey
 
+        RowsHtmlLoadingOverlay.show(container, webView)
+
         if (row.htmlUrl.isNotEmpty()) {
             webView.loadUrl(row.htmlUrl)
         } else {
-            loadLocalHtml(context, webView, row.htmlFile, config.pageConfigDir)
+            loadLocalHtml(context, webView, row.htmlFile, config.pageConfigDir, cacheKey)
         }
     }
 
@@ -90,27 +92,36 @@ object RowsHtmlRenderHelper {
         return webView
     }
 
-    // Đọc nội dung file HTML qua PathAnalysis (hỗ trợ path tương đối theo thư mục cấu hình
-    // trang, thư mục riêng của app, assets, path tuyệt đối, kể cả file cần quyền root) rồi nạp
-    // bằng loadDataWithBaseURL - baseUrl lấy theo thư mục chứa file để các tài nguyên tương đối
-    // (css/js/ảnh) mà trang html tự tham chiếu vẫn nạp được.
-    private fun loadLocalHtml(context: Context, webView: WebView, htmlFile: String, pageDir: String) {
-        val pathAnalysis = PathAnalysis(context, pageDir)
-        val html = try {
-            pathAnalysis.parsePath(htmlFile)?.use { it.readBytes().toString(StandardCharsets.UTF_8) }
-        } catch (ex: Exception) {
-            null
-        }
-        if (html.isNullOrEmpty()) {
-            webView.loadData("", "text/html", "UTF-8")
-            return
-        }
-        val absPath = pathAnalysis.getCurrentAbsPath()
-        val baseUrl = when {
-            absPath.startsWith("file:///android_asset/") -> absPath.substringBeforeLast('/', "") + "/"
-            absPath.isNotEmpty() -> "file://" + absPath.substringBeforeLast('/', "") + "/"
-            else -> null
-        }
-        webView.loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null)
+    // Đọc file html ở luồng nền (tránh chặn main thread khi dựng item), rồi nạp vào WebView trên
+    // main thread. Bỏ qua kết quả nếu WebView đã được bind sang nội dung khác (tag đổi).
+    private fun loadLocalHtml(context: Context, webView: WebView, htmlFile: String, pageDir: String, cacheKey: String) {
+        Thread {
+            val pathAnalysis = PathAnalysis(context, pageDir)
+            val html = try {
+                pathAnalysis.parsePath(htmlFile)?.use { it.readBytes().toString(StandardCharsets.UTF_8) }
+            } catch (ex: Exception) {
+                null
+            }
+            var baseUrl: String? = null
+            if (!html.isNullOrEmpty()) {
+                val absPath = pathAnalysis.getCurrentAbsPath()
+                baseUrl = when {
+                    absPath.startsWith("file:///android_asset/") -> absPath.substringBeforeLast('/', "") + "/"
+                    absPath.isNotEmpty() -> "file://" + absPath.substringBeforeLast('/', "") + "/"
+                    else -> null
+                }
+            }
+            webView.post {
+                if (webView.tag != cacheKey) return@post
+                try {
+                    if (html.isNullOrEmpty()) {
+                        webView.loadData("", "text/html", "UTF-8")
+                    } else {
+                        webView.loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null)
+                    }
+                } catch (_: Exception) {
+                }
+            }
+        }.start()
     }
 }
