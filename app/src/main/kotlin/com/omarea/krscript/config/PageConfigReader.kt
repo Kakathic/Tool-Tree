@@ -811,6 +811,11 @@ class PageConfigReader {
         if (switchNode.setState == null) {
             switchNode.setState = ""
         }
+
+        for (rowTable in tomlEntries(table, "rows")) {
+            textRowToml(switchNode.rows, rowTable)
+        }
+
         return switchNode
     }
 
@@ -849,6 +854,10 @@ class PageConfigReader {
             }
         }
         resourceNodeToml(table)
+
+        for (rowTable in tomlEntries(table, "rows")) {
+            textRowToml(picker.rows, rowTable)
+        }
 
         if (picker.getState.isNullOrEmpty()) {
             picker.getState = ""
@@ -1134,6 +1143,11 @@ class PageConfigReader {
         tomlGet(table, "need-input")?.let { editor.needInput = (it == "true" || it == "1") }
         tomlGet(table, "value-sh")?.let { editor.valueSh = it }
         tomlGet(table, "value")?.let { editor.value = it }
+
+        for (rowTable in tomlEntries(table, "rows")) {
+            textRowToml(editor.rows, rowTable)
+        }
+
         return editor
     }
 

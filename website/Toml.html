@@ -879,6 +879,7 @@ suffix = "conf"
 <tr><td class="field-name">set</td><td>setstate</td><td class="field-type">String</td><td><span class="badge req">required</span> Script to set state. Receives <code>$state</code> = "1"/"0"</td></tr>
 <tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format</td></tr>
 <tr><td class="field-name">lock-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script to check lock dynamically (returns <code>"1"</code> = locked)</td></tr>
+<tr><td class="field-name">rows</td><td>-</td><td class="field-type">Array</td><td><span class="badge new">new</span> Rich-text rows shown below the item - see <a href="#text-rows">section 12</a></td></tr>
 <tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ all fields of RunnableNode, ClickableNode, NodeInfoBase</td></tr>
 </table>
 </div>
@@ -933,6 +934,7 @@ set = "settings put system screen_brightness_mode $state"
 <tr><td class="field-name">separator</td><td>-</td><td class="field-type">String</td><td>Separator for multi-select values (default <code>\n</code>)</td></tr>
 <tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format</td></tr>
 <tr><td class="field-name">lock-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script to check lock dynamically (returns <code>"1"</code> = locked)</td></tr>
+<tr><td class="field-name">rows</td><td>-</td><td class="field-type">Array</td><td><span class="badge new">new</span> Rich-text rows shown below the item - see <a href="#text-rows">section 12</a></td></tr>
 <tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ all fields of RunnableNode, ClickableNode, NodeInfoBase</td></tr>
 </table>
 </div>
@@ -1024,7 +1026,7 @@ italic = true
 
 <section id="text-rows">
 <h2>12. [[text.rows]] - Rich text row</h2>
-<p>This is the <strong>most common</strong> display component: used in <code>[[text]]</code>, <code>[[action]]</code>, <code>[[page]]</code>, <code>[[download]]</code> and <code>[[action.params-rows]]</code>. Each row is a single line of text that can have style, icon, toggle, photo, etc.</p>
+<p>This is the <strong>most common</strong> display component: used in <code>[[text]]</code>, <code>[[action]]</code>, <code>[[page]]</code>, <code>[[download]]</code>, <code>[[action.params-rows]]</code> and <span class="badge new">new</span> <code>[[switch]]</code>, <code>[[picker]]</code>, <code>[[editor]]</code>. Each row is a single line of text that can have style, icon, toggle, photo, etc.</p>
 
 <h3>12.1. Row fields</h3>
 <div class="tbl-container">
@@ -1278,6 +1280,7 @@ reset = "all"
 <tr><td class="field-name">need-input</td><td>-</td><td class="field-type">Bool</td><td>false</td><td>Whether the run script uses <code>read</code></td></tr>
 <tr><td class="field-name">value</td><td>-</td><td class="field-type">String</td><td>""</td><td>Initial content (only when file does not exist)</td></tr>
 <tr><td class="field-name">value-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that produces initial content (higher priority than <code>value</code>)</td></tr>
+<tr><td class="field-name">rows</td><td>-</td><td class="field-type">Array</td><td>[]</td><td><span class="badge new">new</span> Rich-text rows shown below the item - see <a href="#text-rows">section 12</a></td></tr>
 <tr><td colspan="5" style="background:var(--bg-soft);font-style:italic;">+ ClickableNode fields (icon, lock, min-sdk...) and NodeInfoBase (title, desc...)</td></tr>
 </table>
 </div>

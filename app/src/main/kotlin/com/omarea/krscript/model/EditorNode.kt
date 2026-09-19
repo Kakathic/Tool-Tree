@@ -29,4 +29,9 @@ class EditorNode(currentConfigXml: String) : ClickableNode(currentConfigXml) {
     // Nội dung khởi tạo (tĩnh): chỉ được điền vào khi file CHƯA tồn tại.
     // Nếu file đã tồn tại thì giữ nguyên nội dung hiện có, không điền gì thêm.
     var value: String = ""
+
+    // Giống action.rows: cho phép editor hiển thị thêm các dòng rich-text (text/icon/toggle/photo...)
+    // ngay bên dưới item, dùng chung TextNode.TextRow/RowsRenderHelper. Xem PageConfigReader.editorNodeToml()
+    // và ListItemEditor.
+    val rows = ArrayList<TextNode.TextRow>()
 }
