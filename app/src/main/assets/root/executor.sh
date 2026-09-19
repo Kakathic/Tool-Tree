@@ -87,10 +87,9 @@ if [ "$ARCH" != 'aarch64' ] && [ "$ARCH" != 'armv8l' ]; then
     exit 1
 fi
 
-# Giới hạn cpu (dùng hex mask chọn nhân lớn cho Toybox)
 if command -v taskset &>/dev/null; then
     max_cpukkk="$(nproc --all 2>/dev/null)"
-    use_cpukkk="$(glog use_cpu $(( max_cpukkk / 2 )))"
+    use_cpukkk="$(glog use_cpu)"
     if [ -n "$use_cpukkk" ] && [ "$use_cpukkk" -lt $max_cpukkk ]; then
     maskkkk=$(( ((1 << use_cpukkk) - 1) << (max_cpukkk - use_cpukkk) ))
     taskset -p "$(printf "%x" $maskkkk)" $$ &>/dev/null

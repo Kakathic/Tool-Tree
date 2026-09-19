@@ -3,23 +3,28 @@
 Addss(){
 
 echo '
+  [[group]]
+  [[page]]
+  title = "Tài khoản"
+  desc = "Nơi này để tạo tài khoản và upload add-on"
+  icon = "'$urlicon'/addon.png"
+  config-sh = "'$ETC'/tool-tree.bash"
 
   [[group]]
   [[page]]
-  title = "Add-on sẵn có"
+  title = "Add-on có sẵn"
   desc = "'$home_text_4'"
   icon = "'$urlicon'/addon.png"
   process = true
   config-sh = "'$ETC'/tool-tree.bash Addon $UPL"
-  
+
   [[group]]
   [[page]]
-  title = "Add-on người dùng"
+  title = "Add-on người dùng tải lên"
   desc = "'$home_text_4'"
   icon = "'$urlicon'/addon.png"
   process = true
   config-sh = "'$ETC'/tool-tree.bash Addon $UZE"
-
 '
 
 }
