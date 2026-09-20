@@ -4,20 +4,25 @@
         <shape>
             <corners android:radius="10dp" />
             <solid android:color="#50c0c0c0" />
-            <!--<gradient
-                android:angle="270"
-                android:centerColor="#eeeff3"
-                android:centerY="0.75"
-                android:endColor="#eeeff3"
-                android:startColor="#eeeff3" />-->
         </shape>
     </item>
     <item android:id="@android:id/progress">
         <clip>
-            <shape>
-                <corners android:radius="10dp"/>
-                <solid android:color="?android:colorAccent"/>
-            </shape>
+            <!-- Khi control bị khóa (readonly) thì đổi sang màu xám mờ thay vì màu accent -->
+            <selector>
+                <item android:state_enabled="false">
+                    <shape>
+                        <corners android:radius="10dp" />
+                        <solid android:color="#66808080" />
+                    </shape>
+                </item>
+                <item>
+                    <shape>
+                        <corners android:radius="10dp" />
+                        <solid android:color="?android:colorAccent" />
+                    </shape>
+                </item>
+            </selector>
         </clip>
     </item>
 </layer-list>
