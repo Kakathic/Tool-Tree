@@ -280,34 +280,6 @@ More() {
 
 Info() {
   echo '
-  
-  [[group]]
-  [[menu]]
-    handler = """
-    if [ "$menu_id" == "v1" ]; then
-    echo "am:[start -a android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS -d package:com.tool.tree]"
-    elif [ "$menu_id" == "v2" ]; then
-    echo "am:[start -a android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION -d package:com.tool.tree]"
-    elif [ "$menu_id" == "v3" ]; then
-    echo "am:[start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.tool.tree]"
-    fi
-  """
-  
-    [[menu.items]]
-    key = "v1"
-    title = "'$permis_text_1'"
-    silent = true
-
-    [[menu.items]]
-    key = "v2"
-    title = "'$permis_text_4'"
-    silent = true
-
-    [[menu.items]]
-    key = "v3"
-    title = "'$setting_text_5'"
-    silent = true
-  
   [[group]]
   [[page]]
   title = "'$setting_text_1'"
@@ -423,17 +395,42 @@ Update() {
   echo '
   [[group]]
   [[menu]]
-  [[menu.items]]
-  auto-kill = true
-  silent = true
-  title = "'$reset_data_text'"
-  script = """
-  slog -d boot_ver_code
-  slog -d sum_onl_plugin
-  slog -d sum_moduls
-  slog -d sum_ver_boot
+  handler = """
+    if [ "$menu_id" == "v1" ]; then
+    echo "am:[start -a android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS -d package:com.tool.tree]"
+    elif [ "$menu_id" == "v2" ]; then
+    echo "am:[start -a android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION -d package:com.tool.tree]"
+    elif [ "$menu_id" == "v3" ]; then
+    echo "am:[start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.tool.tree]"
+    fi
   """
   
+    [[menu.items]]
+    auto-kill = true
+    silent = true
+    title = "'$reset_data_text'"
+    script = """
+    slog -d boot_ver_code
+    slog -d sum_onl_plugin
+    slog -d sum_moduls
+    slog -d sum_ver_boot
+    """
+    
+    [[menu.items]]
+    key = "v1"
+    title = "'$permis_text_1'"
+    silent = true
+
+    [[menu.items]]
+    key = "v2"
+    title = "'$permis_text_4'"
+    silent = true
+
+    [[menu.items]]
+    key = "v3"
+    title = "'$setting_text_5'"
+    silent = true
+
   [[group]]
   [[text]]
   [[text.rows]]

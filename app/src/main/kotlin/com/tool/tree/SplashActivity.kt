@@ -84,6 +84,8 @@ class SplashActivity : AppCompatActivity() {
         }
     }
 
+    // cancelable=false truyền ngay lúc tạo dialog để customDialog() không gắn vuốt-phải-để-đóng
+    // (setCancelable(false) gọi sau khi tạo không chặn được thao tác vuốt này).
     private fun showAgreementDialog() {
         DialogHelper.warning(
             this,
@@ -92,8 +94,9 @@ class SplashActivity : AppCompatActivity() {
             Runnable {
                 requestRequiredPermissions()
             },
-            Runnable { finish() }
-        ).setCancelable(false)
+            Runnable { finish() },
+            cancelable = false
+        )
     }
 
     // Android 11+ (API 30+): READ/WRITE_EXTERNAL_STORAGE không còn cấp quyền ghi file chung,
