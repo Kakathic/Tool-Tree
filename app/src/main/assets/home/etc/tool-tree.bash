@@ -7,20 +7,20 @@ echo '
   [[page]]
   title = "Tài khoản"
   desc = "Đăng ký tài khoản và upload add-on"
-  icon = "'$urlicon'/addon.png"
+  icon = "'$urlicon'/add_user.png"
   config-sh = "'$ETC'/tool-tree.bash"
 
   [[page]]
   title = "Demo tính năng"
   desc = "Hướng dẫn dành cho nhà phát triển"
-  icon = "'$urlicon'/addon.png"
+  icon = "'$urlicon'/add_list.png"
   config-sh = "'$ETC'/tool-tree.bash"
   
   [[group]]
   [[page]]
   title = "Add-on có sẵn"
   desc = "Đây là các add-on do tác giả tạo ra"
-  icon = "'$urlicon'/addon.png"
+  icon = "'$urlicon'/add_off.png"
   process = true
   config-sh = "'$ETC'/tool-tree.bash Addon $UPL"
 
@@ -28,7 +28,7 @@ echo '
   [[page]]
   title = "Add-on online"
   desc = "Đây là các add-on do người dùng tải lên"
-  icon = "'$urlicon'/addon.png"
+  icon = "'$urlicon'/add_online.png"
   process = true
   config-sh = "'$ETC'/tool-tree.bash Addon $UZE"
   '
