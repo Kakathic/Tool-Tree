@@ -63,7 +63,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         // Xem scheduleCheckboxRefresh().
         private const val CHECKBOX_REFRESH_DEBOUNCE_MS = 1000L
         // Trang process = false: số ô skeleton tối đa và độ trễ để skeleton kịp vẽ trước khi dựng item đầu tiên.
-        private const val SKELETON_AFTER_DIALOG_MAX = 5
+        private const val SKELETON_AFTER_DIALOG_MAX = 1
         private const val SKELETON_FIRST_FRAME_DELAY_MS = 48L
     }
 
