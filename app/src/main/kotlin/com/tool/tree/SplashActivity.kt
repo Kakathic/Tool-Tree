@@ -8,8 +8,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.util.TypedValue
 import android.animation.ObjectAnimator
 import android.view.animation.LinearInterpolator
@@ -45,6 +48,7 @@ class SplashActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySplashBinding
     private val REQUEST_CODE_PERMISSIONS = 1001
+    private val REQUEST_CODE_ALL_FILES = 1002
 
     private var hasRoot = false
     private var started = false
@@ -59,10 +63,6 @@ class SplashActivity : AppCompatActivity() {
 
         ShellExecutor.setTmpDir(cacheDir.absolutePath)
 
-        // Khởi tạo + xoay logo NGAY từ đầu, TRƯỚC nhánh fast-path bên dưới - để mọi trường hợp
-        // (kể cả fast-path) đều có phản hồi hình ảnh trong lúc chờ loadTabsThenHome() (bao gồm
-        // cả lúc check update timeout tới 8s), không bị đứng hình. gotoHome() sẽ cancel() đúng
-        // lúc chuyển sang MainActivity.
         logoAnimator = ObjectAnimator.ofFloat(binding.startLogoXml, "rotation", 0f, 360f).apply {
             duration = 3000
             repeatCount = ObjectAnimator.INFINITE
@@ -76,11 +76,6 @@ class SplashActivity : AppCompatActivity() {
             return
         }
 
-        // Bỏ cờ agreed_permissions tách rời (Session: Sep 5, 2026): trước đây dialog chỉ hiện
-        // đúng 1 lần dựa vào cờ SharedPreferences, nên khi quyền bộ nhớ bị thu hồi sau đó thì
-        // code nhảy thẳng qua requestRequiredPermissions() mà không hiện dialog nữa. Giờ dùng
-        // thẳng hasRequiredPermissions() làm điều kiện duy nhất -> hễ chưa có quyền là luôn
-        // hiện dialog trước, bất kể trước đó đã từng cấp/đồng ý hay chưa.
         if (!hasRequiredPermissions()) {
             showAgreementDialog()
         } else {
@@ -100,7 +95,13 @@ class SplashActivity : AppCompatActivity() {
         ).setCancelable(false)
     }
 
+    // Android 11+ (API 30+): READ/WRITE_EXTERNAL_STORAGE không còn cấp quyền ghi file chung,
+    // phải dùng quyền "Quản lý tất cả các tệp" (MANAGE_EXTERNAL_STORAGE). Android 10 trở xuống
+    // giữ nguyên cách xin quyền cũ.
+    private fun useAllFilesAccess(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+
     private fun hasRequiredPermissions(): Boolean {
+        if (useAllFilesAccess()) return Environment.isExternalStorageManager()
         val permissions = listOf(
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE
@@ -111,11 +112,42 @@ class SplashActivity : AppCompatActivity() {
     }
 
     private fun requestRequiredPermissions() {
+        if (useAllFilesAccess()) {
+            requestAllFilesAccess()
+            return
+        }
         val permissions = arrayOf(
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE
         )
         ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_PERMISSIONS)
+    }
+
+    // Mở trang cài đặt quyền: ưu tiên trang riêng của app, ROM không hỗ trợ (vd MIUI) thì lùi
+    // dần về danh sách chung, rồi trang thông tin ứng dụng.
+    private fun requestAllFilesAccess() {
+        val packageUri = Uri.parse("package:$packageName")
+        val candidates = listOf(
+            Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, packageUri),
+            Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri)
+        )
+        for (candidate in candidates) {
+            try {
+                startActivityForResult(candidate, REQUEST_CODE_ALL_FILES)
+                return
+            } catch (_: Exception) {
+            }
+        }
+        finish()
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_ALL_FILES) {
+            if (hasRequiredPermissions()) checkPermissionsNextStep() else finish()
+        }
     }
 
     private fun checkPermissionsNextStep() {
@@ -194,9 +226,6 @@ class SplashActivity : AppCompatActivity() {
             val config = KrScriptConfig()
             config.init(this@SplashActivity)
 
-            // Kiểm tra cập nhật song song với việc tải data tab - có giới hạn thời gian chờ để
-            // không làm chậm khởi động app nếu mạng yếu/GitHub không phản hồi. Dialog cập nhật
-            // KHÔNG hiện ở đây, chỉ chuyển kết quả cho MainActivity hiện khi vào màn hình chính.
             val updateInfoDeferred = async {
                 withTimeoutOrNull(8000) { AppUpdateChecker.fetchUpdateInfo(this@SplashActivity) }
             }
