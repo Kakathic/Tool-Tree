@@ -179,7 +179,7 @@ echo '
   markdown = true
   
   [[text.rows]]
-  text = "APP UID: {'$APP_UID'}(#0dbda2)"
+  text = "App UID: {'$APP_UID'}(#0dbda2)"
   break = true
   size = 13
   bold = true
