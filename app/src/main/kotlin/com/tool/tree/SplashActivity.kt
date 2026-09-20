@@ -49,6 +49,7 @@ class SplashActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySplashBinding
     private val REQUEST_CODE_PERMISSIONS = 1001
     private val REQUEST_CODE_ALL_FILES = 1002
+    private val REQUEST_CODE_MEDIA = 1003
 
     private var hasRoot = false
     private var started = false
@@ -113,7 +114,11 @@ class SplashActivity : AppCompatActivity() {
 
     private fun requestRequiredPermissions() {
         if (useAllFilesAccess()) {
-            requestAllFilesAccess()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requestMediaPermissions()
+            } else {
+                requestAllFilesAccess()
+            }
             return
         }
         val permissions = arrayOf(
@@ -121,6 +126,17 @@ class SplashActivity : AppCompatActivity() {
             Manifest.permission.WRITE_EXTERNAL_STORAGE
         )
         ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_PERMISSIONS)
+    }
+
+    // API 33+: xin thử READ_MEDIA_IMAGES/VIDEO trước vì một số ROM tự cấp luôn quyền "tất cả các
+    // tệp" khi cấp 2 quyền này. Kết quả được check lại trong onRequestPermissionsResult(): đã có
+    // quyền thì đi tiếp, chưa có mới mở trang cài đặt.
+    private fun requestMediaPermissions() {
+        val permissions = arrayOf(
+            Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_VIDEO
+        )
+        ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_MEDIA)
     }
 
     // Mở trang cài đặt quyền: ưu tiên trang riêng của app, ROM không hỗ trợ (vd MIUI) thì lùi
@@ -181,6 +197,9 @@ class SplashActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        if (requestCode == REQUEST_CODE_MEDIA) {
+            if (hasRequiredPermissions()) checkPermissionsNextStep() else requestAllFilesAccess()
+        }
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 checkPermissionsNextStep()
