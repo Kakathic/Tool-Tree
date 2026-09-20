@@ -19,6 +19,7 @@ import com.omarea.krscript.model.NodeInfoBase
 import com.tool.tree.ThemeModeState
 import java.io.DataOutputStream
 import java.io.File
+import java.io.FileInputStream
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -348,7 +349,6 @@ object ScriptEnvironmen {
             put("KERNEL_VERSION", System.getProperty("os.version") ?: "")
             put("SELINUX", getSELinuxStatus())
 
-            // Lấy kích thước màn hình chuẩn xác
             val windowManager = context.getSystemService(WindowManager::class.java)
             val width: Int
             val height: Int
@@ -368,7 +368,6 @@ object ScriptEnvironmen {
 
             put("BATTERY_CAPACITY", getBatteryCapacity(context))
 
-            // Trạng thái bootloader (số và dạng chữ)
             val lockVal = getSystemProperty("ro.boot.flash.locked", "unknown")
             put("BOOTLOADER_LOCKED", lockVal)
             put("BOOTLOADER_STATE", when (lockVal) {
@@ -389,7 +388,6 @@ object ScriptEnvironmen {
                 put("DARK_MODE", if (ThemeModeState.isDarkMode()) "true" else "false")
             } catch (ignored: Exception) {}
 
-            // Root dạng số 0 / 1
             put("ROOT_NUMBER", if (rooted) "1" else "0")
             put("ROOT_PERMISSION", if (rooted) "true" else "false")
             put("SDCARD_PATH", Environment.getExternalStorageDirectory().absolutePath)
@@ -433,10 +431,19 @@ object ScriptEnvironmen {
             }
         }
     
+        // Không root: đọc thẳng /sys/fs/selinux/enforce. Không dùng SELinux.isSELinuxEnforced() vì
+        // hàm đó trả false cả khi không đọc được file (bị hiểu nhầm thành Permissive).
         return try {
-            val isEnforced = Class.forName("android.os.SELinux")
-                .getMethod("isSELinuxEnforced").invoke(null) as Boolean
-            if (isEnforced) "Enforcing" else "Permissive"
+            val value = FileInputStream("/sys/fs/selinux/enforce").use { input ->
+                val buffer = ByteArray(8)
+                val length = input.read(buffer)
+                if (length > 0) String(buffer, 0, length).trim() else ""
+            }
+            when (value) {
+                "1" -> "Enforcing"
+                "0" -> "Permissive"
+                else -> "Unknown"
+            }
         } catch (ex: Exception) {
             "Unknown"
         }
