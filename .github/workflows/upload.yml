@@ -1,0 +1,36 @@
+name: Upload add-on
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '59 23 * * *'
+permissions: write-all
+env:
+    UP_TOKEN: ${{ secrets.UP_TOKEN }}
+    GH_TOKEN: ${{ github.token }}
+jobs:
+  build-release:
+    if: ${{ github.repository_owner == 'Kakathic' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download add-on
+        run: |
+          chmod +x ./.github/upload.bash
+          . ./.github/upload.bash
+      - name: Upload file
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Tmp"
+          tag_name: "V1"
+          files: |
+            Up/list_onl.zip
+            addon.log
+      - name: Upload add-on
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Add-on"
+          tag_name: "V1.0.2"
+          files: Add/*.add
+          

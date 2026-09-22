@@ -253,7 +253,7 @@ if [ "$NODECO" != 1 ] && [ -f "$file_img" ] && [ "$dang_file" != "unknow" ] && [
         echo "$dang_file" > "$info"
         cp -f "$file_img" "$in_name/logo.img"
         echo
-    elif [ "$dang_file" == 'vbmeta' ] || [ "$dang_file" == 'vbmeta_system' ]; then
+    elif [ "$dang_file" == 'vbmeta' ]; then
         cp -f "$file_img" "$in_name"
         if [ "$PTVBMETA" == 1 ]; then
             magiskboot hexpatch "$in_name/${file_img##*/}" 0000000000000000617662746F6F6C20 0000000200000000617662746F6F6C20 2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"

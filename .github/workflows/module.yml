@@ -16,8 +16,8 @@ jobs:
 
       - name: Build module
         run: |
-          chmod +x ./.github/modun.sh
-          ./.github/modun.sh
+          chmod +x ./.github/modun.bash
+          ./.github/modun.bash
 
       - name: Upload module
         uses: softprops/action-gh-release@v2

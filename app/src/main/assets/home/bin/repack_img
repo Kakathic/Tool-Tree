@@ -207,7 +207,7 @@ elif [ "$partition" = "boot" ] || [ "$partition" = "vendor_boot" ]; then
     fi
     magiskboot repack "${INPUT##*/}.img" "$saved" 2>&1
     echo
-elif [ "$partition" = "vbmeta_system" ] || [ "$partition" = "vbmeta" ]; then
+elif [ "$partition" = "vbmeta" ]; then
     cd "$INPUT"
     cp -rf "${INPUT##*/}.img" "$saved"
 elif [ "$partition" = "logo" ]; then
