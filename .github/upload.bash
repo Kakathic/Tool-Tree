@@ -14,9 +14,7 @@ exit 0
 exit 1
 fi
 
-ls Up
-
-if [ -z "$(ls Up/*)" ]; then
+if [ -z "$(ls Up)" ]; then
 echo "E: Download failed list_onl.zip"
 gh run cancel $GITHUB_RUN_ID
 sleep 5
