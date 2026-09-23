@@ -21,9 +21,9 @@ fi
 
 # Thực thi công cụ tải
 case "$FLAG" in
-    -#) curl -# --connect-timeout 20 --speed-time 15 --speed-limit 1000 --retry 2 --retry-delay 2 -L -H "$WEBS" "$1" -o "$SAVE_PATH" ;;
-    -s) curl -s --connect-timeout 20 --speed-time 15 --speed-limit 1000 --retry 2 --retry-delay 2 -L -H "$WEBS" "$1" -o "$SAVE_PATH" ;;
+    -#) curl -f -# --connect-timeout 20 --speed-time 15 --speed-limit 1000 --retry 2 --retry-delay 2 -L -H "$WEBS" "$1" -o "$SAVE_PATH" ;;
+    -s) curl -sSf --connect-timeout 20 --speed-time 15 --speed-limit 1000 --retry 2 --retry-delay 2 -L -H "$WEBS" "$1" -o "$SAVE_PATH" ;;
     -a) axel -q -o "$SAVE_PATH" "$1" ;;
     -w) wget --header "$WEBS" --no-check-certificate -O "$SAVE_PATH" "$1" ;;
-     *) curl --connect-timeout 20 --speed-time 15 --speed-limit 1000 --retry 2 --retry-delay 2 -L -H "$WEBS" "$1" -o "$SAVE_PATH" ;;
+     *) curl -f --connect-timeout 20 --speed-time 15 --speed-limit 1000 --retry 2 --retry-delay 2 -L -H "$WEBS" "$1" -o "$SAVE_PATH" ;;
 esac
