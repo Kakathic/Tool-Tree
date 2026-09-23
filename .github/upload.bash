@@ -3,7 +3,7 @@
 mkdir -p Up Add
 sumcek="$(curl -sSL -G 'https://api.github.com/repos/Kakathic/Tool-Tree/releases/tags/V1' | jq -r --arg name "list_onl.zip" '.assets[] | select(.name == $name and .digest != null) | .digest // empty' | cut -d: -f2)"
 curl -sSLf "https://github.com/Kakathic/Tool-Tree/releases/download/V1/list_onl.zip" -o "list_onl.zip"
-curl -sLf "https://github.com/Kakathic/Tool-Tree/releases/download/V1/addon.log" -o "addon.log"
+#curl -sSLf "https://github.com/Kakathic/Tool-Tree/releases/download/V1/addon.log" -o "addon.log"
 unzip -o list_onl.zip -d Up
 
 if [[ "$(sha256sum "list_onl.zip" | awk '{print $1}')" != "$sumcek" ]]; then
