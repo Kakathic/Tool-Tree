@@ -2,7 +2,7 @@
 
 mkdir -p Up Add
 sumcek="$(curl -s -G 'https://api.github.com/repos/Kakathic/Tool-Tree/releases/tags/V1' | jq -r --arg name "list_onl.zip" '.assets[] | select(.name == $name and .digest != null) | .digest // empty' | cut -d: -f2)"
-curl -L "https://github.com/Kakathic/Tool-Tree/releases/download/V1/list_onl.zip" -o "list_onl.zip"
+curl -s -L "https://github.com/Kakathic/Tool-Tree/releases/download/V1/list_onl.zip" -o "list_onl.zip"
 curl -s -L "https://github.com/Kakathic/Tool-Tree/releases/download/V1/addon.log" -o "addon.log"
 unzip -o list_onl.zip -d Up
 
@@ -13,7 +13,9 @@ sleep 5
 exit 0
 exit 1
 fi
-ls Up/*
+
+ls Up
+
 if [ -z "$(ls Up/*)" ]; then
 echo "E: Download failed list_onl.zip"
 gh run cancel $GITHUB_RUN_ID
