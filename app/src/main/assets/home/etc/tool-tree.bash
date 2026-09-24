@@ -5,7 +5,7 @@ echo '
   [[group]]
   [[action]]
   icon = "'$urlicon'"
-  title = "Tài khoản và mật khẩu"
+  title = "Phòng thí nghiệm"
   desc = "Tạo tài khoản, đăng nhập, quên mật khẩu"
   warn = "Đăng ký tài khoản để có thể tải lên add-on, và cập nhật add-on"
   script = ""
@@ -54,8 +54,8 @@ Addss(){
 echo '
   [[group]]
   [[page]]
-  title = "Tài khoản"
-  desc = "Đăng ký tài khoản và upload add-on"
+  title = "Phòng thí nghiệm"
+  desc = "Tạo add-on cơ bản và upload lên"
   icon = "'$urlicon'/add_user.png"
   config-sh = "'$ETC'/tool-tree.bash Account"
 
