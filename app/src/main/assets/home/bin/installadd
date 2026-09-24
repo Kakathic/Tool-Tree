@@ -63,7 +63,7 @@ chmod -R 755 "$2/$id" 2>/dev/null
 rm -f "$2/$id/update" 2>/dev/null
 
 if [ -f "$2/$id/install.bash" ]; then
-  MPAT="$2/$id" "$2/$id/install.bash"
+  "$2/$id/install.bash" "$2/$id"
   rm -fr "$2/$id/install.bash"
 fi
 

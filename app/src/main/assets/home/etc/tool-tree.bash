@@ -1279,6 +1279,7 @@ Utilities() {
   desc = "'$desc_rom'"
   icon = "'$urlicon'/decom.png"
   script = """
+  slog box_btn_avb "$box_btn"
   slog vavbbgdf "$vavb"
   slog xoa_oat_boot "$xoa_oat_boot"
   slog dkjdj "$nounpak"
@@ -1337,7 +1338,9 @@ Utilities() {
     
     [[action.params]]
     name = "box_btn"
+    value-sh = "glog box_btn_avb"
     multiple = true
+    label = "'$option_text'"
     items = [ "avb|'$builds_text_81'", "enc|'$builds_text_82'", "recovery|'$builds_text_83'" ]
     depend-on = "vavb"
     depend-value = "1"
@@ -2126,7 +2129,7 @@ Addon() {
     '$croot_add'
     icon = "'$icon_vb'"
     title = "'$name'"
-    summary = "'$version' '$author'"
+    summary = "'$sumstxt$version' '$author'"
     reload = true
     url = "'$url'"
     script = """
@@ -2222,7 +2225,7 @@ Addon() {
       [[group]]
       [[page]]
       title = "'$name'"
-      summary = "'$version' '$author'"
+      summary = "'$sumstxt$version' '$author'"
       icon = "'$icon_vb'"
       process = "'$process'"
       '$croot_add'
@@ -2239,7 +2242,7 @@ Addon() {
     
     # Xoá giá trị cũ
     id= root= shortcut= description= url= name=
-    beforesh= croot_add= process=
+    beforesh= croot_add= process= sumstxt=
     hinde_add= shortcut_text= delete_add=
     
     # Nạp string
@@ -2248,6 +2251,7 @@ Addon() {
     
     # Phát hiện root
     if [ "$root" == "true" ]; then
+    [ "$ROT" == 1 ] || sumstxt="$text_root | "
     croot_add='lock = "'$LOT'|'$root_warning_text'"'
     fi
   
