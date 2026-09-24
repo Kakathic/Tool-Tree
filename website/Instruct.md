@@ -16,7 +16,6 @@ file.add
     ├── icon.png (200x200)   # is the icon of the add-on
     ├── menu.sh              # 3-dot menu button
     ├── index.sh|index.xml   # After entering the page, all content will be displayed.
-    ├── firstly_start.sh     # This command only runs during data installation and application updates.
     ├── early_start.sh       # The first time the application starts, it will run the shell.
     ├── install.sh           # When the add-on is unzipped, it will run the shell.
     └── uninstall.sh         # remove add-on it will run shell

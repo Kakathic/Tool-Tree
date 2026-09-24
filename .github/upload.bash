@@ -33,9 +33,11 @@ for vc in $list_file; do
   file_name="$(echo "$infor" | jq -r .name)"
   file_size="$(echo "$infor" | jq -r .size)"
   # Check tên
-  if [[ "$file_name" == addon_* && "$file_size" -lt 10485760 ]]; then
+  if [[ "$file_name" == account_* ]]; then
+  true
+  elif [[ "$file_name" == addon_* && "$file_size" -lt 10485760 ]]; then
     # Tải về
-    curl -L -u ":$UP_TOKEN" -o "$file_name" "https://pixeldrain.com/api/file/$vc"
+    curl -sSLf -u ":$UP_TOKEN" -o "$file_name" "https://pixeldrain.com/api/file/$vc"
     # Lấy thông tin add-on
     if [[ "$file_name" != *.add ]]; then
       loadmd="$(7z x "$file_name" Add-on.bash -so 2>/dev/null)"

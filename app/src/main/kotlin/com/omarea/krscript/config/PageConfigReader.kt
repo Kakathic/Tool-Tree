@@ -773,12 +773,24 @@ class PageConfigReader {
         tomlGet(table, "config")?.let { option.pageConfigPath = it }
         tomlGet(table, "config-sh")?.let { option.pageConfigSh = it }
         tomlGet(table, "script", "set", "setstate")?.let { option.script = it }
-        tomlGet(table, "option-sh", "options-sh", "options-su")?.let {
+        tomlGet(table, "option-sh", "options-sh")?.let {
             if (option.options == null) option.options = ArrayList()
             option.optionsSh = it
         }
+        val spinnerItemsArray = table.getArray("items")
+        if (spinnerItemsArray != null) {
+            if (option.options == null) option.options = ArrayList()
+            for (i in 0 until spinnerItemsArray.size()) {
+                val str = spinnerItemsArray.getString(i) ?: continue
+                val parts = str.split("|", limit = 2)
+                val item = SelectItem()
+                item.value = parts[0].trim()
+                item.title = if (parts.size > 1) StringResRef.resolve(context, parts[1].trim()) else parts[0].trim()
+                option.options!!.add(item)
+            }
+        }
         val spinnerOptionsToml = tomlEntries(table, "options")
-        if (spinnerOptionsToml.isNotEmpty()) {
+        if (spinnerItemsArray == null && spinnerOptionsToml.isNotEmpty()) {
             if (option.options == null) option.options = ArrayList()
             for (optTable in spinnerOptionsToml) {
                 option.options!!.add(selectItemToml(optTable))
@@ -835,7 +847,7 @@ class PageConfigReader {
 
     private fun pickerNodeToml(table: TomlTable): PickerNode? {
         val picker = runnableNodeToml(PickerNode(pageConfigAbsPath), table) as PickerNode? ?: return null
-        tomlGet(table, "option-sh", "options-sh", "options-su")?.let {
+        tomlGet(table, "option-sh", "options-sh")?.let {
             if (picker.options == null) picker.options = ArrayList()
             picker.optionsSh = it
         }
@@ -846,8 +858,20 @@ class PageConfigReader {
         tomlGet(table, "lock", "lock-state")?.let { parseLockAttr(it, picker) }
         tomlGet(table, "lock-sh")?.let { picker.lockShell = it.trim() }
 
+        val pickerItemsArray = table.getArray("items")
+        if (pickerItemsArray != null) {
+            if (picker.options == null) picker.options = ArrayList()
+            for (i in 0 until pickerItemsArray.size()) {
+                val str = pickerItemsArray.getString(i) ?: continue
+                val parts = str.split("|", limit = 2)
+                val item = SelectItem()
+                item.value = parts[0].trim()
+                item.title = if (parts.size > 1) StringResRef.resolve(context, parts[1].trim()) else parts[0].trim()
+                picker.options!!.add(item)
+            }
+        }
         val pickerOptions = tomlEntries(table, "options")
-        if (pickerOptions.isNotEmpty()) {
+        if (pickerItemsArray == null && pickerOptions.isNotEmpty()) {
             if (picker.options == null) picker.options = ArrayList()
             for (optTable in pickerOptions) {
                 picker.options!!.add(selectItemToml(optTable))
@@ -958,8 +982,8 @@ class PageConfigReader {
         tomlGet(table, "min")?.let { p.min = it.trim().toIntOrNull() ?: p.min }
         tomlGet(table, "max")?.let { p.max = it.trim().toIntOrNull() ?: p.max }
         tomlGet(table, "required")?.let { p.required = tomlTruthy(it, "required") }
-        tomlGet(table, "value-sh", "value-su")?.let { p.valueShell = it }
-        tomlGet(table, "options-sh", "option-sh", "options-su")?.let {
+        tomlGet(table, "value-sh")?.let { p.valueShell = it }
+        tomlGet(table, "options-sh", "option-sh")?.let {
             if (p.options == null) p.options = ArrayList()
             p.optionsSh = it
         }

@@ -162,10 +162,6 @@ process_erofss(){
   progress -1/0
 }
 
-thay_mau() {
-    sed 's/\r//g; /info: ignored token/Id'
-}
-
 if [ "$partition" == "erofs" ]; then
     [ "$DISATFS" == 0 ] || patch "$INPUT" "$fs_config" "$file_contexts" >"$TMP/patch_fs.log"
     if [ "$tool_erofs" == 1 ]; then
@@ -178,8 +174,8 @@ if [ "$partition" == "erofs" ]; then
         --fs-config-file="$fs_config" \
         --file-contexts="$file_contexts" \
         "$saved" "$INPUT" \
-        > "$TMP/mkfs_erofs.log" 2> >(thay_mau >&2) \
-        || killtree "Error build process mkfs.erofs" "$saved" &
+        > "$TMP/mkfs_erofs.log" 2>$TMP/mkfs_erofs_error.log \
+        || killtree "Error build process mkfs.erofs\n$(cat $TMP/mkfs_erofs_error.log)" "$saved" &
         process_erofss "$TMP/mkfs_erofs.log"
     fi
 elif [ "$partition" = "boot" ] || [ "$partition" = "vendor_boot" ]; then

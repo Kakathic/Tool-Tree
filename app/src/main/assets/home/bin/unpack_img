@@ -256,14 +256,26 @@ if [ "$NODECO" != 1 ] && [ -f "$file_img" ] && [ "$dang_file" != "unknow" ] && [
     elif [ "$dang_file" == 'vbmeta' ]; then
         cp -f "$file_img" "$in_name"
         if [ "$PTVBMETA" == 1 ]; then
-            magiskboot hexpatch "$in_name/${file_img##*/}" 0000000000000000617662746F6F6C20 0000000200000000617662746F6F6C20 2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            magiskboot hexpatch "$in_name/${file_img##*/}" \
+            0000000000000000617662746F6F6C20 \
+            0000000200000000617662746F6F6C20 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
             echo
         elif [ "$PTVBMETA" == 2 ]; then
-            magiskboot hexpatch "$in_name/${file_img##*/}" 00000000000000007665726966792000 00000000000000007665726966790000 2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            magiskboot hexpatch "$in_name/${file_img##*/}" \
+            00000000000000007665726966792000 \
+            00000000000000007665726966790000 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
             echo
         elif [ "$PTVBMETA" == 3 ]; then
-            magiskboot hexpatch "$in_name/${file_img##*/}" 0000000000000000617662746F6F6C20 0000000200000000617662746F6F6C20 2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
-            magiskboot hexpatch "$in_name/${file_img##*/}" 00000000000000007665726966792000 00000000000000007665726966790000 2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            magiskboot hexpatch "$in_name/${file_img##*/}" \
+            0000000000000000617662746F6F6C20 \
+            0000000200000000617662746F6F6C20 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            magiskboot hexpatch "$in_name/${file_img##*/}" \
+            00000000000000007665726966792000 \
+            00000000000000007665726966790000 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
             echo
         fi
         
@@ -372,24 +384,26 @@ fi
 
 # Patch fstab
 if [ "$AVBIMG" == 1 ] && [ "$NODECO" != 1 ]; then
+    if [[ "$box_btn" =~ "recovery" ]]; then
     for rec in "$in_name/bin/install-recovery.sh" "$in_name/etc/init/vendor_flash_recovery.rc" "$in_name/recovery-from-boot.p" "$in_name/verity_key"; do
         if [ -f "$rec" ]; then
             echo "Delete file: $rec"
             rm -fr "$rec"
         fi
     done
+    fi
     for fstab in $(find "$in_name" -type f -name "fstab.*" 2>/dev/null); do
-        if [ -f "$fstab" ]; then
-            if grep -Eqi 'avb=|avb_keys=|avb,|,avb' "$fstab"; then
-                sed -i "s/,avb=[^,]*//g; s/,avb_keys=[^,]*//g; s/avb,//g; s/,avb//g; s/,,/,/g" "$fstab"
-                echo "Deleted avb in fstab: ${fstab##*/}"
-            fi
-            if grep -Eqi 'fileencryption|keydirectory|metadata_encryption' "$fstab"; then
-                sed -i 's/fileencryption=[^,]*,//g; s/,fileencryption=[^,]*//g; s/keydirectory=[^,]*,//g; s/,keydirectory=[^,]*//g; s/metadata_encryption=[^,]*,//g; s/,metadata_encryption=[^,]*//g; s/fileencryption/encryptable/g; s/,,/,/g' "$fstab"
-                echo "Decrypted data: ${fstab##*/}"
-            fi
-            echo
+    if [ -f "$fstab" ]; then
+        if grep -Eqi 'avb=|avb_keys=|avb,|,avb' "$fstab" && [[ "$box_btn" =~ "avb" ]]; then
+            sed -i "s/,avb=[^,]*//g; s/,avb_keys=[^,]*//g; s/avb,//g; s/,avb//g; s/,,/,/g" "$fstab"
+            echo "Deleted avb in fstab: ${fstab##*/}"
         fi
+        if grep -Eqi 'fileencryption|keydirectory|metadata_encryption' "$fstab" && [[ "$box_btn" =~ "enc" ]]; then
+            sed -i 's/fileencryption=[^,]*,//g; s/,fileencryption=[^,]*//g; s/keydirectory=[^,]*,//g; s/,keydirectory=[^,]*//g; s/metadata_encryption=[^,]*,//g; s/,metadata_encryption=[^,]*//g; s/fileencryption/encryptable/g; s/,,/,/g' "$fstab"
+            echo "Decrypted data: ${fstab##*/}"
+        fi
+        echo
+    fi
     done
 fi
 

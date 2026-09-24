@@ -1,5 +1,54 @@
 #!/data/data/com.tool.tree/files/home/bin/bash
 
+Account(){
+echo '
+  [[group]]
+  [[action]]
+  icon = "'$urlicon'"
+  title = "Tài khoản và mật khẩu"
+  desc = "Tạo tài khoản, đăng nhập, quên mật khẩu"
+  warn = "Đăng ký tài khoản để có thể tải lên add-on, và cập nhật add-on"
+  script = ""
+  
+  [[action.params]]
+  name = "NAME"
+  label = "Lựa chọn"
+  desc = ""
+  options-sh = """
+  echo -e "1|Tạo tài khoản\n2|Đăng nhập\n3|Quên mật khẩu"
+  """
+  
+  [[action.params]]
+  name = "NAME2"
+  label = "Tài khoản"
+  placeholder = "test"
+  type = "text"
+  required = true
+  
+  [[action.params]]
+  name = "NAME3"
+  label = "Mật khẩu"
+  placeholder = "123456"
+  type = "text"
+  required = true
+  
+  [[action.params]]
+  name = "NAME4"
+  label = "Mật khẩu mới"
+  placeholder = "654321"
+  type = "text"
+  required = true
+  
+  [[action.params]]
+  name = "NAME5"
+  placeholder = "name_022098"
+  label = "Văn bản"
+  desc = "Mục này dùng để khôi phục mật khẩu, hãy lưu lại tên tài khoản, và mục này để khi quên mật khẩu có thể lấy lại"
+  type = "text"
+  required = true
+  '
+}
+
 Addss(){
 
 echo '
@@ -8,7 +57,7 @@ echo '
   title = "Tài khoản"
   desc = "Đăng ký tài khoản và upload add-on"
   icon = "'$urlicon'/add_user.png"
-  config-sh = "'$ETC'/tool-tree.bash"
+  config-sh = "'$ETC'/tool-tree.bash Account"
 
   [[page]]
   title = "Demo tính năng"
@@ -346,14 +395,14 @@ Info() {
   title = "Models Gemini"
   editable = true
   label = "Models"
-  items = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
+  items = [ "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" ]
   value-sh = "glog models_genmini \"gemini-3.1-flash-lite\""
   
   [[action.params]]
   name = "models_thinking"
   title = "'$chatai_think_text'"
   label = "'$option_text'"
-  items = ["0|'$default_text'", "1024", "2048", "4096"]
+  items = [ "0|'$default_text'", "1024", "2048", "4096" ]
   value-sh = "glog models_thinking 0"
   
   [[action.params]]
@@ -550,42 +599,42 @@ if [ "$1" == 1 ]; then
     title = "'$tool_unpack_text' ext4"
     label = "'$option_text'"
     value-sh = "glog un_tool_ext4 0"
-    options-sh = "echo -e \"0|imgextractor\n1|imgkit_scuti\""
+    items = [ "0|imgextractor", "1|imgkit_scuti" ]
 
     [[action.params]]
     name = "un_tool_erofs"
     title = "'$tool_unpack_text' erofs"
     label = "'$option_text'"
     value-sh = "glog un_tool_erofs"
-    options-sh = "echo -e \"0|extract.erofs\n1|imgkit_scuti\""
+    items = [ "0|extract.erofs", "1|imgkit_scuti" ]
 
     [[action.params]]
     name = "un_tool_f2fs"
     title = "'$tool_unpack_text' f2fs"
     label = "'$option_text'"
     value-sh = "glog un_tool_f2fs 0"
-    options-sh = "echo -e \"0|extract.f2fs\n1|imgkit_scuti\""
+    items = [ "0|extract.f2fs", "1|imgkit_scuti" ]
 
     [[action.params]]
     name = "re_tool_ext4"
     title = "'$tool_repack_text' ext4"
     label = "'$option_text'"
     value-sh = "glog re_tool_ext4 1"
-    options-sh = "echo -e \"0|make_ext4fs\n1|mke2fs+e2fsdroid\n2|imgkit_scuti\""
+    items = [ "0|make_ext4fs", "1|mke2fs+e2fsdroid", "2|imgkit_scuti" ]
 
     [[action.params]]
     name = "re_tool_erofs"
     title = "'$tool_repack_text' erofs"
     label = "'$option_text'"
     value-sh = "glog re_tool_erofs"
-    options-sh = "echo -e \"0|mkfs.erofs\n1|imgkit_scuti\""
+    items = [ "0|mkfs.erofs", "1|imgkit_scuti" ]
 
     [[action.params]]
     name = "re_tool_f2fs"
     title = "'$tool_repack_text' f2fs"
     label = "'$option_text'"
     value-sh = "glog re_tool_f2fs 0"
-    options-sh = "echo -e \"0|sload_f2fs\""
+    items = [ "0|sload_f2fs" ]
   '
 
   for vvsskk in $SDH/$PTSH/*; do
@@ -664,7 +713,7 @@ Feature() {
     name = "ramoccupied"
     label = "'$option_text'"
     value-sh = "glog ramoccupied 4096"
-    options-sh = "echo -e \"512\n1024\n2048\n3072\n4096\n5120\n6144\n7168\n8192\""
+    items = [ "512", "1024", "2048", "3072", "4096", "5120", "6144", "7168", "8192" ]
 
   [[group]]
   [[action]]
@@ -748,7 +797,7 @@ Feature() {
     title = "Models Gemini"
     editable = true
     label = "Models"
-    items = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
+    items = [ "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" ]
     value-sh = "glog models_genmini \"gemini-3.1-flash-lite\""
   '
 }
@@ -953,7 +1002,7 @@ Troot() {
     name = "name_dex_list"
     label = "'$option_text'"
     value = "speed-profile"
-    options-sh = "echo -e \"everything\nspeed\nspeed-profile\nverify\""
+    items = [ "everything", "speed", "speed-profile", "verify" ]
 
     [[action.params]]
     name = "bools"
@@ -1110,13 +1159,13 @@ Generate() {
     name = "amlogic_ver"
     label = "'$version_text'"
     value-sh = "glog amlogic_ver v2"
-    options-sh = "echo -e \"v2\nv1\""
+    items = [ "v2", "v1" ]
 
     [[action.params]]
     name = "amlogic_align"
     label = "'$alignment_text'"
     value-sh = "glog amlogic_align 8"
-    options-sh = "echo -e \"4|4\n8|8 (Android 11+)\""
+    items = [ "4|4", "8|8 (Android 11+)" ]
 
     [[action.params]]
     name = "FOLDER"
@@ -1287,10 +1336,19 @@ Utilities() {
     depend-readonly = true
     
     [[action.params]]
+    name = "box_btn"
+    multiple = true
+    items = [ "avb|'$builds_text_81'", "enc|'$builds_text_82'", "recovery|'$builds_text_83'" ]
+    depend-on = "vavb"
+    depend-value = "1"
+    depend-mode = "show"
+    depend-default = "hide"
+    
+    [[action.params]]
     name = "pcvbmeta"
     label = "'$patch_text' vbmeta"
     value-sh = "glog pcvbmeta 0"
-    options-sh = "echo -e \"0|'$default_text'\n1|'$disable_text' dm-verity\n2|'$disable_text' Verification\n3|'$disable_text' dm-verity + Verification\""
+    items = [ "0|'$default_text'", "1|'$disable_text' dm-verity", "2|'$disable_text' Verification", "3|'$disable_text' dm-verity + Verification" ]
     depend-on = "nounpak"
     depend-value = "1"
     depend-mode = "hide"
@@ -1345,7 +1403,7 @@ Utilities() {
     label = "'$build_text'"
     desc = "'$builds_text_2'"
     value-sh = "glog dinh_dang 0"
-    options-sh = "echo -e \"0|'$default_text'\n1|RO (EROFS)\n2|RW (EXT4)\n3|RO (F2FS)\n4|RW (F2FS)\""
+    items = [ "0|'$default_text'", "1|RO (EROFS)", "2|RW (EXT4)", "3|RO (F2FS)", "4|RW (F2FS)" ]
     depend-on = "IMAGES"
     depend-value = "(erofs),(ext),(f2fs)"
     depend-mode = "show"
@@ -1367,7 +1425,7 @@ Utilities() {
     label = "'$option_text'"
     desc = "'$builds_text_3'"
     value-sh = "glog dang_nen lz4hc"
-    options-sh = "echo -e \"lz4hc\nlz4\nlzma\ndeflate\nzstd\""
+    items = [ "lz4hc", "lz4", "lzma", "deflate", "zstd" ]
     depend-on = "dinh_dang|dinh_dang|IMAGES"
     depend-value = "EROFS|EXT4,F2FS|(erofs)"
     depend-mode = "show|hide|show"
@@ -1396,9 +1454,7 @@ Utilities() {
     depend-value = "(erofs),(ext),(f2fs)"
     depend-mode = "show"
     depend-readonly = true
-    options-sh = """
-    echo -e "raw|File.img (raw)\nsparse|File.img (sparse)\nzstd|File.img.zstd\nzst|File.img.zst\ndat|File.new.dat\nbr|File.new.dat.br"
-    """
+    items = [ "raw|File.img (raw)", "sparse|File.img (sparse)", "zstd|File.img.zstd", "zst|File.img.zst", "dat|File.new.dat", "br|File.new.dat.br" ]
 
     [[action.params]]
     name = "nen_br"
@@ -1467,13 +1523,13 @@ Utilities() {
     name = "type"
     label = "'$super_text_2'"
     value-sh = "glog typeheh VAB"
-    options-sh = "echo -e \"A|a_only\nAB|ab\nVAB|virtual_ab\""
+    items = [ "A|a_only", "AB|ab", "VAB|virtual_ab" ]
 
     [[action.params]]
     name = "from"
     label = "'$super_text_3'"
     value-sh = "glog fromdjfh raw"
-    options-sh = "echo -e \"raw\nsparse\""
+    items = [ "raw", "sparse" ]
 
     [[action.params]]
     name = "super_size"
@@ -1656,7 +1712,7 @@ Apex() {
     name = "nen_apex"
     label = "'$option_text'"
     value-sh = "glog nen_apex auto"
-    options-sh = "echo -e \"auto|'$default_text'\n0|'$off_text'\n1|'$on_text'\""
+    items = [ "auto|'$default_text'", "0|'$off_text'", "1|'$on_text'" ]
 
     [[action.params]]
     name = "SIGNS"
@@ -1796,14 +1852,14 @@ Utiliapk() {
     title = "'$customize_tools_text'"
     label = "'$tools_text'"
     value-sh = "glog tooldecom apkeditor"
-    options-sh = "echo -e \"apkeditor|Apkeditor\napktool|Apktool\""
+    items = [ "apkeditor|Apkeditor", "apktool|Apktool" ]
 
     [[action.params]]
     name = "mutiresk"
     title = "'$decom_apk_text_11'"
     label = "'$option_text'"
     value-sh = "glog mutiresk 1"
-    options-sh = "echo -e \"0|'$decom_apk_text_3'\n1|'$default_text'\n2|'$decom_apk_text_5'\""
+    items = [ "0|'$decom_apk_text_3'", "1|'$default_text'", "2|'$decom_apk_text_5'" ]
     depend-on = "tooldecom"
     depend-value = "apkeditor"
     depend-mode = "hide"
@@ -1816,14 +1872,14 @@ Utiliapk() {
     depend-on = "tooldecom"
     depend-value = "apktool"
     depend-mode = "hide"
-    options-sh = "echo -e \"raw|'$decom_apk_text_3'\nxml|'$default_text'\nreso|'$decom_apk_text_10'\""
+    items = [ "raw|'$decom_apk_text_3'", "xml|'$default_text'", "reso|'$decom_apk_text_10'" ]
 
     [[action.params]]
     name = "dexlibk"
     title = "'$decom_apk_text_12'"
     label = "'$option_text'"
     value-sh = "glog dexlibk 2"
-    options-sh = "echo -e \"0|'$decom_apk_text_3'\n1|'$default_text'\n2|Baksmali 3.0.9\""
+    items = [ "0|'$decom_apk_text_3'", "1|'$default_text'", "2|Baksmali 3.0.9" ]
     depend-on = "tooldecom"
     depend-value = "apkeditor"
     depend-mode = "hide"
@@ -1833,7 +1889,7 @@ Utiliapk() {
     title = "'$decom_apk_text_12'"
     label = "'$option_text'"
     value-sh = "glog dexlib smali"
-    options-sh = "echo -e \"nodex|'$decom_apk_text_3'\ninternal|'$default_text'\nsmali|Baksmali 3.0.9\""
+    items = [ "nodex|'$decom_apk_text_3'", "internal|'$default_text'", "smali|Baksmali 3.0.9" ]
     depend-on = "tooldecom"
     depend-value = "apktool"
     depend-mode = "hide"
@@ -1938,7 +1994,7 @@ Utiliapk() {
     label = "'$addlang_text_2'"
     desc = "'$addlang_text_3'"
     value-sh = "glog comlib manifest"
-    options-sh = "echo -e \"manifest|'$default_text'\ntrue|'$on_text'\nfalse|'$off_text'\""
+    items = [ "manifest|'$default_text'", "true|'$on_text'", "false|'$off_text'" ]
 
     [[action.params]]
     name = "FOLDER"
