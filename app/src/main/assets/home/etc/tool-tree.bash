@@ -2139,10 +2139,6 @@ Addon() {
       if [ "$(glog show_setting_add)" == 1 ]; then
         echo '
         [[download.rows]]
-        text = "'$description'"
-        margin-top = 4
-        
-        [[download.rows]]
         toggle = "checkbox"
         line = true
         align="right"
