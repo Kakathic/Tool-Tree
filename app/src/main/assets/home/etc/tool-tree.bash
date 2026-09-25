@@ -187,7 +187,7 @@ echo '
   markdown = true
   
   [[text.rows]]
-  text = "'$operating_system': {Android '$ANDROID_RELEASE' - SDK '$API'}(#0dbda2)"
+  text = "'$operating_system': {Android '$ANDROID_RELEASE' - '$API'}(#0dbda2)"
   break = true
   size = 13
   bold = true
