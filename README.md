@@ -80,7 +80,7 @@ amlogic, apk, apex, capex, squashfs, ...
 
 Want to help translate Tool-Tree?
 
-- [Resources](https://github.com/Kakathic/Tool-Tree/tree/main/app/src/main/res), [Shell](https://github.com/Kakathic/Tool-Tree/tree/main/app/src/main/assets/home/etc/lang), [Addon](https://github.com/Kakathic/Tool-Tree/tree/main/.github/plugin/ZADD), [Apkon](https://github.com/Kakathic/Tool-Tree/tree/main/.github/plugin/ZAPK), [Other](https://github.com/Kakathic/Tool-Tree/tree/main/.github/addon)
+- [Resources](https://github.com/Kakathic/Tool-Tree/tree/main/app/src/main/res), [Shell](https://github.com/Kakathic/Tool-Tree/tree/main/app/src/main/assets/home/etc/lang), [Addon](https://github.com/Kakathic/Tool-Tree/tree/main/.github/list_addon), [Other](https://github.com/Kakathic/Tool-Tree/tree/main/.github/addon)
 
 + For language utilities, they are usually located in the `language.bash` file within the directories.
 
