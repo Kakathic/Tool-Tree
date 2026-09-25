@@ -235,7 +235,14 @@ class DialogAppUpdate(
                     // thành công - lúc này app coi như đã thoát rồi.
                 } else {
                     closingToInstall = true
-                    if (isAdded) dismiss()
+                    // isAdded chỉ xác nhận fragment còn gắn vào FragmentManager, KHÔNG đảm bảo
+                    // state chưa bị lưu (activity có thể đã qua onSaveInstanceState trong lúc
+                    // chờ lệnh root chạy nền - vd người dùng đưa app xuống nền). dismiss() thường
+                    // sẽ ném IllegalStateException "Can not perform this action after
+                    // onSaveInstanceState" trong tình huống đó -> dùng dismissAllowingStateLoss()
+                    // (đã là quy ước sẵn có trong dự án, xem DialogLogFragment.closeView()),
+                    // bọc thêm runCatching cho chắc vì đây là callback bất đồng bộ từ thread nền.
+                    if (isAdded) runCatching { dismissAllowingStateLoss() }
                     openApkViaSystemInstaller(activity, file)
                 }
             }
