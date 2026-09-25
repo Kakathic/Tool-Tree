@@ -1324,12 +1324,11 @@ Utilities() {
     [[action.params]]
     name = "pcvbmeta"
     label = "'$patch_text' vbmeta"
-  items = [ "1|'$disable_text' dm-verity (hex 020)", "2|'$disable_text' Verification", "3|'$disable_text' dm-verity (hex 020) + Verification", "4|'$disable_text' dm-verity (hex 010)", "5|'$disable_text' dm-verity + Verification (hex 030)" ]
+  items = [ "0|'$default_text'", "1|'$disable_text' dm-verity (hex 020)", "2|'$disable_text' Verification", "3|'$disable_text' dm-verity (hex 020) + Verification", "4|'$disable_text' dm-verity (hex 010)", "5|'$disable_text' dm-verity + Verification (hex 030)" ]
     depend-on = "nounpak"
     depend-value = "1"
     depend-mode = "hide"
     depend-readonly = true
-    no-select = true
     
     [[action.params]]
     name = "IMAGES"
