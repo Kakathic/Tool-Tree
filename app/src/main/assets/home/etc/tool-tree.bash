@@ -206,47 +206,6 @@ echo '
   '
 }
 
-inforka() {
-echo '
-  [[group]]
-  [[text.rows]]
-  size = 13
-  text = "Selinux: {'$SELINUX'}(#0dbda2)"
-  bold = true
-  icon = "'$urlicon'/1shield.png"
-  line-height = 1.3
-  break = true
-  markdown = true
-  
-  [[text.rows]]
-  text = "Kernel: {'$KERNEL_VERSION'}(#0dbda2)"
-  break = true
-  size = 13
-  bold = true
-  line-height = 1.3
-  icon = "'$urlicon'/1smart.png"
-  markdown = true
-  
-  [[text.rows]]
-  text = "App UID: {'$APP_UID'}(#0dbda2)"
-  break = true
-  size = 13
-  bold = true
-  line-height = 1.3
-  icon = "'$urlicon'/1android.png"
-  markdown = true
-  
-  [[text.rows]]
-  text = "Bootloader: {'${BOOTLOADER_STATE^}' - '$VERIFIED_BOOT_STATE'}(#0dbda2)"
-  break = true
-  size = 13
-  bold = true
-  line-height = 1.3
-  icon = "'$urlicon'/1cpu.png"
-  markdown = true
-  '
-}
-
 # Ngôn ngữ
 source language 2>/dev/null
 
@@ -292,7 +251,7 @@ Home() {
 }
 
 More() {
-  inforka
+  inforkk
   
   echo '
   [[group]]
