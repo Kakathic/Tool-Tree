@@ -1234,9 +1234,7 @@ Utilities() {
     label = "'$option_text'"
     value = "raw"
     required = true
-    options-sh = """
-    echo -e "raw|File.img (raw)\nsparse|File.img (sparse)\ndat|File.new.dat\nbr|File.new.dat.br\nzstd|File.img.zstd\nzst|File.img.zst\nlzma|File.img.lzma\nlz4|File.img.lz4\nxz|File.img.xz\ngz|File.img.gz"
-    """
+    items = [ "raw|File.img (raw)", "sparse|File.img (sparse)", "dat|File.new.dat", "br|File.new.dat.br", "zstd|File.img.zstd", "zst|File.img.zst", "lzma|File.img.lzma", "lz4|File.img.lz4", "xz|File.img.xz", "gz|File.img.gz" ]
 
     [[action.params]]
     name = "nen_br"
@@ -1326,7 +1324,7 @@ Utilities() {
     [[action.params]]
     name = "pcvbmeta"
     label = "'$patch_text' vbmeta"
-    items = [ "1|'$disable_text' dm-verity", "2|'$disable_text' Verification", "3|'$disable_text' dm-verity + Verification" ]
+  items = [ "1|'$disable_text' dm-verity (hex 020)", "2|'$disable_text' Verification", "3|'$disable_text' dm-verity (hex 020) + Verification", "4|'$disable_text' dm-verity (hex 010)", "5|'$disable_text' dm-verity + Verification (hex 030)" ]
     depend-on = "nounpak"
     depend-value = "1"
     depend-mode = "hide"

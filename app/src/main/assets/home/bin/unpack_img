@@ -254,30 +254,43 @@ if [ "$NODECO" != 1 ] && [ -f "$file_img" ] && [ "$dang_file" != "unknow" ] && [
         cp -f "$file_img" "$in_name/logo.img"
         echo
     elif [ "$dang_file" == 'vbmeta' ]; then
-        cp -rf "$file_img" "$in_name"
+        cp -rf "$file_img" "$PTSD/out/${file_img##*/}"
         if [ "$PTVBMETA" == 1 ]; then
-            magiskboot hexpatch "$in_name/${file_img##*/}" \
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
             0000000000000000617662746F6F6C20 \
             0000000200000000617662746F6F6C20 \
             2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
             echo
         elif [ "$PTVBMETA" == 2 ]; then
-            magiskboot hexpatch "$in_name/${file_img##*/}" \
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
             00000000000000007665726966792000 \
             00000000000000007665726966790000 \
             2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
             echo
         elif [ "$PTVBMETA" == 3 ]; then
-            magiskboot hexpatch "$in_name/${file_img##*/}" \
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
             0000000000000000617662746F6F6C20 \
             0000000200000000617662746F6F6C20 \
             2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
-            magiskboot hexpatch "$in_name/${file_img##*/}" \
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
             00000000000000007665726966792000 \
             00000000000000007665726966790000 \
             2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
             echo
+        elif [ "$PTVBMETA" == 4 ]; then
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
+            0000000000000000617662746F6F6C20 \
+            0000000100000000617662746F6F6C20 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            echo
+        elif [ "$PTVBMETA" == 5 ]; then
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
+            0000000000000000617662746F6F6C20 \
+            0000000300000000617662746F6F6C20 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            echo
         fi
+        echo -e "$save_text $PTSD/out\n"
         echo "$dang_file" > "$info"
     elif [ "$dang_file" == 'boot' ] || [ "$dang_file" == 'vendor_boot' ]; then
         cd "$in_name"
