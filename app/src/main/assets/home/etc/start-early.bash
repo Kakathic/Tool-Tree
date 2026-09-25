@@ -17,17 +17,19 @@ chown -R 0:0 $HOME/.cache
 
 # Tạo link home
 if [ ! -e /data/local/TOOL ]; then
-set_permis -R /data/local/TOOL
-ln -sf $APK /data/local/TOOL
+  set_permis -R /data/local/TOOL
+  ln -sf $APK /data/local/TOOL
 fi
 
 if [ ! -e /data/local/TREE ]; then
-set_permis -R /data/local/TREE
-ln -sf $SDH /data/local/TREE
+  set_permis -R /data/local/TREE
+  ln -sf $SDH /data/local/TREE
 fi
 
 # Thêm không giới hạn tiết kiệm pin
 dumpsys deviceidle whitelist +$PACKAGE_NAME
+
+# Giữ nền
 am set-inactive --user 0 $PACKAGE_NAME false
 am set-standby-bucket $PACKAGE_NAME active
 am set-bg-restriction-level --user 0 $PACKAGE_NAME unrestricted
@@ -55,7 +57,7 @@ search_image &>/dev/null
 rm -fr $AON/*/zcheck $AOK/*/zcheck &
 
 # Cấp quyền 755 tự động
-set_permis $AON/*/* $AOK/*/* &>/dev/null &
+set_permis $AON/*/* $AOK/*/* &>/dev/null
 
 # Khởi động các file shell ở add-on
 for vadd in $AON/* $AOK/*; do
