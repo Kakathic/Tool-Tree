@@ -1,0 +1,34 @@
+name: List Add-on
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/list_addon/**'
+
+permissions: write-all
+
+jobs:
+  build-release:
+    if: ${{ github.repository_owner == 'Kakathic' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build add-on
+        run: |
+          for vv in .github/list_addon/*; do
+            [ -d "$vv" ] || continue
+            echo "Processing: $vv"
+            (
+            cd "$vv"
+            find . -exec touch -d "2026-01-01 00:00:00" {} +
+            7z a -tzip -mmt=off -mtc=off -mta=off -y /home/runner/${vv##*/}.zip
+            )
+          done
+
+      - name: Upload module
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Tmp"
+          tag_name: "V1"
+          files: /home/runner/*.zip
