@@ -1,11 +1,14 @@
 #!/data/data/com.tool.tree/files/home/bin/bash
 # Kakathic
 
+am(){ /system/bin/am "$@"; }
+dumpsys(){ /system/bin/dumpsys "$@"; }
+
 # Dọn dẹp tmp
 find "$TMPDIR" -maxdepth 1 ! -path "$TMPDIR" ! -name '*.log' -exec rm -rf {} +
 rm -fr $TEMP/documents $TEMP/kr_download_* $START_DIR/icons/*
 
-[ -z $(glog api_genmini) ] && transai -c &
+[ -z "$(glog api_genmini)" ] && transai -c &
 
 {
 
@@ -29,6 +32,8 @@ am set-inactive --user 0 $PACKAGE_NAME false
 am set-standby-bucket $PACKAGE_NAME active
 am set-bg-restriction-level --user 0 $PACKAGE_NAME unrestricted
 am unfreeze --sticky $PACKAGE_NAME
+
+# Chạy nền
 cmd appops set $PACKAGE_NAME RUN_IN_BACKGROUND allow
 cmd appops set $PACKAGE_NAME RUN_ANY_IN_BACKGROUND allow
 cmd appops set $PACKAGE_NAME WAKE_LOCK allow
