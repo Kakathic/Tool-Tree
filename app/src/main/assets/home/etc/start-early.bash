@@ -10,6 +10,28 @@ rm -fr $TEMP/documents $TEMP/kr_download_* $START_DIR/icons/*
 
 [ -z "$(glog api_genmini)" ] && transai -c &
 
+(
+# Tự động cập nhật add-on
+urlgitv1="https://github.com/Kakathic/Tool-Tree/releases/download/V1"
+aokshum="$(get_shum 'V1' "AOK.zip")"
+if [[ -n "$aokshum" ]] && [[ "$aokshum" != "$(glog aok_shum "$aokshum")" ]]; then
+  taive -s "$urlgitv1/AOK.zip" "$TMP/AOK.zip" && unzip -o "$TMP/AOK.zip" -d "$AOK"
+  slog aok_shum "$aokshum"
+fi
+# add-on 2
+aonshum="$(get_shum 'V1' "AON.zip")"
+if [[ -n "$aonshum" ]] && [[ "$aonshum" != "$(glog aon_shum "$aonshum")" ]]; then
+  taive -s "$urlgitv1/AON.zip" "$TMP/AON.zip" && unzip -o "$TMP/AON.zip" -d "$AON"
+  slog aon_shum "$aonshum"
+fi
+# add-on 3
+uplshum="$(get_shum 'V1' "UPL.zip")"
+if [[ -n "$uplshum" ]] && [[ "$uplshum" != "$(glog upl_shum "$uplshum")" ]]; then
+  taive -s "$urlgitv1/UPL.zip" "$TMP/UPL.zip" && unzip -o "$TMP/UPL.zip" -d "$UPL"
+  slog upl_shum "$uplshum"
+fi
+) &
+
 {
 
 # Cấp quyền tự động nếu đã root
