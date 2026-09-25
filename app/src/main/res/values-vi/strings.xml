@@ -101,6 +101,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="kr_please_choose_app">Vui lòng chọn ứng dụng</string>
     <string name="kr_please_input_color">Vui lòng nhập màu</string>
     <string name="kr_please_select">Vui lòng chọn</string>
+    <string name="kr_no_selection">Không chọn</string>
     <string name="kr_download_create_fail">Không thể tạo tác vụ tải xuống</string>
     <string name="kr_download_create_success">Đã bắt đầu tải tệp</string>
     <string name="kr_download_confirm">Tải tệp này?</string>

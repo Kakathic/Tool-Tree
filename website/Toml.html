@@ -766,8 +766,8 @@ auto-off = true
 <tr><td class="field-name">desc-on</td><td>on-desc, desc-checked</td><td class="field-type">String</td><td><span class="badge new">new</span> Note shown SPECIFICALLY when the checkbox/switch is ON (only for type=bool/checkbox/switch)</td></tr>
 <tr><td class="field-name">desc-on-sh</td><td>on-desc-sh, desc-checked-sh</td><td class="field-type">String</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces desc-on</td></tr>
 <tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td>Input type: <code>text</code>/<code>int</code>/<code>number</code>/<code>bool</code>/<code>checkbox</code>/<code>switch</code>/<code>seekbar</code>/<code>file</code>/<code>folder</code>/<code>app</code>/<code>packages</code>/<code>spinner</code>/<code>single-select</code>/<code>multi-select</code>/<code>color</code></td></tr>
-<tr><td class="field-name">value</td><td>-</td><td class="field-type">String</td><td>Default value</td></tr>
-<tr><td class="field-name">value-sh</td><td>value-su</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that fetches value dynamically (runs when dialog opens)</td></tr>
+<tr><td class="field-name">value</td><td>-</td><td class="field-type">String|Array</td><td>Default value. Also accepts a TOML array of strings (e.g. <code>value = ["a", "b"]</code>) for <code>multi-select</code> - each entry is one selected value, joined internally using <code>separator</code></td></tr>
+<tr><td class="field-name">value-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that fetches value dynamically (runs when dialog opens)</td></tr>
 <tr><td class="field-name">placeholder</td><td>-</td><td class="field-type">String</td><td>Hint when empty</td></tr>
 <tr><td class="field-name">placeholder-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces placeholder</td></tr>
 <tr><td class="field-name">required</td><td>-</td><td class="field-type">Bool</td><td>Required input</td></tr>
@@ -777,7 +777,7 @@ auto-off = true
 <tr><td class="field-name">max</td><td>-</td><td class="field-type">Int</td><td>Maximum value (seekbar). Default <code>Int.MAX_VALUE</code></td></tr>
 <tr><td class="field-name">options</td><td>-</td><td class="field-type">Array</td><td>List of choices (spinner/single-select/multi-select)</td></tr>
 <tr><td class="field-name">items</td><td>-</td><td class="field-type">Array of String</td><td>Shorthand choice list - each entry is <code>"value|title"</code> or just <code>"value"</code>. Takes priority over <code>options</code> tables when both are declared</td></tr>
-<tr><td class="field-name">options-sh</td><td>option-sh, options-su</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces options dynamically</td></tr>
+<tr><td class="field-name">options-sh</td><td>option-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces options dynamically</td></tr>
 <tr><td class="field-name">multiple</td><td>-</td><td class="field-type">Bool</td><td>Allow multiple files/options</td></tr>
 <tr><td class="field-name">separator</td><td>-</td><td class="field-type">String</td><td>Value separator (multi). Default <code>\n</code></td></tr>
 <tr><td class="field-name">suffix</td><td>-</td><td class="field-type">String</td><td>File extension filter (e.g. <code>"zip,apk"</code>). Only type=file</td></tr>
@@ -787,6 +787,7 @@ auto-off = true
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>Hide/show the param</td></tr>
 <tr><td class="field-name">sort</td><td>-</td><td class="field-type">Bool</td><td><span class="badge new">new</span> Move readonly params to the bottom (only effective when <code>readonly</code> is declared)</td></tr>
 <tr><td class="field-name">allow-no-selection</td><td>no-select</td><td class="field-type">Bool</td><td><span class="badge new">new</span> Allow spinner to be empty (e.g. when you need to distinguish "not selected" from "first item")</td></tr>
+<tr><td class="field-name">remember</td><td>remember-value</td><td class="field-type">Bool</td><td><span class="badge new">new</span> Persist the user's last chosen/entered value (keyed by page config path + action <code>key</code> + param <code>name</code>) and auto-restore it as the default the next time the dialog opens - overrides static <code>value</code>. If the param also has <code>value-sh</code>, the shell result still wins (it reflects the real current system state); the remembered value is only used when <code>value-sh</code> is absent. <strong>Default: <code>true</code></strong> - set <code>remember = "false"</code> to opt out and always fall back to static <code>value</code></td></tr>
 </table>
 </div>
 
@@ -929,7 +930,8 @@ set = "settings put system screen_brightness_mode $state"
 <tr><td class="field-name">get</td><td>getstate</td><td class="field-type">String</td><td><span class="badge req">required</span> Script to read the current value</td></tr>
 <tr><td class="field-name">set</td><td>setstate</td><td class="field-type">String</td><td><span class="badge req">required</span> Script to set the value. Receives <code>$state</code></td></tr>
 <tr><td class="field-name">options</td><td>-</td><td class="field-type">Array</td><td>Static options list - <code>[[picker.options]]</code> with <code>title</code>/<code>value</code></td></tr>
-<tr><td class="field-name">option-sh</td><td>options-sh, options-su</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces options dynamically. Each line <code>value|title</code> or just <code>value</code></td></tr>
+<tr><td class="field-name">items</td><td>-</td><td class="field-type">Array of String</td><td><span class="badge new">new</span> Shorthand static choice list - each entry is <code>"value|title"</code> or just <code>"value"</code>. Takes priority over <code>[[picker.options]]</code> when both are declared (the two are alternative ways to write the same static list, not additive)</td></tr>
+<tr><td class="field-name">option-sh</td><td>options-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces options dynamically. Each line <code>value|title</code> or just <code>value</code></td></tr>
 <tr><td class="field-name">multiple</td><td>-</td><td class="field-type">Bool</td><td>Allow selecting multiple values</td></tr>
 <tr><td class="field-name">separator</td><td>-</td><td class="field-type">String</td><td>Separator for multi-select values (default <code>\n</code>)</td></tr>
 <tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format</td></tr>
@@ -972,7 +974,7 @@ get = "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq"
 set = "echo $state &gt; /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq"
 option-sh = "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies | tr ' ' '\\n'"
 </code></pre>
-<div class="callout warn">When a picker has both static <code>[[picker.options]]</code> and dynamic <code>option-sh</code>, the final list is the <strong>union of both</strong> (static options first, dynamic options appended after running the shell).</div>
+<div class="callout warn">When a picker has both a static list (<code>items</code> or <code>[[picker.options]]</code>) and dynamic <code>option-sh</code>, the final list is the <strong>union of both</strong> (static options first, dynamic options appended after running the shell). <code>items</code> and <code>[[picker.options]]</code> are mutually exclusive with each other - only one is used to build the static part.</div>
 </section>
 
 <section id="text">
@@ -1427,7 +1429,8 @@ script = "sh /data/data/com.tool.tree/files/run.sh"
 <tr><td class="field-name">path-home</td><td>home-path, pathhome</td><td class="field-type">String</td><td>Initial directory (file picker)</td></tr>
 <tr><td class="field-name">multiple</td><td>-</td><td class="field-type">Bool</td><td>Allow multiple file selection</td></tr>
 <tr><td class="field-name">options</td><td>-</td><td class="field-type">Array</td><td>(type=spinner) Choice list</td></tr>
-<tr><td class="field-name">option-sh</td><td>options-sh, options-su</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces options. Each line <code>value|title</code> or just <code>value</code></td></tr>
+<tr><td class="field-name">items</td><td>-</td><td class="field-type">Array of String</td><td><span class="badge new">new</span> (type=spinner) Shorthand choice list - each entry is <code>"value|title"</code> or just <code>"value"</code>. Takes priority over <code>options</code> when both are declared</td></tr>
+<tr><td class="field-name">option-sh</td><td>options-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces options. Each line <code>value|title</code> or just <code>value</code></td></tr>
 <tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ RunnableNode, ClickableNode, NodeInfoBase fields</td></tr>
 </table>
 </div>
@@ -1622,7 +1625,7 @@ depend-value = "folder"
 <tr><td class="field-name">placeholder-sh</td><td>ActionParamInfo</td><td>Produce placeholder dynamically</td></tr>
 <tr><td class="field-name">desc-on-sh</td><td>ActionParamInfo (type=bool)</td><td>Produce desc-on dynamically</td></tr>
 <tr><td class="field-name">value-sh</td><td>ActionParamInfo, EditorNode</td><td>Fetch current value</td></tr>
-<tr><td class="field-name">options-sh / option-sh / options-su</td><td>PickerNode, ActionParamInfo, PageMenuOption</td><td>Produce options list dynamically</td></tr>
+<tr><td class="field-name">options-sh / option-sh</td><td>PickerNode, ActionParamInfo, PageMenuOption</td><td>Produce options list dynamically</td></tr>
 <tr><td class="field-name">get / getstate</td><td>SwitchNode, PickerNode, PageMenuOption (checkbox/spinner), TextRow (toggle)</td><td>Read current state (batched via pending states at parse time)</td></tr>
 <tr><td class="field-name">set / setstate / script</td><td>ActionNode, SwitchNode, PickerNode, DownloadNode, PageMenuOption, TextRow (toggle)</td><td>Set new state on user interaction</td></tr>
 <tr><td class="field-name">lock / lock-state</td><td>ClickableNode, PageNode, PageMenuOption</td><td>Check lock state (static, or "state|message" format)</td></tr>
@@ -1894,9 +1897,17 @@ script = "sh $state"
   <li><code>desc-on</code>, <code>desc-on-sh</code> - alternate description shown while a toggle/value is in its "on" state.</li>
   <li><code>sort</code>, <code>allow-no-selection</code> - control ordering and whether a selector can be left with nothing chosen.</li>
   <li><code>type = "int"</code>/<code>"number"</code> - numeric text input validated against <code>min</code>/<code>max</code> on confirm; <code>type = "color"</code> - color picker accepting hex or <code>@color/...</code> references; <code>type = "packages"</code> - alias of <code>app</code>.</li>
+  <li><code>value</code> now also accepts a TOML array of strings (<code>value = ["a", "b"]</code>) for <code>multi-select</code>, joined internally with <code>separator</code> - alternative to writing a pre-joined string by hand.</li>
+  <li><code>remember</code> - persists the user's last chosen/entered value per page+action+param and auto-restores it as the default on the next dialog open, instead of always falling back to static <code>value</code>. <strong>Enabled by default</strong> - set <code>remember = "false"</code> to opt out. Still overridden by a live <code>value-sh</code> result when present.</li>
 </ul>
 
-<h3>26.6. <a href="#text-rows">§12 [[text.rows]]</a></h3>
+<h3>26.6. <a href="#picker">§10 [[picker]]</a></h3>
+<ul>
+  <li><code>items</code> - shorthand static choice list (<code>"value|title"</code> strings), alternative to <code>[[picker.options]]</code> tables. Still unions with dynamic <code>option-sh</code> as before.</li>
+  <li>Removed the legacy <code>options-su</code>/<code>value-su</code> aliases across the config format - use <code>options-sh</code>/<code>option-sh</code> and <code>value-sh</code> instead.</li>
+</ul>
+
+<h3>26.7. <a href="#text-rows">§12 [[text.rows]]</a></h3>
 <ul>
   <li><code>icon</code>, <code>icon-sh</code> - inline icon shown next to a text row (distinct from the row's full-width <code>photo</code>), with dynamic script-based path support.</li>
   <li><code>icon-gif-num</code>, <code>icon-gif-time</code>, <code>icon-gif-autoplay</code>, <code>icon-gif-loop</code>, <code>icon-real-gif</code> - animation controls for the inline icon, mirroring the row's <code>photo-gif-*</code> fields.</li>
@@ -1913,12 +1924,13 @@ script = "sh $state"
   <li><code>script</code>/<code>run</code> now runs on a background thread instead of blocking the UI thread, showing a thin indeterminate progress bar just below the toolbar (the same bar used while the page itself loads) for the duration of the run.</li>
 </ul>
 
-<h3>26.7. <a href="#menu-fab">§16 [[menu]] / [[fab]]</a></h3>
+<h3>26.8. <a href="#menu-fab">§16 [[menu]] / [[fab]]</a></h3>
 <ul>
   <li><code>key</code> (on items) - explicit item ID passed to scripts as <code>$state</code>/<code>$menu_id</code>; auto keys derived from the title are now de-duplicated with a <code>#menu2</code>/<code>#fab2</code> suffix so two items can never share one.</li>
+  <li><code>items</code> (type=spinner) - shorthand choice list (<code>"value|title"</code> strings), alternative to <code>[[...options]]</code> tables.</li>
 </ul>
 
-<h3>26.8. <a href="#depend">§17 Dependencies</a></h3>
+<h3>26.9. <a href="#depend">§17 Dependencies</a></h3>
 <ul>
   <li><code>depend-readonly</code>, <code>depend-sort</code> - dim and lock a dependent param instead of hiding it, and optionally move locked params to the bottom of the list.</li>
 </ul>

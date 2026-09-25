@@ -94,6 +94,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="kr_please_choose_app">Selecciona una aplicación</string>
     <string name="kr_please_input_color">Introduce un color</string>
     <string name="kr_please_select">Selecciona una opción</string>
+    <string name="kr_no_selection">Sin selección</string>
     <string name="kr_download_create_fail">Error al crear la tarea de descarga</string>
     <string name="kr_download_create_success">Descarga del archivo iniciada</string>
     <string name="kr_download_confirm">¿Descargar el archivo?</string>

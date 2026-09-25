@@ -954,7 +954,17 @@ class PageConfigReader {
         tomlGet(table, "desc-sh")?.let { p.descSh = it }
         tomlGet(table, "desc-on", "on-desc", "desc-checked")?.let { p.descOn = StringResRef.resolve(context, it) }
         tomlGet(table, "desc-on-sh", "on-desc-sh", "desc-checked-sh")?.let { p.descOnSh = it }
-        tomlGet(table, "value")?.let { p.value = it }
+        tomlGet(table, "separator")?.let { p.separator = it }
+        val valueArray = table.getArray("value")
+        if (valueArray != null) {
+            val parts = ArrayList<String>()
+            for (i in 0 until valueArray.size()) {
+                valueArray.getString(i)?.let { parts.add(it) }
+            }
+            p.value = parts.joinToString(p.separator)
+        } else {
+            tomlGet(table, "value")?.let { p.value = it }
+        }
         tomlGet(table, "type")?.let { p.type = it.lowercase(getDefault()).trim() }
         tomlGet(table, "suffix")?.let {
             val suffix = it.lowercase(getDefault()).trim()
@@ -982,6 +992,7 @@ class PageConfigReader {
         tomlGet(table, "min")?.let { p.min = it.trim().toIntOrNull() ?: p.min }
         tomlGet(table, "max")?.let { p.max = it.trim().toIntOrNull() ?: p.max }
         tomlGet(table, "required")?.let { p.required = tomlTruthy(it, "required") }
+        tomlGet(table, "remember", "remember-value")?.let { p.remember = tomlTruthy(it, "remember") }
         tomlGet(table, "value-sh")?.let { p.valueShell = it }
         tomlGet(table, "options-sh", "option-sh")?.let {
             if (p.options == null) p.options = ArrayList()
@@ -992,7 +1003,6 @@ class PageConfigReader {
         }
         tomlGet(table, "multiple")?.let { p.multiple = tomlTruthy(it, "multiple") }
         tomlGet(table, "editable")?.let { p.editable = tomlTruthy(it, "editable") }
-        tomlGet(table, "separator")?.let { p.separator = it }
         tomlGet(table, "depend-on", "depend")?.let { p.dependOn = it }
         tomlGet(table, "depend-value")?.let { p.dependValue = it }
         tomlGet(table, "depend-mode")?.let { p.dependMode = it }

@@ -50,6 +50,25 @@ class ParamsSingleSelect(
         }
     }
 
+    // Khi allowNoSelection = true, chèn thêm 1 dòng "Không chọn" ở đầu danh sách hiển thị
+    // (không đụng vào `options`/optionsFromShell gốc vì đây là list dùng chung).
+    // indexOffset dùng để quy đổi vị trí trong danh sách hiển thị <-> selectedIndex thực (-1 = chưa chọn).
+    private val indexOffset: Int
+        get() = if (actionParamInfo.allowNoSelection) 1 else 0
+
+    private fun displayOptions(): List<SelectItem> {
+        if (!actionParamInfo.allowNoSelection) {
+            return options
+        }
+        return ArrayList<SelectItem>(options.size + 1).apply {
+            add(SelectItem().apply {
+                title = context.getString(R.string.kr_no_selection)
+                value = ""
+            })
+            addAll(options)
+        }
+    }
+
     fun render(): View {
         if (actionParamInfo.editable) {
             return renderEditable()
@@ -111,7 +130,8 @@ class ParamsSingleSelect(
         }
         lastOpenTime = currentTime
 
-        val adapter = ArrayAdapter(context, R.layout.kr_spinner_dropdown, R.id.text, options)
+        val items = displayOptions()
+        val adapter = ArrayAdapter(context, R.layout.kr_spinner_dropdown, R.id.text, items)
         val background = context.getDrawable(R.drawable.kr_spinner_popup_bg)
 
         val popup = ListPopupWindow(context)
@@ -120,7 +140,7 @@ class ParamsSingleSelect(
         popup.setBackgroundDrawable(background)
         popup.isModal = true
         popup.setOnItemClickListener { _, _, position, _ ->
-            selectedIndex = position
+            selectedIndex = position - indexOffset
             updateAnchorText(anchor)
             valueHolder.text = getValue()
             onValueChanged?.invoke()
@@ -128,7 +148,7 @@ class ParamsSingleSelect(
         }
 
         val inflater = LayoutInflater.from(context)
-        val itemViews = options.map { item ->
+        val itemViews = items.map { item ->
             inflater.inflate(R.layout.kr_spinner_dropdown, anchor.parent as? ViewGroup, false).apply {
                 findViewById<TextView>(R.id.text).text = item.title
             }
@@ -141,7 +161,9 @@ class ParamsSingleSelect(
         popup.show()
         SpinnerPopupHelper.applyRoundedClip(popup, context.resources.getDimension(R.dimen.kr_spinner_popup_radius))
         if (selectedIndex > -1 && selectedIndex < options.size) {
-            popup.listView?.setSelection(selectedIndex)
+            popup.listView?.setSelection(selectedIndex + indexOffset)
+        } else if (indexOffset > 0) {
+            popup.listView?.setSelection(0)
         }
     }
 
@@ -152,15 +174,20 @@ class ParamsSingleSelect(
         }
         lastOpenTime = currentTime
 
-        DialogItemChooser(darkMode, ArrayList(options.mapIndexed { index, item ->
+        val items = displayOptions()
+        DialogItemChooser(darkMode, ArrayList(items.mapIndexed { index, item ->
             SelectItem().apply {
                 title = item.title
-                selected = index == selectedIndex
+                selected = index == selectedIndex + indexOffset
             }
         }), false, object : DialogItemChooser.Callback {
             override fun onConfirm(selected: List<SelectItem>, status: BooleanArray) {
-                val confirmedIndex = status.indexOf(true)
-                if (confirmedIndex > -1 && confirmedIndex < options.size) {
+                val rawIndex = status.indexOf(true)
+                if (rawIndex == -1) {
+                    return
+                }
+                val confirmedIndex = rawIndex - indexOffset
+                if (confirmedIndex >= -1 && confirmedIndex < options.size) {
                     selectedIndex = confirmedIndex
                     updateAnchorText(anchor)
                     valueHolder.text = getValue()
@@ -231,7 +258,8 @@ class ParamsSingleSelect(
         }
         lastOpenTime = currentTime
 
-        val adapter = ArrayAdapter(context, R.layout.kr_spinner_dropdown, R.id.text, options)
+        val items = displayOptions()
+        val adapter = ArrayAdapter(context, R.layout.kr_spinner_dropdown, R.id.text, items)
         val background = context.getDrawable(R.drawable.kr_spinner_popup_bg)
 
         val popup = ListPopupWindow(context)
@@ -240,8 +268,8 @@ class ParamsSingleSelect(
         popup.setBackgroundDrawable(background)
         popup.isModal = true
         popup.setOnItemClickListener { _, _, position, _ ->
-            selectedIndex = position
-            val selectedValue = options.getOrNull(position)?.value ?: ""
+            selectedIndex = position - indexOffset
+            val selectedValue = if (selectedIndex > -1) options.getOrNull(selectedIndex)?.value ?: "" else ""
             editText.setText(selectedValue)
             editText.setSelection(editText.text?.length ?: 0)
             onValueChanged?.invoke()
@@ -249,7 +277,7 @@ class ParamsSingleSelect(
         }
 
         val inflater = LayoutInflater.from(context)
-        val itemViews = options.map { item ->
+        val itemViews = items.map { item ->
             inflater.inflate(R.layout.kr_spinner_dropdown, editText.parent as? ViewGroup, false).apply {
                 findViewById<TextView>(R.id.text).text = item.title
             }
@@ -262,7 +290,9 @@ class ParamsSingleSelect(
         popup.show()
         SpinnerPopupHelper.applyRoundedClip(popup, context.resources.getDimension(R.dimen.kr_spinner_popup_radius))
         if (selectedIndex > -1 && selectedIndex < options.size) {
-            popup.listView?.setSelection(selectedIndex)
+            popup.listView?.setSelection(selectedIndex + indexOffset)
+        } else if (indexOffset > 0) {
+            popup.listView?.setSelection(0)
         }
     }
 
@@ -273,17 +303,22 @@ class ParamsSingleSelect(
         }
         lastOpenTime = currentTime
 
-        DialogItemChooser(darkMode, ArrayList(options.mapIndexed { index, item ->
+        val items = displayOptions()
+        DialogItemChooser(darkMode, ArrayList(items.mapIndexed { index, item ->
             SelectItem().apply {
                 title = item.title
-                selected = index == selectedIndex
+                selected = index == selectedIndex + indexOffset
             }
         }), false, object : DialogItemChooser.Callback {
             override fun onConfirm(selected: List<SelectItem>, status: BooleanArray) {
-                val confirmedIndex = status.indexOf(true)
-                if (confirmedIndex > -1 && confirmedIndex < options.size) {
+                val rawIndex = status.indexOf(true)
+                if (rawIndex == -1) {
+                    return
+                }
+                val confirmedIndex = rawIndex - indexOffset
+                if (confirmedIndex >= -1 && confirmedIndex < options.size) {
                     selectedIndex = confirmedIndex
-                    editText.setText(options[confirmedIndex].value ?: "")
+                    editText.setText(if (confirmedIndex > -1) options[confirmedIndex].value ?: "" else "")
                     editText.setSelection(editText.text?.length ?: 0)
                     onValueChanged?.invoke()
                 }

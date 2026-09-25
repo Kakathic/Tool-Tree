@@ -95,6 +95,7 @@
     <string name="kr_please_choose_folder">Kérjük, válasszon mappát</string>
     <string name="kr_please_input_color">Kérjük, adja meg a színt</string>
     <string name="kr_please_select">Kérjük, válasszon</string>
+    <string name="kr_no_selection">Nincs kiválasztva</string>
     <string name="kr_script_task_finished">A feladat befejeződött</string>
     <string name="kr_script_task_has_error">Hiba történt</string>
     <string name="kr_script_task_notification">Háttérfeladat értesítés</string>

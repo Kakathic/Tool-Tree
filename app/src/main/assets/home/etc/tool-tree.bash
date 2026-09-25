@@ -1338,7 +1338,7 @@ Utilities() {
     
     [[action.params]]
     name = "box_btn"
-    value-sh = "glog box_btn_avb"
+    value-sh = "glog box_btn_avb \"avb\n\enc\nrecovery""
     multiple = true
     label = "'$option_text'"
     items = [ "avb|'$builds_text_81'", "enc|'$builds_text_82'", "recovery|'$builds_text_83'" ]

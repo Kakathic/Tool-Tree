@@ -218,4 +218,15 @@ class ActionParamInfo : Serializable {
     //   dùng khi thực sự cần phân biệt rõ giữa "người dùng chưa chọn" và "đã chọn mục đầu".
     // Ví dụ: allow-no-selection="true" (hoặc viết tắt: no-select="true")
     var allowNoSelection: Boolean = false
+
+    // ========== TÍNH NĂNG MỚI: GHI NHỚ LỰA CHỌN (remember) ==========
+    // Nếu true: giá trị người dùng chọn/nhập lần cuối (lúc bấm OK) sẽ được lưu lại (xem
+    // ActionParamMemory), và lần sau mở lại dialog action sẽ TỰ NẠP giá trị đã nhớ đó làm mặc
+    // định - ghi đè lên "value" tĩnh khai trong TOML.
+    // Nếu param CÒN khai "value-sh" (đọc trạng thái thật từ hệ thống lúc mở dialog), kết quả
+    // của value-sh vẫn được ưu tiên hơn giá trị đã nhớ, vì đó là trạng thái THẬT ngay lúc mở -
+    // giá trị đã nhớ chỉ áp dụng khi value-sh không khai hoặc không trả về gì.
+    // Mặc định: true (bật) - hầu hết trường hợp dùng spinner/select đều muốn nhớ lựa chọn cũ;
+    // khai "remember = false" trong TOML nếu KHÔNG muốn nhớ (luôn quay về "value" tĩnh).
+    var remember: Boolean = true
 }

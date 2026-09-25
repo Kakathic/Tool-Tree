@@ -25,6 +25,7 @@ import com.omarea.krscript.downloader.DownloadTaskHelper
 import com.tool.tree.R
 import com.omarea.krscript.TryOpenActivity
 import com.omarea.krscript.config.IconPathAnalysis
+import com.omarea.krscript.config.ActionParamMemory
 import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.model.*
 import com.omarea.krscript.shortcut.ActionShortcutManager
@@ -663,6 +664,11 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                     shellResults["desc-on:$name"]?.let { param.descOn = it }
                     shellResults["placeholder:$name"]?.let { param.placeholder = it }
                     shellResults["readonly:$name"]?.let { param.readonly = it.trim() == "1" }
+                    // remember = true và param KHÔNG khai value-sh (nên valueFromShell còn null)
+                    // -> nạp giá trị người dùng đã chọn lần trước làm giá trị mặc định.
+                    if (param.valueFromShell == null) {
+                        ActionParamMemory.load(requireContext(), action, param)?.let { param.valueFromShell = it }
+                    }
                 }
 
                 withContext(Dispatchers.Main) {
@@ -677,7 +683,9 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
 
                     val customRunner = krScriptActionHandler?.openParamsPage(action, linearLayout) {
                         try {
-                            actionExecute(action, script, onExit, render.readParamsValue(actionParamInfos))
+                            val paramsValue = render.readParamsValue(actionParamInfos)
+                            ActionParamMemory.save(requireContext(), action, actionParamInfos, paramsValue)
+                            actionExecute(action, script, onExit, paramsValue)
                         } catch (ex: Exception) {
                             Toast.makeText(requireContext(), "" + ex.message, Toast.LENGTH_LONG).show()
                         }
@@ -753,7 +761,9 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                         }
                         dialogView.findViewById<View>(R.id.btn_confirm).setOnClickListener {
                             try {
-                                actionExecute(action, script, onExit, render.readParamsValue(actionParamInfos))
+                                val paramsValue = render.readParamsValue(actionParamInfos)
+                                ActionParamMemory.save(requireContext(), action, actionParamInfos, paramsValue)
+                                actionExecute(action, script, onExit, paramsValue)
                                 dialog?.dismiss()
                             } catch (ex: Exception) {
                                 Toast.makeText(requireContext(), "" + ex.message, Toast.LENGTH_LONG).show()

@@ -91,6 +91,7 @@
     <string name="kr_please_choose_app">Пожалуйста, выберите приложение</string>
     <string name="kr_please_input_color">Пожалуйста, введите цвет</string>
     <string name="kr_please_select">Пожалуйста, выберите</string>
+    <string name="kr_no_selection">Не выбрано</string>
     <string name="kr_download_create_fail">Не удалось создать задачу загрузки</string>
     <string name="kr_download_create_success">Загрузка файла начата</string>
     <string name="kr_download_confirm">Загрузить этот файл?</string>

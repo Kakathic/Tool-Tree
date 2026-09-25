@@ -90,6 +90,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="kr_please_choose_app">Silakan pilih aplikasi</string>
     <string name="kr_please_input_color">Silakan masukkan warna</string>
     <string name="kr_please_select">Silakan pilih</string>
+    <string name="kr_no_selection">Tidak dipilih</string>
     <string name="kr_download_create_fail">Gagal membuat tugas pengunduhan</string>
     <string name="kr_download_create_success">Mulai mengunduh berkas</string>
     <string name="kr_download_confirm">Unduh berkas ini?</string>
