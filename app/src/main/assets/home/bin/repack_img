@@ -74,7 +74,6 @@ fi
 [ -f "$ETC/mke2fs.conf" ] && export MKE2FS_CONFIG="$ETC/mke2fs.conf"
 
 # Thời gian build
-time_build="$(glog build_times)"
 [ -z "$time_build" ] && time_build="1230768000"
 
 info="${INPUT%/*}/config/${INPUT##*/}_info"
@@ -257,7 +256,7 @@ elif [ "$partition" == "f2fs" ]; then
     if [ "$TTBUILDI" == 0 ]; then
     grep -qE 'superblock features.*ro' "$fs_options" 2>/dev/null && TTBUILDI=3 || TTBUILDI=4
     fi
-    if [ "$(glog on_f2fs_nen)" == 1 ]; then
+    if [ "$on_f2fs_nen" == 1 ]; then
     dang_f2fs_nen=",compression"
     co_f2fs="-c"
     fi

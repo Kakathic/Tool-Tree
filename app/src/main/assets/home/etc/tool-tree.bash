@@ -380,11 +380,6 @@ Info() {
   icon = "'$urlicon'/chatai.png"
   lock-sh = "[ -z $(glog api_genmini) ] && echo \"'$warn_gemini_text'\" || echo 0"
   script = """
-  slog chatai_save "$chatai"
-  slog models_thinking "$models_thinking"
-  slog models_genmini "$models_genmini"
-  slog chatai_lang "$chatai_lang"
-  slog chatai_nextrule "$chatai_nextrule"
   [ "$models_thinking" -gt 0 ] && thingkk="-t $models_thinking"
   transai -m "$chatai" -l "$chatai_lang" $thingkk
   """
@@ -396,14 +391,14 @@ Info() {
   editable = true
   label = "Models"
   items = [ "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" ]
-  value-sh = "glog models_genmini \"gemini-3.1-flash-lite\""
+  value-sh = "glog models_genmini gemini-3.1-flash-lite"
   
   [[action.params]]
   name = "models_thinking"
   title = "'$chatai_think_text'"
   label = "'$option_text'"
   items = [ "0|'$default_text'", "1024", "2048", "4096" ]
-  value-sh = "glog models_thinking 0"
+  value = "0"
   
   [[action.params]]
   name = "chatai_lang"
@@ -411,14 +406,13 @@ Info() {
   label = "'$permis_text_2'"
   placeholder = "en-US"
   type = "text"
-  value-sh = "glog chatai_lang \"$LANGUAGE-$COUNTRY\""
+  value = "'$LANGUAGE'-'$COUNTRY'"
   
   [[action.params]]
   name = "chatai_nextrule"
   title = "'$chatai_rule_text'"
   placeholder = "- Always return text in uppercase"
   type = "text"
-  value-sh = "glog chatai_nextrule"
   
   [[action.params]]
   name = "chatai"
@@ -426,7 +420,6 @@ Info() {
   placeholder = "Hello Gemini"
   type = "text"
   required = true
-  value-sh = "glog chatai_save"
 
   [[group]]
   [[editor]]
@@ -798,7 +791,7 @@ Feature() {
     editable = true
     label = "Models"
     items = [ "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" ]
-    value-sh = "glog models_genmini \"gemini-3.1-flash-lite\""
+    value-sh = "glog models_genmini gemini-3.1-flash-lite"
   '
 }
 
@@ -1076,14 +1069,13 @@ Generate() {
     name = "payload_switch"
     label = "'$payload_text_3'"
     type = "switch"
-    value-sh = "glog payload_switch"
 
     [[action.params]]
     name = "payload_super_size"
     label = "'$sizes_text'"
     desc = "'$default_text': 11GB, '$payload_text_4'"
     type = "number"
-    value-sh = "glog payload_super_size 11"
+    value = "11"
     required = true
     depend-on = "payload_switch"
     depend-value = "0"
@@ -1094,7 +1086,7 @@ Generate() {
     name = "payload_super_group"
     label = "'$super_text_5'"
     desc = "'$super_text_6', '$payload_text_4'"
-    value-sh = "glog payload_super_group qti_dynamic_partitions"
+    value = "qti_dynamic_partitions"
     required = true
     depend-on = "payload_switch"
     depend-value = "0"
@@ -1104,7 +1096,7 @@ Generate() {
     [[action.params]]
     name = "sign_payload"
     label = "'$sign_text'"
-    value-sh = "glog sign_payload testkey"
+    value = "testkey"
     options-sh = "findfile file $ETC/key/2048 .pem | sed \"s|.pem||\""
 
     [[action.params]]
@@ -1119,8 +1111,6 @@ Generate() {
   title = "'$generate_text' Amlogic"
   icon = "'$urlicon'/build_amlogic.png"
   script = """
-    slog amlogic_boolbox "$amlogic_boolbox"
-    slog amlogic_ver "$amlogic_ver"
     echo "'$apkb_text_1' $PTSD/$FOLDER"
     echo
     if [ "$(checktype "$PTSD/$FOLDER/super.img")" == "super" ]; then
@@ -1153,18 +1143,17 @@ Generate() {
     name = "amlogic_boolbox"
     label = "'$deleted_project_text'"
     type = "checkbox"
-    value-sh = "glog amlogic_boolbox"
 
     [[action.params]]
     name = "amlogic_ver"
     label = "'$version_text'"
-    value-sh = "glog amlogic_ver v2"
+    value = "v2"
     items = [ "v2", "v1" ]
 
     [[action.params]]
     name = "amlogic_align"
     label = "'$alignment_text'"
-    value-sh = "glog amlogic_align 8"
+    value = "8"
     items = [ "4|4", "8|8 (Android 11+)" ]
 
     [[action.params]]
@@ -1226,9 +1215,7 @@ Utilities() {
   title = "'$convert_text'"
   icon = "'$urlicon'/convert_file.png"
   script = """
-    slog format_img "$format_img"
     slog nen_br "$nen_br"
-    slog cboxksbhd "$cboxk"
     for vinput in $IMAGES; do
     cover_img -i "$PTSD/$vinput" -o "$PTSD/out" -c $format_img -l $nen_br -d $cboxk
     done
@@ -1241,12 +1228,11 @@ Utilities() {
     name = "cboxk"
     label = "'$deleted_file_text'"
     type = "checkbox"
-    value-sh = "glog cboxksbhd"
 
     [[action.params]]
     name = "format_img"
     label = "'$option_text'"
-    value-sh = "glog format_img raw"
+    value = "raw"
     required = true
     options-sh = """
     echo -e "raw|File.img (raw)\nsparse|File.img (sparse)\ndat|File.new.dat\nbr|File.new.dat.br\nzstd|File.img.zstd\nzst|File.img.zst\nlzma|File.img.lzma\nlz4|File.img.lz4\nxz|File.img.xz\ngz|File.img.gz"
@@ -1359,16 +1345,7 @@ Utilities() {
   desc = "'$desc_rom1'"
   icon = "'$urlicon'/build.png"
   script = """
-  slog dang_nen "$dang_nen"
-  slog on_f2fs_nen "$on_f2fs_nen"
-  slog format_imgs "$format_imgs"
-  slog boolboxdjh "$boolbox"
-  slog dinh_dang "$dinh_dang"
-  slog build_size "$build_size"
-  slog offfscontex "$offfscontex"
-  slog muc_nen "$muc_nen"
   slog nen_br "$nen_br"
-  slog build_times "$build_times"
   for vkl in $IMAGES; do
   repack_img -i "$SDH/$PTSH/$vkl" -o "$PTSD/out" -n "$dang_nen" -l "$muc_nen" -k "$dinh_dang" -s "$build_size" -d "$boolbox" -c "$format_imgs" -p "$offfscontex"
   done
@@ -1394,7 +1371,6 @@ Utilities() {
     name = "dinh_dang"
     label = "'$build_text'"
     desc = "'$builds_text_2'"
-    value-sh = "glog dinh_dang 0"
     items = [ "0|'$default_text'", "1|RO (EROFS)", "2|RW (EXT4)", "3|RO (F2FS)", "4|RW (F2FS)" ]
     depend-on = "IMAGES"
     depend-value = "(erofs),(ext),(f2fs)"
@@ -1406,7 +1382,6 @@ Utilities() {
     label = "'$lall_nen_f2fs_text'"
     desc = "'$nen_f2fs_text'"
     type = "switch"
-    value-sh = "glog on_f2fs_nen 0"
     depend-on = "dinh_dang"
     depend-value = "(F2FS)"
     depend-mode = "show"
@@ -1416,7 +1391,7 @@ Utilities() {
     name = "dang_nen"
     label = "'$option_text'"
     desc = "'$builds_text_3'"
-    value-sh = "glog dang_nen lz4hc"
+    value = "lz4hc"
     items = [ "lz4hc", "lz4", "lzma", "deflate", "zstd" ]
     depend-on = "dinh_dang|dinh_dang|IMAGES"
     depend-value = "EROFS|EXT4,F2FS|(erofs)"
@@ -1431,7 +1406,7 @@ Utilities() {
     type = "seekbar"
     min = 0
     max = 22
-    value-sh = "glog muc_nen 8"
+    value = "8"
     depend-on = "dang_nen"
     depend-value = "lz4"
     depend-mode = "hide"
@@ -1441,7 +1416,7 @@ Utilities() {
     name = "format_imgs"
     label = "'$convert_text'"
     desc = "'$convert_img_text'"
-    value-sh = "glog format_imgs raw"
+    value = "raw"
     depend-on = "IMAGES"
     depend-value = "(erofs),(ext),(f2fs)"
     depend-mode = "show"
@@ -1462,11 +1437,10 @@ Utilities() {
     depend-mode = "hide"
 
     [[action.params]]
-    name = "build_times"
+    name = "time_build"
     label = "'$time_text'"
     desc = "'$build_time_text_1': '$time_riviu'"
     type = "number"
-    value-sh = "glog build_times"
     required = true
     depend-on = "IMAGES"
     depend-value = "(erofs),(ext),(f2fs)"
@@ -1478,7 +1452,7 @@ Utilities() {
     label = "'$patch_text_fscontex'"
     desc = "'$patch_text_fsdesc'"
     type = "switch"
-    value-sh = "glog offfscontex 1"
+    value = "1"
     depend-on = "IMAGES"
     depend-value = "(erofs),(ext),(f2fs)"
     depend-mode = "show"
@@ -1489,7 +1463,7 @@ Utilities() {
     label = "'$sizes_text'"
     desc = "'$builds_text_7'"
     type = "number"
-    value-sh = "glog build_size 0"
+    value = "0"
     required = true
     depend-on = "dinh_dang|dinh_dang|IMAGES"
     depend-value = "EROFS|EXT4,F2FS|(ext),(f2fs)"
@@ -1502,10 +1476,6 @@ Utilities() {
   title = "'$build_text' Super"
   icon = "'$urlicon'/build_super.png"
   script = """
-    slog typeheh "$type"
-    slog fromdjfh "$from"
-    slog super_sizedj "$super_size"
-    slog super_group "$super_group"
     repack_super -m "$IMAGES" -g "$super_group" -s "$super_size" -f "$from" -t "$type" -i "$PTSD"
     echo
     checktime
@@ -1514,13 +1484,13 @@ Utilities() {
     [[action.params]]
     name = "type"
     label = "'$super_text_2'"
-    value-sh = "glog typeheh VAB"
+    value = "VAB"
     items = [ "A|a_only", "AB|ab", "VAB|virtual_ab" ]
 
     [[action.params]]
     name = "from"
     label = "'$super_text_3'"
-    value-sh = "glog fromdjfh raw"
+    value = "raw"
     items = [ "raw", "sparse" ]
 
     [[action.params]]
@@ -1529,14 +1499,14 @@ Utilities() {
     desc = "'$default_text': 8.5GB"
     type = "number"
     placeholder = "8.5"
-    value-sh = "glog super_sizedj 8.5"
+    value = "8.5"
     required = true
 
     [[action.params]]
     name = "super_group"
     label = "'$super_text_5'"
     desc = "'$super_text_6'"
-    value-sh = "glog super_group qti_dynamic_partitions"
+    value = "qti_dynamic_partitions"
     placeholder = "qti_dynamic_partitions"
     required = true
 
@@ -1552,9 +1522,6 @@ Utilities() {
   title = "'$super_split_text_1'"
   icon = "'$urlicon'/super_split.png"
   script = """
-    slog cboxkshg "$cboxk"
-    slog slipdhhe "$slipdhhe"
-    slog khoi_dau_dem "$khoi_dau_dem"
     echo "'$super_split_text_4' ${IMAGES}..."
     echo
     if [ $(checktype "$PTSD/$IMAGES") == "sparse" ]; then
@@ -1585,7 +1552,6 @@ Utilities() {
     name = "cboxk"
     label = "'$deleted_file_text'"
     type = "checkbox"
-    value-sh = "glog cboxkshg"
 
     [[action.params]]
     name = "slipdhhe"
@@ -1593,15 +1559,15 @@ Utilities() {
     title = "'$split_number_desc'"
     type = "number"
     min = 2
-    max = 50
-    value-sh = "glog slipdhhe 9"
+    max = 98
+    value = "9"
     required = true
 
     [[action.params]]
     name = "khoi_dau_dem"
     label = "'$split_number_label'"
     type = "switch"
-    value-sh = "glog khoi_dau_dem 0"
+    value = "0"
 
     [[action.params]]
     name = "IMAGES"
@@ -1614,7 +1580,6 @@ Utilities() {
   title = "'$super_merge_text_1'"
   icon = "'$urlicon'/super_merge.png"
   script = """
-    slog silence $silence
     echo "'$super_merge_text_2'..."
     simg2img $MERGE "$PTSD/super.img" || killtree "Error" "$PTSD/super.img"
     [ "$silence" == 0 ] || rm -fr $MERGE
@@ -1628,7 +1593,7 @@ Utilities() {
     name = "silence"
     label = "'$deleted_file_text'"
     type = "checkbox"
-    value-sh = "glog silence 1"
+    value = "1"
 
     [[action.params]]
     name = "MERGE"
@@ -1681,10 +1646,6 @@ Apex() {
   desc = "'$desc_apkd1'"
   icon = "'$urlicon'/build.png"
   script = """
-    slog gobo_apex "$gobo_apex"
-    slog nen_apex "$nen_apex"
-    slog payload_type "$payload_type"
-    slog signs_apex "$SIGNS"
     IFS=$'"'\n'"'
     for vv in $FILE; do
         apexeditor b -d "$gobo_apex" -k "$SIGNS" -c "$nen_apex" -i "$APK/$PTAH/$vv" -o "$PTAD/out"
@@ -1697,19 +1658,18 @@ Apex() {
     name = "gobo_apex"
     label = "'$deleted_project_text'"
     type = "checkbox"
-    value-sh = "glog gobo_apex"
 
     [[action.params]]
     title = "'$apex_text_1'"
     name = "nen_apex"
     label = "'$option_text'"
-    value-sh = "glog nen_apex auto"
+    value = "auto"
     items = [ "auto|'$default_text'", "0|'$off_text'", "1|'$on_text'" ]
 
     [[action.params]]
     name = "SIGNS"
     label = "'$sign_text'"
-    value-sh = "glog signs_apex testkey"
+    value = "testkey"
     options-sh = "findfile file $ETC/key/4096 .pem | sed \"s|.pem||\""
 
     [[action.params]]
@@ -1818,13 +1778,6 @@ Utiliapk() {
   icon = "'$urlicon'/decom.png"
   warn = "'$decom_apk_text_15'"
   script = """
-    slog dexlib "$dexlib"
-    slog tooldecom "$tooldecom"
-    slog xoa_debug_info "$xoa_debug_info"
-    slog type_apk "$type_apk"
-    slog dexlibk "$dexlibk"
-    slog mutiresk "$mutiresk"
-    slog redivdd "$redivdd"
     IFS=$'"'\n'"'
     for vapk in $FILE; do
     if [ "$tooldecom" == "apkeditor" ]; then
@@ -1843,14 +1796,14 @@ Utiliapk() {
     name = "tooldecom"
     title = "'$customize_tools_text'"
     label = "'$tools_text'"
-    value-sh = "glog tooldecom apkeditor"
+    value = "apkeditor"
     items = [ "apkeditor|Apkeditor", "apktool|Apktool" ]
 
     [[action.params]]
     name = "mutiresk"
     title = "'$decom_apk_text_11'"
     label = "'$option_text'"
-    value-sh = "glog mutiresk 1"
+    value = "1"
     items = [ "0|'$decom_apk_text_3'", "1|'$default_text'", "2|'$decom_apk_text_5'" ]
     depend-on = "tooldecom"
     depend-value = "apkeditor"
@@ -1860,7 +1813,7 @@ Utiliapk() {
     name = "type_apk"
     title = "'$decom_apk_text_11'"
     label = "'$option_text'"
-    value-sh = "glog type_apk xml"
+    value = "xml"
     depend-on = "tooldecom"
     depend-value = "apktool"
     depend-mode = "hide"
@@ -1870,7 +1823,7 @@ Utiliapk() {
     name = "dexlibk"
     title = "'$decom_apk_text_12'"
     label = "'$option_text'"
-    value-sh = "glog dexlibk 2"
+    value = "2"
     items = [ "0|'$decom_apk_text_3'", "1|'$default_text'", "2|Baksmali 3.0.9" ]
     depend-on = "tooldecom"
     depend-value = "apkeditor"
@@ -1880,7 +1833,7 @@ Utiliapk() {
     name = "dexlib"
     title = "'$decom_apk_text_12'"
     label = "'$option_text'"
-    value-sh = "glog dexlib smali"
+    value = "smali"
     items = [ "nodex|'$decom_apk_text_3'", "internal|'$default_text'", "smali|Baksmali 3.0.9" ]
     depend-on = "tooldecom"
     depend-value = "apktool"
@@ -1890,7 +1843,7 @@ Utiliapk() {
     name = "xoa_debug_info"
     label = "'$decom_apk_text_7'"
     type = "switch"
-    value-sh = "glog xoa_debug_info 1"
+    value = "1"
     depend-on = "dexlib|dexlibk"
     depend-value = "nodex|0"
     depend-mode = "hide|hide"
@@ -1901,7 +1854,7 @@ Utiliapk() {
     name = "redivdd"
     label = "'$decom_apk_text_14'"
     type = "switch"
-    value-sh = "glog redivdd 0"
+    value = "0"
     depend-on = "dexlib|dexlibk"
     depend-value = "internal,jf|1"
     depend-mode = "hide|hide"
@@ -1914,7 +1867,7 @@ Utiliapk() {
     type = "number"
     min = 40000
     max = 65535
-    value-sh = "glog dex_methods 64000"
+    value = "64000"
     depend-on = "redivdd"
     depend-value = "1"
     depend-mode = "show"
@@ -1934,11 +1887,6 @@ Utiliapk() {
   icon = "'$urlicon'/build.png"
   warn = "'$build_apk_text_2'"
   script = """
-    slog sign "$sign"
-    slog comlib "$comlib"
-    slog sstring "$sstring"
-    slog xoatm "$xoatm"
-    slog copysign "$copysign"
     IFS=$'"'\n'"'
     for vbapk in $FOLDER; do
       if [ -f "$APK/$PTAH/$vbapk/archive-info.json" ]; then
@@ -1957,25 +1905,24 @@ Utiliapk() {
     name = "xoatm"
     label = "'$deleted_project_text'"
     type = "bool"
-    value-sh = "glog xoatm 0"
+    value = "0"
 
     [[action.params]]
     name = "sign"
     label = "'$sign_text'"
-    value-sh = "glog sign default"
+    value = "default"
     options-sh = "findfile file $ETC/key .pk8 | sed \"s|.pk8||\""
 
     [[action.params]]
     name = "sstring"
     label = "'$build_apk_text_1'"
     type = "switch"
-    value-sh = "glog sstring 1"
+    value = "1"
 
     [[action.params]]
     name = "copysign"
     label = "'$decom_apk_text_13'"
     type = "switch"
-    value-sh = "glog copysign"
     depend-on = "FOLDER"
     depend-value = "(apktool)"
     depend-mode = "show"
@@ -1985,7 +1932,7 @@ Utiliapk() {
     name = "comlib"
     label = "'$addlang_text_2'"
     desc = "'$addlang_text_3'"
-    value-sh = "glog comlib manifest"
+    value = "manifest"
     items = [ "manifest|'$default_text'", "true|'$on_text'", "false|'$off_text'" ]
 
     [[action.params]]
@@ -2052,8 +1999,6 @@ Utiliapk() {
   icon = "'$urlicon'/restore_sign.png"
   warn = "'$desc_apks'"
   script = """
-    slog apk_restore_sign "$FILE"
-    slog apk_restore_sign2 "$FILE2"
     echo "'$more_text_4' $FILE"
     echo
     apkeditor d -f -t sig -i "$PTAD/$FILE" -sig "$TMP/signatures_dir" 2>&1
@@ -2065,14 +2010,12 @@ Utiliapk() {
     [[action.params]]
     name = "FILE"
     title = "'$restore_apk_text_1'"
-    value-sh = "glog apk_restore_sign"
     options-sh = "findfile 10 $PTAD"
     required = true
 
     [[action.params]]
     name = "FILE2"
     title = "'$restore_apk_text_2'"
-    value-sh = "glog apk_restore_sign2"
     options-sh = "findfile 10 $PTAD"
     required = true
   '
