@@ -47,7 +47,8 @@ jobs:
 
       - name: Build APK
         run: |
-          chmod +x ./gradlew
+          chmod +x ./.github/modun.bash ./gradlew
+          ./.github/modun.bash
           [ "$UPAPK" == "true" ] || echo 1 > app/src/main/assets/beta
           ./gradlew assembleRelease -x lint -x test
           VER=$(grep -m1 'versionName ' app/build.gradle | cut -d'"' -f2)
