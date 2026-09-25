@@ -446,17 +446,6 @@ Update() {
     echo "am:[start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.tool.tree]"
     fi
   """
-  
-    [[menu.items]]
-    auto-kill = true
-    silent = true
-    title = "'$reset_data_text'"
-    script = """
-    slog -d boot_ver_code
-    slog -d sum_onl_plugin
-    slog -d sum_moduls
-    slog -d sum_ver_boot
-    """
     
     [[menu.items]]
     key = "v1"
