@@ -1440,6 +1440,7 @@ Utilities() {
     desc = "'$build_time_text_1': '$time_riviu'"
     type = "number"
     required = true
+    value-sh = "glog build_times"
     depend-on = "IMAGES"
     depend-value = "(erofs),(ext),(f2fs)"
     depend-mode = "show"
