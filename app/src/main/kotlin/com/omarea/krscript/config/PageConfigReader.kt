@@ -955,13 +955,18 @@ class PageConfigReader {
         tomlGet(table, "desc-on", "on-desc", "desc-checked")?.let { p.descOn = StringResRef.resolve(context, it) }
         tomlGet(table, "desc-on-sh", "on-desc-sh", "desc-checked-sh")?.let { p.descOnSh = it }
         tomlGet(table, "separator")?.let { p.separator = it }
-        val valueArray = table.getArray("value")
-        if (valueArray != null) {
-            val parts = ArrayList<String>()
-            for (i in 0 until valueArray.size()) {
-                valueArray.getString(i)?.let { parts.add(it) }
+        // FIX: getArray() ném exception nếu "value" tồn tại nhưng không phải kiểu array
+        // (ví dụ value = "abc" - cách dùng gốc, chiếm đa số cấu hình cũ) → phải kiểm tra
+        // isArray trước, giống cách tomlEntries() đang làm ở trên, rồi mới gọi getArray.
+        if (table.isArray("value")) {
+            val valueArray = table.getArray("value")
+            if (valueArray != null) {
+                val parts = ArrayList<String>()
+                for (i in 0 until valueArray.size()) {
+                    valueArray.getString(i)?.let { parts.add(it) }
+                }
+                p.value = parts.joinToString(p.separator)
             }
-            p.value = parts.joinToString(p.separator)
         } else {
             tomlGet(table, "value")?.let { p.value = it }
         }

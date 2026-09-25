@@ -1279,13 +1279,6 @@ Utilities() {
   desc = "'$desc_rom'"
   icon = "'$urlicon'/decom.png"
   script = """
-  slog box_btn_avb "$box_btn"
-  slog vavbbgdf "$vavb"
-  slog xoa_oat_boot "$xoa_oat_boot"
-  slog dkjdj "$nounpak"
-  slog pcvbmeta "$pcvbmeta"
-  slog dkhdh "$cboxk"
-  slog text_oat_boot "$text_oat_boot"
   for vkl in $IMAGES; do
   if [ -f "$PTSD/${vkl#*=}" ]; then
   unpack_img -i "$PTSD/${vkl#*=}" -p "${vkl%%=*}" -o "$SDH/$PTSH" -n $nounpak -d $cboxk -r $xoa_oat_boot -a $vavb -m $pcvbmeta
@@ -1300,19 +1293,16 @@ Utilities() {
     name = "cboxk"
     label = "'$deleted_file_text'"
     type = "checkbox"
-    value-sh = "glog dkhdh"
     
     [[action.params]]
     name = "nounpak"
     label = "'$decode_text_1'"
     type = "switch"
-    value-sh = "glog dkjdj"
     
     [[action.params]]
     name = "xoa_oat_boot"
     label = "'$xoaoat_text_1'"
     type = "switch"
-    value-sh = "glog xoa_oat_boot"
     depend-on = "nounpak"
     depend-value = "1"
     depend-mode = "hide"
@@ -1321,7 +1311,7 @@ Utilities() {
     [[action.params]]
     name = "text_oat_boot"
     type = "text"
-    value-sh = "glog text_oat_boot \"fsv_meta,oat,vdex,odex,prof,bprof\""
+    value = "fsv_meta,oat,vdex,odex,prof,bprof"
     depend-on = "xoa_oat_boot"
     depend-value = "1"
     depend-mode = "show"
@@ -1338,7 +1328,7 @@ Utilities() {
     
     [[action.params]]
     name = "box_btn"
-    value-sh = "glog box_btn_avb \"avb\n\enc\nrecovery\""
+    value = [ "avb", "enc", "recovery" ]
     multiple = true
     label = "'$option_text'"
     items = [ "avb|'$builds_text_81'", "enc|'$builds_text_82'", "recovery|'$builds_text_83'" ]
@@ -1350,12 +1340,12 @@ Utilities() {
     [[action.params]]
     name = "pcvbmeta"
     label = "'$patch_text' vbmeta"
-    value-sh = "glog pcvbmeta 0"
-    items = [ "0|'$default_text'", "1|'$disable_text' dm-verity", "2|'$disable_text' Verification", "3|'$disable_text' dm-verity + Verification" ]
+    items = [ "1|'$disable_text' dm-verity", "2|'$disable_text' Verification", "3|'$disable_text' dm-verity + Verification" ]
     depend-on = "nounpak"
     depend-value = "1"
     depend-mode = "hide"
     depend-readonly = true
+    no-select = true
     
     [[action.params]]
     name = "IMAGES"
@@ -1391,7 +1381,6 @@ Utilities() {
     name = "boolbox"
     label = "'$deleted_project_text'"
     type = "checkbox"
-    value-sh = "glog boolboxdjh"
 
     [[action.params]]
     name = "IMAGES"

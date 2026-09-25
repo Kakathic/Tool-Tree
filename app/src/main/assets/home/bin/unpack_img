@@ -408,7 +408,7 @@ fi
 
 if [ "$XOAOAT" == 1 ] && [ "$NODECO" != 1 ]; then
     {
-    for voat in $(glog text_oat_boot | tr ',' '\n'); do
+    for voat in $(echo "$text_oat_boot" | tr ',' '\n'); do
       if [ "$voat" == "oat" ]; then
       find "$in_name" -type d -name "oat" -print -exec rm -rf {} +
         if [ -d "$in_name/system/framework" ]; then
