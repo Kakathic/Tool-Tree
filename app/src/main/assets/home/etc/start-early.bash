@@ -10,27 +10,35 @@ rm -fr $TEMP/documents $TEMP/kr_download_* $START_DIR/icons/*
 
 [ -z "$(glog api_genmini)" ] && transai -c &
 
-(
+{
 # Tự động cập nhật add-on
 urlgitv1="https://github.com/Kakathic/Tool-Tree/releases/download/V1"
 aokshum="$(get_shum 'V1' "AOK.zip")"
-if [[ -n "$aokshum" ]] && [[ "$aokshum" != "$(glog aok_shum "$aokshum")" ]]; then
-  taive -s "$urlgitv1/AOK.zip" "$TMP/AOK.zip" && unzip -o "$TMP/AOK.zip" -d "$AOK"
+if [[ -n "$aokshum" ]] && [[ "$aokshum" != "$(glog aok_shum)" ]]; then
+  taive -s "$urlgitv1/AOK.zip" "$TMP/AOK.zip"
+  unzip -o "$TMP/AOK.zip" -d "$AOK"
+  rm -fr "$TMP/AOK.zip"
   slog aok_shum "$aokshum"
 fi
 # add-on 2
 aonshum="$(get_shum 'V1' "AON.zip")"
-if [[ -n "$aonshum" ]] && [[ "$aonshum" != "$(glog aon_shum "$aonshum")" ]]; then
-  taive -s "$urlgitv1/AON.zip" "$TMP/AON.zip" && unzip -o "$TMP/AON.zip" -d "$AON"
+if [[ -n "$aonshum" ]] && [[ "$aonshum" != "$(glog aon_shum)" ]]; then
+  taive -s "$urlgitv1/AON.zip" "$TMP/AON.zip"
+  unzip -o "$TMP/AON.zip" -d "$AON"
+  rm -fr "$TMP/AON.zip"
   slog aon_shum "$aonshum"
 fi
 # add-on 3
 uplshum="$(get_shum 'V1' "UPL.zip")"
-if [[ -n "$uplshum" ]] && [[ "$uplshum" != "$(glog upl_shum "$uplshum")" ]]; then
-  taive -s "$urlgitv1/UPL.zip" "$TMP/UPL.zip" && unzip -o "$TMP/UPL.zip" -d "$UPL"
+if [[ -n "$uplshum" ]] && [[ "$uplshum" != "$(glog upl_shum)" ]]; then
+  taive -s "$urlgitv1/UPL.zip" "$TMP/UPL.zip"
+  unzip -o "$TMP/UPL.zip" -d "$UPL"
+  rm -fr "$TMP/UPL.zip"
   slog upl_shum "$uplshum"
 fi
-) &
+# Cấp quyền 755 tự động
+set_permis $AON/*/* $AOK/*/* $UPL/*/* &>/dev/null
+} &
 
 {
 
@@ -76,13 +84,10 @@ search_image &>/dev/null
 } &
 
 # Dọn bộ đếm
-rm -fr $AON/*/zcheck $AOK/*/zcheck &
-
-# Cấp quyền 755 tự động
-set_permis $AON/*/* $AOK/*/* &>/dev/null
+rm -fr $AON/*/zcheck $AOK/*/zcheck $UPL/*/zcheck $UZE/*/zcheck &
 
 # Khởi động các file shell ở add-on
-for vadd in $AON/* $AOK/*; do
+for vadd in $AON/* $AOK/* $UPL/* $UZE/*; do
   if [ -f "$vadd/early_start.bash" ]; then
   echo "Run shell: $vadd/early_start.bash"
   $vadd/early_start.bash &
