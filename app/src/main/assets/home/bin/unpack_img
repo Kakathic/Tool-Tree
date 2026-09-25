@@ -35,12 +35,6 @@ if [[ $# -eq 0 || "$1" != -* ]]; then
   print_help
 fi
 
-XOAIMG=0
-NODECO=0
-XOAOAT=0
-AVBIMG=0
-PTVBMETA=0
-
 while getopts ":i:o:a:n:d:p:m:r:h" opt; do
   case $opt in
     i) INPUT="$OPTARG" ;;
@@ -66,6 +60,12 @@ fi
 
 source language 2>/dev/null
 dang_tep="$(checktype "$INPUT")"
+
+[ -z "$XOAIMG" ] && XOAIMG=0
+[ -z "$NODECO" ] && NODECO=0
+[ -z "$XOAOAT" ] && XOAOAT=0
+[ -z "$AVBIMG" ] && AVBIMG=0
+[ -z "$PTVBMETA" ] && PTVBMETA=0
 
 # Xử lý zip
 if [ "$dang_tep" == 'zip' ]; then
@@ -346,7 +346,7 @@ else
             [ "$file_img" != "$target_img" ] && mv -f "$file_img" "$target_img"
             echo -e "$save_text $target_img\n"
         fi
-    elif [ "$dang_file" == 'vbmeta' ] && [ "$NODECO" != 1 ]; then
+    elif [ "$dang_file" == 'vbmeta' ] && [ "$NODECO" != 1 ] && [ "$PTVBMETA" != 0 ]; then
         echo -e "$patch_text: ${file_img##*/} ($dang_file)\n"
         cp -rf "$file_img" "$PTSD/out/${file_img##*/}"
         if [ "$PTVBMETA" == 1 ]; then
