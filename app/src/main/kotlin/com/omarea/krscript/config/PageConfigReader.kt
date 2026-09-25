@@ -567,15 +567,9 @@ class PageConfigReader {
             "action" -> {
                 val action = actionNodeToml(table)
                 if (action != null) {
-                    // Fallback key = title khi TOML không khai "key"/"index"/"id" - áp dụng cho
-                    // MỌI action (không chỉ action.menu như trước), vì action.key còn được dùng
-                    // làm định danh remember (ActionParamMemory.buildKey) lẫn shortcut màn hình
-                    // chính. Nếu để trống, các action không khai key sẽ dùng chung 1 khoá rỗng ->
-                    // param cùng tên ở action khác nhau (nhất là action đọc qua InputStream, khi
-                    // currentPageConfigPath cũng rỗng) sẽ ghi đè giá trị nhớ của nhau.
-                    if (action.key.isEmpty()) action.key = action.title
                     if (action.show) collectedAutoShowActions.add(action)
                     if (action.menu) {
+                        if (action.key.isEmpty()) action.key = action.title
                         collectedHeaderActions.add(action)
                         null
                     } else {
