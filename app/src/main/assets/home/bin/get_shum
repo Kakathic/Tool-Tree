@@ -1,0 +1,2 @@
+# Kakathic
+xem "https://api.github.com/repos/Kakathic/Tool-Tree/releases/tags/$1" | jq -r --arg name "$2" '.assets[] | select(.name == $name and .digest != null) | .digest // empty' | cut -d: -f2
