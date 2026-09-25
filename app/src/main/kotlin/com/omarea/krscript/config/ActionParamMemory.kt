@@ -4,19 +4,11 @@ import android.content.Context
 import com.omarea.krscript.model.ActionNode
 import com.omarea.krscript.model.ActionParamInfo
 
-// ========== TÍNH NĂNG MỚI: GHI NHỚ LỰA CHỌN CỦA PARAM (remember) ==========
-// Lưu/đọc lại giá trị người dùng đã chọn/nhập lần cuối cho các param có khai "remember = true"
-// trong TOML, để lần sau mở lại dialog action vẫn tự hiển thị đúng lựa chọn cũ thay vì luôn
-// quay về "value" tĩnh khai trong file cấu hình.
-//
-// Định danh duy nhất cho mỗi giá trị được lưu = đường dẫn file config của trang
-// (action.currentPageConfigPath) + "key" của action (action.key - đã có sẵn cơ chế fallback về
-// title nếu TOML không khai "key"/"index"/"id", xem PageConfigReader) + tên param (param.name).
-// Đủ để phân biệt 2 param trùng tên nằm ở 2 action/trang khác nhau, dùng lại đúng nguyên tắc
-// định danh mà tính năng tạo shortcut màn hình chính đang dựa vào (action.key).
-//
-// Thứ tự ưu tiên khi mở dialog: value-sh (nếu có, đọc trạng thái THẬT từ hệ thống lúc mở) >
-// giá trị đã nhớ (remember) > value tĩnh - xem điểm gọi load() trong ActionListFragment.kt.
+// Lưu/đọc giá trị người dùng đã chọn/nhập lần cuối cho các param có "remember = true" trong
+// TOML, để lần sau mở lại dialog action tự hiển thị đúng lựa chọn cũ thay vì quay về "value"
+// tĩnh. Định danh 1 giá trị = configPath trang + action.key + tên param. Thứ tự ưu tiên khi mở
+// dialog: value-sh (trạng thái thật từ hệ thống) > giá trị đã nhớ > value tĩnh - xem điểm gọi
+// load() trong ActionListFragment.kt.
 object ActionParamMemory {
     private const val PREF_NAME = "kr-param-memory"
 
@@ -24,7 +16,7 @@ object ActionParamMemory {
         return "${action.currentPageConfigPath}|${action.key}|$paramName"
     }
 
-    // Đọc giá trị đã nhớ cho 1 param (null nếu param không bật "remember" hoặc chưa từng lưu).
+    // Đọc giá trị đã nhớ cho 1 param (null nếu không bật "remember" hoặc chưa từng lưu).
     fun load(context: Context, action: ActionNode, param: ActionParamInfo): String? {
         if (!param.remember) return null
         val name = param.name ?: return null

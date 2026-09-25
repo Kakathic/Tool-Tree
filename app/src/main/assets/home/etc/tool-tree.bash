@@ -1337,6 +1337,7 @@ Utilities() {
     options-sh = "findfile 2 $PTSD"
     required = true
     multiple = true
+    remember = false
   
   [[action]]
   title = "'$build_text'"
@@ -1364,6 +1365,7 @@ Utilities() {
     options-sh = "findfile 0 $SDH/$PTSH"
     required = true
     multiple = true
+    remember = false
 
     [[action.params]]
     name = "dinh_dang"

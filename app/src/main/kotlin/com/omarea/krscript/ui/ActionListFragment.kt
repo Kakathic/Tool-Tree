@@ -605,22 +605,19 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
             progressBarDialog.showDialog(getString(R.string.onloading))
 
             activeLoadJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-                // ========== TỐI ƯU: GỘP TOÀN BỘ valueShell + optionsSh CỦA MỌI PARAM ==========
-                // THÀNH 1 LẦN GỌI SHELL DUY NHẤT.
-                // Trước đây: mỗi param tốn tới 2 round-trip riêng (valueShell rồi optionsSh),
-                // chạy TUẦN TỰ cho từng param -> N param có valueShell+optionsSh sẽ tốn 2N
-                // round-trip qua shell root (1 tiến trình dùng chung, có khóa, nên các lệnh
-                // luôn phải xếp hàng dù có gọi song song bằng coroutine). Ngoài ra còn 2N lần
-                // cập nhật progress dialog (chuyển ngữ cảnh Main<->IO liên tục).
-                //
-                // Giờ: gộp tất cả script thành 1 khối lệnh, gọi doCmdSync() ĐÚNG 1 LẦN, rồi
-                // tách kết quả theo tag để gán lại cho từng param.
+                // Gộp valueShell + optionsSh + ... của mọi param thành 1 lần gọi shell duy nhất
+                // (thay vì mỗi param tự gọi riêng, chạy tuần tự qua shell root dùng chung khóa).
                 withContext(Dispatchers.Main) {
                     progressBarDialog.showDialog(getString(R.string.kr_param_options_load) + " ");
                 }
 
                 val scripts = LinkedHashMap<String, String>()
                 for (param in actionParamInfos) {
+                    // action.params được parse 1 lần và tái sử dụng nguyên object ở mọi lần mở
+                    // dialog trong cùng phiên trang -> phải reset valueFromShell về null trước,
+                    // nếu không điều kiện remember bên dưới chỉ đúng ở lần mở đầu tiên.
+                    param.valueFromShell = null
+
                     val name = param.name ?: continue
                     if (!param.valueShell.isNullOrEmpty()) {
                         scripts["value:$name"] = param.valueShell!!
@@ -664,8 +661,8 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                     shellResults["desc-on:$name"]?.let { param.descOn = it }
                     shellResults["placeholder:$name"]?.let { param.placeholder = it }
                     shellResults["readonly:$name"]?.let { param.readonly = it.trim() == "1" }
-                    // remember = true và param KHÔNG khai value-sh (nên valueFromShell còn null)
-                    // -> nạp giá trị người dùng đã chọn lần trước làm giá trị mặc định.
+                    // Không có value-sh (valueFromShell còn null) -> ưu tiên nạp giá trị đã
+                    // nhớ (remember) làm giá trị mặc định; load() tự bỏ qua nếu remember=false.
                     if (param.valueFromShell == null) {
                         ActionParamMemory.load(requireContext(), action, param)?.let { param.valueFromShell = it }
                     }

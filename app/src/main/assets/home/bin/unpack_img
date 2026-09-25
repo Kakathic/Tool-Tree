@@ -85,7 +85,7 @@ if [ "$dang_tep" == 'zip' ]; then
   fi
 fi
 
-if [ "$dang_tep" == 'zstd' ] || [ "$dang_tep" == 'gz' ] || [ "$dang_tep" == 'xz' ] || [ "$dang_tep" == 'lz4' ] || [ "$dang_tep" == 'lzma' ]; then
+if [[ "$dang_tep" =~ ^(zstd|gz|xz|lz4|lzma)$ ]]; then
     echo -e "$unpack_text_0 (${INPUT##*/}) ➠ (raw)...\n"
     if [ "$NODECO" == 1 ]; then
         file_img="$PTSD/out/$(echo "${INPUT##*/}" | cut -d. -f1).img"
@@ -195,7 +195,7 @@ tool_un_erofs="$(glog un_tool_erofs)"
 tool_un_ext4="$(glog un_tool_ext4)"
 tool_un_f2fs="$(glog un_tool_f2fs)"
 
-if [ "$NODECO" != 1 ] && [ -f "$file_img" ] && [ "$dang_file" != "unknow" ] && [ "$dang_file" != "super" ]; then
+if [ "$NODECO" != 1 ] && [ -f "$file_img" ] && [[ ! "$dang_file" =~ ^(unknow|super|vbmeta)$ ]]; then
 
     echo -e "$decompile_text: ${file_img##*/} ($dang_file)...\n"
     # Xoá cũ
@@ -253,45 +253,6 @@ if [ "$NODECO" != 1 ] && [ -f "$file_img" ] && [ "$dang_file" != "unknow" ] && [
         echo "$dang_file" > "$info"
         cp -f "$file_img" "$in_name/logo.img"
         echo
-    elif [ "$dang_file" == 'vbmeta' ]; then
-        cp -rf "$file_img" "$PTSD/out/${file_img##*/}"
-        if [ "$PTVBMETA" == 1 ]; then
-            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
-            0000000000000000617662746F6F6C20 \
-            0000000200000000617662746F6F6C20 \
-            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
-            echo
-        elif [ "$PTVBMETA" == 2 ]; then
-            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
-            00000000000000007665726966792000 \
-            00000000000000007665726966790000 \
-            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
-            echo
-        elif [ "$PTVBMETA" == 3 ]; then
-            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
-            0000000000000000617662746F6F6C20 \
-            0000000200000000617662746F6F6C20 \
-            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
-            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
-            00000000000000007665726966792000 \
-            00000000000000007665726966790000 \
-            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
-            echo
-        elif [ "$PTVBMETA" == 4 ]; then
-            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
-            0000000000000000617662746F6F6C20 \
-            0000000100000000617662746F6F6C20 \
-            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
-            echo
-        elif [ "$PTVBMETA" == 5 ]; then
-            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
-            0000000000000000617662746F6F6C20 \
-            0000000300000000617662746F6F6C20 \
-            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
-            echo
-        fi
-        echo -e "$save_text $PTSD/out\n"
-        echo "$dang_file" > "$info"
     elif [ "$dang_file" == 'boot' ] || [ "$dang_file" == 'vendor_boot' ]; then
         cd "$in_name"
         cp -f "$file_img" "$in_name"
@@ -385,6 +346,45 @@ else
             [ "$file_img" != "$target_img" ] && mv -f "$file_img" "$target_img"
             echo -e "$save_text $target_img\n"
         fi
+    elif [ "$dang_file" == 'vbmeta' ] && [ "$NODECO" != 1 ]; then
+        echo -e "$patch_text: ${file_img##*/} ($dang_file)\n"
+        cp -rf "$file_img" "$PTSD/out/${file_img##*/}"
+        if [ "$PTVBMETA" == 1 ]; then
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
+            0000000000000000617662746F6F6C20 \
+            0000000200000000617662746F6F6C20 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            echo
+        elif [ "$PTVBMETA" == 2 ]; then
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
+            00000000000000007665726966792000 \
+            00000000000000007665726966790000 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            echo
+        elif [ "$PTVBMETA" == 3 ]; then
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
+            0000000000000000617662746F6F6C20 \
+            0000000200000000617662746F6F6C20 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
+            00000000000000007665726966792000 \
+            00000000000000007665726966790000 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            echo
+        elif [ "$PTVBMETA" == 4 ]; then
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
+            0000000000000000617662746F6F6C20 \
+            0000000100000000617662746F6F6C20 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            echo
+        elif [ "$PTVBMETA" == 5 ]; then
+            magiskboot hexpatch "$PTSD/out/${file_img##*/}" \
+            0000000000000000617662746F6F6C20 \
+            0000000300000000617662746F6F6C20 \
+            2>&1 | sed "s|Failed to patch|Cannot be patched or already patched|"
+            echo
+        fi
+        echo -e "$save_text $PTSD/out\n"
     else
         echo -e "$unpack_text_6 ${file_img##*/} ($dang_file)\n"
         if [ "$NODECO" == 1 ]; then
