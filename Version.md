@@ -8,7 +8,7 @@
 + You should delete all data when updating the app
 + Add a swipe gesture to go back to the previous page
 + Adding some new features to the app.
-+ Add a web configuration .TOML file for users to create add-ons
++ Add a web configuration .TOML file
 + Report a bug on Telegram
 
 **Version: 1.5.9 (17-8-2026)**
