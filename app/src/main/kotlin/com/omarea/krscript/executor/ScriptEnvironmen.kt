@@ -46,6 +46,12 @@ object ScriptEnvironmen {
     @JvmStatic
     fun isInited(): Boolean = inited
 
+    // Trạng thái root đã cache (tính 1 lần lúc init(), cùng nguồn dữ liệu với ROOT_NUMBER/
+    // ROOT_PERMISSION ở getEnvironment()) - để nơi khác (vd PageConfigReader xử lý {ROT})
+    // dùng lại, tránh chạy lại lệnh shell "id -u" mỗi lần cần biết trạng thái root.
+    @JvmStatic
+    fun isRooted(): Boolean = rooted
+
     private fun init(context: Context): Boolean {
         val configSpf = context.getSharedPreferences("kr-script-config", Context.MODE_PRIVATE)
         return init(context, configSpf.getString("executor", "root/executor.sh"), configSpf.getString("toolkitDir", "home"))

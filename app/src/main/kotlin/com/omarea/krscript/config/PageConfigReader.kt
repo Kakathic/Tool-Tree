@@ -62,10 +62,20 @@ class PageConfigReader {
         return null
     }
 
+    // Biến dựng sẵn (built-in) dạng "{NAME}", thay trực tiếp trên text TOML thô, luôn dùng
+    // được ở MỌI config dù không khai báo "load-key" - khác với hệ "@key" (applyLoadKey())
+    // chỉ thay được khi có load-key trỏ tới file chứa key đó. Dùng ngoặc nhọn {..} thay vì
+    // "@.." để phân biệt rõ với hệ @key, tránh nhầm lẫn 2 cơ chế.
+    private fun applyBuiltinVars(rawText: String): String {
+        if (!rawText.contains("{ROT}")) return rawText
+        val rootFlag = if (ScriptEnvironmen.isRooted()) "1" else "0"
+        return rawText.replace("{ROT}", rootFlag)
+    }
+
     private fun readConfigXml(fileInputStream: InputStream, onNodeReady: ((NodeInfoBase?, Int, Int) -> Unit)? = null): ArrayList<NodeInfoBase>? {
         return try {
             val rawText = fileInputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            readConfigToml(applyLoadKey(rawText), onNodeReady)
+            readConfigToml(applyLoadKey(applyBuiltinVars(rawText)), onNodeReady)
         } catch (ex: Exception) {
             Handler(Looper.getMainLooper()).post {
                 Toast.makeText(context, "Failed to parse configuration file\n" + ex.message, Toast.LENGTH_LONG).show()
@@ -84,8 +94,13 @@ class PageConfigReader {
         return ScriptEnvironmen.executeResultRoot(context, scriptIn, vitualRootNode)
     }
 
-    // Nạp file ngôn ngữ dạng key="value" và thay thế $key trong toàn bộ text TOML
+    // Nạp file ngôn ngữ dạng key="value" và thay thế @key trong toàn bộ text TOML
     // trước khi parse. Dòng "load-key"/"load-key-sh" bị loại khỏi text sau khi xử lý.
+    // Dùng "@key" thay vì "$key" để tránh xung đột với biến shell ($PATH, $HOME, $1...)
+    // trong nội dung script/run. Lưu ý: không nên đặt tên key trong file load-key là
+    // "string" vì sẽ trùng tiền tố "@string:"/"@string/" của StringResRef (resolve string
+    // resource Android) - ưu tiên StringResRef xử lý trước (StringResRef.resolve() được gọi
+    // ở bước tomlGet sau applyLoadKey), nhưng khi đó "@string" đã bị applyLoadKey thay mất.
     private val loadKeyDirectiveRegex = Regex("""(?m)^[ \t]*load-key(-sh)?[ \t]*=[ \t]*"([^"]*)"[ \t]*\r?\n?""")
     private val langLineRegex = Regex("""(?m)^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*"((?:[^"\\]|\\.)*)"[ \t]*$""")
     private val escapeSeqRegex = Regex("""\\(.)""")
@@ -132,7 +147,7 @@ class PageConfigReader {
         }
         if (keyMap.isNullOrEmpty()) return stripped
 
-        val keyRefRegex = Regex("\\$(" + keyMap.keys.joinToString("|") { Regex.escape(it) } + ")\\b")
+        val keyRefRegex = Regex("@(" + keyMap.keys.joinToString("|") { Regex.escape(it) } + ")\\b")
         return keyRefRegex.replace(stripped) { m ->
             keyMap[m.groupValues[1]]?.replace("\\", "\\\\")?.replace("\"", "\\\"") ?: m.value
         }
@@ -370,7 +385,7 @@ class PageConfigReader {
             val state = v.substring(0, pipeIndex).trim()
             val message = v.substring(pipeIndex + 1).trim()
             node.locked = (state == "1")
-            node.lockMessage = message
+            node.lockMessage = StringResRef.resolve(context, message)
         } else {
             // Hỗ trợ cũ: boolean hoặc từ khoá
             node.locked = tomlTruthy(v, "locked")
