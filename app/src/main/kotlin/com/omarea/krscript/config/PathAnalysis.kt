@@ -18,13 +18,23 @@ class PathAnalysis(private var context: Context, private var parentDir: String =
 
     fun getCurrentAbsPath(): String = currentAbsPath
 
+    // Thay "{HOME}" bằng thư mục home thật của app (đúng kiểu lấy dùng chung trong project:
+    // ThemeModeState/LanguageManager... File(context.filesDir, "home")), áp dụng cho MỌI path
+    // đi qua parsePath (icon, html, load-key, text editor...), không chỉ riêng load-key.
+    private fun resolveHomePlaceholder(filePath: String): String {
+        if (!filePath.contains("{HOME}")) return filePath
+        val homeDir = File(context.filesDir, "home").absolutePath
+        return filePath.replace("{HOME}", homeDir)
+    }
+
     fun parsePath(filePath: String): InputStream? {
+        val resolvedPath = resolveHomePlaceholder(filePath)
         return try {
-            if (filePath.startsWith(ASSETS_FILE)) {
-                currentAbsPath = filePath
-                context.assets.open(filePath.substring(ASSETS_FILE.length))
+            if (resolvedPath.startsWith(ASSETS_FILE)) {
+                currentAbsPath = resolvedPath
+                context.assets.open(resolvedPath.substring(ASSETS_FILE.length))
             } else {
-                getFileByPath(filePath)
+                getFileByPath(resolvedPath)
             }
         } catch (ex: Exception) {
             null
