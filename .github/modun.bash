@@ -7,7 +7,7 @@ mkdir -p "${vmk%.*}®${vmk##*.}_7zv2"
 rm -fr "$vmk"
 done
 
-for vnk in $(find lib/*®jar_7zv2/frameworks/android/*apk lib/apktool®jar_7zv2/prebuilt/*.jar -type f 2>/dev/null); do
+for vnk in $(find lib/*®jar_7zv2/frameworks/android/*apk lib/apktool®jar_7zv2/prebuilt/*.jar -type f); do
 mkdir -p "${vnk%.*}®${vnk##*.}_7zv1"
 7z x "$vnk" -o"${vnk%.*}®${vnk##*.}_7zv1" -y >/dev/null
 rm -fr "$vnk"
