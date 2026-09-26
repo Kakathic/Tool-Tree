@@ -19,10 +19,9 @@ mkdir -p root tmp TREE/ROM TOOL/APK
 find . -exec touch -d "2026-01-01 00:00:00" {} +
 
 # Nén dữ liệu
-7z a -t7z -mx=9 -mmt=off -mtc=off -mta=off -y ../termux.7z -x!lib -x!bin -x!.local -x!etc
+7z a -t7z -mx=9 -mmt=off -mtc=off -mta=off -y ../termux.7z -x!lib -x!bin -x!.local -x!etc -x!check_unpack
+7z a -t7z -mx=9 -mmt=off -mtc=off -mta=off -y ../lib.7z lib .local check_unpack
 7z a -t7z -mx=9 -mmt=off -mtc=off -mta=off -y ../bin.7z bin
-7z a -t7z -mx=9 -mmt=off -mtc=off -mta=off -y ../lib.7z lib
-7z a -t7z -mx=9 -mmt=off -mtc=off -mta=off -y ../local.7z .local
 7z a -t7z -mx=9 -mmt=off -mtc=off -mta=off -y ../etc.7z etc
 
 ls -lh ../*.7z

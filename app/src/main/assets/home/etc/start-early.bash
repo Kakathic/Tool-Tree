@@ -8,40 +8,29 @@ dumpsys(){ /system/bin/dumpsys "$@"; }
 find "$TMPDIR" -maxdepth 1 ! -path "$TMPDIR" ! -name '*.log' -exec rm -rf {} +
 rm -fr $TEMP/documents $TEMP/kr_download_* $START_DIR/icons/*
 
+# Lấy lại api đã lưu
 [ -z "$(glog api_genmini)" ] && transai -c &
 
 {
 # Tự động cập nhật add-on
-urlgitv1="https://github.com/Kakathic/Tool-Tree/releases/download/V1"
-aokshum="$(get_shum 'V1' "AOK.zip")"
-if [[ -n "$aokshum" ]] && [[ "$aokshum" != "$(glog aok_shum)" ]]; then
-  taive -s "$urlgitv1/AOK.zip" "$TMP/AOK.zip"
-  unzip -o "$TMP/AOK.zip" -d "$AOK"
-  rm -fr "$TMP/AOK.zip"
-  slog aok_shum "$aokshum"
+taiveadd(){
+local urlgitv1="https://github.com/Kakathic/Tool-Tree/releases/download/V1"
+local shum_add="$(get_shum 'V1' "$1")"
+if [[ -n "$shum_add" ]] && [[ "$shum_add" != "$(glog "shum_add_${1%.*}")" ]]; then
+  taive -s "$urlgitv1/$1" "$TMP/$1"
+  unzip -o "$TMP/$1" -d "$AOK"
+  rm -fr "$TMP/$1"
+  slog "shum_add_${1%.*}" "$shum_add"
 fi
-# add-on 2
-aonshum="$(get_shum 'V1' "AON.zip")"
-if [[ -n "$aonshum" ]] && [[ "$aonshum" != "$(glog aon_shum)" ]]; then
-  taive -s "$urlgitv1/AON.zip" "$TMP/AON.zip"
-  unzip -o "$TMP/AON.zip" -d "$AON"
-  rm -fr "$TMP/AON.zip"
-  slog aon_shum "$aonshum"
-fi
-# add-on 3
-uplshum="$(get_shum 'V1' "UPL.zip")"
-if [[ -n "$uplshum" ]] && [[ "$uplshum" != "$(glog upl_shum)" ]]; then
-  taive -s "$urlgitv1/UPL.zip" "$TMP/UPL.zip"
-  unzip -o "$TMP/UPL.zip" -d "$UPL"
-  rm -fr "$TMP/UPL.zip"
-  slog upl_shum "$uplshum"
-fi
+}
+taiveadd AOK.zip
+taiveadd AON.zip
+taiveadd UPL.zip
 # Cấp quyền 755 tự động
 set_permis $AON/*/* $AOK/*/* $UPL/*/* &>/dev/null
 } &
 
 {
-
 # Cấp quyền tự động nếu đã root
 chown -R 0:0 $HOME/.cache
 
@@ -80,12 +69,10 @@ cmd appops set $PACKAGE_NAME 10017 allow
 
 # Loaded sẵn danh sách img
 search_image &>/dev/null
-
 } &
 
 # Dọn bộ đếm
 rm -fr $AON/*/zcheck $AOK/*/zcheck $UPL/*/zcheck $UZE/*/zcheck &
-
 # Khởi động các file shell ở add-on
 for vadd in $AON/* $AOK/* $UPL/* $UZE/*; do
   if [ -f "$vadd/early_start.bash" ]; then
