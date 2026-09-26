@@ -90,20 +90,6 @@ class PageConfigReader {
     private val langLineRegex = Regex("""(?m)^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*"((?:[^"\\]|\\.)*)"[ \t]*$""")
     private val escapeSeqRegex = Regex("""\\(.)""")
 
-    // Dùng đúng nguồn ngôn ngữ hiện tại mà app đang dùng (giống ScriptEnvironmen.kt,
-    // params["LANGUAGE"] = Locale.getDefault().language). Trả về danh sách ứng viên
-    // theo thứ tự ưu tiên: ngôn ngữ-khu vực (vd "zh-CN") -> ngôn ngữ (vd "zh") -> "default".
-    private fun currentLangCandidates(): List<String> {
-        val locale = getDefault()
-        val lang = locale.language
-        val country = locale.country
-        val list = mutableListOf<String>()
-        if (lang.isNotEmpty() && country.isNotEmpty()) list.add("$lang-$country")
-        if (lang.isNotEmpty()) list.add(lang)
-        list.add("default")
-        return list.distinct()
-    }
-
     private fun applyLoadKey(rawText: String): String {
         val match = loadKeyDirectiveRegex.find(rawText) ?: return rawText
         val isShell = match.groupValues[1] == "-sh"
@@ -122,17 +108,15 @@ class PageConfigReader {
                 }
             }
         } else {
-            // Thử lần lượt: ngôn ngữ-khu vực -> ngôn ngữ -> default, dừng ngay khi tìm thấy file
-            val codes = if (rawPath.contains("{LANG}")) currentLangCandidates() else listOf(null)
-            for (code in codes) {
-                val path = (if (code == null) rawPath else rawPath.replace("{LANG}", code)).trim()
-                if (path.isEmpty()) continue
+            // {LANG} (thử lần lượt lang-country -> lang -> default) nay đã xử lý bên trong
+            // PathAnalysis.parsePath(), gọi thẳng 1 lần là đủ.
+            val path = rawPath.trim()
+            if (path.isNotEmpty()) {
                 stream = try {
                     PathAnalysis(context, parentDir).parsePath(path)
                 } catch (_: Exception) {
                     null
                 }
-                if (stream != null) break
             }
         }
 

@@ -15,14 +15,27 @@ import com.omarea.krscript.model.TextNode
 import java.nio.ByteBuffer
 
 class IconPathAnalysis {
+    // Ảnh đã decode + mtime của file nguồn lúc decode - dùng để phát hiện file bị thay nội
+    // dung dù giữ nguyên path (xem decodeBitmap()).
+    private class CachedImage(val bitmap: Bitmap, val lastModified: Long)
+
     companion object {
         // Cache Bitmap đã giải mã dùng chung cho toàn app (theo dung lượng, ~12MB).
         // Giúp tránh decode lại ảnh mỗi lần list re-render (đỡ giật/lag, đỡ tốn CPU).
         private const val CACHE_SIZE_BYTES = 12 * 1024 * 1024
-        private val bitmapCache = object : LruCache<String, Bitmap>(CACHE_SIZE_BYTES) {
-            override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+        private val bitmapCache = object : LruCache<String, CachedImage>(CACHE_SIZE_BYTES) {
+            override fun sizeOf(key: String, value: CachedImage): Int = value.bitmap.byteCount
         }
     }
+
+    // Cache path đã xác nhận KHÔNG tồn tại/không đọc được, chỉ sống trong đúng 1 instance (tức
+    // đúng 1 lượt tải trang - xem ActionPage.prewarmNodeImages() dùng chung 1 instance cho cả
+    // lượt tải). Mục đích: 1 icon lỗi bị nhiều nơi tra cùng path (loadIcon() + loadLogo() fallback
+    // cùng đọc iconPath, hoặc nhiều item dùng chung 1 path lỗi) sẽ chỉ tốn đúng 1 lần dò qua root
+    // (PathAnalysis -> RootFile.fileExists chạy shell thật khi file không tồn tại cục bộ), các lần
+    // tra lại trong CÙNG lượt tải trả về ngay. KHÔNG dùng companion (không sống qua lượt tải khác)
+    // để nếu path lỗi được sửa thật (file được tạo đúng chỗ) thì lần tải sau vẫn dò lại bình thường.
+    private val failedPaths = HashSet<String>()
 
     // 获取快捷方式的图标
     fun loadLogo(context: Context, clickableNode: ClickableNode): Drawable {
@@ -218,9 +231,26 @@ class IconPathAnalysis {
     private fun decodeBitmap(context: Context, pageDir: String, path: String): Bitmap? {
         if (path.isEmpty()) return null
         val cacheKey = "$pageDir|$path"
-        bitmapCache.get(cacheKey)?.let { return it }
+        if (failedPaths.contains(cacheKey)) return null
+
         return try {
-            val inputStream = PathAnalysis(context, pageDir).parsePath(path) ?: return null
+            val pathAnalysis = PathAnalysis(context, pageDir)
+            val inputStream = pathAnalysis.parsePath(path)
+            if (inputStream == null) {
+                failedPaths.add(cacheKey)
+                return null
+            }
+
+            // mtime = 0 (asset hoặc file phải mở qua root - xem PathAnalysis.getCurrentLastModified())
+            // nghĩa là không xác định được thay đổi -> coi cache còn hợp lệ mãi, giữ đúng hành vi cũ.
+            val currentModified = pathAnalysis.getCurrentLastModified()
+            bitmapCache.get(cacheKey)?.let { cached ->
+                if (currentModified == 0L || cached.lastModified == currentModified) {
+                    inputStream.close()
+                    return cached.bitmap
+                }
+            }
+
             val bytes = inputStream.use { it.readBytes() }
             if (bytes.isEmpty()) return null
 
@@ -235,7 +265,7 @@ class IconPathAnalysis {
             }
             val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
             if (bitmap != null) {
-                bitmapCache.put(cacheKey, bitmap)
+                bitmapCache.put(cacheKey, CachedImage(bitmap, currentModified))
             }
             bitmap
         } catch (ex: Exception) {

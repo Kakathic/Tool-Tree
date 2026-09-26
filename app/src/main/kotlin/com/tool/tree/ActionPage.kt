@@ -109,6 +109,13 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     // chạy ở startDeferredLoadIfNeeded() để không chạy lặp lại nếu tryAutoShowActions() được
     // gọi nhiều lần. Xem PageConfigReader.DeferredNodeResult.
     private var pendingDeferredBuilder: (() -> ArrayList<PageConfigReader.DeferredNodeResult>)? = null
+
+    // Dùng CHUNG 1 instance cho toàn bộ 1 lượt tải trang (kể cả phần load-after chạy sau) thay vì
+    // tạo mới mỗi node trong prewarmNodeImages() như trước - để cache path lỗi của IconPathAnalysis
+    // (sống theo instance) thật sự dedup được giữa các item cùng lượt tải, không chỉ trong 1 node.
+    // Tạo mới đầu mỗi loadPageConfig() (không phải companion) để icon lỗi được sửa thật thì lượt
+    // tải SAU vẫn dò lại bình thường, không bị "kẹt" cache lỗi qua lượt tải khác.
+    private var pagePrewarmIconAnalysis = IconPathAnalysis()
     // Tránh chạy lại checkPageLock khi onResume() gọi lại trong lúc vẫn đang đợi.
     private var lockCheckStarted = false
 
@@ -820,6 +827,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
 
         pendingDeferredBuilder = null
+        pagePrewarmIconAnalysis = IconPathAnalysis()
         progressBarDialog.setCancelCallback {
             loadPageJob?.cancel()
             finish()
@@ -982,7 +990,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     }
 
     private fun prewarmNodeImages(node: NodeInfoBase) {
-        val iconPathAnalysis = IconPathAnalysis()
+        val iconPathAnalysis = pagePrewarmIconAnalysis
         when (node) {
             is TextNode -> {
                 node.rows.forEach { row ->

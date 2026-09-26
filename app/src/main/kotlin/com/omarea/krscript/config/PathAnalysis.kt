@@ -8,6 +8,7 @@ import com.omarea.krscript.FileOwner
 import java.io.File
 import java.io.InputStream
 import java.net.URI
+import java.util.Locale
 
 class PathAnalysis(private var context: Context, private var parentDir: String = "") {
     companion object {
@@ -27,8 +28,56 @@ class PathAnalysis(private var context: Context, private var parentDir: String =
         return filePath.replace("{HOME}", homeDir)
     }
 
+    // Thay "{ICON}" bằng thư mục icon thật của app (home/etc/icon), cùng quy ước với {HOME}.
+    private fun resolveIconPlaceholder(filePath: String): String {
+        if (!filePath.contains("{ICON}")) return filePath
+        val iconDir = File(context.filesDir, "home/etc/icon").absolutePath
+        return filePath.replace("{ICON}", iconDir)
+    }
+
+    // Flag file "Ticon" trong home/usr/log/ (cùng kiểu dissblur/directbg/language ở
+    // ThemeModeState/LanguageManager), nội dung "1" thì tắt riêng các path dùng {ICON}
+    // (path tĩnh khác không dùng {ICON} vẫn hiện icon bình thường).
+    private fun isIconDisabled(): Boolean {
+        val file = File(context.filesDir, "home/usr/log/Ticon")
+        return try {
+            if (file.exists()) file.readText().trim() == "1" else false
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    // {LANG} - thử lần lượt ngôn ngữ-khu vực (vd "zh-CN") -> ngôn ngữ (vd "zh") -> "default",
+    // dừng ngay khi tìm thấy file. Chuyển từ PageConfigReader.applyLoadKey() vào đây để dùng
+    // được ở MỌI nơi gọi parsePath() (icon, html, load-key, text editor...), không riêng load-key.
+    private fun currentLangCandidates(): List<String> {
+        val locale = Locale.getDefault()
+        val lang = locale.language
+        val country = locale.country
+        val list = mutableListOf<String>()
+        if (lang.isNotEmpty() && country.isNotEmpty()) list.add("$lang-$country")
+        if (lang.isNotEmpty()) list.add(lang)
+        list.add("default")
+        return list.distinct()
+    }
+
     fun parsePath(filePath: String): InputStream? {
-        val resolvedPath = resolveHomePlaceholder(filePath)
+        // Ticon=1 chỉ tắt riêng các path dùng {ICON} - kiểm tra trên placeholder gốc, trước khi
+        // thử {LANG}/{HOME}, để không mở nhầm file thật khi icon đã bị tắt.
+        if (filePath.contains("{ICON}") && isIconDisabled()) return null
+
+        if (filePath.contains("{LANG}")) {
+            for (code in currentLangCandidates()) {
+                val candidate = filePath.replace("{LANG}", code)
+                openResolvedPath(candidate)?.let { return it }
+            }
+            return null
+        }
+        return openResolvedPath(filePath)
+    }
+
+    private fun openResolvedPath(filePath: String): InputStream? {
+        val resolvedPath = resolveIconPlaceholder(resolveHomePlaceholder(filePath))
         return try {
             if (resolvedPath.startsWith(ASSETS_FILE)) {
                 currentAbsPath = resolvedPath
@@ -38,6 +87,21 @@ class PathAnalysis(private var context: Context, private var parentDir: String =
             }
         } catch (ex: Exception) {
             null
+        }
+    }
+
+    // Thời gian sửa đổi cuối của file vừa parsePath() thành công, dùng để phát hiện file bị
+    // THAY NỘI DUNG dù giữ nguyên tên/đường dẫn (vd icon đổi ảnh mới cùng path cũ). Trả về 0
+    // khi không xác định được (asset - không có mtime filesystem thật; hoặc file phải mở qua
+    // root - currentAbsPath không trỏ tới file gốc nên đọc mtime trực tiếp sẽ luôn ra 0/lỗi
+    // do không có quyền, không cố tình chạy thêm lệnh root chỉ để lấy mtime). 0 nghĩa là bên
+    // gọi nên coi cache là còn hợp lệ mãi (giữ đúng hành vi cache cũ cho 2 trường hợp này).
+    fun getCurrentLastModified(): Long {
+        if (currentAbsPath.isEmpty() || currentAbsPath.startsWith(ASSETS_FILE)) return 0L
+        return try {
+            File(currentAbsPath).lastModified()
+        } catch (_: Exception) {
+            0L
         }
     }
 
