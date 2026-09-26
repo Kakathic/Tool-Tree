@@ -10,7 +10,7 @@ silent = true
 [[group]]
 [[switch]]
 title = "$project_text_5"
-icon = "$urlicon/set_home.png"
+icon = "{ICON}/set_home.png"
 shell = "hidden"
 auto-restart = true
 get = "glog Tset"
@@ -18,7 +18,7 @@ set = "slog Tset $state"
 
 [[switch]]
 title = "$project_text_7"
-icon = "$urlicon/icon_off.png"
+icon = "{ICON}/icon_off.png"
 shell = "hidden"
 auto-restart = true
 get = "glog Ticon"
@@ -27,10 +27,10 @@ set = "slog Ticon $state"
 [[group]]
 [[action]]
 title = "$project_text_10"
-icon = "$urlicon/java.png"
+icon = "{ICON}/java.png"
 warn = "$project_text_9"
 shell = "hidden"
-script = "slog ramoccupied \"$ramoccupied\""
+script = "slog ramoccupied $ramoccupied"
 
   [[action.params]]
   name = "ramoccupied"
@@ -41,11 +41,11 @@ script = "slog ramoccupied \"$ramoccupied\""
 [[group]]
 [[action]]
 title = "$project_text_12"
-icon = "$urlicon/cpu.png"
+icon = "{ICON}/cpu.png"
 warn = "$project_text_13"
 shell = "hidden"
 support = "command -v taskset &>/dev/null && echo 1"
-script = "slog use_cpu \"$use_cpus\""
+script = "slog use_cpu $use_cpus"
 
   [[action.params]]
   name = "use_cpus"
@@ -56,7 +56,7 @@ script = "slog use_cpu \"$use_cpus\""
 [[group]]
 [[action]]
 title = "$project_text_14"
-icon = "$urlicon/background.png"
+icon = "{ICON}/background.png"
 warn = "$project_text_15"
 shell = "hidden"
 auto-restart = true
@@ -91,7 +91,7 @@ set_permis "$ETC/wallpaper.jpg" &>/dev/null
 [[group]]
 [[action]]
 title = "$api_key_text"
-icon = "$urlicon/apikey.png"
+icon = "{ICON}/apikey.png"
 shell = "hidden"
 script = """
 slog models_genmini "$models_genmini"

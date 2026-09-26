@@ -300,7 +300,7 @@ Info() {
   title = "'$setting_text_7'"
   desc = "'$setting_text_8'"
   icon = "'$urlicon'/feature.png"
-  config-sh = "'$ETC'/tool-tree.bash Feature"
+  config = "'$ETC'/toml/feature.toml"
   
   [[group]]
   [[picker]]
