@@ -66,10 +66,13 @@ class PageConfigReader {
     // được ở MỌI config dù không khai báo "load-key" - khác với hệ "@key" (applyLoadKey())
     // chỉ thay được khi có load-key trỏ tới file chứa key đó. Dùng ngoặc nhọn {..} thay vì
     // "@.." để phân biệt rõ với hệ @key, tránh nhầm lẫn 2 cơ chế.
+    // {ROT}: "1" nếu có root, "0" nếu không. {LOT}: ngược lại {ROT} - "1" nếu KHÔNG root, "0" nếu có root.
     private fun applyBuiltinVars(rawText: String): String {
-        if (!rawText.contains("{ROT}")) return rawText
-        val rootFlag = if (ScriptEnvironmen.isRooted()) "1" else "0"
-        return rawText.replace("{ROT}", rootFlag)
+        var text = rawText
+        val rooted = ScriptEnvironmen.isRooted()
+        if (text.contains("{ROT}")) text = text.replace("{ROT}", if (rooted) "1" else "0")
+        if (text.contains("{LOT}")) text = text.replace("{LOT}", if (rooted) "0" else "1")
+        return text
     }
 
     private fun readConfigXml(fileInputStream: InputStream, onNodeReady: ((NodeInfoBase?, Int, Int) -> Unit)? = null): ArrayList<NodeInfoBase>? {
