@@ -115,7 +115,7 @@
     <string name="kr_slice_script_result">Szkript eredménye</string>
     <string name="kr_task_notify_copy_empty">Még nincs napló a másoláshoz</string>
     <string name="kr_ushortcut_nsupported">Ez a funkció nem támogatja a parancsikonok hozzáadását</string>
-    <string name="loading_data">Adatok betöltése...</string>
+    <string name="loading_data">Ellenőrizni az adatokat...</string>
     <string name="menu_power">Energiagazdálkodási művelet kiválasztása (root)</string>
     <string name="msg_file_extension_required">Szükséges fájltípus: %1$s</string>
     <string name="msg_folder_mode">Tartsa lenyomva a gombot egy mappa kiválasztásához</string>

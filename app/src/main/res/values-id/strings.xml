@@ -178,7 +178,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="editor_exit">Keluar</string>
     <string name="editor_undo">Urungkan</string>
     <string name="editor_redo">Ulangi</string>
-    <string name="loading_data">Memuat data...</string>
+    <string name="loading_data">Memeriksa data...</string>
     <string name="debug_text_network">Silakan hubungkan ke jaringan dan coba lagi!</string>
     <string name="debug_text_version">Versi saat ini</string>
     <string name="debug_text_delay">Waktu uji coba telah habis, aplikasi telah berhenti beroperasi.</string>

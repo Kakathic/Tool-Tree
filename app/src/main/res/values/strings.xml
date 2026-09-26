@@ -201,7 +201,7 @@ If you agree, press the confirm button to continue."</string>
     <string name="editor_exit">Exit</string>
     <string name="editor_undo">Undo</string>
     <string name="editor_redo">Redo</string>
-    <string name="loading_data">Loading data...</string>
+    <string name="loading_data">Checking data...</string>
     <string name="debug_text_network">Please connect to the internet and try again!</string>
     <string name="debug_text_version">Current version</string>
     <string name="debug_text_delay">The trial period has ended, and the application has stopped working.</string>

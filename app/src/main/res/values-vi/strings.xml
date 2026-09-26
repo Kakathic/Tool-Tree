@@ -189,7 +189,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="editor_exit">Thoát</string>
     <string name="editor_undo">Hoàn tác</string>
     <string name="editor_redo">Làm lại</string>
-    <string name="loading_data">Đang tải dữ liệu...</string>
+    <string name="loading_data">Đang kiểm tra dữ liệu...</string>
     <string name="debug_text_network">Vui lòng kết nối mạng và thử lại !</string>
     <string name="debug_text_version">Phiên bản hiện tại</string>
     <string name="debug_text_delay">Thời gian thử nghiệm đã hết, ứng dụng đã ngừng hoạt động.</string>

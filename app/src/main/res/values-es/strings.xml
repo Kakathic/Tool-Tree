@@ -182,7 +182,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="editor_exit">Salir</string>
     <string name="editor_undo">Deshacer</string>
     <string name="editor_redo">Rehacer</string>
-    <string name="loading_data">Cargando datos...</string>
+    <string name="loading_data">Revisando los datos...</string>
     <string name="debug_text_network">Conéctate a internet e inténtalo de nuevo</string>
     <string name="debug_text_version">Versión actual</string>
     <string name="debug_text_delay">El período de prueba ha finalizado y la aplicación ha dejado de funcionar.</string>

@@ -178,7 +178,7 @@
     <string name="editor_exit">Выход</string>
     <string name="editor_undo">Отменить</string>
     <string name="editor_redo">Повторить</string>
-    <string name="loading_data">Загрузка данных...</string>
+    <string name="loading_data">Проверяю данные...</string>
     <string name="debug_text_network">Пожалуйста, подключитесь к интернету и попробуйте снова!</string>
     <string name="debug_text_version">Текущая версия</string>
     <string name="debug_text_delay">Пробный период закончился, приложение остановлено.</string>
