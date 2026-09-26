@@ -293,7 +293,7 @@ Info() {
   title = "'$setting_text_1'"
   desc = "'$setting_text_2'"
   icon = "'$urlicon'/info.png"
-  config-sh = "'$ETC'/tool-tree.bash Update"
+  config = "'$ETC'/toml/update.toml"
     
   [[group]]
   [[page]]
@@ -392,74 +392,7 @@ Info() {
   '
 }
 
-Update() {
-  echo '
-  [[group]]
-  [[menu]]
-  handler = """
-    if [ "$menu_id" == "v1" ]; then
-    echo "am:[start -a android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS -d package:com.tool.tree]"
-    elif [ "$menu_id" == "v2" ]; then
-    echo "am:[start -a android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION -d package:com.tool.tree]"
-    elif [ "$menu_id" == "v3" ]; then
-    echo "am:[start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.tool.tree]"
-    fi
-  """
-    
-    [[menu.items]]
-    key = "v1"
-    title = "'$permis_text_1'"
-    silent = true
 
-    [[menu.items]]
-    key = "v2"
-    title = "'$permis_text_4'"
-    silent = true
-
-    [[menu.items]]
-    key = "v3"
-    title = "'$setting_text_5'"
-    silent = true
-
-  [[group]]
-  [[text]]
-  [[text.rows]]
-  html-file = "'$ETC'/html/tool-tree.html"
-  html-height = 100
-  
-  [[group]]
-  [[page]]
-  title = "'$author_text'"
-  icon = "'$urlicon'/like.png"
-  html = "https://Kakathic.github.io/Tool-Tree/website/Information.html"
-
-  [[group]]
-  [[page]]
-  title = "'$update_text_5'"
-  icon = "'$urlicon'/website.png"
-  html = "https://Kakathic.github.io/Tool-Tree"
-
-  [[group]]
-  [[page]]
-  title = "Telegram"
-  icon = "'$urlicon'/telegram.png"
-  html = "https://t.me/tooltree"
-
-  [[group]]
-  [[download]]
-  title = "'$download_text' stable"
-  icon = "'$urlicon'/update.png"
-  url-sh = "linkgit https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest Tool-Tree"
-  script = "openfile $state"
-  
-  [[group]]
-  [[download]]
-  title = "'$download_text' beta"
-  icon = "'$urlicon'/update2.png"
-  url = "https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-beta.apk"
-  script = "openfile $state"
-  '
-}
 
 Project() {
 
@@ -616,132 +549,6 @@ if [ "$1" == 1 ]; then
 fi
 }
 
-Feature() {
-  echo '
-  [[group]]
-  [[menu]]
-  [[menu.items]]
-  link = "https://aistudio.google.com/api-keys"
-  title = "'$generate_text' Gemini API"
-  silent = true
-  
-  [[group]]
-  [[switch]]
-  title = "'$project_text_5'"
-  icon = "'$urlicon'/set_home.png"
-  shell = "hidden"
-  auto-restart = true
-  get = "glog Tset"
-  set = "slog Tset $state"
-
-  [[switch]]
-  title = "'$project_text_7'"
-  icon = "'$urlicon'/icon_off.png"
-  shell = "hidden"
-  auto-restart = true
-  get = "glog Ticon"
-  set = "slog Ticon $state"
-
-  [[group]]
-  [[action]]
-  title = "'$project_text_10'"
-  icon = "'$urlicon'/java.png"
-  warn = "'$project_text_9'"
-  shell = "hidden"
-  script = "slog ramoccupied \"$ramoccupied\""
-
-    [[action.params]]
-    name = "ramoccupied"
-    label = "'$option_text'"
-    value-sh = "glog ramoccupied 4096"
-    items = [ "512", "1024", "2048", "3072", "4096", "5120", "6144", "7168", "8192" ]
-
-  [[group]]
-  [[action]]
-  title = "'$project_text_12'"
-  icon = "'$urlicon'/cpu.png"
-  warn = "'$project_text_13'"
-  shell = "hidden"
-  support = "command -v taskset &>/dev/null && echo 1"
-  script = "slog use_cpu \"$use_cpus\""
-  
-    [[action.params]]
-    name = "use_cpus"
-    label = "'$option_text'"
-    value-sh = "glog use_cpu"
-    options-sh = "seq 1 $(nproc --all)"
-
-  [[group]]
-  [[action]]
-  title = "'$project_text_14'"
-  icon = "'$urlicon'/background.png"
-  warn = "'$project_text_15'"
-  shell = "hidden"
-  auto-restart = true
-  script = """
-  slog dissblur "$dissblur"
-  slog directbg "$directbg"
-  slog uri_change_background "$uri_change_background"
-  [ -f "$uri_change_background" ] && cp -f "$uri_change_background" "$ETC/wallpaper.jpg"
-  [ -z "$uri_change_background" ] && rm -f "$ETC/wallpaper.jpg"
-  set_permis "$ETC/wallpaper.jpg" &>/dev/null
-  """
-
-    [[action.params]]
-    name = "dissblur"
-    label = "'$dissblur_text'"
-    type = "switch"
-    value-sh = "glog dissblur"
-
-    [[action.params]]
-    name = "directbg"
-    label = "'$directbg_text'"
-    type = "switch"
-    value-sh = "glog directbg"
-
-    [[action.params]]
-    name = "uri_change_background"
-    type = "file"
-    suffix = "jpg"
-    editable = true
-    value-sh = "glog uri_change_background"
-  
-  [[group]]
-  [[action]]
-  title = "'$api_key_text'"
-  icon = "'$urlicon'/apikey.png"
-  shell = "hidden"
-  script = """
-  slog models_genmini "$models_genmini"
-  transai -c
-  """
-  
-  [[action.params-rows]]
-  text = "'$note_genmini_text':"
-  line = true
-  
-  [[action.params-rows]]
-  text = "'$generate_text' Gemini API"
-  link = "https://aistudio.google.com/api-keys"
-  underline = true
-  
-    [[action.params]]
-    name = "api_genmini"
-    title = "Gemini API"
-    placeholder = "*******************"
-    type = "text"
-    desc-sh = "transai -c 2>&1"
-    
-    [[action.params]]
-    name = "models_genmini"
-    placeholder = "gemini-3.1-flash-lite"
-    title = "Models Gemini"
-    editable = true
-    label = "Models"
-    items = [ "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" ]
-    value-sh = "glog models_genmini gemini-3.1-flash-lite"
-  '
-}
 
 Root() {
   echo '
