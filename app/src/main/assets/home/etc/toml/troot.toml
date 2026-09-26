@@ -1,0 +1,76 @@
+[[toml]]
+load-key = "{HOME}/etc/lang/{LANG}.bash"
+
+[[group]]
+[[action]]
+title = "@dexopt_app_text"
+summary = "{TEXT_ROOT}"
+icon = "{ICON}/dexopt_app.png"
+lock = "{LOT}|@root_warning_text"
+script = """
+if [ "$bools" == 1 ]; then
+pm compile -v -a -m $name_dex_list
+echo
+checktime
+else
+for vv in $apps; do
+pm compile -v -f -m $name_dex_list $vv
+echo
+done
+checktime
+fi
+"""
+
+[[action.params]]
+name = "name_dex_list"
+label = "@option_text"
+value = "speed-profile"
+items = [ "everything", "speed", "speed-profile", "verify" ]
+
+[[action.params]]
+name = "bools"
+label = "@dexopt_app_text_2"
+desc = "@dexopt_app_text_3"
+type = "checkbox"
+
+[[action.params]]
+name = "apps"
+desc = "@dexopt_app_text_1"
+type = "app"
+options-sh = "pm list package -3 | cut -f2 -d:"
+multiple = true
+
+[[group]]
+[[action]]
+title = "@backups_text_2"
+icon = "{ICON}/backup_apk.png"
+warn = "@backups_text_1"
+interruptible = false
+script = """
+for v in $Sapp; do
+patk="$(pm path $v | cut -f2 -d:)"
+patk22="$(pm path "$v" | cut -f2 -d: | head -n1)"
+pathvv="${patk22%/*}"
+hcdf="$(echo "$patk" | grep -c ".apk"$)"
+paptn="$(echo "$patk" | grep "base.apk"$)"
+if [[ -n "$paptn" ]]; then
+infor="$(apkeditor info -t json -i "$paptn")"
+nameapk="$(echo "$infor" | jq -r .[0].AppName)"
+else
+nameapk="${pathvv##*/}"
+fi
+if [ "$hcdf" -ge 2 ]; then
+zip -j -r "$PTAD/${nameapk}.apks" $patk
+echo "@save_text $PTAD/${nameapk}.apks"
+else
+cp -rf "$patk" "$PTAD/${nameapk}.apk"
+echo "@save_text $PTAD/${nameapk}.apk"
+fi
+done
+"""
+
+[[action.params]]
+name = "Sapp"
+label = "@backups_text_3"
+type = "app"
+multiple = true

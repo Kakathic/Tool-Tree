@@ -15,17 +15,17 @@ fi
   
   [[menu.items]]
   key = "v1"
-  title = "$permis_text_1"
+  title = "@permis_text_1"
   silent = true
 
   [[menu.items]]
   key = "v2"
-  title = "$permis_text_4"
+  title = "@permis_text_4"
   silent = true
 
   [[menu.items]]
   key = "v3"
-  title = "$setting_text_5"
+  title = "@setting_text_5"
   silent = true
 
 [[group]]
@@ -36,13 +36,13 @@ html-height = 100
 
 [[group]]
 [[page]]
-title = "$author_text"
+title = "@author_text"
 icon = "{ICON}/like.png"
 html = "https://Kakathic.github.io/Tool-Tree/website/Information.html"
 
 [[group]]
 [[page]]
-title = "$update_text_5"
+title = "@update_text_5"
 icon = "{ICON}/website.png"
 html = "https://Kakathic.github.io/Tool-Tree"
 
@@ -54,14 +54,14 @@ html = "https://t.me/tooltree"
 
 [[group]]
 [[download]]
-title = "$download_text stable"
+title = "@download_text stable"
 icon = "{ICON}/update.png"
 url-sh = "linkgit https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest Tool-Tree"
 script = "openfile $state"
 
 [[group]]
 [[download]]
-title = "$download_text beta"
+title = "@download_text beta"
 icon = "{ICON}/update2.png"
 url = "https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-beta.apk"
 script = "openfile $state"

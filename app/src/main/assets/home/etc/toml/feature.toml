@@ -4,12 +4,12 @@ load-key = "{HOME}/etc/lang/{LANG}.bash"
 [[menu]]
 [[menu.items]]
 link = "https://aistudio.google.com/api-keys"
-title = "$generate_text Gemini API"
+title = "@generate_text Gemini API"
 silent = true
 
 [[group]]
 [[switch]]
-title = "$project_text_5"
+title = "@project_text_5"
 icon = "{ICON}/set_home.png"
 shell = "hidden"
 auto-restart = true
@@ -17,7 +17,7 @@ get = "glog Tset"
 set = "slog Tset $state"
 
 [[switch]]
-title = "$project_text_7"
+title = "@project_text_7"
 icon = "{ICON}/icon_off.png"
 shell = "hidden"
 auto-restart = true
@@ -26,38 +26,38 @@ set = "slog Ticon $state"
 
 [[group]]
 [[action]]
-title = "$project_text_10"
+title = "@project_text_10"
 icon = "{ICON}/java.png"
-warn = "$project_text_9"
+warn = "@project_text_9"
 shell = "hidden"
 script = "slog ramoccupied $ramoccupied"
 
   [[action.params]]
   name = "ramoccupied"
-  label = "$option_text"
+  label = "@option_text"
   value-sh = "glog ramoccupied 4096"
   items = [ "512", "1024", "2048", "3072", "4096", "5120", "6144", "7168", "8192" ]
 
 [[group]]
 [[action]]
-title = "$project_text_12"
+title = "@project_text_12"
 icon = "{ICON}/cpu.png"
-warn = "$project_text_13"
+warn = "@project_text_13"
 shell = "hidden"
 support = "command -v taskset &>/dev/null && echo 1"
 script = "slog use_cpu $use_cpus"
 
   [[action.params]]
   name = "use_cpus"
-  label = "$option_text"
+  label = "@option_text"
   value-sh = "glog use_cpu"
   options-sh = "seq 1 $(nproc --all)"
 
 [[group]]
 [[action]]
-title = "$project_text_14"
+title = "@project_text_14"
 icon = "{ICON}/background.png"
-warn = "$project_text_15"
+warn = "@project_text_15"
 shell = "hidden"
 auto-restart = true
 script = """
@@ -71,13 +71,13 @@ set_permis "$ETC/wallpaper.jpg" &>/dev/null
 
   [[action.params]]
   name = "dissblur"
-  label = "$dissblur_text"
+  label = "@dissblur_text"
   type = "switch"
   value-sh = "glog dissblur"
 
   [[action.params]]
   name = "directbg"
-  label = "$directbg_text"
+  label = "@directbg_text"
   type = "switch"
   value-sh = "glog directbg"
 
@@ -90,7 +90,7 @@ set_permis "$ETC/wallpaper.jpg" &>/dev/null
 
 [[group]]
 [[action]]
-title = "$api_key_text"
+title = "@api_key_text"
 icon = "{ICON}/apikey.png"
 shell = "hidden"
 script = """
@@ -99,11 +99,11 @@ transai -c
 """
 
 [[action.params-rows]]
-text = "$note_genmini_text:"
+text = "@note_genmini_text:"
 line = true
 
 [[action.params-rows]]
-text = "$generate_text Gemini API"
+text = "@generate_text Gemini API"
 link = "https://aistudio.google.com/api-keys"
 underline = true
 

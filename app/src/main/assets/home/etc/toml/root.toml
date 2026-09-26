@@ -1,0 +1,172 @@
+[[toml]]
+load-key = "{HOME}/etc/lang/{LANG}.bash"
+
+[[group]]
+[[action]]
+title = "@mount_text_1"
+summary = "{TEXT_ROOT}"
+icon = "{ICON}/mount.png"
+lock = "{LOT}|@root_warning_text"
+interruptible = false
+script = """
+for kkh in $IMG_NAME; do
+if [ "$(ls $SDH/raw/${kkh%.*} 2>/dev/null)" ]; then
+su -mm -c umount -l $SDH/raw/${kkh%.*}
+fi
+mkdir -p $SDH/raw/${kkh%.*}
+if [ "$(checktype $PTSD/$kkh)" == "erofs" ]; then
+su -mm -c mount -r -t erofs $PTSD/$kkh $SDH/raw/${kkh%.*}
+else
+su -mm -c mount -w $PTSD/$kkh $SDH/raw/${kkh%.*}
+fi
+done
+echo "@save_text $SDH/raw"
+"""
+
+  [[action.params]]
+  name = "IMG_NAME"
+  desc = "@mount_text_2"
+  options-sh = "findfile 3 $PTSD | grep -E \"(f2fs)|(ext)|(erofs)\""
+  required = true
+  multiple = true
+
+[[action]]
+title = "@umount_text_1"
+summary = "{TEXT_ROOT}"
+icon = "{ICON}/umount.png"
+lock = "{LOT}|@root_warning_text"
+interruptible = false
+script = """
+for kkh in $IMG_NAME; do
+su -mm -c umount -l $SDH/raw/$kkh
+rm -fr $SDH/raw/$kkh
+if [ "$(checktype $PTSD/${kkh}.img)" == "ext" ]; then
+[ -f $PTSD/${kkh}.img ] && e2fsck -yf $PTSD/${kkh}.img
+elif [ "$(checktype $PTSD/${kkh}.img)" == "f2fs" ]; then
+[ -f $PTSD/${kkh}.img ] && fsck.f2fs -yf $PTSD/${kkh}.img
+fi
+done
+echo "@umount_text_2"
+"""
+
+  [[action.params]]
+  name = "IMG_NAME"
+  desc = "@umount_text_3"
+  options-sh = "findfile 4 $SDH/raw"
+  required = true
+  multiple = true
+
+[[group]]
+[[action]]
+title = "@backup_text_1"
+summary = "{TEXT_ROOT}"
+icon = "{ICON}/backup.png"
+lock = "{LOT}|@root_warning_text"
+interruptible = false
+script = """
+Extract=$PTSD/backup
+[[ ! -d "$Extract" ]] && mkdir -p "$Extract"
+for i in $IMG; do
+e=${i##*/}
+File="$Extract/${e}.img"
+if [[ ! -L $i ]]; then
+echo "@backup_text_3 $e" >&2
+else
+echo "@backup_text_4 $e"
+echo
+dd if="$i" of="$File" 2>&1
+echo
+fi
+done
+echo "@save_text $Extract"
+"""
+
+  [[action.params]]
+  name = "IMG"
+  label = "IMAGE"
+  desc-sh = "echo \"@backup_text_2 $PTSD\""
+  options-sh = "search_image"
+  required = true
+  multiple = true
+
+[[group]]
+[[action]]
+title = "@flash_text_1"
+summary = "{TEXT_ROOT}"
+icon = "{ICON}/flash.png"
+lock = "{LOT}|@root_warning_text"
+script = """
+e=${IMG##*/}
+if [ "$e" = "vendor" ] || [ "$e" = "system" ] || [ "$e" = "super" ]; then
+killtree "($e) @flash_text_8"
+fi
+echo "@more_text_4 $Brush_in"
+echo
+if [ "$(checktype "$Brush_in")" == "space" ]; then
+simg2img "$Brush_in"
+fi
+if [[ -f "$Brush_in" ]]; then
+echo "Flash (${Brush_in##*/}) ➠ ($e)"
+echo
+dd if="$Brush_in" of="$IMG" 2>&1
+if [[ $CQ1 = 1 ]]; then
+echo
+echo "@flash_text_9..."
+for i in $(seq 4 -1 1); do
+echo $i
+sleep 1
+done
+reboot recovery
+fi
+if [[ $CQ = 1 ]]; then
+echo
+echo "@flash_text_10..."
+for i in $(seq 4 -1 1); do
+echo $i
+sleep 1
+done
+reboot
+fi
+else
+killtree "! ($Brush_in) @flash_text_11 ($e)"
+fi
+echo
+echo "@flash_text_12"
+"""
+
+  [[action.params]]
+  name = "CQ"
+  label = "@flash_text_2"
+  type = "checkbox"
+  depend-on = "CQ1"
+  depend-value = "1"
+  depend-mode = "hide"
+  depend-cascade = false
+  depend-readonly = true
+
+  [[action.params]]
+  name = "CQ1"
+  label = "@flash_text_3"
+  type = "checkbox"
+  depend-on = "CQ"
+  depend-value = "1"
+  depend-mode = "hide"
+  depend-cascade = false
+  depend-readonly = true
+
+  [[action.params]]
+  name = "IMG"
+  title = "@flash_text_4"
+  desc = "@flash_text_5"
+  label = "IMAGE"
+  options-sh = "search_image"
+  required = true
+
+  [[action.params]]
+  name = "Brush_in"
+  title = "@flash_text_6"
+  desc = "@flash_text_7"
+  type = "file"
+  suffix = "img"
+  editable = true
+  required = true

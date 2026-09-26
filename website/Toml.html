@@ -480,14 +480,14 @@ set = "setprop sys.fastcharge $state"</code></pre>
 <pre><code>load-key = "strings_{LANG}.txt"
 
 [[switch]]
-title = "$wifi_title"
+title = "@wifi_title"
 get = "settings get global wifi_on"
 set = "settings put global wifi_on $state"</code></pre>
-<p>Before the TOML is parsed, the parser reads the key file and substitutes every <code>$name</code> token in the <strong>whole document</strong> with the matching value. This is a plain text pre-processing step (it runs on the raw file, before <code>Toml.parse()</code>), so <code>$name</code> works inside any string field - titles, descs, scripts, options...</p>
+<p>Before the TOML is parsed, the parser reads the key file and substitutes every <code>@name</code> token in the <strong>whole document</strong> with the matching value. This is a plain text pre-processing step (it runs on the raw file, before <code>Toml.parse()</code>), so <code>@name</code> works inside any string field - titles, descs, scripts, options, <code>lock</code> messages...</p>
 <div class="tbl-container">
 <table class="tbl">
 <tr><th>Directive</th><th>Description</th></tr>
-<tr><td><code>load-key = "path"</code></td><td>Path of the key file - resolved like every other path (relative to the page config dir, app-private dir, APK assets, or absolute). The special placeholder <code>{LANG}</code> is tried in order: <em>language-country</em> (e.g. <code>strings_zh-CN.txt</code>) &rarr; <em>language</em> (e.g. <code>strings_zh.txt</code>) &rarr; <code>strings_default.txt</code> - the <strong>first file that exists</strong> wins, so one config can ship per-locale strings</td></tr>
+<tr><td><code>load-key = "path"</code></td><td>Path of the key file - resolved like every other path (relative to the page config dir, app-private dir, APK assets, or absolute), and accepts the <code>{HOME}</code>/<code>{ICON}</code>/<code>{LANG}</code> path placeholders described in <a href="#rules">&sect;2.8</a>. <code>{LANG}</code> is tried in order: <em>language-country</em> (e.g. <code>strings_zh-CN.txt</code>) &rarr; <em>language</em> (e.g. <code>strings_zh.txt</code>) &rarr; <code>strings_default.txt</code> - the <strong>first file that exists</strong> wins, so one config can ship per-locale strings</td></tr>
 <tr><td><code>load-key-sh = "script"</code></td><td><span class="badge shell">shell</span> Script whose output is the key file path instead of a static path</td></tr>
 </table>
 </div>
@@ -495,7 +495,34 @@ set = "settings put global wifi_on $state"</code></pre>
 <pre><code># strings_en.txt
 wifi_title = "Wi-Fi booster"
 wifi_desc = "Keep Wi-Fi on during sleep"</code></pre>
-<div class="callout tip">Substitution details: unknown <code>$name</code> references are left untouched; values are re-escaped (<code>\</code> &rarr; <code>\\</code>, <code>"</code> &rarr; <code>\"</code>) so they are safe inside TOML strings; the directive line itself is removed from the document after processing. Only the <strong>first</strong> directive line is applied - later ones are ignored.</div>
+<div class="callout tip">Substitution details: unknown <code>@name</code> references are left untouched; values are re-escaped (<code>\</code> &rarr; <code>\\</code>, <code>"</code> &rarr; <code>\"</code>) so they are safe inside TOML strings; the directive line itself is removed from the document after processing. Only the <strong>first</strong> directive line is applied - later ones are ignored.</div>
+<div class="callout warn"><span class="badge new">new</span> The token prefix used to change from <code>$name</code> to <code>@name</code> - a shell variable like <code>$PATH</code>/<code>$HOME</code>/<code>$1</code> inside a <code>script</code>/<code>run</code> field would otherwise collide with a load-key of the same name. For the same reason, avoid naming a load-key <code>string</code>, <code>color</code>, or <code>android</code> - those are reserved by the <code>@string/...</code>, <code>@color/...</code> and <code>@android:color/...</code> resource references from &sect;2.6 and &sect;8.2, and a load-key with one of these names would shadow them.</div>
+
+<h3>2.8. Path placeholders: <code>{HOME}</code>, <code>{ICON}</code>, <code>{LANG}</code></h3>
+<p><span class="badge new">new</span> These are resolved by the path lookup itself (<code>PathAnalysis</code>), not by the whole-document text substitution above - so they only take effect inside fields that are actually treated as a <strong>path</strong>: <code>icon</code>/<code>icon-sh</code> output, <code>photo</code>, <code>bg</code>, <code>logo</code>, row <code>icon</code>/<code>photo</code>, <code>html-file</code>, the editor's <code>file</code>, <code>resource-file</code>/<code>resource-dir</code>, and <code>load-key</code>/<code>load-key-sh</code> above.</p>
+<div class="tbl-container">
+<table class="tbl">
+<tr><th>Placeholder</th><th>Description</th></tr>
+<tr><td><code>{HOME}</code></td><td>The app's toolkit "home" directory. Equivalent to writing the absolute path by hand, but portable across app installs</td></tr>
+<tr><td><code>{ICON}</code></td><td>The app's icon directory (<code>home/etc/icon</code>) - a shortcut for icon assets shipped alongside the config, e.g. <code>icon = "{ICON}/wifi.png"</code></td></tr>
+<tr><td><code>{LANG}</code></td><td>Same language-country &rarr; language &rarr; default fallback used by <code>load-key</code> (&sect;2.7), now usable in <strong>any</strong> path field - e.g. <code>icon = "{ICON}/flag_{LANG}.png"</code> or <code>html-file = "help_{LANG}.html"</code></td></tr>
+</table>
+</div>
+
+<h3>2.9. Built-in variables: <code>{ROT}</code>, <code>{LOT}</code></h3>
+<p><span class="badge new">new</span> Unlike <code>{HOME}</code>/<code>{ICON}</code>/<code>{LANG}</code>, these are substituted directly on the raw document text - same mechanism as <code>load-key</code>'s <code>@name</code>, but always available with <strong>no <code>load-key</code> directive required</strong>. They report the device's root state:</p>
+<div class="tbl-container">
+<table class="tbl">
+<tr><th>Placeholder</th><th>Value</th></tr>
+<tr><td><code>{ROT}</code></td><td><code>"1"</code> if the device is rooted, <code>"0"</code> otherwise</td></tr>
+<tr><td><code>{LOT}</code></td><td>Opposite of <code>{ROT}</code>: <code>"1"</code> if <strong>not</strong> rooted, <code>"0"</code> if rooted</td></tr>
+</table>
+</div>
+<pre><code>[[action]]
+title = "Flash module"
+lock = "{LOT}|Requires root access"
+script = "..."</code></pre>
+<div class="callout tip">The example above locks the action (with message "Requires root access") only on non-rooted devices, since <code>{LOT}</code> resolves to <code>"1"</code> there. Because the substitution is on raw text, <code>{ROT}</code>/<code>{LOT}</code> work inside <code>lock</code>, <code>script</code>, <code>title</code> - any string field, same as <code>@name</code>.</div>
 </section>
 
 <section id="overview">
@@ -560,7 +587,7 @@ All text fields accept <code>@string/...</code> references.</p>
 <tr><td class="field-name">icon-real-gif</td><td>icon-gif-real</td><td class="field-type">Bool</td><td><span class="badge new">new</span> Same as <code>photo-real-gif</code> but for the small icon - REAL <code>.gif</code> file, Android 9/API 28+ only</td></tr>
 <tr><td class="field-name">bg</td><td>bg-path</td><td class="field-type">String</td><td>Background image for the item/dialog</td></tr>
 <tr><td class="field-name">bg-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge new">new</span> <span class="badge shell">shell</span> Script that produces the background image path dynamically. Runs during parse (batched); overrides <code>bg</code></td></tr>
-<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Lock the item (no interaction allowed). <code>true</code>/<code>1</code> = locked; or the format <code>"state|message"</code>, e.g. <code>lock = "1|Requires root"</code> - the message is shown when the user clicks the locked item</td></tr>
+<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Lock the item (no interaction allowed). <code>true</code>/<code>1</code> = locked; or the format <code>"state|message"</code>, e.g. <code>lock = "1|Requires root"</code> - the message is shown when the user clicks the locked item. <span class="badge new">new</span> The whole field is plain text, so the <code>message</code> accepts <code>@string/...</code> resource references (&sect;2.6) as well as <code>{ROT}</code>/<code>{LOT}</code> and <code>@key</code> load-key substitution (&sect;2.7-2.9), e.g. <code>lock = "{LOT}|@root_required_msg"</code></td></tr>
 <tr><td class="field-name">lock-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that checks the lock state dynamically (returns <code>"1"</code> = locked)</td></tr>
 <tr><td class="field-name">min-sdk</td><td>sdk-min</td><td class="field-type">Int</td><td>Minimum Android SDK version</td></tr>
 <tr><td class="field-name">max-sdk</td><td>sdk-max</td><td class="field-type">Int</td><td>Maximum Android SDK version (default 100)</td></tr>
@@ -667,7 +694,7 @@ script = "sync; echo 3 &gt; /proc/sys/vm/drop_caches"
 <tr><td class="field-name">load-fail</td><td>load-error</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script run if load fails</td></tr>
 <tr><td class="field-name">process</td><td>-</td><td class="field-type">Bool</td><td><span class="badge new">new</span> true: show items one by one as they build (with progress bar) instead of waiting (see <a href="#process">section 21</a>)</td></tr>
 <tr><td class="field-name">placeholder-count</td><td>placeholder_count</td><td class="field-type">Int</td><td><span class="badge new">new</span> Only used when <code>process = true</code>. Number of skeleton placeholders shown up-front while waiting for the first real item. Default: <code>1</code> (see <a href="#process">section 21</a>)</td></tr>
-<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format</td></tr>
+<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format (message accepts <code>@string/...</code>, <code>@key</code>, <code>{ROT}</code>/<code>{LOT}</code> - see &sect;4.2)</td></tr>
 <tr><td class="field-name">lock-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script to check the lock state (returns <code>"1"</code> = locked)</td></tr>
 <tr><td class="field-name">rows</td><td>-</td><td class="field-type">Array</td><td>Rich-text rows shown below the page (see <a href="#text-rows">section 12</a>)</td></tr>
 </table>
@@ -703,7 +730,7 @@ config = "/sdcard/Tool-Tree/advanced.toml"
 <table class="tbl">
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Description</th></tr>
 <tr><td class="field-name">script</td><td>set, setstate</td><td class="field-type">String</td><td><span class="badge req">required</span> Main shell script. Receives <code>$param_name</code> env vars from params</td></tr>
-<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format. When locked, the action is not clickable</td></tr>
+<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format (message accepts <code>@string/...</code>, <code>@key</code>, <code>{ROT}</code>/<code>{LOT}</code> - see &sect;4.2). When locked, the action is not clickable</td></tr>
 <tr><td class="field-name">lock-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script to check lock dynamically (returns <code>"1"</code> = locked)</td></tr>
 <tr><td class="field-name">menu</td><td>-</td><td class="field-type">Bool</td><td><span class="badge new">new</span> true: action does NOT appear in the list; instead appears as its own icon on the toolbar</td></tr>
 <tr><td class="field-name">show</td><td>-</td><td class="field-type">Bool|Shell</td><td><span class="badge new">new</span> true (or shell): auto-open this action's dialog when entering the page (only once)</td></tr>
@@ -878,7 +905,7 @@ suffix = "conf"
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Description</th></tr>
 <tr><td class="field-name">get</td><td>getstate</td><td class="field-type">String</td><td><span class="badge req">required</span> Script to read state. Returning <code>"1"</code>/<code>"true"</code> = ON. If omitted, the switch always shows OFF</td></tr>
 <tr><td class="field-name">set</td><td>setstate</td><td class="field-type">String</td><td><span class="badge req">required</span> Script to set state. Receives <code>$state</code> = "1"/"0"</td></tr>
-<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format</td></tr>
+<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format (message accepts <code>@string/...</code>, <code>@key</code>, <code>{ROT}</code>/<code>{LOT}</code> - see &sect;4.2)</td></tr>
 <tr><td class="field-name">lock-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script to check lock dynamically (returns <code>"1"</code> = locked)</td></tr>
 <tr><td class="field-name">rows</td><td>-</td><td class="field-type">Array</td><td><span class="badge new">new</span> Rich-text rows shown below the item - see <a href="#text-rows">section 12</a></td></tr>
 <tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ all fields of RunnableNode, ClickableNode, NodeInfoBase</td></tr>
@@ -934,7 +961,7 @@ set = "settings put system screen_brightness_mode $state"
 <tr><td class="field-name">option-sh</td><td>options-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces options dynamically. Each line <code>value|title</code> or just <code>value</code></td></tr>
 <tr><td class="field-name">multiple</td><td>-</td><td class="field-type">Bool</td><td>Allow selecting multiple values</td></tr>
 <tr><td class="field-name">separator</td><td>-</td><td class="field-type">String</td><td>Separator for multi-select values (default <code>\n</code>)</td></tr>
-<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format</td></tr>
+<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format (message accepts <code>@string/...</code>, <code>@key</code>, <code>{ROT}</code>/<code>{LOT}</code> - see &sect;4.2)</td></tr>
 <tr><td class="field-name">lock-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script to check lock dynamically (returns <code>"1"</code> = locked)</td></tr>
 <tr><td class="field-name">rows</td><td>-</td><td class="field-type">Array</td><td><span class="badge new">new</span> Rich-text rows shown below the item - see <a href="#text-rows">section 12</a></td></tr>
 <tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ all fields of RunnableNode, ClickableNode, NodeInfoBase</td></tr>
@@ -1329,7 +1356,7 @@ value = "#!/system/bin/sh\necho hello"
 <tr><td class="field-name">url</td><td>-</td><td class="field-type">String</td><td>Static URL (http/https) to download. Required if <code>url-sh</code> is not set</td></tr>
 <tr><td class="field-name">url-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that returns the URL to download. Runs <strong>once</strong>, the first time the item is tapped - the result is cached into <code>url</code> for the rest of that page visit (pause/resume/retry reuse the cached value, the script is not re-run). Required if <code>url</code> is not set; if both are set, the result of <code>url-sh</code> overwrites <code>url</code> on that first tap</td></tr>
 <tr><td class="field-name">script</td><td>set, setstate</td><td class="field-type">String</td><td>Script run after download. Receives <code>$state</code> = path of downloaded file</td></tr>
-<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format</td></tr>
+<tr><td class="field-name">lock</td><td>lock-state</td><td class="field-type">String</td><td>Static lock: <code>true</code>/<code>1</code> or the <code>"1|message"</code> format (message accepts <code>@string/...</code>, <code>@key</code>, <code>{ROT}</code>/<code>{LOT}</code> - see &sect;4.2)</td></tr>
 <tr><td class="field-name">lock-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script to check lock dynamically (returns <code>"1"</code> = locked)</td></tr>
 <tr><td class="field-name">rows</td><td>-</td><td class="field-type">Array</td><td>Rich-text rows shown below the item - see <a href="#text-rows">section 12</a></td></tr>
 <tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ all RunnableNode fields: confirm, warn, reload, auto-finish...</td></tr>
@@ -1872,13 +1899,16 @@ script = "sh $state"
 
 <h3>26.1. <a href="#rules">§2 Syntax rules</a></h3>
 <ul>
-  <li><code>load-key</code>, <code>load-key-sh</code> - pre-parse directive that loads a <code>name = "value"</code> key file and substitutes every <code>$name</code> token in the whole document (i18n-friendly; supports the <code>{LANG}</code> placeholder with language-country &rarr; language &rarr; default fallback). See <a href="#rules">§2.7</a>.</li>
+  <li><code>load-key</code>, <code>load-key-sh</code> - pre-parse directive that loads a <code>name = "value"</code> key file and substitutes every <code>@name</code> token in the whole document (i18n-friendly; supports the <code>{LANG}</code> placeholder with language-country &rarr; language &rarr; default fallback). See <a href="#rules">§2.7</a>. <span class="badge new">new</span> Changed from <code>$name</code> to <code>@name</code> to avoid colliding with shell variables (<code>$PATH</code>, <code>$HOME</code>, <code>$1</code>...) inside <code>script</code>/<code>run</code> fields.</li>
+  <li><span class="badge new">new</span> Path placeholders <code>{HOME}</code> (app home dir) and <code>{ICON}</code> (app icon dir, <code>home/etc/icon</code>) - usable in any path field (icon, photo, bg, html-file, editor file, resource-file/dir, load-key). <code>{LANG}</code> is no longer limited to <code>load-key</code> - it now works the same way in every path field. See <a href="#rules">§2.8</a>.</li>
+  <li><span class="badge new">new</span> Built-in variables <code>{ROT}</code>/<code>{LOT}</code> - report the device's root state ("1"/"0") directly in any string field, with no <code>load-key</code> directive needed. See <a href="#rules">§2.9</a>.</li>
 </ul>
 
 <h3>26.2. <a href="#shared-fields">§4 Shared fields</a></h3>
 <ul>
   <li><code>icon-sh</code>, <code>photo-sh</code>, <code>bg-sh</code> - resolve the icon/photo/background path from a shell script at parse time, instead of a static path.</li>
   <li><code>icon-real-gif</code>, <code>photo-real-gif</code> - decode <code>icon</code>/<code>photo</code> as a real animated <code>.gif</code> file via <code>AnimatedImageDrawable</code>. Requires Android 9 / API 28+; older devices fall back to a static first frame.</li>
+  <li><span class="badge new">new</span> <code>lock</code>'s <code>"state|message"</code> format now resolves <code>@string/...</code> resource references inside <code>message</code>, and (being plain text) also accepts <code>{ROT}</code>/<code>{LOT}</code> and <code>@key</code> load-key substitution.</li>
 </ul>
 
 <h3>26.3. <a href="#page">§6 [[page]]</a></h3>

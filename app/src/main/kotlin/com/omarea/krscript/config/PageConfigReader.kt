@@ -62,17 +62,12 @@ class PageConfigReader {
         return null
     }
 
-    // Biến dựng sẵn (built-in) dạng "{NAME}", thay trực tiếp trên text TOML thô, luôn dùng
-    // được ở MỌI config dù không khai báo "load-key" - khác với hệ "@key" (applyLoadKey())
-    // chỉ thay được khi có load-key trỏ tới file chứa key đó. Dùng ngoặc nhọn {..} thay vì
-    // "@.." để phân biệt rõ với hệ @key, tránh nhầm lẫn 2 cơ chế.
-    // {ROT}: "1" nếu có root, "0" nếu không. {LOT}: ngược lại {ROT} - "1" nếu KHÔNG root, "0" nếu có root.
     private fun applyBuiltinVars(rawText: String): String {
-        var text = rawText
         val rooted = ScriptEnvironmen.isRooted()
-        if (text.contains("{ROT}")) text = text.replace("{ROT}", if (rooted) "1" else "0")
-        if (text.contains("{LOT}")) text = text.replace("{LOT}", if (rooted) "0" else "1")
-        return text
+        return rawText
+            .replace("{ROT}", if (rooted) "1" else "0")
+            .replace("{LOT}", if (rooted) "0" else "1")
+            .replace("{TEXT_ROOT}", if (rooted) "" else "ROOT")
     }
 
     private fun readConfigXml(fileInputStream: InputStream, onNodeReady: ((NodeInfoBase?, Int, Int) -> Unit)? = null): ArrayList<NodeInfoBase>? {
