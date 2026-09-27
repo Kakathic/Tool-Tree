@@ -51,7 +51,6 @@
             android:layout_gravity="center_vertical"
             android:layout_marginEnd="10dp"
             android:drawablePadding="10dp"
-            android:marqueeRepeatLimit="marquee_forever"
             android:maxLines="2"
             android:textStyle="normal"
             app:drawableRightCompat="@drawable/kr_param_label" />
