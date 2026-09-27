@@ -848,7 +848,7 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
                 text = actionParamInfo.label
             }
         } else {
-            layout.findViewById<View>(R.id.kr_param_label_layout).visibility = View.GONE
+            layout.findViewById<TextView>(R.id.kr_param_label).visibility = View.GONE
         }
 
         if (!actionParamInfo.desc.isNullOrEmpty()) {
