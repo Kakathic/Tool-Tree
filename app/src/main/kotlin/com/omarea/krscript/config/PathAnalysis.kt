@@ -8,7 +8,6 @@ import com.omarea.krscript.FileOwner
 import java.io.File
 import java.io.InputStream
 import java.net.URI
-import java.util.Locale
 
 class PathAnalysis(private var context: Context, private var parentDir: String = "") {
     companion object {
@@ -47,32 +46,11 @@ class PathAnalysis(private var context: Context, private var parentDir: String =
         }
     }
 
-    // {LANG} - thử lần lượt ngôn ngữ-khu vực (vd "zh-CN") -> ngôn ngữ (vd "zh") -> "default",
-    // dừng ngay khi tìm thấy file. Chuyển từ PageConfigReader.applyLoadKey() vào đây để dùng
-    // được ở MỌI nơi gọi parsePath() (icon, html, load-key, text editor...), không riêng load-key.
-    private fun currentLangCandidates(): List<String> {
-        val locale = Locale.getDefault()
-        val lang = locale.language
-        val country = locale.country
-        val list = mutableListOf<String>()
-        if (lang.isNotEmpty() && country.isNotEmpty()) list.add("$lang-$country")
-        if (lang.isNotEmpty()) list.add(lang)
-        list.add("default")
-        return list.distinct()
-    }
-
     fun parsePath(filePath: String): InputStream? {
         // Ticon=1 chỉ tắt riêng các path dùng {ICON} - kiểm tra trên placeholder gốc, trước khi
-        // thử {LANG}/{HOME}, để không mở nhầm file thật khi icon đã bị tắt.
+        // thử {HOME}, để không mở nhầm file thật khi icon đã bị tắt.
         if (filePath.contains("{ICON}") && isIconDisabled()) return null
 
-        if (filePath.contains("{LANG}")) {
-            for (code in currentLangCandidates()) {
-                val candidate = filePath.replace("{LANG}", code)
-                openResolvedPath(candidate)?.let { return it }
-            }
-            return null
-        }
         return openResolvedPath(filePath)
     }
 

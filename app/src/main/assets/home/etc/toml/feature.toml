@@ -1,5 +1,5 @@
 [[toml]]
-load-key = "{HOME}/etc/lang/{LANG}.bash"
+load-key-sh = "langpath"
 
 [[menu]]
 [[menu.items]]
