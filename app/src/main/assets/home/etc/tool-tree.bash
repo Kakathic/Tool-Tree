@@ -1558,7 +1558,7 @@ Addon() {
     '$croot_add'
     icon = "'$icon_vb'"
     title = "'$name'"
-    summary = "'$sumstxt$version' '$author'"
+    summary = "'$sumstxt'"
     reload = true
     url = "'$url'"
     script = """
@@ -1623,8 +1623,7 @@ Addon() {
       """
       '
       
-      [ -f "$dirvad/nodelete" ] || delete_add='
-      [[page.rows]]
+      [ -f "$dirvad/nodelete" ] || delete_add='[[page.rows]]
       toggle = "switch"
       toast = true
       text = "'$deleted_text'"
@@ -1650,7 +1649,7 @@ Addon() {
       [[group]]
       [[page]]
       title = "'$name'"
-      summary = "'$sumstxt$version' '$author'"
+      summary = "'$sumstxt'"
       icon = "'$icon_vb'"
       process = "'$process'"
       '$croot_add'
@@ -1676,8 +1675,10 @@ Addon() {
     
     # Phát hiện root
     if [ "$root" == "true" ]; then
-    [ "$ROT" == 1 ] || sumstxt="$text_root | "
+    [ "$ROT" == 1 ] sumstxt="$version $author" || sumstxt="$text_root"
     croot_add='lock = "'$LOT'|'$root_warning_text'"'
+    else
+    sumstxt="$version $author"
     fi
   
     # Phát hiện tính năng
