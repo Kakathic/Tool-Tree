@@ -42,18 +42,32 @@
         android:minHeight="48dp"
         android:orientation="horizontal">
 
-        <!-- android:maxWidth="150dp" -->
-        <TextView
-            android:id="@+id/kr_param_label"
-            style="@style/textTitle"
+        <LinearLayout
+            android:id="@+id/kr_param_label_layout"
             android:layout_width="100dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_marginEnd="10dp"
-            android:drawablePadding="10dp"
-            android:maxLines="2"
-            android:textStyle="normal"
-            app:drawableRightCompat="@drawable/kr_param_label" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/kr_param_label"
+                style="@style/textTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:maxWidth="89dp"
+                android:maxLines="2"
+                android:textStyle="normal" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center_vertical"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/kr_param_label" />
+        </LinearLayout>
 
         <FrameLayout
             android:id="@+id/kr_param_input"
