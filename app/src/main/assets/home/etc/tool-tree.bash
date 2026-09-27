@@ -1296,15 +1296,13 @@ Utiliapk() {
 
     [[action.params]]
     name = "tooldecom"
-    title = "'$customize_tools_text'"
-    label = "'$tools_text'"
+    label = "'$customize_tools_text'"
     value = "apkeditor"
     items = [ "apkeditor|Apkeditor", "apktool|Apktool" ]
 
     [[action.params]]
     name = "mutiresk"
-    title = "'$decom_apk_text_11'"
-    label = "'$option_text'"
+    label = "'$decom_apk_text_11'"
     value = "1"
     items = [ "0|'$decom_apk_text_3'", "1|'$default_text'", "2|'$decom_apk_text_5'" ]
     depend-on = "tooldecom"
@@ -1313,8 +1311,7 @@ Utiliapk() {
 
     [[action.params]]
     name = "type_apk"
-    title = "'$decom_apk_text_11'"
-    label = "'$option_text'"
+    label = "'$decom_apk_text_11'"
     value = "xml"
     depend-on = "tooldecom"
     depend-value = "apktool"
@@ -1323,8 +1320,7 @@ Utiliapk() {
 
     [[action.params]]
     name = "dexlibk"
-    title = "'$decom_apk_text_12'"
-    label = "'$option_text'"
+    label = "'$decom_apk_text_12'"
     value = "2"
     items = [ "0|'$decom_apk_text_3'", "1|'$default_text'", "2|Baksmali 3.0.9" ]
     depend-on = "tooldecom"
@@ -1333,8 +1329,7 @@ Utiliapk() {
 
     [[action.params]]
     name = "dexlib"
-    title = "'$decom_apk_text_12'"
-    label = "'$option_text'"
+    label = "'$decom_apk_text_12'"
     value = "smali"
     items = [ "nodex|'$decom_apk_text_3'", "internal|'$default_text'", "smali|Baksmali 3.0.9" ]
     depend-on = "tooldecom"
