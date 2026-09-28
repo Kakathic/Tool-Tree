@@ -28,31 +28,31 @@
 
 **Node types**
 
-- [5. [[group]] - Container for child nodes](#5-group---container-for-child-nodes)
+- [5. `[[group]]` - Container for child nodes](#5-group---container-for-child-nodes)
   - [5.1. Group fields](#51-group-fields)
   - [5.2. Demo](#52-demo)
   - [5.3. Grouping rules (no nesting)](#53-grouping-rules-no-nesting)
-- [6. [[page]] - Sub-page](#6-page---sub-page)
+- [6. `[[page]]` - Sub-page](#6-page---sub-page)
   - [6.1. Page fields](#61-page-fields)
   - [6.2. Demo](#62-demo)
-- [7. [[action]] - Action (runs a shell script)](#7-action---action-runs-a-shell-script)
+- [7. `[[action]]` - Action (runs a shell script)](#7-action---action-runs-a-shell-script)
   - [7.1. Action fields](#71-action-fields)
   - [7.2. Demo](#72-demo)
-- [8. [[action.params]] - Input parameters](#8-actionparams---input-parameters)
+- [8. `[[action.params]]` - Input parameters](#8-actionparams---input-parameters)
   - [8.1. Basic param fields](#81-basic-param-fields)
   - [8.2. Common `type` values](#82-common-type-values)
   - [8.3. Demo](#83-demo)
   - [8.4. Dependencies (depend-*)](#84-dependencies-depend-)
-- [9. [[switch]] - On/off toggle](#9-switch---onoff-toggle)
+- [9. `[[switch]]` - On/off toggle](#9-switch---onoff-toggle)
   - [9.1. Switch fields](#91-switch-fields)
   - [9.2. Demo](#92-demo)
-- [10. [[picker]] - Value selector](#10-picker---value-selector)
+- [10. `[[picker]]` - Value selector](#10-picker---value-selector)
   - [10.1. Picker fields](#101-picker-fields)
   - [10.2. Demo](#102-demo)
-- [11. [[text]] - Rich text block](#11-text---rich-text-block)
+- [11. `[[text]]` - Rich text block](#11-text---rich-text-block)
   - [11.1. Text fields](#111-text-fields)
   - [11.2. Demo](#112-demo)
-- [12. [[text.rows]] - Rich text row](#12-textrows---rich-text-row)
+- [12. `[[text.rows]]` - Rich text row](#12-textrows---rich-text-row)
   - [12.1. Row fields](#121-row-fields)
   - [12.2. Demo](#122-demo)
   - [12.3. Inline HTML block (`html-file` / `html-url`)](#123-inline-html-block-html-file--html-url)
@@ -60,15 +60,15 @@
   - [12.5. Pinning rows to the left / center / right of the same line](#125-pinning-rows-to-the-left--center--right-of-the-same-line)
   - [12.6. Reset a single row on demand (`reset`)](#126-reset-a-single-row-on-demand-reset)
   - [12.7. Inline progress bar (`progress`) and flash highlight (`flash`)](#127-inline-progress-bar-progress-and-flash-highlight-flash)
-- [13. [[editor]] - Open file in the text editor](#13-editor---open-file-in-the-text-editor)
+- [13. `[[editor]]` - Open file in the text editor](#13-editor---open-file-in-the-text-editor)
   - [13.1. Editor fields](#131-editor-fields)
   - [13.2. Demo](#132-demo)
-- [14. [[download]] - Download a file via HTTP](#14-download---download-a-file-via-http)
+- [14. `[[download]]` - Download a file via HTTP](#14-download---download-a-file-via-http)
   - [14.1. Download fields](#141-download-fields)
   - [14.2. Demo](#142-demo)
-- [15. [[resource]] - Extract assets](#15-resource---extract-assets)
+- [15. `[[resource]]` - Extract assets](#15-resource---extract-assets)
   - [15.1. Fields](#151-fields)
-- [16. [[menu]] / [[fab]] - Overflow menu and FAB](#16-menu--fab---overflow-menu-and-fab)
+- [16. `[[menu]]` / `[[fab]]` - Overflow menu and FAB](#16-menu--fab---overflow-menu-and-fab)
   - [16.1. Structure](#161-structure)
   - [16.2. Item fields (inside menu/fab)](#162-item-fields-inside-menufab)
   - [16.3. Demo](#163-demo)
@@ -76,7 +76,7 @@
 **Advanced**
 
 - [17. Dependencies (depend-*)](#17-dependencies-depend-)
-  - [17.1. depend-* fields (only for [[action.params]])](#171-depend--fields-only-for-actionparams)
+  - [17.1. depend-* fields (only for `[[action.params]]`)](#171-depend--fields-only-for-actionparams)
   - [17.2. Demo - simple dependency](#172-demo---simple-dependency)
   - [17.3. depend-logic reference](#173-depend-logic-reference)
   - [17.4. depend-default and depend-initial](#174-depend-default-and-depend-initial)
@@ -140,7 +140,7 @@ There is no separate `type` field. A node's type is determined by its TOML table
 | `menu` | Overflow menu | Toolbar 3-dot menu container |
 | `fab` | Floating button | FAB container on the page |
 
-### 2.3. Group children = nearest preceding [[group]] (dot-notation removed)
+### 2.3. Group children = nearest preceding `[[group]]` (dot-notation removed)
 
 All node types are declared as **flat `[[type]]` entries at the top level** of the document - the dotted `[[group.action]]` / `[[subgroup.type]]` style is **no longer supported**. A child node simply belongs to the most recently declared `[[group]]` above it in the file; the parser walks the document once, in line order, and assigns each entry to the current group.
 
@@ -363,7 +363,7 @@ These are the fields that **every node has** (inherited from `NodeInfoBase`). Al
 
 ---
 
-## 5. [[group]] - Container for child nodes
+## 5. `[[group]]` - Container for child nodes
 
 `[[group]]` is a container that groups related nodes. It has no icon and is not clickable - it's just a title with a list of child nodes below it.
 
@@ -417,7 +417,7 @@ Since dot-notation was removed, groups can no longer be nested inside each other
 
 ---
 
-## 6. [[page]] - Sub-page
+## 6. `[[page]]` - Sub-page
 
 `[[page]]` is not an action - it's a **link to another page**. Clicking it opens a new page (another .toml file, an HTML page, or another Activity).
 
@@ -464,7 +464,7 @@ config = "/sdcard/Tool-Tree/advanced.toml"
 
 ---
 
-## 7. [[action]] - Action (runs a shell script)
+## 7. `[[action]]` - Action (runs a shell script)
 
 `[[action]]` is the most common node type: clicking it shows a dialog (if it has `confirm`/`params`/`warning`), then runs the script and shows the output in a log dialog.
 
@@ -511,7 +511,7 @@ auto-off = true
 
 ---
 
-## 8. [[action.params]] - Input parameters
+## 8. `[[action.params]]` - Input parameters
 
 Each `[[action.params]]` defines one input field in the dialog shown when the user clicks an action. The parameter's value is passed to the action's script via the `$param_name` environment variable.
 
@@ -629,7 +629,7 @@ A param can be hidden/shown (or switched to readonly) based on the value of anot
 
 ---
 
-## 9. [[switch]] - On/off toggle
+## 9. `[[switch]]` - On/off toggle
 
 `[[switch]]` displays an ON/OFF toggle. When the user toggles it, the `set` script is called with the env var `$state` set to `"1"` or `"0"`. When the page loads, the `get` script is called to read the current state.
 
@@ -673,7 +673,7 @@ set = "settings put system screen_brightness_mode $state"
 
 ---
 
-## 10. [[picker]] - Value selector
+## 10. `[[picker]]` - Value selector
 
 `[[picker]]` displays a current value; clicking it opens a popup to choose one (or more) values from a list. When the user confirms, the `set` script is called with `$state` = the chosen value.
 
@@ -726,7 +726,7 @@ option-sh = "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequenc
 
 ---
 
-## 11. [[text]] - Rich text block
+## 11. `[[text]]` - Rich text block
 
 `[[text]]` is a non-clickable display block containing multiple rich-text rows. Use it for notices, instructions, or inline image/gif blocks.
 
@@ -772,7 +772,7 @@ italic = true
 
 ---
 
-## 12. [[text.rows]] - Rich text row
+## 12. `[[text.rows]]` - Rich text row
 
 This is the **most common** display component: used in `[[text]]`, `[[action]]`, `[[page]]`, `[[download]]`, `[[action.params-rows]]` and `[[switch]]`, `[[picker]]`, `[[editor]]`. Each row is a single line of text that can have style, icon, toggle, photo, etc.
 
@@ -1034,7 +1034,7 @@ The companion `flash` effect makes a reset-driven value change visible: whenever
 
 ---
 
-## 13. [[editor]] - Open file in the text editor
+## 13. `[[editor]]` - Open file in the text editor
 
 `[[editor]]` lets the user open a file in the built-in text editor (`TextEditorActivity`) to view or edit it. If the file does not exist, the editor creates it when the user saves.
 
@@ -1078,7 +1078,7 @@ value = "#!/system/bin/sh\necho hello"
 
 ---
 
-## 14. [[download]] - Download a file via HTTP
+## 14. `[[download]]` - Download a file via HTTP
 
 `[[download]]` is a new node type that displays download progress **directly in the item** (no separate dialog). When download completes, it runs the `script` with the env var `$state` = path of the downloaded file (cached, random name). The URL can be static (`url`) and/or dynamic (`url-sh`).
 
@@ -1109,7 +1109,7 @@ script = "unzip -o $state -d /sdcard/update && echo Update installed"
 
 ---
 
-## 15. [[resource]] - Extract assets
+## 15. `[[resource]]` - Extract assets
 
 `[[resource]]` is an **invisible** node (it returns `null` after initialization). It only extracts assets from the APK to storage (typically `/data/data/<pkg>/files/...` or cache). This is how to ship script files, images, etc. from the APK to outside so shell can call them.
 
@@ -1142,7 +1142,7 @@ script = "sh /data/data/com.tool.tree/files/run.sh"
 
 ---
 
-## 16. [[menu]] / [[fab]] - Overflow menu and FAB
+## 16. `[[menu]]` / `[[fab]]` - Overflow menu and FAB
 
 This feature **replaces** the old `[[page.options]]` mechanism (declared in the parent page, built eagerly even when the sub-page was never opened). Now the menu and FAB are declared **directly inside the page's own TOML file**, just like `[[action]]`/`[[text]]` - they are only read (and only their inner shell runs) when the page is actually opened.
 
@@ -1255,7 +1255,7 @@ script = "sh $state"
 
 This is the **largest feature** of `[[action.params]]`: a param can be hidden/shown (or switched to *readonly*) based on the value of one (or more) other params in the same action. This is how to build complex dialogs that are still easy to manage - the UI auto-hides irrelevant fields when the user picks a different mode.
 
-### 17.1. depend-* fields (only for [[action.params]])
+### 17.1. depend-* fields (only for `[[action.params]]`)
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
