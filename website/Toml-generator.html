@@ -15,6 +15,8 @@
   --green: #10b981; --orange: #f59e0b; --red: #ef4444;
   --purple: #8b5cf6;
   --border: #232833;
+  --tk-key:#7cc7ff; --tk-str:#ce9178; --tk-sec:#fbbf24; --tk-bool:#c4b5fd;
+  --tk-num:#6ee7b7; --tk-com:#6f7889; --tk-op:#8b95a6; --tk-br:#8590a2;
   --shadow-lg: 0 20px 50px rgba(0,0,0,.55);
   --radius: 6px; --radius-lg: 10px;
   --mono: 'JetBrains Mono','SF Mono','Cascadia Code','Fira Code',Consolas,monospace;
@@ -25,16 +27,18 @@
   --fg:#1a1a1a; --fg-soft:#525a6b; --fg-muted:#8a93a6;
   --accent:#2563eb; --accent-soft:#dbeafe;
   --border:#e5e7eb; --shadow-lg:0 10px 30px rgba(0,0,0,.08);
+  --tk-key:#1d4ed8; --tk-str:#b45309; --tk-sec:#c2410c; --tk-bool:#7c3aed;
+  --tk-num:#047857; --tk-com:#8a93a6; --tk-op:#525a6b; --tk-br:#6b7280;
 }
 * { box-sizing: border-box; }
-html, body { width:100%; max-width:100vw; overflow-x:hidden; }
+html, body { width:100%; max-width:100vw; overflow-x:clip; }
 body {
   margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans);
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 header {
-  padding:18px 20px 14px; border-bottom:1px solid var(--border);
-  padding-top:calc(18px + env(safe-area-inset-top,0px));
+  padding:14px 20px 12px; border-bottom:1px solid var(--border);
+  padding-top:calc(14px + env(safe-area-inset-top,0px));
 }
 .brand-line {
   display:flex; align-items:center; gap:7px; margin-bottom:8px;
@@ -78,7 +82,6 @@ main {
 .panel-form {
   padding:20px; border-right:1px solid var(--border); overflow-y:auto;
 }
-@media (max-width:820px) { .panel-form { border-right:none; border-bottom:1px solid var(--border); } }
 
 .field { margin-bottom:13px; }
 .field label { display:block; font-size:10.5px; font-weight:600; color:var(--fg-soft); margin-bottom:4px; font-family:var(--mono); letter-spacing:.2px; }
@@ -124,6 +127,7 @@ main {
   font-family:var(--mono); font-size:10px; color:var(--purple);
   background:rgba(139,92,246,.12); border-radius:4px; padding:1px 6px;
 }
+.param-type-chip.chip-fab { color:var(--green); background:rgba(16,185,129,.12); }
 .param-var { font-family:var(--mono); font-size:10px; color:var(--accent); }
 .param-actions { margin-left:auto; display:flex; gap:4px; }
 .param-btn {
@@ -133,7 +137,7 @@ main {
 }
 .param-btn:hover { border-color:var(--accent); color:var(--accent); }
 .param-btn.param-del:hover { border-color:var(--red); color:var(--red); }
-.param-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px 8px; }
+.param-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px 8px; }
 .param-cell label { display:block; font-size:9.5px; font-weight:600; color:var(--fg-muted); margin-bottom:3px; font-family:var(--mono); }
 .param-cell label b { color:var(--accent); }
 .param-cell input, .param-cell select {
@@ -142,7 +146,7 @@ main {
 }
 .param-cell input:disabled { opacity:.55; }
 .param-cell input:focus, .param-cell select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft); }
-.pcell-label-row { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:3px; }
+.pcell-label-row { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:3px 6px; margin-bottom:3px; }
 .pcell-label-row label { margin:0; }
 .pcell-label-row .sh-toggle { padding:0 6px; }
 .param-cell input.sh-active { border-color:var(--orange); }
@@ -169,6 +173,7 @@ main {
 .param-dep-row .param-grid { flex:1 0 100%; }
 .param-dep-row .param-cell { min-width:0; }
 .param-dep-row .param-cell input, .param-dep-row .param-cell select { width:100%; }
+.param-dep-row .dep-cell-mode { grid-column:1 / -1; }
 
 /* Options editor — compact header with an options-sh toggle (script OR rows) */
 .param-opts { margin-top:9px; border-top:1px dashed var(--border); padding-top:7px; }
@@ -176,17 +181,22 @@ main {
 .popts-head .sh-name { font-family:var(--mono); font-size:9.5px; color:var(--purple); flex:0 0 auto; }
 .popts-note { font-family:var(--mono); font-size:9.5px; color:var(--fg-muted); flex:1 1 auto; min-width:0; }
 .popts-head .sh-toggle { flex:0 0 auto; padding:0 6px; }
-.opt-row { display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-bottom:5px; }
+.popts-modes { display:flex; gap:4px; flex:0 0 auto; }
+.popts-mode {
+  padding:3px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-elev);
+  color:var(--fg-soft); font-size:10px; font-family:var(--mono); font-weight:600; cursor:pointer; white-space:nowrap;
+}
+.popts-mode:hover { border-color:var(--accent); color:var(--accent); }
+.popts-mode.on { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+.opt-row { display:flex; flex-wrap:nowrap; gap:5px; align-items:center; margin-bottom:5px; }
 .opt-row input {
   padding:4px 7px; border:1px solid var(--border); border-radius:var(--radius);
   background:var(--bg-elev); color:var(--fg); font-size:11px; font-family:var(--mono); min-width:0;
 }
 .opt-row input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft); }
-.opt-row input[data-ofield="value"] { flex:0 0 92px; }
-.opt-row input[data-ofield="title"] { flex:1 1 110px; }
-.opt-row .sh-toggle { flex:0 0 auto; padding:0 6px; }
-.opt-row .opt-sh-input { flex:1 1 100%; }
-.opt-row .opt-sh-input:focus { outline:none; border-color:var(--orange); box-shadow:0 0 0 2px rgba(245,158,11,.15); }
+.opt-row input[data-ofield="value"] { flex:1 1 0; }
+.opt-row input[data-ofield="title"] { flex:1 1 0; }
+.opt-row input[data-ifield="item"] { flex:1 1 160px; }
 .opt-row .param-btn { flex:0 0 auto; }
 .opt-add { margin-top:2px; }
 .param-opts > .opt-sh-input {
@@ -195,7 +205,7 @@ main {
 }
 .param-opts > .opt-sh-input:focus { outline:none; box-shadow:0 0 0 2px rgba(245,158,11,.15); }
 
-.pb-row { display:flex; gap:6px; align-items:stretch; margin-bottom:6px; }
+.pb-row { display:flex; flex-wrap:wrap; gap:6px; align-items:stretch; margin-bottom:6px; }
 .pb-row select {
   flex:1 1 auto; padding:5px 7px; border:1px solid var(--border); border-radius:var(--radius);
   background:var(--bg-elev); color:var(--fg); font-size:11px; font-family:var(--mono); min-width:0;
@@ -237,21 +247,38 @@ main {
   padding:16px; font-family:var(--mono); font-size:12.5px; line-height:1.65; overflow-x:auto;
   color:var(--fg); margin:0; white-space:pre; max-width:100%;
 }
+.code-wrap pre .tk-com { color:var(--tk-com); font-style:italic; }
+.code-wrap pre .tk-sec { color:var(--tk-sec); font-weight:700; }
+.code-wrap pre .tk-key { color:var(--tk-key); }
+.code-wrap pre .tk-str { color:var(--tk-str); }
+.code-wrap pre .tk-bool { color:var(--tk-bool); font-weight:600; }
+.code-wrap pre .tk-num { color:var(--tk-num); }
+.code-wrap pre .tk-op { color:var(--tk-op); }
+.code-wrap pre .tk-br { color:var(--tk-br); }
 .copy-btn {
   position:absolute; top:7px; right:10px; padding:5px 11px; border-radius:6px; border:1px solid var(--border);
   background:var(--bg); color:var(--fg-soft); font-size:11.5px; font-family:var(--mono); cursor:pointer;
-  text-transform:lowercase;
+  text-transform:lowercase; z-index:2;
 }
 .copy-btn:hover { border-color:var(--accent); color:var(--accent); }
 .copy-btn.copied { color:var(--green); border-color:var(--green); }
+.pre-wrap { position:relative; }
+.pre-wrap .copy-btn { top:6px; right:6px; opacity:.85; }
+.pre-wrap pre:hover + .copy-btn, .pre-wrap .copy-btn:hover { opacity:1; }
+.code-titlebar .code-spacer { flex:1; }
+.titlebar-btn {
+  padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg);
+  color:var(--fg-soft); font-size:11px; font-family:var(--mono); cursor:pointer; white-space:nowrap;
+}
+.titlebar-btn:hover { border-color:var(--accent); color:var(--accent); }
+.titlebar-btn.copied { color:var(--green); border-color:var(--green); }
+.titlebar-btn.on { color:var(--accent); border-color:var(--accent); }
 
 .demo-frame {
   background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius-lg); padding:0;
   overflow:visible; box-shadow:var(--shadow-lg); font-family:var(--sans); position:relative;
-  width:100%; max-width:420px; margin:0 auto;
+  width:100%; max-width:100%; margin:0;
 }
-@media (min-width:900px)  { .demo-frame { max-width:520px; } }
-@media (min-width:1200px) { .demo-frame { max-width:640px; } }
 
 .d-toolbar { background:var(--accent); color:#fff; padding:12px 14px; font-size:14px; font-weight:600; display:flex; align-items:center; gap:10px; border-radius:var(--radius-lg) var(--radius-lg) 0 0; }
 .d-toolbar .d-back { font-size:18px; opacity:.9; }
@@ -307,6 +334,37 @@ main {
   background:var(--bg-elev); color:var(--fg-soft); font-size:12px; cursor:pointer;
 }
 .demo-toggle-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ---------- sticky top navigation (type tabs) ---------- */
+.topnav { position:sticky; top:0; z-index:50; background:var(--bg); }
+
+/* ---------- template tools (per-type clear / restore) ---------- */
+.form-actions { display:flex; flex-direction:column; align-items:stretch; gap:6px; margin:0 0 12px; }
+.form-actions .fa-btns { display:flex; gap:6px; }
+.form-actions .fa-btn { flex:1 1 0; padding:7px 10px; }
+.form-actions .fa-btn.danger { background:rgba(239,68,68,.15); border-color:rgba(239,68,68,.60); color:#f87171; }
+.form-actions .fa-btn.danger:hover { background:var(--red); border-color:var(--red); color:#fff; }
+.form-actions .fa-btn.ok { background:rgba(16,185,129,.15); border-color:rgba(16,185,129,.60); color:#34d399; }
+.form-actions .fa-btn.ok:hover { background:var(--green); border-color:var(--green); color:#fff; }
+.form-actions .fa-label { font-family:var(--mono); font-size:10px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:.6px; }
+.form-actions .fa-label b { color:var(--accent); }
+.fa-btn {
+  padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-elev);
+  color:var(--fg-soft); font-size:12px; font-family:var(--mono); font-weight:600; cursor:pointer; white-space:nowrap;
+}
+.fa-btn:hover { border-color:var(--accent); color:var(--accent); }
+.fa-btn.danger:hover { border-color:var(--red); color:var(--red); }
+
+/* ---------- per-field clear buttons ---------- */
+.in-wrap { position:relative; }
+.in-wrap input[type="text"], .in-wrap textarea { padding-right:26px; }
+.in-clear {
+  position:absolute; top:3px; right:3px; width:20px; height:20px; border:none; border-radius:5px;
+  background:transparent; color:var(--fg-muted); font-size:11px; line-height:1; cursor:pointer; padding:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.in-clear:hover { color:var(--red); background:var(--bg-soft); }
+.in-wrap textarea ~ .in-clear { top:6px; }
 
 .chips { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; }
 .chip {
@@ -405,6 +463,14 @@ details.adv-topic summary::before { content:'▸'; color:var(--fg-muted); transi
 details.adv-topic[open] summary::before { transform:rotate(90deg); }
 details.adv-topic .topic-body { padding:0 14px 14px; font-size:12.5px; line-height:1.6; color:var(--fg); }
 
+@media (max-width:820px) {
+  .panel-form { border-right:none; border-bottom:1px solid var(--border); }
+  .topnav { box-shadow:0 10px 20px -14px rgba(0,0,0,.65); }
+}
+@media (min-width:821px) {
+  .topnav { box-shadow:0 10px 20px -14px rgba(0,0,0,.5); }
+  .panel-form { position:sticky; top:60px; align-self:start; max-height:calc(100vh - 60px); overflow-y:auto; scrollbar-width:thin; }
+}
 @media (max-width:600px) {
   header { padding:14px 16px 12px; }
   header h1 { font-size:17px; }
@@ -412,7 +478,9 @@ details.adv-topic .topic-body { padding:0 14px 14px; font-size:12.5px; line-heig
   .types { padding:12px 16px; gap:6px; }
   .type-btn { padding:9px 14px; font-size:12.5px; }
   .panel-form, .view-body { padding:16px; }
-  .field input[type="text"], .field textarea, .field select { font-size:14px; padding:7px 8px; }
+  .field input[type="text"], .field textarea, .field select { font-size:16px; padding:7px 8px; }
+  .param-cell input, .param-cell select, .opt-row input, .param-dep-row input, .param-dep-row select, .pb-row select { font-size:16px; }
+  .in-clear { width:24px; height:24px; top:5px; right:4px; }
   .field-check input { width:18px; height:18px; }
   .code-wrap pre { font-size:12px; padding:14px; }
   .copy-btn { padding:8px 12px; font-size:12.5px; }
@@ -433,10 +501,12 @@ details.adv-topic .topic-body { padding:0 14px 14px; font-size:12.5px; line-heig
 <header>
   <div class="brand-line"><span class="brand-dot"></span><span class="brand-tag">tool-tree</span><span>· config generator + guide</span></div>
   <h1>TOML Template Generator</h1>
-  <p>Pick a node type, fill the merged Fields &amp; Advanced panel, preview the UI and copy the TOML — [[action.params]] is authored inside the action tab: per-field -sh pills, an options editor with an options-sh switch, and a live preview of the dialog.</p>
+  <p>Pick a node type, fill the merged Fields &amp; Advanced panel, preview the UI and copy the TOML — [[action.params]] is authored inside the action tab: per-field -sh pills, a 3-way options editor (options-sh · options · items), and a live preview of the dialog.</p>
 </header>
 
-<div class="types" id="typeTabs"></div>
+<div class="topnav">
+  <div class="types" id="typeTabs"></div>
+</div>
 
 <main>
   <section class="panel-form">
@@ -447,11 +517,18 @@ details.adv-topic .topic-body { padding:0 14px 14px; font-size:12.5px; line-heig
         <span class="adv-caret">▶</span>
       </summary>
       <div class="adv-inner">
+        <div class="form-actions">
+          <span class="fa-label">template · <b id="faType">group</b></span>
+          <div class="fa-btns">
+            <button type="button" class="fa-btn danger" id="clearAllBtn" title="Empty every field of this node type — start from a blank page">✕ Clear template</button>
+            <button type="button" class="fa-btn ok" id="sampleBtn" title="Bring back the default sample values of this node type">↺ Restore sample</button>
+          </div>
+        </div>
         <p class="type-desc" id="formDesc" style="margin-top:0;"></p>
         <div id="formFields"></div>
         <div class="adv-sep"></div>
         <div class="section-title">Advanced options</div>
-        <div class="adv-dedup">⚡ <b>One-variant rule:</b> tick the <b>-sh</b> pill next to a field — the value is auto-wrapped as <code>echo "…"</code> (or a fitting shell sample); untick to show plain text again. · <b>Params:</b> name names the $env_var; title / value / desc / support each carry their own -sh pill. · <b>Options:</b> tick <code>options-sh</code> to build the list from a script — that replaces the value/title rows (only one form per param). · 🧹 <b>Empty = hidden.</b></div>
+        <div class="adv-dedup">⚡ <b>One-variant rule:</b> tick the <b>-sh</b> pill next to a field — the value is auto-wrapped as <code>echo "…"</code> (or a fitting shell sample); untick to show plain text again. · <b>Params:</b> name names the $env_var; title / label / value / desc / support each carry their own -sh pill. · <b>Options:</b> 3 forms — <code>options-sh</code> (list from a script) · <code>options</code> (Title + val tables) · <code>items</code> ("value|Title" strings) — only one per param. · 🧹 <b>Empty = hidden.</b></div>
         <div class="chips" id="chipRow"></div>
         <div class="adv-grid" id="advBody"></div>
         <div class="adv-note" id="advNote" style="display:none;"></div>
@@ -462,30 +539,32 @@ details.adv-topic .topic-body { padding:0 14px 14px; font-size:12.5px; line-heig
   <section class="panel-view">
     <div class="view-body">
 
-      <div class="view-block">
+      <div class="view-block vb-output">
         <div class="section-title">UI demo</div>
         <div class="demo-frame" id="demoFrame"></div>
         <p class="d-hint" id="demoHint"></p>
       </div>
 
-      <div class="view-block">
+      <div class="view-block vb-output">
         <div class="section-title">TOML code</div>
         <div class="code-wrap">
           <div class="code-titlebar">
             <span class="code-dots"><i></i><i></i><i></i></span>
             <span class="code-filename">output.toml</span>
+            <span class="code-spacer"></span>
+            <button type="button" class="titlebar-btn" id="wrapBtn" title="Toggle soft wrap for long lines">wrap: off</button>
+            <button type="button" class="titlebar-btn" id="copyBtn" title="Copy the generated TOML">Copy</button>
           </div>
-          <button class="copy-btn" id="copyBtn">Copy</button>
           <pre id="codeOut"></pre>
         </div>
       </div>
 
-      <div class="view-block">
+      <div class="view-block vb-docs">
         <div class="section-title" id="guideTitle">Guide</div>
         <div class="doc" id="guideBody"></div>
       </div>
 
-      <div class="view-block">
+      <div class="view-block vb-docs">
         <div class="section-title">Advanced mechanics · all types</div>
         <div id="topicsBody"></div>
       </div>
@@ -538,13 +617,26 @@ function shUnwrap(val) {
 function paramNameFrom(label) {
   return ((label||'param').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'param');
 }
+// displayed title: p.title (falls back to the separate p.label in very old states)
+function paramTitle(p) { return ((p.title||'').trim() ? p.title : (p.label||'')); }
 function paramVar(p) {
-  return '$' + ((p.name||'').trim() || paramNameFrom(p.label));
+  return '$' + ((p.name||'').trim() || paramNameFrom(paramTitle(p)));
 }
 function paramOptionsList(p) {
-  const arr = (p.options||[]).filter(o=>((o.value||'')+(o.title||'')).trim())
-    .map(o=>({ v:(o.value||o.title||'').trim(), l:(o.title||o.value||'').trim() }));
-  if (arr.length) return arr;
+  const mode = p.optMode || (p.optionsShOn ? 'sh' : 'tables');
+  if (mode === 'items') {
+    const arr = (p.items||[]).map(s=>(s||'').trim()).filter(Boolean).map(s=>{
+      const bar = s.indexOf('|');
+      const v = (bar > 0 ? s.slice(0,bar) : s).trim();
+      const l = bar > 0 ? (s.slice(bar+1).trim() || v) : v;
+      return { v, l };
+    }).filter(o=>o.v);
+    if (arr.length) return arr;
+  } else {
+    const arr = (p.options||[]).filter(o=>((o.value||'')+(o.title||'')).trim())
+      .map(o=>({ v:(o.value||o.title||'').trim(), l:(o.title||o.value||'').trim() }));
+    if (arr.length) return arr;
+  }
   return (p.extra||'').split(',').map(s=>s.trim()).filter(Boolean).map(s=>{
     const ci = s.indexOf(':');
     return ci > 0 ? { v:s.slice(0,ci).trim(), l:s.slice(ci+1).trim() } : { v:s, l:s };
@@ -580,11 +672,11 @@ function paramDepLines(p) {
   return s;
 }
 // soft validation: parents must be other params of the same action (by name)
-function paramNames(list) { return (list||[]).map(q => paramNameFrom((q.name||'').trim() || q.label)); }
+function paramNames(list) { return (list||[]).map(q => paramNameFrom((q.name||'').trim() || paramTitle(q))); }
 function depWarnings(list, p) {
   const dep = p.dep || {}, on = (dep.on||'').trim();
   if (!on) return [];
-  const names = paramNames(list), me = paramNameFrom((p.name||'').trim() || p.label);
+  const names = paramNames(list), me = paramNameFrom((p.name||'').trim() || paramTitle(p));
   const out = [];
   on.split('|').map(x=>x.trim()).filter(Boolean).forEach(n => {
     if (n === me) out.push(`"${n}" is this param itself — a param cannot depend on itself`);
@@ -646,23 +738,23 @@ function paramToToml(p) {
   let optBlocks = '';
   if (OPT_TYPES.includes(t)) {
     if (t==='multi-select') fields += `\nmultiple = true`;
-    if (p.optionsShOn && (p.optionsSh||'').trim()) {
+    const omode = p.optMode || (p.optionsShOn ? 'sh' : 'tables');
+    if (omode === 'sh' && (p.optionsSh||'').trim()) {
       // options-sh replaces the whole static list (one-variant at param level)
       fields += `\noptions-sh = "${tomlEsc(p.optionsSh.trim())}"`;
+    } else if (omode === 'items' && (p.items||[]).some(s=>(s||'').trim())) {
+      // compact array form: items = ["value|Title", ...]
+      const parts = (p.items||[]).map(s=>(s||'').trim()).filter(Boolean).map(s => `"${tomlEsc(s)}"`);
+      const oneLine = `items = [${parts.join(', ')}]`;
+      fields += '\n' + (oneLine.length <= 72 ? oneLine : `items = [\n  ${parts.join(',\n  ')}\n]`);
     } else {
       const opts = paramOptionsList(p);
-      optBlocks = opts.map(o => {
-        const src = (p.options||[]).find(x => (x.value||x.title||'').trim() === o.v);
-        // one-variant: a per-option shell REPLACES title (parser key is title-sh, not option-sh)
-        if (src && src.shOn && (src.shTitle||'').trim())
-          return `\n\n[[action.params.options]]\nvalue = "${tomlEsc(o.v)}"\ntitle-sh = "${tomlEsc(src.shTitle.trim())}"`;
-        return `\n\n[[action.params.options]]\nvalue = "${tomlEsc(o.v)}"\ntitle = "${tomlEsc(o.l)}"`;
-      }).join('');
+      optBlocks = opts.map(o => `\n\n[[action.params.options]]\nvalue = "${tomlEsc(o.v)}"\ntitle = "${tomlEsc(o.l)}"`).join('');
     }
   } else if (t === 'int' || t === 'number' || t === 'seekbar') {
-    const [min, max] = (p.mm || '').split(',').map(s => s.trim());
-    if (min) fields += `\nmin = ${min}`;
-    if (max) fields += `\nmax = ${max}`;
+    const mn = (p.min || '').trim(), mx = (p.max || '').trim();
+    if (mn) fields += `\nmin = ${mn}`;
+    if (mx) fields += `\nmax = ${mx}`;
     fields += valLine(p.value);
   } else if (t === 'switch' || t === 'bool' || t === 'checkbox') {
     fields += valLine(p.value);
@@ -680,8 +772,9 @@ function paramToToml(p) {
   }
   // name names the $env_var (always emitted); the title cell's -sh pill swaps
   // title ↔ title-sh (one-variant, like every other field).
-  let out = `\n\n[[action.params]]\nname = "${tomlEsc(paramNameFrom((p.name||'').trim() || p.label))}"`;
-  out += has('title') ? `\ntitle-sh = "${tomlEsc(sh.title.trim())}"` : `\ntitle = "${tomlEsc(p.label)}"`;
+  let out = `\n\n[[action.params]]\nname = "${tomlEsc(paramNameFrom((p.name||'').trim() || paramTitle(p)))}"`;
+  out += has('title') ? `\ntitle-sh = "${tomlEsc(sh.title.trim())}"` : (((p.title||'').trim()) ? `\ntitle = "${tomlEsc(p.title.trim())}"` : '');
+  out += has('label') ? `\nlabel-sh = "${tomlEsc(sh.label.trim())}"` : (((p.label||'').trim()) ? `\nlabel = "${tomlEsc(p.label.trim())}"` : '');
   out += `\ntype = "${tomlEsc(t)}"${fields}`;
   out += has('desc') ? `\ndesc-sh = "${tomlEsc(sh.desc.trim())}"` : (((p.desc||'').trim()) ? `\ndesc = "${tomlEsc(p.desc.trim())}"` : '');
   out += paramSupportPart(p);
@@ -697,16 +790,16 @@ function paramToDemoRow(p) {
   const shTag = name => `<span style="color:var(--orange);font-size:9px;font-weight:700;letter-spacing:.5px;margin-left:5px;">${name}-sh</span>`;
   const xd = p.x || {};
   const roOn = !!(xd.readonly||'').trim() && !/^(false|0)$/i.test((xd.readonly||'').trim());
-  const labelHtml = `<label>${esc(p.label)}${xd.required ? ' <span style="color:var(--red);">*</span>' : ''}${roOn ? ' &#128274;' : ''} <span style="color:var(--accent);font-size:9px;">${esc(paramVar(p))}</span>${has('title') ? shTag('title') : ''}</label>`;
+  const labelHtml = `<label>${esc(paramTitle(p))}${xd.required ? ' <span style="color:var(--red);">*</span>' : ''}${roOn ? ' &#128274;' : ''} <span style="color:var(--accent);font-size:9px;">${esc(paramVar(p))}</span>${has('title') ? shTag('title') : ''}${has('label') ? shTag('label') : ''}${((p.label||'').trim()) ? ` <span style="color:var(--fg-muted);font-size:9px;">· ${esc(p.label.trim())}</span>` : ''}</label>`;
   let input;
   if (has('value')) {
     input = `<div class="d-dialog-input" style="color:var(--orange);">&#10227; ${esc(sh.value.trim())}${shTag('value')}</div>`;
   } else if (t === 'int' || t === 'number') {
-    const mn = (p.mm||'').split(',')[0].trim();
+    const mn = (p.min||'').trim();
     input = `<div class="d-dialog-input">${esc(p.value || mn || (xd.placeholder||'').trim() || '0')}</div>`;
   } else if (t === 'seekbar') {
-    const mn = parseFloat((p.mm||'').split(',')[0]) || 0;
-    const mx = parseFloat((p.mm||'').split(',')[1]) || 100;
+    const mn = parseFloat(p.min) || 0;
+    const mx = parseFloat(p.max) || 100;
     const val = parseFloat(p.value);
     const v = isNaN(val) ? mn : val;
     const pct = mx > mn ? Math.max(0, Math.min(100, (v - mn) / (mx - mn) * 100)) : 0;
@@ -841,34 +934,106 @@ function rowsBlockDemoHtml(rowsStr) {
   return (rowsStr || '').split('\n').map(l => l.trim()).filter(Boolean).map(rowToDemoHtml).join('');
 }
 function rowsField() {
-  return { key: 'rows', label: 'rows (optional — extra [[<type>.rows]] rich-text lines below the item, same syntax as text/text.rows — see the rows syntax note in the Guide)', type: 'textarea', default: '' };
+  return { key: 'rows', label: 'rows (optional — one card per [[<type>.rows]] rich-text line below the item)', type: 'rowcards', default: '', hint: 'Each card is one [[<type>.rows]] table: style picks the row kind; toggle exposes get/set, link/html/progress expose their value; color/size plus the "more keys" cell (icon, script, support, copy, …) cover the rest. ↑ ↓ ✕ reorder / remove.' };
 }
 
-// --- menu/fab item helpers (authored on the group tab) -----------------------
-function parseMfItems(str) {
-  const rows = (str||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
-    const [title,style,type,preview,optSh] = l.split('|');
-    return { title:(title||'').trim(), style:(style||'').trim(), type:(type||'action').trim(), preview:(preview||'').trim(), optSh:(optSh||'').trim() };
+// --- text.rows card editor (pipe line <-> card round-trip) -------------------
+const ROW_STYLES = ['plain','bold','italic','mono','underline','strike','copy','markdown','center','right','link','html','divider','progress','toggle'];
+function rcRows(str) {
+  return (str||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+    const parts = l.split('|');
+    const style = (parts[0]||'').trim() || 'plain';
+    const text = parts[1] !== undefined ? parts[1] : '';
+    const ex = rowExtras(parts, 2);
+    return { style, text, pos: ex.pos, kv: ex.kv };
   });
+}
+function rcDedicated(st) { return st === 'toggle' ? ['get','set'] : st === 'progress' ? ['progress-max'] : []; }
+function rcKvGet(r, k) { const e = r.kv.find(([x])=>x===k); return e ? e[1] : ''; }
+function rcKvSet(r, k, v) {
+  const i = r.kv.findIndex(([x])=>x===k);
+  if ((v||'') === '') { if (i >= 0) r.kv.splice(i,1); }
+  else if (i >= 0) r.kv[i] = [k, v];
+  else r.kv.push([k, v]);
+}
+function rcExtrasText(r) {
+  const keep = ['color','size',...rcDedicated(r.style)];
+  return r.kv.filter(([k])=>!keep.includes(k)).map(([k,v])=>`${k}=${v}`).join(' | ');
+}
+function rcSerialize(r) {
+  if (r.style === 'divider') return 'divider';
+  const segs = [r.style];
+  const needsSlot = r.style==='progress' || r.style==='toggle' || r.style==='link' || r.style==='html';
+  if ((r.text||'') !== '' || needsSlot) segs.push(r.text||'');
+  if (r.style==='link' || r.style==='html' || r.style==='progress') { const p0 = (r.pos[0]||'').trim(); if (p0) segs.push(p0); }
+  r.kv.forEach(([k,v]) => { if ((v||'').trim() !== '') segs.push(`${k}=${(v||'').trim()}`); });
+  return segs.join('|');
+}
+function rcSerializeAll(str) { return rcRows(str).map(rcSerialize).join('\n'); }
+
+// --- menu/fab item helpers (authored on the group tab) -----------------------
+const MF_TYPES = ['action','checkbox','spinner','file','folder','link','activity','html','config','refresh','reload','restart','finish','exit','close','killapp'];
+function mfNew(style) {
+  return { title:'', id:'', style:style==='fab'?'fab':'menu', type:'action', preview:'', optSh:'', optMode:'options', options:[], items:[], link:'', activity:'', html:'', config:'', suffix:'', mime:'', multiple:false, pathHome:'', get:'', set:'', script:'', silent:false, icon:'' };
+}
+function mfNorm(r) {
+  const d = mfNew((r||{}).style);
+  const out = {};
+  Object.keys(d).forEach(k => { out[k] = (r||{})[k] !== undefined ? (r||{})[k] : d[k]; });
+  if (!Array.isArray(out.options)) out.options = [];
+  if (!Array.isArray(out.items)) out.items = [];
+  out.options = out.options.filter(o => o && typeof o === 'object').map(o => ({ value:(o.value||'')+'', title:(o.title||'')+'' }));
+  out.items = out.items.map(x => (x||'')+'');
+  out.multiple = !!out.multiple; out.silent = !!out.silent;
+  return out;
+}
+function parseMfItems(src) {
+  const rows = Array.isArray(src) ? src.map(mfNorm) : [];
   return { menu: rows.filter(r=>r.style!=='fab'), fab: rows.filter(r=>r.style==='fab') };
 }
 const MF_NO_EXTRA = ['refresh','reload','restart','finish','exit','close','killapp','link','activity','html','config'];
+// The parser reads script/set/setstate as ONE key (script wins), so emit set only when script is empty.
+function mfRunLine(r, fallback) {
+  const sc = (r.script||'').trim(), st = (r.set||'').trim();
+  if (sc) return `\nscript = "${tomlEsc(sc)}"`;
+  if (st) return `\nset = "${tomlEsc(st)}"`;
+  return fallback ? `\nscript = "${tomlEsc(fallback)}"` : '';
+}
 function mfItemBlock(container, r) {
-  let extra = '';
+  let extra = '', tail = '';
   const t = r.type;
-  if (t === 'checkbox') extra = `\nget = "test -f /data/flag && echo 1"\nscript = "touch /data/flag"`;
+  const idLine = (r.id||'').trim() ? `\nkey = "${tomlEsc(r.id.trim())}"` : '';
+  const iconLine = (r.icon||'').trim() ? `\nicon = "${tomlEsc(r.icon.trim())}"` : '';
+  const silentLine = r.silent ? `\nsilent = true` : '';
+  if (t === 'checkbox') extra = ((r.get||'').trim() ? `\nget = "${tomlEsc(r.get.trim())}"` : `\nget = "test -f /data/flag && echo 1"`) + mfRunLine(r, 'touch /data/flag');
   else if (t === 'spinner') {
-    extra = r.optSh ? `\noptions-sh = "${tomlEsc(r.optSh)}"` : `\nitems = ["a|Option A", "b|Option B"]`;
-    extra += `\nget = "cat /data/choice"\nscript = "echo $state"`;
+    const mode = r.optMode || 'options';
+    if (mode === 'sh') {
+      const sh = (r.optSh||'').trim();
+      extra = sh ? `\noptions-sh = "${tomlEsc(sh)}"` : `\nitems = ["a|Option A", "b|Option B"]`;
+    } else if (mode === 'items') {
+      const arr = (r.items||[]).map(x=>(x||'').trim()).filter(Boolean);
+      extra = arr.length ? `\nitems = [${arr.map(x=>`"${tomlEsc(x)}"`).join(', ')}]` : `\nitems = ["a|Option A", "b|Option B"]`;
+    } else {
+      const tbls = (r.options||[]).map(o => {
+        const v = ((o&&o.value)||'').trim(), ti = ((o&&o.title)||'').trim();
+        if (!v && !ti) return '';
+        return `\n\n[[${container}.items.options]]\ntitle = "${tomlEsc(ti || v)}"` + (v && v !== ti ? `\nvalue = "${tomlEsc(v)}"` : '');
+      }).filter(Boolean).join('');
+      extra = tbls ? '' : `\nitems = ["a|Option A", "b|Option B"]`;
+      tail = tbls;
+    }
+    extra += ((r.get||'').trim() ? `\nget = "${tomlEsc(r.get.trim())}"` : `\nget = "cat /data/choice"`) + mfRunLine(r, 'echo $state');
   }
-  else if (t === 'file')   extra = `\nsuffix = "zip"\npath-home = "/sdcard"\nscript = "echo $file"`;
-  else if (t === 'folder') extra = `\npath-home = "/sdcard"\nscript = "echo $folder"`;
-  else if (t === 'link')     extra = `\nlink = "https://example.com"`;
-  else if (t === 'activity') extra = `\nactivity = "com.android.settings/.Settings"`;
-  else if (t === 'html')     extra = `\nhtml = "https://example.com"`;
-  else if (t === 'config')   extra = `\nconfig = "sub_page.toml"`;
-  else if (!MF_NO_EXTRA.includes(t)) extra = `\nscript = "echo $menu_id"`;
-  return `\n\n[[${container}.items]]\ntitle = "${tomlEsc(r.title)}"\ntype = "${tomlEsc(t)}"${extra}`;
+  else if (t === 'file')   extra = `\nsuffix = "${tomlEsc(r.suffix || 'zip')}"` + ((r.mime||'').trim() ? `\nmime = "${tomlEsc(r.mime.trim())}"` : '') + `\npath-home = "${tomlEsc(r.pathHome || '/sdcard')}"` + (r.multiple ? `\nmultiple = true` : '') + mfRunLine(r, 'echo $file');
+  else if (t === 'folder') extra = `\npath-home = "${tomlEsc(r.pathHome || '/sdcard')}"` + mfRunLine(r, 'echo $folder');
+  else if (t === 'link')     extra = `\nlink = "${tomlEsc(r.link || 'https://example.com')}"` + mfRunLine(r);
+  else if (t === 'activity') extra = `\nactivity = "${tomlEsc(r.activity || 'com.android.settings/.Settings')}"` + mfRunLine(r);
+  else if (t === 'html')     extra = `\nhtml = "${tomlEsc(r.html || 'https://example.com')}"` + mfRunLine(r);
+  else if (t === 'config')   extra = `\nconfig = "${tomlEsc(r.config || 'sub_page.toml')}"` + mfRunLine(r);
+  else if (!MF_NO_EXTRA.includes(t)) extra = mfRunLine(r, 'echo $menu_id');
+  else extra = mfRunLine(r);
+  return `\n\n[[${container}.items]]\ntitle = "${tomlEsc(r.title)}"${idLine}\ntype = "${tomlEsc(t)}"${iconLine}${silentLine}${extra}${tail}`;
 }
 
 // --- advanced field definitions (shared pools) -------------------------------
@@ -988,26 +1153,40 @@ function demoGroupWrap(f, inner) {
 
 // --- PARAM CARD renderer ------------------------------------------------------
 function paramOptionsHtml(p, idx) {
-  const useSh = !!p.optionsShOn;
+  const mode = p.optMode || (p.optionsShOn ? 'sh' : 'tables');
+  const modeBtn = (m, label) => `<button type="button" class="popts-mode${mode===m?' on':''}" data-pidx="${idx}" data-poptsmode="${m}">${label}</button>`;
+  const note = mode === 'sh'
+    ? "the script builds the list when the dialog opens — static rows are off"
+    : mode === 'items'
+      ? 'one "value|Title" string per row — the compact array form'
+      : "one row per entry — Title is the label shown, val is stored";
   const head = `<div class="popts-head">
     <span class="sh-name">options</span>
-    <span class="popts-note">${useSh ? 'list built by the script — the rows below are off' : 'one row per entry · a row\'s -sh = title-sh (dynamic title)'}</span>
-    <label class="sh-toggle${useSh?' on':''}"><input type="checkbox" data-pidx="${idx}" data-popts="optionsShOn"${useSh?' checked':''}>-sh</label>
+    <span class="popts-note">${note}</span>
+    <div class="popts-modes">${modeBtn('sh','options-sh')}${modeBtn('tables','options')}${modeBtn('items','items')}</div>
   </div>`;
   let body;
-  if (useSh) {
+  if (mode === 'sh') {
     body = `<input type="text" class="opt-sh-input" data-pidx="${idx}" data-popts="optionsSh" value="${esc(p.optionsSh||'')}" placeholder="shell printing one 'value|Title' line per entry — e.g. gen_options.sh">`;
+  } else if (mode === 'items') {
+    const items = p.items || [];
+    body = (items.length ? items.map((s,i)=>`
+      <div class="opt-row">
+        <input type="text" data-pidx="${idx}" data-iidx="${i}" data-ifield="item" value="${esc(s||'')}" placeholder="value|Title">
+        <button type="button" class="param-btn" data-pidx="${idx}" data-iact="down" data-iidx="${i}" title="move down">↓</button>
+        <button type="button" class="param-btn" data-pidx="${idx}" data-iact="up" data-iidx="${i}" title="move up">↑</button>
+        <button type="button" class="param-btn param-del" data-pidx="${idx}" data-iact="del" data-iidx="${i}" title="remove">✕</button>
+      </div>`).join('') : '<p class="adv-empty" style="font-size:10.5px;margin:0 0 5px;">No items yet — add one below.</p>')
+      + `<button type="button" class="pb-add opt-add" data-pidx="${idx}" data-iadd="1">+ add item</button>`;
   } else {
     const opts = p.options || [];
     body = (opts.length ? opts.map((o,i)=>`
       <div class="opt-row">
-        <input type="text" data-pidx="${idx}" data-oidx="${i}" data-ofield="value" value="${esc(o.value||'')}" placeholder="value">
-        <input type="text" data-pidx="${idx}" data-oidx="${i}" data-ofield="title" value="${esc(o.title||'')}" placeholder="title">
-        <label class="sh-toggle${o.shOn?' on':''}"><input type="checkbox" data-pidx="${idx}" data-oshon="${i}"${o.shOn?' checked':''}>-sh</label>
-        <button type="button" class="param-btn" data-pidx="${idx}" data-oact="up" data-oidx="${i}" title="move up">↑</button>
+        <input type="text" data-pidx="${idx}" data-oidx="${i}" data-ofield="title" value="${esc(o.title||'')}" placeholder="Title">
+        <input type="text" data-pidx="${idx}" data-oidx="${i}" data-ofield="value" value="${esc(o.value||'')}" placeholder="val">
         <button type="button" class="param-btn" data-pidx="${idx}" data-oact="down" data-oidx="${i}" title="move down">↓</button>
+        <button type="button" class="param-btn" data-pidx="${idx}" data-oact="up" data-oidx="${i}" title="move up">↑</button>
         <button type="button" class="param-btn param-del" data-pidx="${idx}" data-oact="del" data-oidx="${i}" title="remove">✕</button>
-        ${o.shOn?`<input type="text" class="opt-sh-input" data-pidx="${idx}" data-oidx="${i}" data-osh="shTitle" value="${esc(o.shTitle||'')}" placeholder='title-sh — e.g. echo "${esc(o.title||o.value||'Option')}"'>`:''}
       </div>`).join('') : '<p class="adv-empty" style="font-size:10.5px;margin:0 0 5px;">No options yet — add one below.</p>')
       + `<button type="button" class="pb-add opt-add" data-pidx="${idx}" data-oadd="1">+ add option</button>`;
   }
@@ -1030,11 +1209,13 @@ function paramCardHtml(p, idx, list) {
     return `<div class="param-cell">${labelRow}<input type="text" class="${active?'sh-active':''}" data-pidx="${idx}" data-pfield="${active ? 'sh:'+shField : storeKey}" value="${esc(cur)}" placeholder="${esc(ph||'')}"></div>`;
   };
   const cells = [];
-  cells.push(cell('<b>name</b> — the $env_var', 'name', null, p.name, paramNameFrom(p.label) + ' (blank = from title)'));
-  cells.push(cell('title — displayed label', 'label', 'title', p.label, 'Param title'));
+  cells.push(cell('<b>name</b> — the $env_var', 'name', null, p.name, paramNameFrom(paramTitle(p)) + ' (blank = from title)'));
+  cells.push(cell('title — main label', 'title', 'title', p.title, 'Param title'));
+  cells.push(cell('label — second label', 'label', 'label', p.label, 'extra label by the input'));
   cells.push(`<div class="param-cell"><label>type</label><select data-pidx="${idx}" data-pfield="type">${PARAM_TYPES.map(x=>`<option ${x===t?'selected':''}>${x}</option>`).join('')}</select></div>`);
   if (t==='int' || t==='number' || t==='seekbar') {
-    cells.push(`<div class="param-cell"><label>min,max</label><input type="text" data-pidx="${idx}" data-pfield="mm" value="${esc(p.mm||'')}" placeholder="0,60"></div>`);
+    cells.push(cell('min — lower bound', 'min', null, p.min, '0'));
+    cells.push(cell('max — upper bound', 'max', null, p.max, '60'));
     cells.push(cell('value — default', 'value', 'value', p.value, 'default'));
   } else if (t==='switch' || t==='bool' || t==='checkbox') {
     cells.push(cell('value — initial (0/1)', 'value', 'value', p.value, '0 or 1'));
@@ -1100,17 +1281,154 @@ function paramCardHtml(p, idx, list) {
     ${isOpts ? paramOptionsHtml(p, idx) : ''}
     <div class="param-dep-row">
       <span class="sh-name">depend</span>
-      <input type="text" data-pdep="on" data-pidx="${idx}" value="${esc(dep.on||'')}" placeholder="depend-on — parent param NAME(s), a|b (empty = off)">
-      <input type="text" data-pdep="value" data-pidx="${idx}" value="${esc(dep.value||'')}" placeholder="depend-value — a,b = any of · a|b,c = per parent">
-      <select data-pdep="mode" data-pidx="${idx}">
-        <option value="none"${(dep.mode||'none')==='none'?' selected':''}>show when matched</option>
-        <option value="hide"${dep.mode==='hide'?' selected':''}>hide when matched</option>
-        <option value="dim"${dep.mode==='dim'?' selected':''}>dim + lock until matched</option>
-      </select>
+      <div class="param-grid">
+        <div class="param-cell"><label>depend-on — parent NAME(s)</label><input type="text" data-pdep="on" data-pidx="${idx}" value="${esc(dep.on||'')}" placeholder="a|b (empty = off)"></div>
+        <div class="param-cell"><label>depend-value — any of</label><input type="text" data-pdep="value" data-pidx="${idx}" value="${esc(dep.value||'')}" placeholder="a,b = any of · a|b,c = per parent"></div>
+        <div class="param-cell dep-cell-mode"><label>depend-mode</label>
+          <select data-pdep="mode" data-pidx="${idx}">
+            <option value="none"${(dep.mode||'none')==='none'?' selected':''}>show when matched</option>
+            <option value="hide"${dep.mode==='hide'?' selected':''}>hide when matched</option>
+            <option value="dim"${dep.mode==='dim'?' selected':''}>dim + lock until matched</option>
+          </select>
+        </div>
+      </div>
       ${depAdv}
       <div class="dep-warn">${depWarnHtml(list, p)}</div>
       <div class="hint">depend-on takes the parent param's <b>name</b> (the $env_var), not its title. "show when matched" is the parser default; "hide when matched" emits depend-mode = "hide"; "dim + lock" emits depend-readonly = true. Re-evaluated live on every dialog change.</div>
     </div>
+  </div>`;
+}
+// menu/fab spinner options — the same 3-mode editor as action.params options
+function mfOptionsEditor(r, idx) {
+  const mode = r.optMode || 'options';
+  const modeBtn = (m, label) => `<button type="button" class="popts-mode${mode===m?' on':''}" data-mfidx="${idx}" data-mfoptmode="${m}">${label}</button>`;
+  const note = mode === 'sh'
+    ? "the script builds the list when the menu opens — static rows are off"
+    : mode === 'items'
+      ? 'one "value|Title" string per row — the compact array form'
+      : 'one row per entry — Title is the label shown, val is passed to the script as $state';
+  const head = `<div class="popts-head">
+    <span class="sh-name">options</span>
+    <span class="popts-note">${note}</span>
+    <div class="popts-modes">${modeBtn('sh','options-sh')}${modeBtn('options','options')}${modeBtn('items','items')}</div>
+  </div>`;
+  let body;
+  if (mode === 'sh') {
+    body = `<input type="text" class="opt-sh-input" data-mfidx="${idx}" data-mfopts="optSh" value="${esc(r.optSh||'')}" placeholder="shell printing one 'value|Title' line per entry — e.g. gen_options.sh">`;
+  } else if (mode === 'items') {
+    const items = r.items || [];
+    body = (items.length ? items.map((sg,i)=>`
+      <div class="opt-row">
+        <input type="text" data-mfidx="${idx}" data-miidx="${i}" data-mifield="item" value="${esc(sg||'')}" placeholder="value|Title">
+        <button type="button" class="param-btn" data-mfidx="${idx}" data-miact="down" data-miidx="${i}" title="move down">↓</button>
+        <button type="button" class="param-btn" data-mfidx="${idx}" data-miact="up" data-miidx="${i}" title="move up">↑</button>
+        <button type="button" class="param-btn param-del" data-mfidx="${idx}" data-miact="del" data-miidx="${i}" title="remove">✕</button>
+      </div>`).join('') : '<p class="adv-empty" style="font-size:10.5px;margin:0 0 5px;">No items yet — add one below.</p>')
+      + `<button type="button" class="pb-add opt-add" data-mfidx="${idx}" data-miadd="1">+ add item</button>`;
+  } else {
+    const opts = r.options || [];
+    body = (opts.length ? opts.map((o,i)=>`
+      <div class="opt-row">
+        <input type="text" data-mfidx="${idx}" data-moidx="${i}" data-mofield="title" value="${esc(o.title||'')}" placeholder="Title">
+        <input type="text" data-mfidx="${idx}" data-moidx="${i}" data-mofield="value" value="${esc(o.value||'')}" placeholder="val">
+        <button type="button" class="param-btn" data-mfidx="${idx}" data-moact="down" data-moidx="${i}" title="move down">↓</button>
+        <button type="button" class="param-btn" data-mfidx="${idx}" data-moact="up" data-moidx="${i}" title="move up">↑</button>
+        <button type="button" class="param-btn param-del" data-mfidx="${idx}" data-moact="del" data-moidx="${i}" title="remove">✕</button>
+      </div>`).join('') : '<p class="adv-empty" style="font-size:10.5px;margin:0 0 5px;">No options yet — add one below.</p>')
+      + `<button type="button" class="pb-add opt-add" data-mfidx="${idx}" data-moadd="1">+ add option</button>`;
+  }
+  return `<div class="param-opts">${head}${body}</div>`;
+}
+// menu/fab item card — authored like action.params cards (group tab)
+function mfCardHtml(r, idx) {
+  r = mfNorm(r);
+  const t = r.type;
+  const cell = (label, fkey, val, ph) => `<div class="param-cell"><label>${label}</label><input type="text" data-mfidx="${idx}" data-mffield="${fkey}" value="${esc(val||'')}" placeholder="${esc(ph||'')}"></div>`;
+  const chk = (label, fkey, on) => `<div class="param-cell param-cell-check"><label><input type="checkbox" data-mfidx="${idx}" data-mffield="${fkey}"${on?' checked':''}>${label}</label></div>`;
+  const cells = [];
+  cells.push(cell('<b>title</b> — menu label', 'title', r.title, 'Item title'));
+  cells.push(cell('key (id) — passed to the script as $state / $menu_id', 'id', r.id, 'blank = auto from title'));
+  cells.push(`<div class="param-cell"><label>style — toolbar or floating</label><select data-mfidx="${idx}" data-mffield="style">${['menu','fab'].map(x=>`<option ${x===r.style?'selected':''}>${x}</option>`).join('')}</select></div>`);
+  cells.push(`<div class="param-cell"><label>type</label><select data-mfidx="${idx}" data-mffield="type">${MF_TYPES.map(x=>`<option ${x===t?'selected':''}>${x}</option>`).join('')}</select></div>`);
+  const MF_SCRIPT_PH = { checkbox:'touch /data/flag', spinner:'echo $state', file:'echo $file', folder:'echo $folder', action:'echo $menu_id' };
+  if (t === 'spinner') {
+    cells.push(cell('preview — value beside the arrow', 'preview', r.preview, 'performance'));
+    cells.push(cell('get — shell returning the current value (empty = sample)', 'get', r.get, 'cat /data/choice'));
+  } else if (t === 'checkbox') {
+    cells.push(cell('preview — "1" shows the check mark', 'preview', r.preview, '1'));
+    cells.push(cell('get — shell returning "1"/"0" (empty = sample)', 'get', r.get, 'test -f /data/flag && echo 1'));
+  } else if (t === 'file') {
+    cells.push(cell('suffix — extension filter', 'suffix', r.suffix, 'zip'));
+    cells.push(cell('mime — MIME filter (optional)', 'mime', r.mime, 'application/zip'));
+    cells.push(cell('path-home — starting dir', 'pathHome', r.pathHome, '/sdcard'));
+    cells.push(chk('multiple — allow picking several files', 'multiple', r.multiple));
+  } else if (t === 'folder') {
+    cells.push(cell('path-home — starting dir', 'pathHome', r.pathHome, '/sdcard'));
+  } else if (t === 'link') {
+    cells.push(cell('link — URL to open', 'link', r.link, 'https://example.com'));
+  } else if (t === 'activity') {
+    cells.push(cell('activity — target component', 'activity', r.activity, 'com.android.settings/.Settings'));
+  } else if (t === 'html') {
+    cells.push(cell('html — HTML page to open', 'html', r.html, 'https://example.com'));
+  } else if (t === 'config') {
+    cells.push(cell('config — sub page .toml', 'config', r.config, 'sub_page.toml'));
+  }
+  if (t === 'spinner' || t === 'checkbox') {
+    cells.push(cell('set — alias of script, used when script is empty', 'set', r.set, MF_SCRIPT_PH[t] || ''));
+  }
+  cells.push(cell('script — shell run when tapped (empty = ' + (MF_SCRIPT_PH[t] ? 'sample' : 'omitted') + ')', 'script', r.script, MF_SCRIPT_PH[t] || ''));
+  cells.push(cell('icon — item icon ({HOME}/{ICON} ok, optional)', 'icon', r.icon, '{ICON}/item.png'));
+  cells.push(chk('silent — run in background, no log dialog', 'silent', r.silent));
+  return `<div class="param-card">
+    <div class="param-card-head">
+      <span class="param-num">#${idx+1}</span>
+      <span class="param-type-chip${r.style==='fab'?' chip-fab':''}">${esc(r.style==='fab'?'fab':'menu')}</span>
+      <span class="param-var">${esc(r.title || '(untitled)')}</span>
+      <span class="param-actions">
+        <button type="button" class="param-btn" data-mfact="up" data-mfidx="${idx}" title="move up">↑</button>
+        <button type="button" class="param-btn" data-mfact="down" data-mfidx="${idx}" title="move down">↓</button>
+        <button type="button" class="param-btn param-del" data-mfact="del" data-mfidx="${idx}" title="remove">✕</button>
+      </span>
+    </div>
+    <div class="param-grid">${cells.join('')}</div>
+    ${t==='spinner' ? mfOptionsEditor(r, idx) : ''}
+  </div>`;
+}
+
+// text.rows item card — same look as menu/fab / param cards
+function rcCardHtml(r, idx, srcKey) {
+  const st = r.style;
+  const k = esc(srcKey);
+  const cell = (label, fkey, val, ph, num) => `<div class="param-cell"><label>${label}</label><input type="${num?'number':'text'}" data-ridx="${idx}" data-rckey="${k}" data-rfield="${fkey}" value="${esc(val||'')}" placeholder="${esc(ph||'')}"></div>`;
+  const cells = [];
+  cells.push(`<div class="param-cell"><label>style</label><select data-ridx="${idx}" data-rckey="${k}" data-rfield="style">${(ROW_STYLES.includes(st)?ROW_STYLES:[st].concat(ROW_STYLES)).map(x=>`<option ${x===st?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`);
+  if (st !== 'divider') {
+    cells.push(cell('text — the row label', 'text', r.text, 'Row text'));
+    if (st === 'link') cells.push(cell('link — URL opened on tap', 'pos0', r.pos[0]||'', 'https://example.com'));
+    else if (st === 'html') cells.push(cell('html — file path or https URL', 'pos0', r.pos[0]||'', 'assets/page.html'));
+    else if (st === 'progress') {
+      cells.push(cell('progress — percent 0-100', 'pos0', r.pos[0]||'', '82', true));
+      cells.push(cell('progress-max — scale top (optional)', 'kv:progress-max', rcKvGet(r,'progress-max'), '100', true));
+    } else if (st === 'toggle') {
+      cells.push(cell('get — shell returning "1"/"0" (empty = sample)', 'kv:get', rcKvGet(r,'get'), 'test -e {HOME}/flag && echo 1'));
+      cells.push(cell('set — shell run with $state (empty = sample)', 'kv:set', rcKvGet(r,'set'), 'echo $state > {HOME}/flag'));
+    }
+    cells.push(cell('color — text color (#hex or name)', 'kv:color', rcKvGet(r,'color'), '#ff6200'));
+    cells.push(cell('size — text size (sp)', 'kv:size', rcKvGet(r,'size'), '16', true));
+    cells.push(cell('more keys — key=value pairs joined with |', 'extras', rcExtrasText(r), 'icon=… | script=… | support=…'));
+  }
+  return `<div class="param-card">
+    <div class="param-card-head">
+      <span class="param-num">#${idx+1}</span>
+      <span class="param-type-chip">${esc(st)}</span>
+      <span class="param-var">${esc((r.text||'').trim() || st)}</span>
+      <span class="param-actions">
+        <button type="button" class="param-btn" data-ract="up" data-ridx="${idx}" data-rckey="${k}" title="move up">↑</button>
+        <button type="button" class="param-btn" data-ract="down" data-ridx="${idx}" data-rckey="${k}" title="move down">↓</button>
+        <button type="button" class="param-btn param-del" data-ract="del" data-ridx="${idx}" data-rckey="${k}" title="remove">✕</button>
+      </span>
+    </div>
+    <div class="param-grid">${cells.join('')}</div>
   </div>`;
 }
 
@@ -1133,7 +1451,7 @@ const TYPES = {
       { key:'child2', label:'second child title (preview only)', type:'text', default:'Governor' },
       { key:'resourceTitle', label:'[[resource]] title (optional)', type:'text', default:'Extract assets' },
       { key:'resourceFile', label:'resource-file (optional — APK asset PATH to extract under this group)', type:'text', default:'', hint:'Filled → a [[resource]] block is emitted after the group children. Use resource-dir (Advanced) for a whole folder. Empty → omitted.' },
-      { key:'mfItems', label:'menu / fab items (optional — one per line "title|style|type|preview|options-sh")', type:'textarea', default:'', hint:'style = menu/fab; spinner items accept a 5th options-sh segment. Emitted after the children with a clarifying comment (page-level containers). Empty → no [[menu]]/[[fab]] output.' },
+      { key:'mfItems', label:'menu / fab items (optional — one card per toolbar / floating entry)', type:'mfitems', default:[], hint:'Each card becomes a [[menu.items]] / [[fab.items]] block, emitted after the children with a clarifying comment (page-level containers). Every card: key (id — passed to the script as $state / $menu_id), icon, silent. spinner has the full 3-mode options editor — options-sh / options (emitted as [[menu.items.options]] title+value tables) / items ("value|Title" strings); checkbox exposes get + set/script; file exposes suffix / mime / path-home / multiple; link / activity / html / config expose their real keys. set is only emitted when script is empty (the parser reads them as one key). Empty → no [[menu]]/[[fab]] output.' },
     ],
     code: f => {
       const lk = shOrStatic(f, 'loadKey', 'load-key');
@@ -1254,17 +1572,17 @@ const TYPES = {
       { key:'script', label:'script', type:'textarea', default:'sleep $delay_sec; echo $governor > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor', hint:'Receives every action.params name as an env var ($delay_sec, $governor …) and $state where applicable. Multi-line scripts are escaped as \\n. Left empty → omitted.' },
       { key:'paramList', label:'action.params — pick a type and press add; a card appears below for full editing (empty list = no params dialog)', type:'paramlist',
         default:[
-          { name:'delay_sec', label:'Delay (seconds)', type:'int', mm:'0,60', value:'5', desc:'', support:'true', extra:'', options:null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
-          { name:'run_in_background', label:'Run in background', type:'switch', mm:'', value:'0', desc:'', support:'true', extra:'', options:null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
-          { name:'governor', label:'Governor', type:'spinner', mm:'', value:'', desc:'', support:'true', extra:'', options:[
-              { value:'performance', title:'Performance', shOn:false, shTitle:'' },
-              { value:'powersave', title:'Power saver', shOn:false, shTitle:'' },
-              { value:'schedutil', title:'Balanced (schedutil)', shOn:true, shTitle:'echo "Balanced (schedutil)"' },
-            ], optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
-          { name:'log_file', label:'Log file', type:'file', mm:'', value:'', desc:'', support:'true', extra:'log,txt', options:null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
-          { name:'seed', label:'Seed', type:'text', mm:'', value:'42', desc:'', support:'true', extra:'', options:null, optionsShOn:false, optionsSh:'', sh:{ value:'gen_seed.sh' }, shOn:{ value:true }, dep:{ on:'run_in_background', value:'1', mode:'none' } },
+          { name:'delay_sec', title:'Delay (seconds)', label:'', type:'int', min:'0', max:'60', value:'5', desc:'', support:'true', extra:'', options:null, items:null, optMode:'tables', optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
+          { name:'run_in_background', title:'Run in background', label:'', type:'switch', min:'', max:'', value:'0', desc:'', support:'true', extra:'', options:null, items:null, optMode:'tables', optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
+          { name:'governor', title:'Governor', label:'', type:'spinner', min:'', max:'', value:'', desc:'', support:'true', extra:'', options:[
+              { value:'performance', title:'Performance' },
+              { value:'powersave', title:'Power saver' },
+              { value:'schedutil', title:'Balanced (schedutil)' },
+            ], items:null, optMode:'tables', optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
+          { name:'log_file', title:'Log file', label:'', type:'file', min:'', max:'', value:'', desc:'', support:'true', extra:'log,txt', options:null, items:null, optMode:'tables', optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
+          { name:'seed', title:'Seed', label:'', type:'text', min:'', max:'', value:'42', desc:'', support:'true', extra:'', options:null, items:null, optMode:'tables', optionsShOn:false, optionsSh:'', sh:{ value:'gen_seed.sh' }, shOn:{ value:true }, dep:{ on:'run_in_background', value:'1', mode:'none' } },
         ],
-        hint:'Card legend: name → $env_var (blank = slug from title) · each cell with a -sh pill switches between its text value and a shell script (auto-sampled on tick) · dropdown types get the options editor — options-sh builds the whole list from a script, otherwise each row is value + title (+ optional title-sh) · the depend row gates this param. ↑ ↓ ✕ reorder / remove.' },
+        hint:'Card legend: name → $env_var (blank = slug from title) · title = main label, label = a second independent label · each cell with a -sh pill switches between its text value and a shell script (auto-sampled on tick) · dropdown types get a 3-mode options editor — options-sh (list from a script) · options (one row per entry — Title + val) · items (one "value|Title" per row) · the depend row gates this param. ↑ ↓ ✕ reorder / remove.' },
       { key:'confirm', label:'confirm before running', type:'checkbox', default:true },
       { key:'warn', label:'warn (confirm-dialog text — shown when confirm is on)', type:'text', default:'Apply the selected governor?', sh:true, hint:'Tick -sh to emit warn-sh — the value becomes echo "…" automatically. Empty → omitted.' },
       { key:'menu', label:'show as toolbar icon (menu = true)', type:'checkbox', default:false },
@@ -1439,7 +1757,7 @@ const TYPES = {
     advNote: 'Rows also accept support (Bool|Shell — deferred like switch get) and icon/photo. The same [[<type>.rows]] block can be attached to page, action, switch, picker, editor and download. The -sh toggle converts title to title-sh. The group-wrap checkbox sits at the top of Fields.',
     fields: [
       { key:'title', label:'title', type:'text', default:'Device info', sh:true, hint:'Tick -sh to emit title-sh — the value becomes echo "…" automatically. Hidden from the preview header when group wrap is ON.' },
-      { key:'rowsMain', label:'rows (one per line — "style|text"; style ∈ bold/italic/mono/underline/strike/link/center/right/copy/markdown/plain, or "divider", "toggle|label", "progress|label|percent", "link|text|https://url", "html|text|file-or-url" — optional trailing key=value pairs: color=#f00 | size=16 | script=… | icon=… | support=…)', type:'textarea', default:'bold|Kernel version\nmono|5.10.101-perf+\nunderline|Important notice\nstrike|Deprecated field\ncenter|— updated today —\ndivider\nprogress|Battery health|82\ntoggle|Show notifications\nplain|Last updated 3 days ago\nlink|View full changelog' },
+      { key:'rowsMain', label:'rows (one card per [[text.rows]] line)', type:'rowcards', default:'bold|Kernel version\nmono|5.10.101-perf+\nunderline|Important notice\nstrike|Deprecated field\ncenter|— updated today —\ndivider\nprogress|Battery health|82\ntoggle|Show notifications\nplain|Last updated 3 days ago\nlink|View full changelog', hint:'Each card becomes one [[text.rows]] table — style picks the row kind (plain / bold / italic / mono / underline / strike / copy / markdown / center / right / link / html / divider / progress / toggle); toggle exposes get/set; progress exposes percent + progress-max; color/size and the "more keys" cell (icon, script, support, copy, …) cover the remaining keys.' },
     ],
     code: f => {
       const rows = f.rowsMain.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>rowToToml('text', l)).join('');
@@ -1630,7 +1948,7 @@ lock = "{LOT}|Requires root access"`
   },
 
   action: {
-    intro: `<code>[[action]]</code> is the most common node: tapping it shows a dialog (if it has <code>confirm</code>/<code>params</code>/<code>warn</code>), then runs the script and shows the output in a log dialog. Flow: <em>lock check → confirm dialog → params dialog → run → log dialog</em>. The params dialog is authored on the dedicated <b>action.params</b> tab.`,
+    intro: `<code>[[action]]</code> is the most common node: tapping it shows a dialog (if it has <code>confirm</code>/<code>params</code>/<code>warn</code>), then runs the script and shows the output in a log dialog. Flow: <em>lock check → confirm dialog → params dialog → run → log dialog</em>. The params dialog is authored inside the <b>action</b> tab.`,
     fields: [
       ['script','set, setstate','String','','<span class="badge req">req</span> Main shell script. Receives <code>$name</code> env vars from params'],
       ['confirm','','Bool','false','Ask for confirmation before running'],
@@ -1668,10 +1986,11 @@ value = "5"`
   },
 
   'action.params': {
-    intro: `<code>[[action.params]]</code> defines the input dialog shown before an action runs. Each params table renders one control; its <b>name</b> is the explicit env var (<code>name = "delay_sec"</code> → <code>$delay_sec</code>), and <b>title</b> is the displayed label. In this generator every param is an editable <b>card</b>: quick-add only asks for a type, the card handles everything else.`,
+    intro: `<code>[[action.params]]</code> defines the input dialog shown before an action runs. Each params table renders one control; its <b>name</b> is the explicit env var (<code>name = "delay_sec"</code> → <code>$delay_sec</code>), <b>title</b> is the main displayed label, and <b>label</b> a second, independent label shown next to the control. In this generator every param is an editable <b>card</b>: quick-add only asks for a type, the card handles everything else.`,
     fields: [
       ['name','','String','','<span class="badge req">req</span> Env var name used in the action script (<code>$delay_sec</code>). Blank = slug derived from the title (spaces → underscores). Always emitted first'],
-      ['title','title-sh','String','','Displayed label; with the -sh pill it becomes <code>title-sh</code> (dynamic label)'],
+      ['title','title-sh','String','','Main displayed label; with the -sh pill it becomes <code>title-sh</code> (dynamic label)'],
+      ['label','label-sh','String','','Second, independent label shown next to the control (the title stays the heading); with the -sh pill it becomes <code>label-sh</code>'],
       ['type','','String','text','One of the 15 control types (see the table below)'],
       ['value','value-sh','String','','Default value; with the -sh pill it becomes <code>value-sh</code> (dynamic default)'],
       ['desc','desc-sh','String','','Hint line under the label; with the -sh pill it becomes <code>desc-sh</code>'],
@@ -1685,13 +2004,14 @@ value = "5"`
       ['allow-no-selection','','Bool','false','Spinner may stay empty'],
       ['mime / multiple / editable','','String|Bool','','File picker: MIME filter · several files · manual path entry (folder: multiple / editable)'],
       ['separator','','String','\\n','Joins multiple selected values (multi-select · multiple file/folder/app)'],
-      ['min / max','','Int','','Bounds for int / number / seekbar'],
+      ['min','','Int','','Lower bound (int / number / seekbar) — its own field in the card'],
+      ['max','','Int','','Upper bound (int / number / seekbar) — its own field in the card'],
       ['suffix','','String','','File-picker extension filter, e.g. "log,txt"'],
       ['path-home','','String','','Starting directory for the folder picker'],
       ['multiple','','Bool','false','Allow several selections (multi-select · app/packages)'],
-      ['options','','Array','','<code>[[action.params.options]]</code> child tables — one per dropdown entry'],
-      ['options-sh','','String','','<span class="badge shell">shell</span> Shell producing "value|Title" lines — replaces the whole static options list (one-variant at param level)'],
-      ['options → title-sh','','String','','<span class="badge shell">shell</span> Dynamic title for one option — emitted as <code>title-sh</code> inside that option\'s table (via the -sh pill on the option row)'],
+      ['options','','Array','','<code>[[action.params.options]]</code> child tables — one per dropdown entry (ignored when items is present)'],
+      ['options-sh','','String','','<span class="badge shell">shell</span> Shell producing "value|Title" lines — builds the list when the dialog opens (one-variant at param level)'],
+      ['items','','Array','','Compact dropdown form: <code>items = ["value|Title", …]</code> — one string per entry, split at the first "|" (title optional). Read BEFORE the options tables — they are ignored when items is present'],
       ['depend-on / depend-value','depend','String','—','Link this param to one or more controlling params by <b>name</b> (<code>a|b</code>) — see the full depend-* reference below'],
       ['depend-mode / depend-readonly / depend-logic / …','depend','String|Bool','','Gate behavior: <code>depend-mode = "hide"</code> · <code>depend-readonly = true</code> (dim + lock) · plus logic/default/initial/negate/threshold/cascade/onchange — see the depend-* reference below'],
     ],
@@ -1699,10 +2019,10 @@ value = "5"`
 <div class="doc-tbl-wrap"><table class="doc-tbl">
 <tr><th>type</th><th>cells shown</th><th>Notes</th></tr>
 <tr><td>text</td><td>name · title · value · desc · support</td><td>Plain single-line input</td></tr>
-<tr><td>int / number</td><td>+ min,max</td><td>value = default</td></tr>
-<tr><td>seekbar</td><td>+ min,max</td><td>Slider</td></tr>
+<tr><td>int / number</td><td>+ min · max</td><td>value = default</td></tr>
+<tr><td>seekbar</td><td>+ min · max</td><td>Slider</td></tr>
 <tr><td>switch / bool / checkbox</td><td>value</td><td>Initial "0"/"1"</td></tr>
-<tr><td>spinner / single-select / multi-select</td><td>options editor</td><td>Rows (value + title) OR options-sh — one form only; multi-select adds <code>multiple = true</code></td></tr>
+<tr><td>spinner / single-select / multi-select</td><td>options editor</td><td>3 forms — options-sh · options (value + title rows) · items ("value|Title" strings); one per param; multi-select adds <code>multiple = true</code></td></tr>
 <tr><td>file</td><td>suffix</td><td>e.g. <code>log,txt</code></td></tr>
 <tr><td>folder</td><td>path-home</td><td>Folder picker</td></tr>
 <tr><td>app / packages</td><td>extra</td><td>"multi" for multiple</td></tr>
@@ -1713,9 +2033,8 @@ value = "5"`
 <tr><th>Field</th><th>Type</th><th>Description</th></tr>
 <tr><td>value</td><td>String</td><td><span class="badge req">req</span> The value passed to <code>$state</code> / the env var</td></tr>
 <tr><td>title</td><td>String</td><td>Displayed label (falls back to value)</td></tr>
-<tr><td>title-sh</td><td>String</td><td><span class="badge shell">shell</span> Dynamic title for this option — tick the -sh pill on the option row (auto-sampled as <code>echo "…"</code>)</td></tr>
 </table></div>
-<div class="doc-note tip"><b>Authoring here:</b> the quick-add row only asks for a <b>type</b> — press <b>+ add param</b> and a card appears below. In the card, every dynamic cell (title / value / desc / support) carries its own <b>-sh pill</b>: tick it and the SAME input switches to its shell form (auto-sampled, editable); untick and it is plain text again. The emitted key follows the pill. For dropdown types the <b>options editor</b> has an <code>options-sh</code> switch — ON: the whole list comes from one script; OFF: one row per entry with value + title (+ optional per-row <code>title-sh</code>). Only one form is active at a time — switching the switch disables the other. The <b>depend row</b> gates the card. Use the card's ↑ ↓ ✕ to reorder or remove.</div>
+<div class="doc-note tip"><b>Authoring here:</b> the quick-add row only asks for a <b>type</b> — press <b>+ add param</b> and a card appears below. In the card, every dynamic cell (title / value / desc / support) carries its own <b>-sh pill</b>: tick it and the SAME input switches to its shell form (auto-sampled, editable); untick and it is plain text again. The emitted key follows the pill. For dropdown types the <b>options editor</b> has 3 mode buttons — <code>options-sh</code>: the whole list comes from one script · <code>options</code>: one row per entry — <b>Title</b> is the shown label, <b>val</b> is stored · <code>items</code>: one "value|Title" string per row. Only one form is active at a time — the buttons switch between them. The <b>depend row</b> gates the card. Use the card's ↑ ↓ ✕ to reorder or remove.</div>
 <h4>depend-* — param-to-param links (full reference)</h4>
 <div class="doc-tbl-wrap"><table class="doc-tbl">
 <tr><th>Field</th><th>Type</th><th>Description</th></tr>
@@ -1769,7 +2088,14 @@ title = "Performance"
 
 [[action.params.options]]
 value = "schedutil"
-title-sh = "echo \\"Balanced (schedutil)\\""
+title = "Balanced (schedutil)"
+
+[[action.params]]
+name = "mode"
+title = "Mode"
+label = "shown next to the control"
+type = "single-select"
+items = ["auto|Auto", "manual|Manual"]
 
 [[action.params]]
 name = "seed"
@@ -2011,7 +2337,6 @@ const TOPICS = [
 <tr><td>lock-sh</td><td>clickable nodes</td><td>Parse time — "1" = locked</td></tr>
 <tr><td>support (shell form)</td><td>every node</td><td>Parse time — "1" = shown; an expensive one delays the page → use <code>load-after</code></td></tr>
 <tr><td>param title-sh / value-sh / desc-sh / support (shell)</td><td>[[action.params]]</td><td>Parse time — per-param, per-cell -sh pills on the card</td></tr>
-<tr><td>option title-sh</td><td>[[action.params.options]]</td><td>Parse time — per-option dynamic title, toggled on its option row</td></tr>
 <tr><td>options-sh</td><td>[[action.params]] (dropdown types) · picker · menu/fab spinner items</td><td>Parse time — outputs <code>value|Title</code> lines, replacing the static options list</td></tr>
 <tr><td>config-sh</td><td>[[page]]</td><td>When the sub-page opens — .toml path or inline TOML</td></tr>
 <tr><td>load-key-sh</td><td>directive</td><td>Before parsing — outputs the key file path</td></tr>
@@ -2135,7 +2460,7 @@ title = "Performance"
 
 [[action.params.options]]
 value = "schedutil"
-title-sh = "echo \\"Balanced (schedutil)\\""
+title = "Balanced (schedutil)"
 
 [[action.params]]
 name = "seed"
@@ -2183,7 +2508,7 @@ lock = "{LOT}|Requires root access"</pre>`
 <li>Expensive shell in <code>support</code>? Add <code>load-after = true</code> so the page shows first.</li>
 <li>Never write both a static field and its <code>*-sh</code> variant — keep exactly one (the generator auto-switches the input between text and shell form when you toggle the pill).</li>
 <li>Params: set an explicit <code>name</code> (the $env_var); title / value / desc / support each carry their own -sh pill swapping text ↔ shell.</li>
-<li>Options: pick ONE form — <code>options-sh</code> (whole list from a script) OR the value/title rows (each optionally with its own <code>title-sh</code>); the card's switch enforces that.</li>
+<li>Options: pick ONE form — <code>options-sh</code> (whole list from a script), one row per entry (Title + val), or the compact <code>items</code> array; only one per param.</li>
 <li>depend-* is directional — put it on the AFFECTED param; <code>depend-value</code> accepts comma-separated "any of" values; hide and dim are mutually exclusive.</li>
 <li><code>icon</code>/<code>photo</code>/<code>bg</code> must be file PATHS — use <code>{ICON}/x.png</code> or <code>{HOME}/…</code>, never emoji or resource IDs.</li>
 <li>Leave a field blank and it is omitted from the generated TOML — no empty keys like <code>script = ""</code> (param <code>name</code> is the exception: it always emits, auto-derived when blank).</li>
@@ -2200,12 +2525,14 @@ lock = "{LOT}|Requires root access"</pre>`
 },
 { id:'changelog', title:'13. Changelog (recently added fields)', html:`
 <ul>
+<li><b>Syntax-highlighted output</b> — the TOML panel (output.toml) is colored like a code editor now: section headers, keys, strings, booleans, numbers and comments each get their own token color in both the dark and light theme. Copy and wrap: on/off are untouched — the raw text stays exactly the same, only the display is decorated.</li>
+<li><b>menu/fab spec pass (checked against PageConfigReader.kt + the [[menu]]/[[fab]] reference)</b> — every item card now has <code>key</code> (id — passed to the item's script as <code>$state</code>/<code>$menu_id</code>), <code>icon</code> and <code>silent</code>; file items expose <code>mime</code> + <code>multiple</code>; <code>set</code> is emitted only when <code>script</code> is empty (the parser reads script/set/setstate as one key, script wins); spinner options upgraded to the full 3-mode editor like [[action.params.options]] — <code>options-sh</code> / <code>options</code> (emitted as <code>[[menu.items.options]]</code> title+value child tables, the form the parser actually reads) / <code>items</code> ("value|Title" strings — the parser's priority key); item data moved from pipe-string storage to structured card state.</li>
+<li><b>menu/fab + text.rows card pass</b> — menu/fab item cards now expose editable <code>get</code>, <code>set</code> (checkbox / spinner) and <code>script</code> (every type — empty = the standard sample, or omitted for link / activity / html / config / refresh-style items); all <code>[[&lt;type&gt;.rows]]</code> fields (text, page, action, editor, download) switched from the pipe-syntax textarea to a card editor — one card per row with a style select, the row text, per-style cells (link/html value, progress percent + progress-max, toggle get/set), color/size and a free "more keys" cell (any remaining key=value pair). The generated TOML is unchanged.</li>
 <li><b>Parser-accuracy pass (checked against PageConfigReader.kt)</b> — <code>support-sh</code> (not a parser key) → <code>support = "&lt;shell&gt;"</code> · depend "hide"/"dim" (<code>depend-hide</code>/<code>depend-dim</code> do not exist) → <code>depend-mode = "hide"</code> / <code>depend-readonly = true</code> · menu/fab spinner <code>options = [..]</code> → <code>items = [..]</code> · per-option <code>option-sh</code> → <code>title-sh</code> · row <code>link</code> now takes a URL (<code>link|text|https://…</code>) · group no longer offers load-after/min-sdk/max-sdk/allow-shortcut (ignored there) · download: <code>url-sh</code>, key, support, icon, rows · editor: key, support, icon, wrap, placeholder, need-input, value/value-sh, rows (support was shown but never emitted before).</li>
 <li><b>New authoring fields</b> — param cards: required, readonly (+sort), placeholder(-sh), maxlength, desc-on(-sh), remember, allow-no-selection, mime/multiple/editable, separator; depend: several parents (<code>a|b</code>), depend-logic, default, initial, negate, threshold, cascade, include-hidden, onchange, per-parent depend-mode, live check that depend-on names an existing param <b>name</b>. Rows: <code>copy</code>, <code>markdown</code>, <code>html</code>, plus trailing <code>key=value</code> pairs (color, size, script, icon, support…). Menu/fab items: real per-type keys for file / folder / link / activity / html / config.</li>
 <li><b>Per-cell -sh pills on param cards</b> — the separate "dynamic (-sh)" block is gone: title / value / desc / support cells each carry their own -sh pill that swaps the SAME input between its text value and a shell script (auto-sampled on tick, unwrapped on untick). The emitted key follows the pill: title ↔ title-sh, value ↔ value-sh, desc ↔ desc-sh, support stays <code>support</code> (the pill only makes its value a shell). desc is a new optional cell.</li>
-<li><b>Compact options editor with options-sh</b> — the dropdown options block now has one header switch: <code>options-sh</code> ON = the whole list comes from a script (rows hidden), OFF = one row per entry (value + title + optional per-row title-sh). Only one form is active at a time — no more duplicated option sources.</li>
+<li><b>Compact options editor with options-sh</b> — the dropdown options block now has one header switch: <code>options-sh</code> ON = the whole list comes from a script (rows hidden), OFF = one row per entry (Title + val). Only one form is active at a time — no more duplicated option sources.</li>
 <li><b>params name field</b> — every [[action.params]] emits an explicit <code>name = "…"</code> (the $env_var) before <code>title</code>; the card has a dedicated name input (blank = slug from the title, chip updates live).</li>
-<li><b>per-option title-sh</b> — the per-option dynamic title inside [[action.params.options]] is <code>title-sh</code> (replaces <code>title</code>; <code>option-sh</code> does not exist there).</li>
 <li><b>Back-to-top anchored correctly</b> — removed <code>height:100%</code> on html/body (it made body a scroll container that re-anchored the fixed button on some WebViews) and made the bottom offset safe-area-aware.</li>
 <li><b>depend-* expanded</b> — <code>depend-value</code> accepts comma-separated "any of" values; full semantics documented; the card's depend row got an inline legend.</li>
 <li><b>[[action.params]] merged into the action tab</b> — one tab, one sample: the preview shows the action with its params dialog already open.</li>
@@ -2240,8 +2567,8 @@ lock = "{LOT}|Requires root access"</pre>`
 let cur = 'group';
 const state = {};
 
-function newParam(type, label) {
-  return { name:'', label: label || 'Param', type: type || 'text', mm:'', value:'', desc:'', support:'true', extra:'', options: null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, x:{}, dep:{ on:'', value:'', mode:'none' } };
+function newParam(type, title) {
+  return { name:'', title: title || 'Param', label:'', type: type || 'text', min:'', max:'', value:'', desc:'', support:'true', extra:'', options: null, items: null, optMode: 'tables', optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, x:{}, dep:{ on:'', value:'', mode:'none' } };
 }
 function initState(type) {
   const t = TYPES[type];
@@ -2271,10 +2598,31 @@ function fieldHtml(field, val, prefix) {
   if (field.type === 'paramlist') {
     const list = val || [];
     let h = `<div class="field"><label>${esc(field.label)}</label>`;
-    h += `<div class="pb-row"><select id="pb_type">${PARAM_TYPES.map(t=>`<option>${t}</option>`).join('')}</select><button type="button" class="pb-add" onclick="pbAdd()">+ add param</button></div>`;
+    h += `<div class="pb-row"><select id="pb_type">${PARAM_TYPES.map(t=>`<option>${t}</option>`).join('')}</select><button type="button" class="pb-add" onclick="pbAdd()">+ add param</button>${list.length?`<button type="button" class="pb-add" onclick="pbClear()" title="Remove every param card">✕ clear all</button>`:''}</div>`;
     h += list.length
       ? `<div class="param-list">${list.map((p,i)=>paramCardHtml(p,i,list)).join('')}</div>`
       : `<p class="adv-empty">No params — pick a type above and press "+ add param" to create one.</p>`;
+    h += hint + `</div>`;
+    return h;
+  }
+  if (field.type === 'mfitems') {
+    const rows = (Array.isArray(val) ? val : []).map(mfNorm);
+    let h = `<div class="field"><label>${esc(field.label)}</label>`;
+    h += `<div class="pb-row"><button type="button" class="pb-add" data-mfadd="menu">+ add menu item</button><button type="button" class="pb-add" data-mfadd="fab">+ add fab item</button>${rows.length?`<button type="button" class="pb-add" data-mfclear="1" title="Remove every menu/fab card">✕ clear all</button>`:''}</div>`;
+    h += rows.length
+      ? `<div class="param-list">${rows.map((r,i)=>mfCardHtml(r,i)).join('')}</div>`
+      : `<p class="adv-empty">No menu/fab items yet — press "+ add menu item" (toolbar 3-dot menu) or "+ add fab item" (floating button) to create one.</p>`;
+    h += hint + `</div>`;
+    return h;
+  }
+  if (field.type === 'rowcards') {
+    const rcList = rcRows(val);
+    const sk = field.key;
+    let h = `<div class="field"><label>${esc(field.label)}</label>`;
+    h += `<div class="pb-row"><button type="button" class="pb-add" data-rcadd="1" data-rckey="${esc(sk)}">+ add row</button>${rcList.length?`<button type="button" class="pb-add" data-rcclear="1" data-rckey="${esc(sk)}" title="Remove every row card">✕ clear all</button>`:''}</div>`;
+    h += rcList.length
+      ? `<div class="param-list">${rcList.map((r,i)=>rcCardHtml(r,i,sk)).join('')}</div>`
+      : `<p class="adv-empty">No rows yet — press "+ add row" to create one. Each card becomes one [[&lt;type&gt;.rows]] table.</p>`;
     h += hint + `</div>`;
     return h;
   }
@@ -2282,12 +2630,12 @@ function fieldHtml(field, val, prefix) {
     return `<div class="field"><label for="${id}">${esc(field.label)}</label><select id="${id}" data-key="${field.key}">${field.options.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('')}</select>${hint}</div>`;
   }
   if (field.type === 'textarea') {
-    return `<div class="field"><label for="${id}">${esc(field.label)}</label><textarea id="${id}" data-key="${field.key}" placeholder="${esc(field.ph||'')}">${esc(val)}</textarea>${hint}</div>`;
+    return `<div class="field"><label for="${id}">${esc(field.label)}</label><div class="in-wrap"><textarea id="${id}" data-key="${field.key}" placeholder="${esc(field.ph||'')}">${esc(val)}</textarea><button type="button" class="in-clear" data-clearkey="${field.key}" title="Clear this field">✕</button></div>${hint}</div>`;
   }
   const labelRow = field.sh
     ? `<div class="field-label-row"><label class="fl-main" for="${id}">${esc(field.label)}</label><label class="sh-toggle${state[cur][field.key+'ShOn']?' on':''}" for="${id}_shon"><input type="checkbox" id="${id}_shon" data-key="${field.key}ShOn"${state[cur][field.key+'ShOn']?' checked':''}>-sh</label></div>`
     : `<label for="${id}">${esc(field.label)}</label>`;
-  return `<div class="field">${labelRow}<input type="text" id="${id}" data-key="${field.key}" value="${esc(val)}" placeholder="${esc(field.ph||'')}">${hint}</div>`;
+  return `<div class="field">${labelRow}<div class="in-wrap"><input type="text" id="${id}" data-key="${field.key}" value="${esc(val)}" placeholder="${esc(field.ph||'')}"><button type="button" class="in-clear" data-clearkey="${field.key}" title="Clear this field">✕</button></div>${hint}</div>`;
 }
 
 const el = id => document.getElementById(id);
@@ -2301,6 +2649,8 @@ function renderForm() {
   const t = TYPES[cur], s = state[cur];
   el('formTitle').textContent = 'Fields & Advanced · ' + t.label;
   el('formDesc').textContent = t.desc;
+  const faT = el('faType');
+  if (faT) faT.textContent = t.label;
   const wrapFields = t.wrap
     ? [A_GROUP, ...(s.advGroup ? [A_GROUPTITLE] : [])]
     : [];
@@ -2324,9 +2674,81 @@ function renderAdv() {
 }
 function renderDemo() { el('demoFrame').innerHTML = TYPES[cur].demo(state[cur]); }
 function renderHint() { el('demoHint').innerHTML = TYPES[cur].hint(state[cur]); }
+// --- TOML syntax highlighting for the output panel (no dependencies) ----
+const TOML_WORD = /[\w.+\-]+/g;
+function hlToml(src) {
+  const out = [];
+  let plain = '';
+  let i = 0;
+  const n = src.length;
+  let atLineStart = true;   // nothing but spaces/tabs so far on this line
+  let inHeader = false;     // between the [ / [[ and ]] of a section header
+  const flush = () => { if (plain) { out.push(esc(plain)); plain = ''; } };
+  const span = (cls, t) => { flush(); out.push('<span class="' + cls + '">' + esc(t) + '</span>'); };
+  while (i < n) {
+    const c = src[i];
+    if (c === '\n') { plain += c; i++; atLineStart = true; inHeader = false; continue; }
+    if (c === ' ' || c === '\t' || c === '\r') { plain += c; i++; continue; }
+    if (c === '#') {   // comment to end of line
+      let j = src.indexOf('\n', i); if (j < 0) j = n;
+      span('tk-com', src.slice(i, j)); i = j; continue;
+    }
+    if (c === '"' || c === "'") {   // string — consumed atomically so # and = inside stay string-colored
+      let j;
+      if (src.slice(i, i + 3) === c + c + c) {   // multi-line triple-quoted string
+        j = src.indexOf(c + c + c, i + 3);
+        j = j < 0 ? n : j + 3;
+      } else {
+        j = i + 1;
+        while (j < n && src[j] !== c && src[j] !== '\n') {
+          if (src[j] === '\\' && c === '"' && j + 1 < n && src[j + 1] !== '\n') j++;
+          j++;
+        }
+        if (j < n && src[j] === c) j++;
+      }
+      span('tk-str', src.slice(i, j)); i = j; continue;
+    }
+    if (c === '[') {
+      if (atLineStart) {   // [[section]] opener — consume the whole bracket run
+        let j = i;
+        while (j < n && src[j] === '[') j++;
+        inHeader = true;
+        span('tk-br', src.slice(i, j)); i = j; atLineStart = false; continue;
+      }
+      span('tk-op', c); i++; atLineStart = false; continue;   // array opener
+    }
+    if (c === ']') {
+      if (inHeader) {   // section closer — consume ]] or ]
+        let j = i;
+        while (j < n && src[j] === ']') j++;
+        span('tk-br', src.slice(i, j)); i = j; inHeader = false; continue;
+      }
+      span('tk-op', c); i++; atLineStart = false; continue;   // array closer
+    }
+    if (c === '=') { span('tk-op', c); i++; atLineStart = false; continue; }
+    if (c === '{' || c === '}' || c === ',') { plain += c; i++; atLineStart = false; continue; }
+    TOML_WORD.lastIndex = i;
+    const m = TOML_WORD.exec(src);
+    if (m && m.index === i) {
+      const word = m[0];
+      let k = i + word.length;
+      while (k < n && (src[k] === ' ' || src[k] === '\t')) k++;
+      let cls = '';
+      if (inHeader) cls = 'tk-sec';
+      else if (src[k] === '=') cls = 'tk-key';
+      else if (word === 'true' || word === 'false') cls = 'tk-bool';
+      else if (word === 'inf' || word === 'nan' || /^[+-]?(\d|\.)/.test(word)) cls = 'tk-num';
+      if (cls) span(cls, word); else plain += word;
+      i += word.length; atLineStart = false; continue;
+    }
+    plain += c; i++; atLineStart = false;
+  }
+  flush();
+  return out.join('');
+}
 function renderCode() {
   const code = TYPES[cur].code(state[cur]);
-  el('codeOut').textContent = code;
+  el('codeOut').innerHTML = hlToml(code);
 }
 function docsHtml(type) {
   const d = DOCS[type];
@@ -2346,10 +2768,12 @@ function docsHtml(type) {
 function renderGuide() {
   el('guideTitle').textContent = 'Guide · ' + TYPES[cur].label;
   el('guideBody').innerHTML = docsHtml(cur);
+  safe(() => enhancePres(el('guideBody')));
 }
 function renderTopics() {
   el('topicsBody').innerHTML = TOPICS.map(t =>
     `<details class="adv-topic"${t.id==='intro'?' open':''}><summary>${esc(t.title)}</summary><div class="topic-body doc">${t.html}</div></details>`).join('');
+  safe(() => enhancePres(el('topicsBody')));
 }
 
 function selectType(type) {
@@ -2393,6 +2817,70 @@ function applyInput(e) {
     return;
   }
 
+  // --- menu/fab card inputs ----------------------------------------------------
+  if (t.dataset.mfidx !== undefined && (t.dataset.mffield || t.dataset.mofield || t.dataset.mifield || t.dataset.mfopts)) {
+    const rows = state[cur].mfItems = (Array.isArray(state[cur].mfItems) ? state[cur].mfItems : []).map(mfNorm);
+    const ri = +t.dataset.mfidx;
+    const r = rows[ri];
+    if (!r) return;
+    if (t.dataset.mffield) {
+      const fk = t.dataset.mffield;
+      if (t.type === 'checkbox') r[fk] = t.checked;
+      else r[fk] = t.value;
+      if (fk === 'title') {
+        const mcard = t.closest('.param-card');
+        const mvc = mcard && mcard.querySelector('.param-var');
+        if (mvc) mvc.textContent = t.value.trim() || '(untitled)';
+      }
+      if (fk === 'style' || fk === 'type') renderForm();
+    } else if (t.dataset.mofield) {
+      const oi = +t.dataset.moidx;
+      r.options = r.options || [];
+      if (!r.options[oi]) return;
+      r.options[oi][t.dataset.mofield] = t.value;
+    } else if (t.dataset.mifield) {
+      const ii = +t.dataset.miidx;
+      r.items = r.items || [];
+      if (r.items[ii] === undefined) return;
+      r.items[ii] = t.value;
+    } else if (t.dataset.mfopts) {
+      r.optSh = t.value;
+    }
+    safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+
+  // --- text.rows card inputs ---------------------------------------------------
+  if (t.dataset.ridx !== undefined && t.dataset.rfield) {
+    const key = t.dataset.rckey || 'rows';
+    const rcRowsArr = rcRows(state[cur][key]);
+    const ri = +t.dataset.ridx;
+    if (!rcRowsArr[ri]) return;
+    const r = rcRowsArr[ri];
+    const rf = t.dataset.rfield;
+    if (rf === 'style') r.style = t.value;
+    else if (rf === 'text') r.text = t.value;
+    else if (rf === 'pos0') { while (r.pos.length < 1) r.pos.push(''); r.pos[0] = t.value; }
+    else if (rf === 'extras') {
+      const keep = ['color','size',...rcDedicated(r.style)];
+      r.kv = r.kv.filter(([k])=>keep.includes(k));
+      (t.value||'').split('|').map(sg=>sg.trim()).filter(Boolean).forEach(seg=>{
+        const m = seg.match(/^([a-zA-Z][a-zA-Z0-9_-]*)\s*=\s*([\s\S]*)$/);
+        if (m) r.kv.push([m[1], m[2].trim()]);
+      });
+    }
+    else if (rf.startsWith('kv:')) rcKvSet(r, rf.slice(3), t.value);
+    state[cur][key] = rcRowsArr.map(rcSerialize).join('\n');
+    if (rf === 'text') {
+      const card = t.closest('.param-card');
+      const vc = card && card.querySelector('.param-var');
+      if (vc) vc.textContent = t.value.trim() || r.style;
+    }
+    if (rf === 'style') renderForm();
+    safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+
   // --- param-card inputs -----------------------------------------------------
   if (t.dataset.pidx !== undefined) {
     const list = state[cur].paramList || [];
@@ -2410,21 +2898,25 @@ function applyInput(e) {
         if (vc) vc.textContent = paramVar(p);
       }
       refreshDepWarnings();
-    } else if (t.dataset.pfield === 'label') {
-      p.label = t.value;
+    } else if (t.dataset.pfield === 'title') {
+      p.title = t.value;
       const card = t.closest('.param-card');
       if (card) {
         const vc = card.querySelector('.param-var');
         if (vc) vc.textContent = paramVar(p);
         const nm = card.querySelector('input[data-pfield="name"]');
-        if (nm && !nm.value) nm.placeholder = paramNameFrom(p.label);
+        if (nm && !nm.value) nm.placeholder = paramNameFrom(p.title || p.label);
       }
       refreshDepWarnings();
+    } else if (t.dataset.pfield === 'label') {
+      p.label = t.value;
     } else if (t.dataset.pfield === 'type') {
       p.type = t.value;
       renderForm(); // swap the cell set + options editor
-    } else if (t.dataset.pfield === 'mm') {
-      p.mm = t.value;
+    } else if (t.dataset.pfield === 'min') {
+      p.min = t.value;
+    } else if (t.dataset.pfield === 'max') {
+      p.max = t.value;
     } else if (t.dataset.pfield === 'extra') {
       p.extra = t.value;
     } else if (t.dataset.pfield === 'value') {
@@ -2443,7 +2935,8 @@ function applyInput(e) {
       p.shOn = p.shOn || {}; p.sh = p.sh || {};
       p.shOn[f] = t.checked;
       if (t.checked && !(p.sh[f]||'').trim()) {
-        if (f === 'title') p.sh.title = 'echo "' + (p.label || 'Label') + '"';
+        if (f === 'title') p.sh.title = 'echo "' + (p.title || p.label || 'Label') + '"';
+        else if (f === 'label') p.sh.label = 'echo "' + (p.label || p.title || 'Label') + '"';
         else if (f === 'desc') p.sh.desc = 'echo "Description"';
         else if (f === 'value') p.sh.value = 'echo "value"';
         else if (f === 'support') p.sh.support = 'test -e {HOME}/flag && echo 1';
@@ -2461,18 +2954,8 @@ function applyInput(e) {
     } else if (t.dataset.ofield !== undefined) {
       const o = (p.options = p.options || [])[+t.dataset.oidx];
       if (o) o[t.dataset.ofield] = t.value;
-    } else if (t.dataset.oshon !== undefined) {
-      const o = (p.options = p.options || [])[+t.dataset.oidx];
-      if (o) {
-        o.shOn = t.checked;
-        if (t.checked && !(o.shTitle||'').trim()) {
-          o.shTitle = 'echo "' + (o.title || o.value || 'Option') + '"';
-        }
-        renderForm();
-      }
-    } else if (t.dataset.osh !== undefined) {
-      const o = (p.options = p.options || [])[+t.dataset.oidx];
-      if (o) o.shTitle = t.value;
+    } else if (t.dataset.ifield !== undefined) {
+      (p.items = p.items || [])[+t.dataset.iidx] = t.value;
     } else if (t.dataset.pdep) {
       p.dep = p.dep || { on:'', value:'', mode:'none' };
       const dk = t.dataset.pdep;
@@ -2494,6 +2977,12 @@ el('formFields').addEventListener('input', applyInput);
 el('formFields').addEventListener('change', applyInput);
 // param card / option row action buttons and "+ add option"
 el('formFields').addEventListener('click', e => {
+  const clr = e.target.closest('[data-clearkey]');
+  if (clr) {
+    state[cur][clr.dataset.clearkey] = '';
+    safe(renderForm); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
   const pact = e.target.closest('[data-pact]');
   if (pact) {
     const idx = parseInt(pact.dataset.pidx, 10);
@@ -2503,6 +2992,17 @@ el('formFields').addEventListener('click', e => {
     else if (act === 'up' && idx > 0) { const [x] = list.splice(idx,1); list.splice(idx-1,0,x); }
     else if (act === 'down' && idx < list.length-1) { const [x] = list.splice(idx,1); list.splice(idx+1,0,x); }
     else return;
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const mbtn = e.target.closest('[data-poptsmode]');
+  if (mbtn) {
+    const p = (state[cur].paramList||[])[+mbtn.dataset.pidx];
+    if (!p) return;
+    p.optMode = mbtn.dataset.poptsmode;
+    p.optionsShOn = p.optMode === 'sh';
+    if (p.optMode === 'sh' && !(p.optionsSh||'').trim()) p.optionsSh = 'gen_options.sh';
+    if (p.optMode === 'items' && !(p.items||[]).length) p.items = [''];
     renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
     return;
   }
@@ -2525,22 +3025,196 @@ el('formFields').addEventListener('click', e => {
     const p = (state[cur].paramList||[])[+oadd.dataset.pidx];
     if (!p) return;
     p.options = p.options || [];
-    p.options.push({ value:'', title:'', shOn:false, shTitle:'' });
+    p.options.push({ value:'', title:'' });
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const iact = e.target.closest('[data-iact]');
+  if (iact) {
+    const p = (state[cur].paramList||[])[+iact.dataset.pidx];
+    if (!p) return;
+    const items = p.items = p.items || [];
+    const ii = parseInt(iact.dataset.iidx, 10);
+    const act = iact.dataset.iact;
+    if (act === 'del') items.splice(ii, 1);
+    else if (act === 'up' && ii > 0) { const [x] = items.splice(ii,1); items.splice(ii-1,0,x); }
+    else if (act === 'down' && ii < items.length-1) { const [x] = items.splice(ii,1); items.splice(ii+1,0,x); }
+    else return;
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const iadd = e.target.closest('[data-iadd]');
+  if (iadd) {
+    const p = (state[cur].paramList||[])[+iadd.dataset.pidx];
+    if (!p) return;
+    p.items = p.items || [];
+    p.items.push('');
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+  }
+  const moptmb = e.target.closest('[data-mfoptmode]');
+  if (moptmb) {
+    const r = (state[cur].mfItems||[])[+moptmb.dataset.mfidx];
+    if (!r) return;
+    r.optMode = moptmb.dataset.mfoptmode;
+    if (r.optMode === 'sh' && !(r.optSh||'').trim()) r.optSh = 'gen_options.sh';
+    if (r.optMode === 'items' && !(r.items||[]).length) r.items = [''];
+    if (r.optMode === 'options' && !(r.options||[]).length) r.options = [{ value:'', title:'' }];
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const moact = e.target.closest('[data-moact]');
+  if (moact) {
+    const r = (state[cur].mfItems||[])[+moact.dataset.mfidx];
+    if (!r) return;
+    const opts = r.options = r.options || [];
+    const oi = parseInt(moact.dataset.moidx, 10);
+    const act = moact.dataset.moact;
+    if (act === 'del') opts.splice(oi, 1);
+    else if (act === 'up' && oi > 0) { const [x] = opts.splice(oi,1); opts.splice(oi-1,0,x); }
+    else if (act === 'down' && oi < opts.length-1) { const [x] = opts.splice(oi,1); opts.splice(oi+1,0,x); }
+    else return;
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const moadd = e.target.closest('[data-moadd]');
+  if (moadd) {
+    const r = (state[cur].mfItems||[])[+moadd.dataset.mfidx];
+    if (!r) return;
+    r.options = r.options || [];
+    r.options.push({ value:'', title:'' });
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const miact = e.target.closest('[data-miact]');
+  if (miact) {
+    const r = (state[cur].mfItems||[])[+miact.dataset.mfidx];
+    if (!r) return;
+    const items = r.items = r.items || [];
+    const ii = parseInt(miact.dataset.miidx, 10);
+    const act = miact.dataset.miact;
+    if (act === 'del') items.splice(ii, 1);
+    else if (act === 'up' && ii > 0) { const [x] = items.splice(ii,1); items.splice(ii-1,0,x); }
+    else if (act === 'down' && ii < items.length-1) { const [x] = items.splice(ii,1); items.splice(ii+1,0,x); }
+    else return;
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const miadd = e.target.closest('[data-miadd]');
+  if (miadd) {
+    const r = (state[cur].mfItems||[])[+miadd.dataset.mfidx];
+    if (!r) return;
+    r.items = r.items || [];
+    r.items.push('');
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const mfact = e.target.closest('[data-mfact]');
+  if (mfact) {
+    const rows = state[cur].mfItems = state[cur].mfItems || [];
+    const mi = parseInt(mfact.dataset.mfidx, 10);
+    const act = mfact.dataset.mfact;
+    if (act === 'del') rows.splice(mi, 1);
+    else if (act === 'up' && mi > 0) { const [x] = rows.splice(mi,1); rows.splice(mi-1,0,x); }
+    else if (act === 'down' && mi < rows.length-1) { const [x] = rows.splice(mi,1); rows.splice(mi+1,0,x); }
+    else return;
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const mfadd = e.target.closest('[data-mfadd]');
+  if (mfadd) {
+    const rows = state[cur].mfItems = state[cur].mfItems || [];
+    rows.push(mfNew(mfadd.dataset.mfadd));
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const mfclr = e.target.closest('[data-mfclear]');
+  if (mfclr) {
+    state[cur].mfItems = [];
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const ract = e.target.closest('[data-ract]');
+  if (ract) {
+    const key = ract.dataset.rckey || 'rows';
+    const rows = rcRows(state[cur][key]);
+    const ri = parseInt(ract.dataset.ridx, 10);
+    const act = ract.dataset.ract;
+    if (act === 'del') rows.splice(ri, 1);
+    else if (act === 'up' && ri > 0) { const [x] = rows.splice(ri,1); rows.splice(ri-1,0,x); }
+    else if (act === 'down' && ri < rows.length-1) { const [x] = rows.splice(ri,1); rows.splice(ri+1,0,x); }
+    else return;
+    state[cur][key] = rows.map(rcSerialize).join('\n');
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const rcadd = e.target.closest('[data-rcadd]');
+  if (rcadd) {
+    const key = rcadd.dataset.rckey || 'rows';
+    const rows = rcRows(state[cur][key]);
+    rows.push({ style:'plain', text:'New row', pos:[], kv:[] });
+    state[cur][key] = rows.map(rcSerialize).join('\n');
+    renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+    return;
+  }
+  const rcclr = e.target.closest('[data-rcclear]');
+  if (rcclr) {
+    state[cur][rcclr.dataset.rckey || 'rows'] = '';
     renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
   }
 });
 el('advBody').addEventListener('input', applyInput);
 el('advBody').addEventListener('change', applyInput);
+el('advBody').addEventListener('click', e => {
+  const clr = e.target.closest('[data-clearkey]');
+  if (clr) {
+    state[cur][clr.dataset.clearkey] = '';
+    safe(renderForm); safe(renderDemo); safe(renderHint); safe(renderCode);
+  }
+});
 
 // param quick-add — ONLY a type + add button; the card appears right after
 function pbAdd() {
   const typ = document.getElementById('pb_type');
   const list = state[cur].paramList = state[cur].paramList || [];
   let n = list.length + 1;
-  while (list.some(p => (p.label||'').toLowerCase() === ('param ' + n))) n++;
+  while (list.some(p => ((p.title||p.label||'').toLowerCase() === ('param ' + n)))) n++;
   list.push(newParam(typ ? typ.value : 'text', 'Param ' + n));
   renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
 }
+// remove every param card of the current type
+function pbClear() {
+  state[cur].paramList = [];
+  renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
+}
+
+// --- template tools: per-type clear / restore --------------------------------
+function blankFieldVal(f) {
+  if (f.type === 'checkbox') return false;
+  if (f.type === 'paramlist' || f.type === 'mfitems') return [];
+  if (f.type === 'select') return (f.options && f.options.length) ? f.options[0] : '';
+  return '';
+}
+function blankState(type) {
+  const t = TYPES[type], s = {};
+  (t.fields || []).forEach(f => { s[f.key] = blankFieldVal(f); if (f.sh) s[f.key + 'ShOn'] = false; });
+  (t.adv || []).forEach(f => {
+    if (s[f.key] === undefined) s[f.key] = blankFieldVal(f);
+    if (f.sh && s[f.key + 'ShOn'] === undefined) s[f.key + 'ShOn'] = false;
+  });
+  if (t.wrap) { s.advGroup = false; s.advGroupTitle = ''; }
+  return s;
+}
+function rerenderAll() {
+  renderTabs(); safe(renderForm); safe(renderAdv); safe(renderDemo); safe(renderHint); safe(renderCode); safe(renderGuide);
+}
+el('clearAllBtn').addEventListener('click', () => {
+  state[cur] = blankState(cur);
+  rerenderAll();
+});
+el('sampleBtn').addEventListener('click', () => {
+  state[cur] = initState(cur);
+  rerenderAll();
+});
 
 // chips → insert into last focused input/textarea
 let lastInput = null;
@@ -2565,15 +3239,50 @@ el('chipRow').addEventListener('click', e => {
   }
 });
 
-// copy
+// copy — shared helper; every code box gets a Copy button
+function flashCopied(btn) {
+  btn.textContent = 'Copied';
+  btn.classList.add('copied');
+  setTimeout(()=>{ btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1200);
+}
+function attachCopy(btn, getText) {
+  btn.addEventListener('click', () => {
+    const txt = getText();
+    const done = () => flashCopied(btn);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, done);
+    else done();
+  });
+}
+// wrap guide/topics example <pre> blocks with a floating Copy button
+function enhancePres(root) {
+  (root || document).querySelectorAll('pre:not([data-copyadded])').forEach(pre => {
+    pre.setAttribute('data-copyadded', '1');
+    const wrap = document.createElement('div');
+    wrap.className = 'pre-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy-btn'; btn.textContent = 'Copy';
+    btn.title = 'Copy this snippet';
+    attachCopy(btn, () => pre.textContent);
+    wrap.appendChild(btn);
+  });
+}
 el('copyBtn').addEventListener('click', () => {
+  const btn = el('copyBtn');
   const txt = el('codeOut').textContent;
-  const done = () => {
-    el('copyBtn').textContent = 'Copied';
-    el('copyBtn').classList.add('copied');
-    setTimeout(()=>{ el('copyBtn').textContent = 'Copy'; el('copyBtn').classList.remove('copied'); }, 1200);
-  };
-  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done); else done();
+  const done = () => flashCopied(btn);
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, done); else done();
+});
+
+// soft-wrap toggle for the generated TOML
+let wrapOn = false;
+el('wrapBtn').addEventListener('click', () => {
+  wrapOn = !wrapOn;
+  el('codeOut').style.whiteSpace = wrapOn ? 'pre-wrap' : 'pre';
+  el('codeOut').style.wordBreak = wrapOn ? 'break-word' : 'normal';
+  el('wrapBtn').textContent = 'wrap: ' + (wrapOn ? 'on' : 'off');
+  el('wrapBtn').classList.toggle('on', wrapOn);
 });
 
 // Back-to-top — the viewport is the scroll container (no height:100%); the
