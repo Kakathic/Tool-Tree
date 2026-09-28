@@ -86,12 +86,12 @@
 - [21. process = true](#21-process--true)
 - [22. Page lifecycle](#22-page-lifecycle)
 - [23. Script output control sequences](#23-script-output-control-sequences)
-  - [23.1. exit:[kill] / exit:[restart]](#231-exitkill--exitrestart)
-  - [23.2. choose:[value1|Label1,value2|Label2,...]](#232-choosevalue1label1value2label2)
-  - [23.3. pick:[values] / pickv:[values] / pickh:[values]](#233-pickvalues--pickvvalues--pickhvalues)
-  - [23.4. input:[prompt]](#234-inputprompt)
-  - [23.5. progress:[current/total]](#235-progresscurrenttotal)
-  - [23.6. am:[...] (send an Android Intent)](#236-am-send-an-android-intent)
+  - [23.1. exit:\[kill\] / exit:\[restart\]](#231-exitkill--exitrestart)
+  - [23.2. choose:\[value1|Label1,value2|Label2,...\]](#232-choosevalue1label1value2label2)
+  - [23.3. pick:\[values\] / pickv:\[values\] / pickh:\[values\]](#233-pickvalues--pickvvalues--pickhvalues)
+  - [23.4. input:\[prompt\]](#234-inputprompt)
+  - [23.5. progress:\[current/total\]](#235-progresscurrenttotal)
+  - [23.6. am:\[...\] (send an Android Intent)](#236-am-send-an-android-intent)
 
 **Practice**
 
