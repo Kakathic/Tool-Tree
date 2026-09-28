@@ -147,11 +147,6 @@ main {
 .pcell-label-row .sh-toggle { padding:0 6px; }
 .param-cell input.sh-active { border-color:var(--orange); }
 .param-cell input.sh-active:focus { outline:none; border-color:var(--orange); box-shadow:0 0 0 2px rgba(245,158,11,.15); }
-.param-cell-check { display:flex; align-items:center; gap:6px; background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius); padding:4px 7px; }
-.param-cell-check label { margin:0 !important; flex:1; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.param-cell-check input { width:14px !important; height:14px; flex:0 0 auto; accent-color:var(--accent); cursor:pointer; padding:0 !important; }
-.dep-check { display:inline-flex; align-items:center; gap:4px; font-family:var(--mono); font-size:9.5px; color:var(--purple); background:rgba(139,92,246,.08); border:1px solid rgba(139,92,246,.25); border-radius:5px; padding:3px 7px; cursor:pointer; user-select:none; }
-.dep-check input { width:12px; height:12px; accent-color:var(--purple); cursor:pointer; margin:0; }
 .param-dep-row {
   display:flex; gap:5px; align-items:center; margin-top:8px; flex-wrap:wrap;
   border-top:1px dashed var(--border); padding-top:7px;
@@ -163,6 +158,17 @@ main {
 }
 .param-dep-row input:focus, .param-dep-row select:focus { outline:none; border-color:var(--purple); box-shadow:0 0 0 2px rgba(139,92,246,.15); }
 .param-dep-row .hint { flex:1 0 100%; margin-top:2px; }
+.param-more, .dep-more { flex:1 0 100%; margin-top:8px; border-top:1px dashed var(--border); padding-top:6px; }
+.dep-more { border-top:none; margin-top:2px; padding-top:0; }
+.param-more > summary, .dep-more > summary { cursor:pointer; font-family:var(--mono); font-size:10px; color:var(--fg-muted); user-select:none; margin-bottom:6px; }
+.param-more > summary:hover, .dep-more > summary:hover { color:var(--accent); }
+.param-cell-check label { display:flex; align-items:flex-start; gap:6px; margin:0; font-weight:500; line-height:1.4; cursor:pointer; }
+.param-cell-check input { width:auto !important; flex:0 0 auto; margin-top:1px; accent-color:var(--accent); }
+.dep-warn { flex:1 0 100%; font-family:var(--mono); font-size:10px; color:var(--red); line-height:1.45; }
+.dep-warn:empty { display:none; }
+.param-dep-row .param-grid { flex:1 0 100%; }
+.param-dep-row .param-cell { min-width:0; }
+.param-dep-row .param-cell input, .param-dep-row .param-cell select { width:100%; }
 
 /* Options editor — compact header with an options-sh toggle (script OR rows) */
 .param-opts { margin-top:9px; border-top:1px dashed var(--border); padding-top:7px; }
@@ -427,7 +433,7 @@ details.adv-topic .topic-body { padding:0 14px 14px; font-size:12.5px; line-heig
 <header>
   <div class="brand-line"><span class="brand-dot"></span><span class="brand-tag">tool-tree</span><span>· config generator + guide</span></div>
   <h1>TOML Template Generator</h1>
-  <p>Pick a node type, fill the merged Fields &amp; Advanced panel, preview the UI and copy the TOML — v3 is fully synced with the TOML guide: text.rows v3 syntax (sh · markdown · icon · photo · html · reset · refresh · real toggle get/set · progress colors), 12 new [[action.params]] fields + the full depend-* set, editor value/wrap/need-input, download url-sh, picker desc and menu/fab file items.</p>
+  <p>Pick a node type, fill the merged Fields &amp; Advanced panel, preview the UI and copy the TOML — [[action.params]] is authored inside the action tab: per-field -sh pills, an options editor with an options-sh switch, and a live preview of the dialog.</p>
 </header>
 
 <div class="types" id="typeTabs"></div>
@@ -501,8 +507,6 @@ const tomlEsc = s => (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"')
 
 const PARAM_TYPES = ['text','int','number','seekbar','switch','bool','checkbox','spinner','single-select','multi-select','file','folder','app','packages','color'];
 const OPT_TYPES = ['spinner','single-select','multi-select'];
-// plain param-card fields (non -sh) handled generically by applyInput
-const PFIELDS = ['plabel','placeholder','readonly','maxlength','descon','mime','pathhome','remember'];
 
 // --- -sh auto-sampling: tick = shell form, untick = plain text ---------------
 const SHELLY_RE = /^(echo|test|cat|ls|grep|sed|awk|sh|source|\.\/|\[|if|while|for|until|case|getprop|setprop|settings|pm|am|wm|dumpsys|mount|umount|unzip|tar|wget|curl|date|id|whoami|df|du|ps|top|kill|killall|rm|cp|mv|mkdir|touch|chmod|chown|dd|sync|find|xargs|busybox|toybox|su)\b/;
@@ -553,41 +557,83 @@ function paramDepLines(p) {
   let s = `\ndepend-on = "${tomlEsc(dOn)}"`;
   const dVal = (dep.value||'').trim();
   if (dVal) s += `\ndepend-value = "${tomlEsc(dVal)}"`;
-  const dLogic = (dep.logic||'').trim();
-  if (dLogic && dLogic !== 'and') s += `\ndepend-logic = "${tomlEsc(dLogic)}"`;
-  const dDef = (dep.default||'').trim();
-  if (dDef) s += `\ndepend-default = "${tomlEsc(dDef)}"`;
-  const dInit = (dep.initial||'').trim();
-  if (dInit && dInit !== 'auto') s += `\ndepend-initial = "${tomlEsc(dInit)}"`;
-  if (dep.mode === 'hide') s += `\ndepend-hide = true`;
-  if (dep.mode === 'dim')  s += `\ndepend-dim = true`;
-  if (dep.dreadonly) s += `\ndepend-readonly = true`;
-  if (dep.dsort) s += `\ndepend-sort = true`;
+  const ml = (dep.modeList||'').trim();
+  if (ml) s += `\ndepend-mode = "${tomlEsc(ml)}"`;
+  else if (dep.mode === 'hide') s += `\ndepend-mode = "hide"`;
+  if (dep.mode === 'dim') {
+    s += `\ndepend-readonly = true`;
+    if (dep.sort) s += `\ndepend-sort = true`;
+  }
+  const lg = (dep.logic||'').trim();
+  if (lg && lg !== 'and') s += `\ndepend-logic = "${tomlEsc(lg)}"`;
+  const df = (dep.def||'').trim();
+  if (df) s += `\ndepend-default = "${tomlEsc(df)}"`;
+  const ini = (dep.initial||'').trim();
+  if (ini) s += `\ndepend-initial = "${tomlEsc(ini)}"`;
+  if (dep.negate) s += `\ndepend-negate = true`;
+  const th = parseInt(dep.threshold, 10);
+  if (!isNaN(th) && (!lg || lg === 'and')) s += `\ndepend-threshold = ${th}`;
+  if (dep.noCascade) s += `\ndepend-cascade = false`;
+  if (dep.noHidden) s += `\ndepend-include-hidden = false`;
+  const oc = (dep.onchange||'').trim();
+  if (oc) s += `\ndepend-onchange = "${tomlEsc(oc)}"`;
   return s;
 }
-// readonly: Bool|Shell — true/1 → readonly = true; other non-empty → shell form; empty/false → omitted
-function paramReadonlyPart(p) {
-  const raw = (p.readonly||'').trim();
-  const v = raw.toLowerCase();
-  if (!v || v==='false' || v==='0') return '';
-  if (v==='true' || v==='1') return `\nreadonly = true`;
-  return `\nreadonly = "${tomlEsc(raw)}"`;
-}
-// remember defaults to true in the app — only an explicit false is emitted
-function paramRememberPart(p) {
-  const v = (p.remember||'').trim().toLowerCase();
-  return (v==='false' || v==='0') ? `\nremember = false` : '';
-}
-function paramToggleCell(label, key, p, idx) {
-  return `<div class="param-cell param-cell-check"><label>${label}</label><input type="checkbox" data-pidx="${idx}" data-pfield="${key}"${p[key]?' checked':''}></div>`;
+// soft validation: parents must be other params of the same action (by name)
+function paramNames(list) { return (list||[]).map(q => paramNameFrom((q.name||'').trim() || q.label)); }
+function depWarnings(list, p) {
+  const dep = p.dep || {}, on = (dep.on||'').trim();
+  if (!on) return [];
+  const names = paramNames(list), me = paramNameFrom((p.name||'').trim() || p.label);
+  const out = [];
+  on.split('|').map(x=>x.trim()).filter(Boolean).forEach(n => {
+    if (n === me) out.push(`"${n}" is this param itself — a param cannot depend on itself`);
+    else if (!names.includes(n)) out.push(`no param named "${n}" in this action — depend-on uses the param name, not its title`);
+  });
+  return out;
 }
 // param support: -sh pill wins; "true"/"1"/empty → omitted; "false"/"0" → false; else shell
 function paramSupportPart(p) {
-  if (p.shOn && p.shOn.support && (p.sh.support||'').trim()) return `\nsupport-sh = "${tomlEsc(p.sh.support.trim())}"`;
+  if (p.shOn && p.shOn.support && (p.sh.support||'').trim()) return `\nsupport = "${tomlEsc(p.sh.support.trim())}"`;
   const raw = (p.support||'').trim(); const v = raw.toLowerCase();
   if (!v || v==='true' || v==='1') return '';
   if (v==='false'||v==='0') return `\nsupport = false`;
   return `\nsupport = "${tomlEsc(raw)}"`;
+}
+function isMultiParam(p) {
+  const x = p.x || {};
+  return p.type === 'multi-select' || ((p.type === 'file' || p.type === 'folder') && !!x.multiple)
+    || ((p.type === 'app' || p.type === 'packages') && (p.extra || '').trim() === 'multi');
+}
+// extra [[action.params]] keys authored in the card's "more fields" block
+function paramExtraLines(p) {
+  const x = p.x || {}, sh = p.sh || {}, on = p.shOn || {};
+  const has = f => on[f] && (sh[f]||'').trim();
+  const t = p.type;
+  let s = '';
+  if (t === 'text' || t === 'int' || t === 'number') {
+    if (has('placeholder')) s += `\nplaceholder-sh = "${tomlEsc(sh.placeholder.trim())}"`;
+    else if ((x.placeholder||'').trim()) s += `\nplaceholder = "${tomlEsc(x.placeholder.trim())}"`;
+  }
+  if (t === 'text' && !isNaN(parseInt(x.maxlength, 10))) s += `\nmaxlength = ${parseInt(x.maxlength, 10)}`;
+  if (t === 'switch' || t === 'bool' || t === 'checkbox') {
+    if (has('descOn')) s += `\ndesc-on-sh = "${tomlEsc(sh.descOn.trim())}"`;
+    else if ((x.descOn||'').trim()) s += `\ndesc-on = "${tomlEsc(x.descOn.trim())}"`;
+  }
+  if (t === 'file' && (x.mime||'').trim()) s += `\nmime = "${tomlEsc(x.mime.trim())}"`;
+  if ((t === 'file' || t === 'folder') && x.multiple) s += `\nmultiple = true`;
+  if ((t === 'file' || t === 'folder') && x.editable) s += `\neditable = true`;
+  if (isMultiParam(p) && (x.separator||'') !== '') s += `\nseparator = "${tomlEsc(String(x.separator).replace(/\\n/g, '\n'))}"`;
+  if (x.required) s += `\nrequired = true`;
+  const ro = (x.readonly||'').trim();
+  if (ro) {
+    const l = ro.toLowerCase();
+    s += (l === 'true' || l === 'false') ? `\nreadonly = ${l}` : `\nreadonly = "${tomlEsc(ro)}"`;
+    if (x.sort) s += `\nsort = true`;
+  }
+  if (x.noRemember) s += `\nremember = false`;
+  if (OPT_TYPES.includes(t) && t !== 'multi-select' && x.noSel) s += `\nallow-no-selection = true`;
+  return s;
 }
 function paramToToml(p) {
   const t = p.type;
@@ -606,14 +652,12 @@ function paramToToml(p) {
     } else {
       const opts = paramOptionsList(p);
       optBlocks = opts.map(o => {
-        let s = `\n\n[[action.params.options]]\nvalue = "${tomlEsc(o.v)}"\ntitle = "${tomlEsc(o.l)}"`;
         const src = (p.options||[]).find(x => (x.value||x.title||'').trim() === o.v);
-        if (src && src.shOn && (src.shTitle||'').trim()) s += `\noption-sh = "${tomlEsc(src.shTitle.trim())}"`;
-        return s;
+        // one-variant: a per-option shell REPLACES title (parser key is title-sh, not option-sh)
+        if (src && src.shOn && (src.shTitle||'').trim())
+          return `\n\n[[action.params.options]]\nvalue = "${tomlEsc(o.v)}"\ntitle-sh = "${tomlEsc(src.shTitle.trim())}"`;
+        return `\n\n[[action.params.options]]\nvalue = "${tomlEsc(o.v)}"\ntitle = "${tomlEsc(o.l)}"`;
       }).join('');
-    }
-    if (t==='spinner' || t==='single-select') {
-      if (p.allownosel) fields += `\nallow-no-selection = true`;
     }
   } else if (t === 'int' || t === 'number' || t === 'seekbar') {
     const [min, max] = (p.mm || '').split(',').map(s => s.trim());
@@ -623,46 +667,25 @@ function paramToToml(p) {
   } else if (t === 'switch' || t === 'bool' || t === 'checkbox') {
     fields += valLine(p.value);
   } else if (t === 'file') {
-    if ((p.extra||'').trim()) fields += `\nsuffix = "${tomlEsc(p.extra.trim())}"`;
-    if ((p.mime||'').trim()) fields += `\nmime = "${tomlEsc(p.mime.trim())}"`;
-    if ((p.pathhome||'').trim()) fields += `\npath-home = "${tomlEsc(p.pathhome.trim())}"`;
-    if (p.multiple) fields += `\nmultiple = true`;
+    if (p.extra) fields += `\nsuffix = "${tomlEsc(p.extra.trim())}"`;
   } else if (t === 'folder') {
-    if ((p.extra||'').trim()) fields += `\npath-home = "${tomlEsc(p.extra.trim())}"`;
-    else if ((p.pathhome||'').trim()) fields += `\npath-home = "${tomlEsc(p.pathhome.trim())}"`;
-    if (p.multiple) fields += `\nmultiple = true`;
+    if (p.extra) fields += `\npath-home = "${tomlEsc(p.extra.trim())}"`;
   } else if (t === 'app' || t === 'packages') {
     if ((p.extra || '').trim() === 'multi') fields += `\nmultiple = true`;
   } else if (t === 'color') {
     const def = (p.value || '').trim();
     if (def) fields += valLine(def.startsWith('#') ? def : '#' + def);
-  } else if (t === 'text') {
-    if ((p.maxlength||'').trim()) fields += `\nmaxlength = ${parseInt(p.maxlength,10)||0}`;
-    fields += valLine(p.value);
   } else {
     fields += valLine(p.value);
-  }
-  // placeholder + desc-on (bool types) + label — each with its own -sh pill
-  const isBoolType = t === 'switch' || t === 'bool' || t === 'checkbox';
-  if (has('placeholder')) fields += `\nplaceholder-sh = "${tomlEsc(sh.placeholder.trim())}"`;
-  else if ((p.placeholder||'').trim()) fields += `\nplaceholder = "${tomlEsc(p.placeholder.trim())}"`;
-  if (isBoolType) {
-    if (has('descon')) fields += `\ndesc-on-sh = "${tomlEsc(sh.descon.trim())}"`;
-    else if ((p.descon||'').trim()) fields += `\ndesc-on = "${tomlEsc(p.descon.trim())}"`;
   }
   // name names the $env_var (always emitted); the title cell's -sh pill swaps
   // title ↔ title-sh (one-variant, like every other field).
   let out = `\n\n[[action.params]]\nname = "${tomlEsc(paramNameFrom((p.name||'').trim() || p.label))}"`;
   out += has('title') ? `\ntitle-sh = "${tomlEsc(sh.title.trim())}"` : `\ntitle = "${tomlEsc(p.label)}"`;
-  if (has('label')) out += `\nlabel-sh = "${tomlEsc(sh.label.trim())}"`;
-  else if ((p.plabel||'').trim()) out += `\nlabel = "${tomlEsc(p.plabel.trim())}"`;
   out += `\ntype = "${tomlEsc(t)}"${fields}`;
   out += has('desc') ? `\ndesc-sh = "${tomlEsc(sh.desc.trim())}"` : (((p.desc||'').trim()) ? `\ndesc = "${tomlEsc(p.desc.trim())}"` : '');
-  out += paramReadonlyPart(p);
-  if (p.required) out += `\nrequired = true`;
-  if (p.sort) out += `\nsort = true`;
-  out += paramRememberPart(p);
   out += paramSupportPart(p);
+  out += paramExtraLines(p);
   out += paramDepLines(p);
   out += optBlocks;
   return out;
@@ -672,13 +695,15 @@ function paramToDemoRow(p) {
   const sh = p.sh || {}, on = p.shOn || {}, dep = p.dep || {};
   const has = f => on[f] && (sh[f]||'').trim();
   const shTag = name => `<span style="color:var(--orange);font-size:9px;font-weight:700;letter-spacing:.5px;margin-left:5px;">${name}-sh</span>`;
-  const labelHtml = `<label>${esc(p.label)} <span style="color:var(--accent);font-size:9px;">${esc(paramVar(p))}</span>${has('title') ? shTag('title') : ''}</label>`;
+  const xd = p.x || {};
+  const roOn = !!(xd.readonly||'').trim() && !/^(false|0)$/i.test((xd.readonly||'').trim());
+  const labelHtml = `<label>${esc(p.label)}${xd.required ? ' <span style="color:var(--red);">*</span>' : ''}${roOn ? ' &#128274;' : ''} <span style="color:var(--accent);font-size:9px;">${esc(paramVar(p))}</span>${has('title') ? shTag('title') : ''}</label>`;
   let input;
   if (has('value')) {
     input = `<div class="d-dialog-input" style="color:var(--orange);">&#10227; ${esc(sh.value.trim())}${shTag('value')}</div>`;
   } else if (t === 'int' || t === 'number') {
     const mn = (p.mm||'').split(',')[0].trim();
-    input = `<div class="d-dialog-input">${esc(p.value || mn || '0')}</div>`;
+    input = `<div class="d-dialog-input">${esc(p.value || mn || (xd.placeholder||'').trim() || '0')}</div>`;
   } else if (t === 'seekbar') {
     const mn = parseFloat((p.mm||'').split(',')[0]) || 0;
     const mx = parseFloat((p.mm||'').split(',')[1]) || 100;
@@ -709,269 +734,114 @@ function paramToDemoRow(p) {
     const hex = def.startsWith('#') ? def : '#' + def;
     input = `<span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:18px;height:18px;border-radius:4px;background:${esc(hex)};border:1px solid var(--border);display:inline-block;"></span>${esc(hex)}</span>`;
   } else {
-    input = `<div class="d-dialog-input">${esc((p.value || 'value').trim())}</div>`;
+    const shown = (p.value || '').trim() || (xd.placeholder||'').trim();
+    input = `<div class="d-dialog-input"${shown && !(p.value||'').trim() ? ' style="opacity:.55;"' : ''}>${esc(shown || 'value')}</div>`;
   }
+  if (roOn) input = `<div style="opacity:.55;">${input}</div>`;
   let foot = '';
   if (has('desc')) foot += `<div style="font-size:9.5px;color:var(--orange);margin-top:2px;">desc-sh: ${esc(sh.desc.trim())}</div>`;
   else if ((p.desc||'').trim()) foot += `<div style="font-size:9.5px;color:var(--fg-muted);margin-top:2px;">${esc(p.desc.trim())}</div>`;
-  if (has('descon')) foot += `<div style="font-size:9.5px;color:var(--orange);margin-top:2px;">desc-on-sh: ${esc(sh.descon.trim())} <span style="color:var(--fg-muted);">(shown while ON)</span></div>`;
-  else if ((p.descon||'').trim() && (t==='switch'||t==='bool'||t==='checkbox')) foot += `<div style="font-size:9.5px;color:var(--fg-muted);margin-top:2px;">ON: ${esc(p.descon.trim())}</div>`;
-  const flags = [];
-  if (p.required) flags.push('required');
-  if ((p.readonly||'').trim() && !/^(false|0)$/i.test(p.readonly.trim())) flags.push('readonly' + (/^(true|1)$/i.test(p.readonly.trim()) ? '' : ':shell'));
-  if (p.sort) flags.push('sort');
-  if (p.allownosel) flags.push('allow-no-selection');
-  if ((p.remember||'').trim() && /^(false|0)$/i.test(p.remember.trim())) flags.push('remember=false');
-  if ((p.mime||'').trim()) flags.push('mime:' + p.mime.trim());
-  if (p.multiple) flags.push('multiple');
-  if (p.editable) flags.push('editable');
-  if ((p.maxlength||'').trim()) flags.push('maxlength:' + p.maxlength.trim());
-  if (flags.length) foot += `<div style="font-size:9px;color:var(--purple);margin-top:2px;font-family:var(--mono);">${esc(flags.join(' · '))}</div>`;
-  if (has('support')) foot += `<div style="font-size:9.5px;color:var(--orange);margin-top:2px;">support-sh: ${esc(sh.support.trim())}</div>`;
+  if (has('support')) foot += `<div style="font-size:9.5px;color:var(--orange);margin-top:2px;">support (shell): ${esc(sh.support.trim())}</div>`;
   if ((dep.on||'').trim()) {
     const dVal = (dep.value||'').trim();
-    const vals = dVal.split(',').map(s=>s.trim()).filter(Boolean);
+    const vals = dVal.split(',').map(x=>x.trim()).filter(Boolean);
     const valTxt = vals.length > 1 ? `any of: ${vals.map(v=>`"${esc(v)}"`).join(' / ')}` : (dVal ? `"${esc(dVal)}"` : '');
-    const mode = dep.mode === 'dim' ? 'dims + locks' : dep.mode === 'hide' ? 'hides' : 'gates';
-    foot += `<div style="font-size:9.5px;color:var(--purple);margin-top:2px;">depend-on "${esc(dep.on.trim())}"${valTxt?` — ${mode} until value matches ${valTxt}`:''}${(dep.logic&&dep.logic!=='and')?` · logic: ${esc(dep.logic)}`:''}${dep.initial&&dep.initial!=='auto'?` · initial: ${esc(dep.initial)}`:''}</div>`;
+    const mode = dep.mode === 'dim' ? 'dimmed + locked until it matches' : dep.mode === 'hide' ? 'hidden while it matches' : 'shown only while it matches';
+    foot += `<div style="font-size:9.5px;color:var(--purple);margin-top:2px;">depend-on "${esc(dep.on.trim())}"${valTxt?` = ${valTxt}`:''} — ${mode}${(dep.logic && dep.logic!=='and') ? ` · logic ${esc(dep.logic)}` : ''}${dep.negate ? ' · negated' : ''}</div>`;
   }
   return `<div class="d-dialog-row">${labelHtml}${input}${foot}</div>`;
 }
 
 // --- text.rows helpers ------------------------------------------------------
-// EXTENDED ROW SYNTAX (v3):
-//   style|text                                — basic styles (backward compatible)
-//   style|text|key=value;key=value            — trailing attributes
-//   toggle|label|get-script|set-script        — toggle with REAL get/set
-//   toggle|label|get-script|set-script|attrs
-//   progress|label|percent|attrs              — percent optional when progress-sh is used
-//   icon|text|icon-path|attrs                 — inline icon (+ pos=after, size=18)
-//   photo|text|photo-path|attrs               — photo row (+ real-size=true)
-//   html|text|file=x.html;height=300          — inline WebView (or url=…)
-//   reset|text|target=0;script=…              — refresh button (target: 0/self/all)
-//   refresh|text|every=5                      — auto-refresh row (refresh-interval)
-//   sh|script                                 — dynamic text (sh = "…")
-//   markdown|text · copy|text                 — markdown = true / copy = true
-// Generic attrs on ANY row: align=left/center/right · link=URL · activity=… ·
-//   color=#hex · bg=#hex · size=sp · alpha · ls · lh · mt · mb · break=true ·
-//   toast=true · confirm=text · script=… · visible=true/false/shell ·
-//   flash=false · flash-color=#hex
-// progress attrs: max · color · track · width · height · sh (progress-sh)
-function parseRowLine(line) {
-  const parts = line.split('|');
-  const style = (parts[0] || 'plain').trim().toLowerCase();
-  const attrs = {};
-  const scanAttrs = str => {
-    (str||'').split(';').forEach(pair => {
-      const eq = pair.indexOf('=');
-      if (eq > 0) attrs[pair.slice(0,eq).trim().toLowerCase()] = pair.slice(eq+1).trim();
-    });
-  };
-  if (style === 'toggle') {
-    if (parts.length >= 5) scanAttrs(parts.slice(4).join('|'));
-  } else if (style === 'progress') {
-    // parts[2] = percent UNLESS it carries '=' (then it is an attr segment)
-    if (parts.length >= 4) scanAttrs(parts.slice(3).join('|'));
-    else if (parts.length === 3 && (parts[2]||'').includes('=')) scanAttrs(parts[2]);
-  } else if (parts.length >= 3) {
-    scanAttrs(parts.slice(2).join('|'));
+// Row syntax:  style|text|extra…   — every extra is either the style's positional
+// argument (link URL, progress %) or a  key=value  pair for any other row key the
+// parser reads (color, size, copy, script, icon, support, html-file, …).
+const ROW_BOOL_KEYS = ['bold','italic','underline','strikethrough','monospace','copy','markdown','line'];
+const ROW_NUM_KEYS  = ['size','progress','progress-max','alpha','icon-size','progress-height','progress-width','row-height','html-height','top-margin','bottom-margin','refresh-interval'];
+const ROW_STR_KEYS  = ['text','text-sh','color','bg','bgcolor','link','align','icon','icon-sh','icon-pos','photo','photo-sh','support','script','get','set','toggle','progress-sh','progress-color','progress-bg','progress-track-color','html-file','html-url','letter-spacing','line-height','spacing-top','spacing-bottom','flash-color'];
+function rowExtras(parts, from) {
+  const kv = [], pos = [];
+  for (let i = from; i < parts.length; i++) {
+    const seg = (parts[i] || '').trim();
+    if (!seg) continue;
+    const m = seg.match(/^([a-z][a-z0-9-]*)\s*=\s*([\s\S]*)$/);
+    if (m && [...ROW_BOOL_KEYS, ...ROW_NUM_KEYS, ...ROW_STR_KEYS].includes(m[1])) kv.push([m[1], m[2].trim()]);
+    else pos.push(seg);
   }
-  return { style, parts, attrs };
+  return { kv, pos };
 }
-// Bool|Shell emission — "true"/"1" → true, "false"/"0" → false, else quoted shell
-function boolOrShellLine(key, v) {
-  const s = (v||'').trim();
-  if (!s) return '';
-  const l = s.toLowerCase();
-  if (l==='true' || l==='1') return `\n${key} = true`;
-  if (l==='false' || l==='0') return `\n${key} = false`;
-  return `\n${key} = "${tomlEsc(s)}"`;
-}
-function rowExtraToml(style, attrs) {
-  const a = attrs || {};
-  const has = k => a[k] !== undefined && a[k] !== '';
-  const num = k => { const n = parseInt(a[k], 10); return isNaN(n) ? 0 : n; };
-  const flt = k => { const f = parseFloat(a[k]); return isNaN(f) ? 0 : f; };
-  let s = '';
-  if (has('ls')) s += `\nletter-spacing = ${flt('ls')}`;
-  if (has('lh')) s += `\nline-height = ${flt('lh')}`;
-  if (has('mt')) s += `\nmargin-top = ${num('mt')}`;
-  if (has('mb')) s += `\nmargin-bottom = ${num('mb')}`;
-  if (has('alpha')) s += `\nalpha = ${flt('alpha')}`;
-  if (style !== 'progress' && has('color')) s += `\nforegroundcolor = "${tomlEsc(a.color)}"`;
-  if (has('bg')) s += `\nbg = "${tomlEsc(a.bg)}"`;
-  if (style !== 'progress' && style !== 'html' && has('size')) s += `\nsize = ${num('size')}`;
-  if (a.break === 'true') s += `\nbreak = true`;
-  if (a.align === 'left') s += `\nalign = "normal"`;
-  else if (a.align === 'center' || a.align === 'right') s += `\nalign = "${a.align}"`;
-  if (has('activity')) s += `\nactivity = "${tomlEsc(a.activity)}"`;
-  if (has('copy') && (a.copy==='true'||a.copy==='1')) s += `\ncopy = true`;
-  if (has('toast') && (a.toast==='true'||a.toast==='1')) s += `\ntoast = true`;
-  if (has('confirm')) s += `\nconfirm = "${tomlEsc(a.confirm)}"`;
-  if (has('script')) s += `\nscript = "${tomlEsc(a.script)}"`;
-  if (has('every')) s += `\nrefresh-interval = ${num('every')}`;
-  if (has('visible')) s += boolOrShellLine('support', a.visible);
-  if (a.flash === 'false') s += `\nflash = false`;
-  else if (has('flash-color')) s += `\nflash-color = "${tomlEsc(a['flash-color'])}"`;
-  if (style === 'progress') {
-    if (has('sh')) s += `\nprogress-sh = "${tomlEsc(a.sh)}"`;
-    if (has('max')) s += `\nprogress-max = ${flt('max')}`;
-    if (has('color')) s += `\nprogress-color = "${tomlEsc(a.color)}"`;
-    if (has('track')) s += `\nprogress-track-color = "${tomlEsc(a.track)}"`;
-    if (has('width')) s += `\nprogress-width = ${num('width')}`;
-    if (has('height')) s += `\nprogress-height = ${num('height')}`;
-  }
-  return s;
+function rowKvToml(kv, skip) {
+  return kv.filter(([k]) => !(skip||[]).includes(k)).map(([k, v]) => {
+    if (ROW_BOOL_KEYS.includes(k)) return `\n${k} = ${/^(false|0|no)$/i.test(v) ? 'false' : 'true'}`;
+    if (ROW_NUM_KEYS.includes(k) && v !== '' && !isNaN(Number(v))) return `\n${k} = ${Number(v)}`;
+    return `\n${k} = "${tomlEsc(v)}"`;
+  }).join('');
 }
 function rowToToml(tableName, line) {
-  const { style, parts, attrs } = parseRowLine(line);
-  if (style === 'divider') return `\n\n[[${tableName}.rows]]\nline = true`;
+  const parts = line.split('|');
+  const style = (parts[0] || 'plain').trim();
+  const H = `\n\n[[${tableName}.rows]]`;
+  if (style === 'divider') return `${H}\nline = true`;
   if (style === 'progress') {
     const label = parts[1] || '';
-    const pctStr = (parts[2]||'').trim();
-    const pct = (pctStr && !pctStr.includes('=')) ? parseInt(pctStr, 10) : NaN;
-    let s = `\n\n[[${tableName}.rows]]`;
-    if (label) s += `\ntext = "${tomlEsc(label)}"`;
-    if (!isNaN(pct)) s += `\nprogress = ${pct}\nprogress-max = 100`;
-    else if (pctStr && pctStr.includes('=') && attrs.sh) s += `\nprogress-sh = "${tomlEsc(attrs.sh)}"`;
-    return s + rowExtraToml('progress', attrs);
+    const { kv, pos } = rowExtras(parts, 2);
+    const pct = parseInt(pos[0], 10) || 0;
+    const hasMax = kv.some(([k]) => k === 'progress-max');
+    return `${H}\ntext = "${tomlEsc(label)}"\nprogress = ${pct}${hasMax ? '' : '\nprogress-max = 100'}${rowKvToml(kv, ['progress','text'])}`;
   }
   if (style === 'toggle') {
     const label = parts[1] || '';
-    const get = (parts[2]||'').trim();
-    const set = (parts[3]||'').trim();
-    let s = `\n\n[[${tableName}.rows]]`;
-    if (label) s += `\ntext = "${tomlEsc(label)}"`;
-    s += `\ntoggle = "switch"`;
-    if (get || set) {
-      s += boolOrShellLine('get', get || '...');
-      s += `\nset = "${tomlEsc(set || '...')}"`;
-    } else {
-      s += `\nget = "..."\nset = "..."`;
-    }
-    return s + rowExtraToml('toggle', attrs);
+    const { kv } = rowExtras(parts, 2);
+    const has = k => kv.some(([x]) => x === k);
+    return `${H}\ntext = "${tomlEsc(label)}"\ntoggle = "switch"${has('get') ? '' : '\nget = "test -e {HOME}/flag && echo 1"'}${has('set') ? '' : '\nset = "echo $state > {HOME}/flag"'}${rowKvToml(kv, ['toggle','text'])}`;
   }
   const text = parts[1];
-  const fieldMap = { bold: 'bold', italic: 'italic', mono: 'monospace', underline: 'underline', strike: 'strikethrough' };
-  let s = `\n\n[[${tableName}.rows]]`;
-  if (style === 'sh') {
-    s += `\nsh = "${tomlEsc(text !== undefined ? text : '')}"`;
-  } else if (style === 'markdown' || style === 'md') {
-    if (text !== undefined) s += `\ntext = "${tomlEsc(text)}"`;
-    s += `\nmarkdown = true`;
-  } else if (style === 'copy') {
-    if (text !== undefined) s += `\ntext = "${tomlEsc(text)}"`;
-    s += `\ncopy = true`;
-  } else if (style === 'refresh') {
-    if (text !== undefined) s += `\ntext = "${tomlEsc(text)}"`;
-    const every = (attrs.every || ((parts[2]||'').trim() && !(parts[2]||'').includes('=') ? parts[2].trim() : '') || '').trim();
-    if (every) { const n = parseInt(every,10); if (!isNaN(n)) s += `\nrefresh-interval = ${n}`; }
-  } else if (style === 'link') {
-    if (text !== undefined) s += `\ntext = "${tomlEsc(text)}"`;
-    const url = (attrs.url || attrs.link || text || '').trim();
-    if (url) s += `\nlink = "${tomlEsc(url)}"`;
-  } else if (style === 'icon') {
-    const p2 = (parts[2]||'').trim();
-    const path = (p2 && !p2.includes('=')) ? p2 : (attrs.path || '');
-    if (text !== undefined && text !== '') s += `\ntext = "${tomlEsc(text)}"`;
-    if (path) s += `\nicon = "${tomlEsc(path)}"`;
-    if ((attrs.pos||'').trim()) s += `\nicon-position = "${tomlEsc(attrs.pos.trim())}"`;
-    if (attrs.size) s += `\nicon-size = ${parseInt(attrs.size,10)||0}`;
-  } else if (style === 'photo') {
-    const p2 = (parts[2]||'').trim();
-    const path = (p2 && !p2.includes('=')) ? p2 : (attrs.path || '');
-    if (text !== undefined && text !== '') s += `\ntext = "${tomlEsc(text)}"`;
-    if (path) s += `\nphoto = "${tomlEsc(path)}"`;
-    if (attrs['real-size']==='true') s += `\nphoto-real-size = true`;
-  } else if (style === 'html') {
-    if (text !== undefined && text !== '') s += `\ntext = "${tomlEsc(text)}"`;
-    if ((attrs.file||'').trim()) s += `\nhtml-file = "${tomlEsc(attrs.file.trim())}"`;
-    if ((attrs.url||'').trim()) s += `\nhtml-url = "${tomlEsc(attrs.url.trim())}"`;
-    if (attrs.height) s += `\nhtml-height = ${parseInt(attrs.height,10)||260}`;
-  } else if (style === 'reset') {
-    if (text !== undefined && text !== '') s += `\ntext = "${tomlEsc(text)}"`;
-    const target = (attrs.target || attrs.reset || ((parts[2]||'').trim() && !(parts[2]||'').includes('=') ? parts[2].trim() : '') || 'self');
-    s += /^\d+$/.test(target) ? `\nreset = ${target}` : `\nreset = "${tomlEsc(target)}"`;
-  } else {
-    const extra = (style === 'center' || style === 'right') ? `\nalign = "${style}"`
-      : fieldMap[style] ? `\n${fieldMap[style]} = true` : '';
-    if (text !== undefined) s += `\ntext = "${tomlEsc(text)}"${extra}`;
-    else if (extra) s += `\ntext = ""${extra}`;
-  }
-  if ((attrs.link) && style !== 'link') s += `\nlink = "${tomlEsc(attrs.link)}"`;
-  return s + rowExtraToml(style, attrs);
+  const t = tomlEsc(text !== undefined ? text : style);
+  const { kv, pos } = rowExtras(parts, 2);
+  const fieldMap = { bold: 'bold', italic: 'italic', mono: 'monospace', underline: 'underline', strike: 'strikethrough', copy: 'copy', markdown: 'markdown' };
+  let extra = '';
+  if (style === 'center' || style === 'right') extra = `\nalign = "${style}"`;
+  else if (style === 'link') extra = `\nlink = "${tomlEsc(pos[0] || 'https://example.com')}"`;
+  else if (style === 'html') extra = pos[0] ? (/^https?:/i.test(pos[0]) ? `\nhtml-url = "${tomlEsc(pos[0])}"` : `\nhtml-file = "${tomlEsc(pos[0])}"`) : '';
+  else if (fieldMap[style]) extra = `\n${fieldMap[style]} = true`;
+  return `${H}\ntext = "${t}"${extra}${rowKvToml(kv, ['text'])}`;
 }
 function rowsBlockToml(tableName, rowsStr) {
   return (rowsStr || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => rowToToml(tableName, l)).join('');
 }
 function rowToDemoHtml(line) {
-  const { style, parts, attrs } = parseRowLine(line);
+  const parts = line.split('|');
+  const style = (parts[0] || 'plain').trim();
   if (style === 'divider') return `<div class="d-divider"></div>`;
-  const chip = (txt, color) => `<span style="color:${color||'var(--orange)'};font-size:8.5px;font-weight:700;letter-spacing:.4px;margin-left:5px;font-family:var(--mono);">${esc(txt)}</span>`;
+  const { kv, pos } = rowExtras(parts, 2);
+  const kvo = {}; kv.forEach(([k, v]) => { kvo[k] = v; });
+  let css = '';
+  if (kvo.color && /^#?[0-9a-f]{3,8}$/i.test(kvo.color)) css += `color:${kvo.color.startsWith('#') ? kvo.color : '#' + kvo.color};`;
+  if (kvo.size && !isNaN(Number(kvo.size))) css += `font-size:${Math.max(8, Math.min(40, Number(kvo.size)))}px;`;
+  if (kvo.bold && !/^(false|0)$/i.test(kvo.bold)) css += 'font-weight:700;';
+  const st = css ? ` style="${css}"` : '';
+  const badges = [(kvo.copy || style === 'copy') ? '&#128203;' : '', kvo.script ? '&#9654;' : '', kvo.icon ? '&#128444;' : '', style === 'markdown' ? 'MD' : '']
+    .filter(Boolean).map(b => ` <span style="opacity:.55;font-size:.8em;">${b}</span>`).join('');
   if (style === 'progress') {
     const label = parts[1] || '';
-    const pctStr = (parts[2]||'').trim();
-    const p = Math.max(0, Math.min(100, (pctStr && !pctStr.includes('=')) ? (parseInt(pctStr, 10) || 0) : 45));
-    const barColor = (style==='progress' && attrs.color) ? esc(attrs.color) : '';
-    const w = attrs.width ? parseInt(attrs.width,10)||120 : '';
-    const h = attrs.height ? parseInt(attrs.height,10)||8 : '';
-    const bar = `<div class="d-progress"${w?` style="width:${w}px;"`:''}><div style="width:${p}%;${barColor?`background:${barColor};`:''}${h?`height:${h}px;`:''}"></div></div>`;
-    return `<div class="d-row">${esc(label)}${attrs.sh?chip('progress-sh'):''}${bar}</div>`;
+    const p = Math.max(0, Math.min(100, parseInt(pos[0], 10) || 0));
+    return `<div class="d-row"${st}>${esc(label)}<div class="d-progress"><div style="width:${p}%;"></div></div></div>`;
   }
   if (style === 'toggle') {
     const label = parts[1] || '';
-    const get = (parts[2]||'').trim(), set = (parts[3]||'').trim();
-    const real = !!(get || set);
-    return `<div class="d-row" style="display:flex;align-items:center;justify-content:space-between;">${esc(label)}${real?chip('get/set'):''}<div class="d-switch" style="display:inline-block;"></div></div>`;
+    return `<div class="d-row" style="display:flex;align-items:center;justify-content:space-between;${css}">${esc(label)}<div class="d-switch" style="display:inline-block;"></div></div>`;
   }
+  if (style === 'html') return `<div class="d-row"${st}>&lt;html&gt; ${esc(pos[0] || parts[1] || '')}</div>`;
   const text = parts[1];
-  const txt = text !== undefined ? text : style;
-  const styleCss = [];
-  if (attrs.color) styleCss.push(`color:${esc(attrs.color)}`);
-  if (attrs.size) styleCss.push(`font-size:${Math.min(28,parseInt(attrs.size,10)||13)}px`);
-  if (attrs.bg) styleCss.push(`background:${esc(attrs.bg)};border-radius:4px;padding:0 4px;`);
-  const css = styleCss.length ? ` style="${styleCss.join(';')}"` : '';
   const clsMap = { bold: 'bold', italic: 'italic', mono: 'mono', underline: 'underline', strike: 'strike', link: 'link', center: 'center', right: 'right' };
-  let cls = clsMap[style] || '';
-  if (attrs.align === 'center') cls += ' center';
-  else if (attrs.align === 'right') cls += ' right';
-  else if (attrs.align === 'left' && (cls==='center'||cls==='right')) cls = '';
-  if (attrs.link) return `<div class="d-row ${cls}"${css}><span class="link">${esc(txt)}</span></div>`;
-  if (style === 'link') return `<div class="d-row ${cls}"${css}><span class="link">${esc(txt)}</span>${chip('link')}</div>`;
-  if (style === 'sh') return `<div class="d-row ${cls}"${css}><span style="color:var(--orange);">&#10227; ${esc(txt)}</span>${chip('sh')}</div>`;
-  if (style === 'markdown' || style === 'md') return `<div class="d-row ${cls}"${css}>${esc(txt)}${chip('md')}</div>`;
-  if (style === 'copy') return `<div class="d-row ${cls}"${css}>${esc(txt)}${chip('copy','var(--green)')}</div>`;
-  if (style === 'refresh') {
-    const every = attrs.every || ((parts[2]||'').trim() && !(parts[2]||'').includes('=') ? parts[2].trim() : '');
-    return `<div class="d-row ${cls}"${css}>${esc(txt)}${chip('every=' + (every||'?') + 's','var(--green)')}</div>`;
-  }
-  if (style === 'icon') {
-    const p2 = (parts[2]||'').trim();
-    const path = (p2 && !p2.includes('=')) ? p2 : (attrs.path || '');
-    const ico = `<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;border-radius:3px;background:var(--accent-soft);display:inline-flex;align-items:center;justify-content:center;font-size:9px;">&#128444;</span></span>`;
-    return `<div class="d-row ${cls}"${css}>${attrs.pos==='after'?'':ico}${esc(txt)}${attrs.pos==='after'?ico:''}${path?chip('icon'):''}</div>`;
-  }
-  if (style === 'photo') {
-    const p2 = (parts[2]||'').trim();
-    const path = (p2 && !p2.includes('=')) ? p2 : (attrs.path || '');
-    const box = `<div style="height:44px;border-radius:8px;background:linear-gradient(135deg,var(--accent-soft),rgba(139,92,246,.12));display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--fg-muted);font-family:var(--mono);margin:3px 0;">&#128444; ${esc(path || 'photo')}</div>`;
-    return `<div class="d-row ${cls}"${css}>${text!==undefined&&text!==''?esc(txt):''}${box}</div>`;
-  }
-  if (style === 'html') {
-    const src = attrs.url ? esc(attrs.url) : esc(attrs.file || '');
-    return `<div class="d-row ${cls}"${css}>${text!==undefined&&text!==''?esc(txt):''}<div style="height:${Math.min(200,parseInt(attrs.height,10)||80)}px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--fg-muted);font-family:var(--mono);margin:3px 0;">&#127760; WebView · ${src || 'html-file'}</div></div>`;
-  }
-  if (style === 'reset') {
-    const target = (attrs.target || attrs.reset || ((parts[2]||'').trim() && !(parts[2]||'').includes('=') ? parts[2].trim() : '') || 'self');
-    return `<div class="d-row ${cls}"${css}><span style="background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;padding:1px 8px;display:inline-block;">${esc(txt)}</span>${chip('reset=' + target,'var(--purple)')}</div>`;
-  }
-  return `<div class="d-row ${cls}"${css}>${esc(txt)}</div>`;
+  const cls = clsMap[style] || '';
+  return `<div class="d-row ${cls}"${st}>${esc(text !== undefined ? text : style)}${badges}</div>`;
 }
 function rowsBlockDemoHtml(rowsStr) {
   return (rowsStr || '').split('\n').map(l => l.trim()).filter(Boolean).map(rowToDemoHtml).join('');
 }
 function rowsField() {
-  return { key: 'rows', label: 'rows (optional — extra [[<type>.rows]] rich-text lines below the item, extended "style|text|key=value" syntax — see the text / text.rows tab for the full reference)', type: 'textarea', default: '' };
+  return { key: 'rows', label: 'rows (optional — extra [[<type>.rows]] rich-text lines below the item, same syntax as text/text.rows — see the rows syntax note in the Guide)', type: 'textarea', default: '' };
 }
 
 // --- menu/fab item helpers (authored on the group tab) -----------------------
@@ -982,20 +852,23 @@ function parseMfItems(str) {
   });
   return { menu: rows.filter(r=>r.style!=='fab'), fab: rows.filter(r=>r.style==='fab') };
 }
-const MF_NO_EXTRA = ['refresh','reload','restart','finish','exit','close','killapp'];
+const MF_NO_EXTRA = ['refresh','reload','restart','finish','exit','close','killapp','link','activity','html','config'];
 function mfItemBlock(container, r) {
   let extra = '';
-  if (r.type === 'checkbox') extra = `\nget = "test -f /data/flag && echo 1"\nscript = "touch /data/flag"`;
-  else if (r.type === 'spinner') {
-    extra = r.optSh ? `\noptions-sh = "${tomlEsc(r.optSh)}"` : `\noptions = ["a|Option A", "b|Option B"]`;
-    extra += `\nscript = "echo $state"`;
+  const t = r.type;
+  if (t === 'checkbox') extra = `\nget = "test -f /data/flag && echo 1"\nscript = "touch /data/flag"`;
+  else if (t === 'spinner') {
+    extra = r.optSh ? `\noptions-sh = "${tomlEsc(r.optSh)}"` : `\nitems = ["a|Option A", "b|Option B"]`;
+    extra += `\nget = "cat /data/choice"\nscript = "echo $state"`;
   }
-  else if (r.type === 'file') {
-    // 4th segment = suffix (extension filter), e.g. "Flash zip|fab|file|zip"
-    extra = (r.preview ? `\nsuffix = "${tomlEsc(r.preview)}"` : '') + `\nscript = "sh $state"`;
-  }
-  else if (!MF_NO_EXTRA.includes(r.type)) extra = `\nscript = "..."`;
-  return `\n\n[[${container}.items]]\ntitle = "${tomlEsc(r.title)}"\ntype = "${tomlEsc(r.type)}"${extra}`;
+  else if (t === 'file')   extra = `\nsuffix = "zip"\npath-home = "/sdcard"\nscript = "echo $file"`;
+  else if (t === 'folder') extra = `\npath-home = "/sdcard"\nscript = "echo $folder"`;
+  else if (t === 'link')     extra = `\nlink = "https://example.com"`;
+  else if (t === 'activity') extra = `\nactivity = "com.android.settings/.Settings"`;
+  else if (t === 'html')     extra = `\nhtml = "https://example.com"`;
+  else if (t === 'config')   extra = `\nconfig = "sub_page.toml"`;
+  else if (!MF_NO_EXTRA.includes(t)) extra = `\nscript = "echo $menu_id"`;
+  return `\n\n[[${container}.items]]\ntitle = "${tomlEsc(r.title)}"\ntype = "${tomlEsc(t)}"${extra}`;
 }
 
 // --- advanced field definitions (shared pools) -------------------------------
@@ -1050,7 +923,7 @@ const warnLine    = f => f.confirm ? shOrStatic(f, 'warn', 'warn') : '';
 function supportLine(f) {
   if (f.supportShOn) {
     const v = (f.support || '').trim();
-    return v ? `\nsupport-sh = "${tomlEsc(v)}"` : '';
+    return v ? `\nsupport = "${tomlEsc(v)}"` : '';
   }
   const raw = (f.support || '').trim();
   const v = raw.toLowerCase();
@@ -1118,7 +991,7 @@ function paramOptionsHtml(p, idx) {
   const useSh = !!p.optionsShOn;
   const head = `<div class="popts-head">
     <span class="sh-name">options</span>
-    <span class="popts-note">${useSh ? 'list built by the script — the rows below are off' : 'one row per entry · a row\'s -sh = option-sh (dynamic title)'}</span>
+    <span class="popts-note">${useSh ? 'list built by the script — the rows below are off' : 'one row per entry · a row\'s -sh = title-sh (dynamic title)'}</span>
     <label class="sh-toggle${useSh?' on':''}"><input type="checkbox" data-pidx="${idx}" data-popts="optionsShOn"${useSh?' checked':''}>-sh</label>
   </div>`;
   let body;
@@ -1134,13 +1007,15 @@ function paramOptionsHtml(p, idx) {
         <button type="button" class="param-btn" data-pidx="${idx}" data-oact="up" data-oidx="${i}" title="move up">↑</button>
         <button type="button" class="param-btn" data-pidx="${idx}" data-oact="down" data-oidx="${i}" title="move down">↓</button>
         <button type="button" class="param-btn param-del" data-pidx="${idx}" data-oact="del" data-oidx="${i}" title="remove">✕</button>
-        ${o.shOn?`<input type="text" class="opt-sh-input" data-pidx="${idx}" data-oidx="${i}" data-osh="shTitle" value="${esc(o.shTitle||'')}" placeholder='option-sh — e.g. echo "${esc(o.title||o.value||'Option')}"'>`:''}
+        ${o.shOn?`<input type="text" class="opt-sh-input" data-pidx="${idx}" data-oidx="${i}" data-osh="shTitle" value="${esc(o.shTitle||'')}" placeholder='title-sh — e.g. echo "${esc(o.title||o.value||'Option')}"'>`:''}
       </div>`).join('') : '<p class="adv-empty" style="font-size:10.5px;margin:0 0 5px;">No options yet — add one below.</p>')
       + `<button type="button" class="pb-add opt-add" data-pidx="${idx}" data-oadd="1">+ add option</button>`;
   }
   return `<div class="param-opts">${head}${body}</div>`;
 }
-function paramCardHtml(p, idx) {
+function depWarnHtml(list, p) { return depWarnings(list, p).map(w => '&#9888; ' + esc(w)).join('<br>'); }
+function paramCardHtml(p, idx, list) {
+  list = list || [];
   const on = p.shOn || {}, dep = p.dep || { on:'', value:'', mode:'none' };
   const t = p.type;
   const isOpts = OPT_TYPES.includes(t);
@@ -1157,46 +1032,58 @@ function paramCardHtml(p, idx) {
   const cells = [];
   cells.push(cell('<b>name</b> — the $env_var', 'name', null, p.name, paramNameFrom(p.label) + ' (blank = from title)'));
   cells.push(cell('title — displayed label', 'label', 'title', p.label, 'Param title'));
-  cells.push(cell('label — secondary label', 'plabel', 'label', p.plabel, 'secondary (optional)'));
   cells.push(`<div class="param-cell"><label>type</label><select data-pidx="${idx}" data-pfield="type">${PARAM_TYPES.map(x=>`<option ${x===t?'selected':''}>${x}</option>`).join('')}</select></div>`);
   if (t==='int' || t==='number' || t==='seekbar') {
     cells.push(`<div class="param-cell"><label>min,max</label><input type="text" data-pidx="${idx}" data-pfield="mm" value="${esc(p.mm||'')}" placeholder="0,60"></div>`);
     cells.push(cell('value — default', 'value', 'value', p.value, 'default'));
   } else if (t==='switch' || t==='bool' || t==='checkbox') {
     cells.push(cell('value — initial (0/1)', 'value', 'value', p.value, '0 or 1'));
-    cells.push(cell('desc-on — note while ON', 'descon', 'descon', p.descon, 'shown when checked'));
   } else if (t==='color') {
     cells.push(cell('value — default color', 'value', 'value', p.value, '#RRGGBB'));
   } else if (t==='file') {
     cells.push(`<div class="param-cell"><label>suffix — extension filter</label><input type="text" data-pidx="${idx}" data-pfield="extra" value="${esc(p.extra||'')}" placeholder="log,txt"></div>`);
-    cells.push(cell('mime — MIME filter', 'mime', null, p.mime, 'application/zip'));
-    cells.push(cell('path-home — starting dir', 'pathhome', null, p.pathhome, '/sdcard'));
-    cells.push(paramToggleCell('multiple', 'multiple', p, idx));
-    cells.push(paramToggleCell('editable', 'editable', p, idx));
   } else if (t==='folder') {
-    cells.push(cell('path-home — starting dir', 'pathhome', null, p.pathhome, '/sdcard (extra wins if set)'));
-    cells.push(paramToggleCell('multiple', 'multiple', p, idx));
-    cells.push(paramToggleCell('editable', 'editable', p, idx));
+    cells.push(`<div class="param-cell"><label>path-home — starting dir</label><input type="text" data-pidx="${idx}" data-pfield="extra" value="${esc(p.extra||'')}" placeholder="/sdcard"></div>`);
   } else if (t==='app' || t==='packages') {
     cells.push(`<div class="param-cell"><label>extra</label><input type="text" data-pidx="${idx}" data-pfield="extra" value="${esc(p.extra||'')}" placeholder='"multi" for multiple'></div>`);
-  } else if (t==='text') {
-    cells.push(`<div class="param-cell"><label>maxlength — max chars</label><input type="text" data-pidx="${idx}" data-pfield="maxlength" value="${esc(p.maxlength||'')}" placeholder="64"></div>`);
-    cells.push(cell('value — default', 'value', 'value', p.value, 'default value'));
   } else if (!isOpts) {
     cells.push(cell('value — default', 'value', 'value', p.value, 'default value'));
   }
-  if (t==='text' || t==='int' || t==='number') {
-    cells.push(cell('placeholder — hint when empty', 'placeholder', 'placeholder', p.placeholder, 'hint text'));
-  }
-  if (t==='spinner' || t==='single-select') {
-    cells.push(paramToggleCell('allow-no-selection', 'allownosel', p, idx));
-  }
   cells.push(cell('desc — hint line', 'desc', 'desc', p.desc, 'description under the label'));
   cells.push(cell('support — "true"/"false"/shell', 'support', 'support', p.support, 'true'));
-  cells.push(cell('readonly — true/false/shell', 'readonly', null, p.readonly, 'true · 1 · test -w … && echo 1'));
-  cells.push(cell('remember — "false" to opt out', 'remember', null, p.remember, 'true (default) · false'));
-  cells.push(paramToggleCell('required', 'required', p, idx));
-  cells.push(paramToggleCell('sort (readonly to bottom)', 'sort', p, idx));
+  // ---- "more fields": every remaining [[action.params]] key the parser reads ----
+  const x = p.x || {};
+  const xt = (label, key, ph) => `<div class="param-cell"><label>${label}</label><input type="text" data-pidx="${idx}" data-pfield="x:${key}" value="${esc(x[key]||'')}" placeholder="${esc(ph||'')}"></div>`;
+  const xc = (label, key) => `<div class="param-cell param-cell-check"><label><input type="checkbox" data-pidx="${idx}" data-pfield="x:${key}"${x[key]?' checked':''}> ${label}</label></div>`;
+  const more = [];
+  more.push(xc('required — input must not be empty', 'required'));
+  more.push(xt('readonly — true / false / shell ("1" = read-only)', 'readonly', 'true'));
+  more.push(xc('sort — read-only params to the bottom (needs readonly)', 'sort'));
+  more.push(xc('remember = false — do not restore the last value', 'noRemember'));
+  if (t==='text' || t==='int' || t==='number') more.push(cell('placeholder — hint when empty', 'x:placeholder', 'placeholder', x.placeholder, 'shown while empty'));
+  if (t==='text') more.push(xt('maxlength — max characters', 'maxlength', '32'));
+  if (t==='switch' || t==='bool' || t==='checkbox') more.push(cell('desc-on — note shown when ON', 'x:descOn', 'descOn', x.descOn, 'Enabled: …'));
+  if (t==='file') more.push(xt('mime — MIME filter', 'mime', 'text/plain'));
+  if (t==='file' || t==='folder') { more.push(xc('multiple — pick several paths', 'multiple')); more.push(xc('editable — allow typing the path', 'editable')); }
+  if (isMultiParam(p)) more.push(xt('separator — joins the selected values ("\\n" = newline)', 'separator', '\\n'));
+  if (isOpts && t !== 'multi-select') more.push(xc('allow-no-selection — spinner may stay empty', 'noSel'));
+  const moreOpen = Object.values(x).some(v => v) || on.placeholder || on.descOn;
+  const moreHtml = `<details class="param-more"${moreOpen?' open':''}><summary>more fields · ${esc(t)}</summary><div class="param-grid">${more.join('')}</div></details>`;
+  const dsel = (key, opts, labels) => `<select data-pdep="${key}" data-pidx="${idx}">${opts.map((o,i)=>`<option value="${o}"${(dep[key]||'')===o?' selected':''}>${esc(labels[i])}</option>`).join('')}</select>`;
+  const dtxt = (label, key, ph) => `<div class="param-cell"><label>${label}</label><input type="text" data-pdep="${key}" data-pidx="${idx}" value="${esc(dep[key]||'')}" placeholder="${esc(ph||'')}"></div>`;
+  const dchk = (label, key) => `<div class="param-cell param-cell-check"><label><input type="checkbox" data-pdep="${key}" data-pidx="${idx}"${dep[key]?' checked':''}> ${label}</label></div>`;
+  const depAdv = `<details class="dep-more"${(dep.logic&&dep.logic!=='and')||dep.def||dep.initial||dep.negate||dep.noCascade||dep.noHidden||dep.onchange||dep.modeList||dep.threshold?' open':''}><summary>advanced depend-*</summary><div class="param-grid">
+      <div class="param-cell"><label>depend-logic — how several parents combine</label>${dsel('logic',['and','priority','priority-rtl','xor','nand'],['and (all must match)','priority (left → right)','priority-rtl (right → left)','xor (exactly one)','nand (not all)'])}</div>
+      <div class="param-cell"><label>depend-default — when nothing matches</label>${dsel('def',['','show','hide'],['(default: show)','show','hide'])}</div>
+      <div class="param-cell"><label>depend-initial — state before evaluation</label>${dsel('initial',['','auto','show','hide'],['(default: auto)','auto','show','hide'])}</div>
+      ${dtxt('depend-mode per parent — e.g. show|hide (overrides behavior)', 'modeList', 'show|hide')}
+      ${dtxt('depend-threshold — % of conditions (logic and only)', 'threshold', '67')}
+      ${dtxt('depend-onchange — shell run on show/hide change', 'onchange', 'notify_change')}
+      ${dchk('depend-negate — invert all conditions', 'negate')}
+      ${dchk('depend-cascade = false — only visible parents count', 'noCascade')}
+      ${dchk('depend-include-hidden = false — skip hidden param in result', 'noHidden')}
+      ${dep.mode==='dim' ? dchk('depend-sort — move locked params to the bottom', 'sort') : ''}
+    </div></details>`;
   return `<div class="param-card">
     <div class="param-card-head">
       <span class="param-num">#${idx+1}</span>
@@ -1209,32 +1096,20 @@ function paramCardHtml(p, idx) {
       </span>
     </div>
     <div class="param-grid">${cells.join('')}</div>
+    ${moreHtml}
     ${isOpts ? paramOptionsHtml(p, idx) : ''}
     <div class="param-dep-row">
       <span class="sh-name">depend</span>
-      <input type="text" data-pdep="on" data-pidx="${idx}" value="${esc(dep.on||'')}" placeholder="depend-on — controlling param (empty = off)">
-      <input type="text" data-pdep="value" data-pidx="${idx}" value="${esc(dep.value||'')}" placeholder="depend-value (comma = any of)">
+      <input type="text" data-pdep="on" data-pidx="${idx}" value="${esc(dep.on||'')}" placeholder="depend-on — parent param NAME(s), a|b (empty = off)">
+      <input type="text" data-pdep="value" data-pidx="${idx}" value="${esc(dep.value||'')}" placeholder="depend-value — a,b = any of · a|b,c = per parent">
       <select data-pdep="mode" data-pidx="${idx}">
-        <option value="none"${dep.mode==='none'?' selected':''}>behavior: none</option>
-        <option value="hide"${dep.mode==='hide'?' selected':''}>behavior: hide</option>
-        <option value="dim"${dep.mode==='dim'?' selected':''}>behavior: dim + lock</option>
+        <option value="none"${(dep.mode||'none')==='none'?' selected':''}>show when matched</option>
+        <option value="hide"${dep.mode==='hide'?' selected':''}>hide when matched</option>
+        <option value="dim"${dep.mode==='dim'?' selected':''}>dim + lock until matched</option>
       </select>
-      <select data-pdep="logic" data-pidx="${idx}" title="depend-logic">
-        <option value=""${!dep.logic||dep.logic==='and'?' selected':''}>logic: and</option>
-        <option value="priority"${dep.logic==='priority'?' selected':''}>logic: priority</option>
-        <option value="priority-rtl"${dep.logic==='priority-rtl'?' selected':''}>logic: priority-rtl</option>
-        <option value="xor"${dep.logic==='xor'?' selected':''}>logic: xor</option>
-        <option value="nand"${dep.logic==='nand'?' selected':''}>logic: nand</option>
-      </select>
-      <input type="text" data-pdep="default" data-pidx="${idx}" value="${esc(dep.default||'')}" placeholder="depend-default">
-      <select data-pdep="initial" data-pidx="${idx}" title="depend-initial">
-        <option value="auto"${!dep.initial||dep.initial==='auto'?' selected':''}>initial: auto</option>
-        <option value="show"${dep.initial==='show'?' selected':''}>initial: show</option>
-        <option value="hide"${dep.initial==='hide'?' selected':''}>initial: hide</option>
-      </select>
-      <label class="dep-check"><input type="checkbox" data-pdep="dreadonly" data-pidx="${idx}"${dep.dreadonly?' checked':''}>depend-readonly</label>
-      <label class="dep-check"><input type="checkbox" data-pdep="dsort" data-pidx="${idx}"${dep.dsort?' checked':''}>depend-sort</label>
-      <div class="hint">Gated until the controlling param matches depend-value: hide pops it in when matched; dim + lock keeps it visible but read-only. logic combines several depend-on keys (and/priority/priority-rtl/xor/nand); depend-default sets the no-match state; initial = show/hide pins the first paint (no flicker). depend-sort only works with depend-readonly.</div>
+      ${depAdv}
+      <div class="dep-warn">${depWarnHtml(list, p)}</div>
+      <div class="hint">depend-on takes the parent param's <b>name</b> (the $env_var), not its title. "show when matched" is the parser default; "hide when matched" emits depend-mode = "hide"; "dim + lock" emits depend-readonly = true. Re-evaluated live on every dialog change.</div>
     </div>
   </div>`;
 }
@@ -1247,24 +1122,24 @@ const TYPES = {
   group: {
     label: 'group',
     desc: '[[group]] groups related nodes — plus, since resource / menu / fab are almost always used under a group, they are authored here too: fill resource-file and/or menu-fab items and the matching blocks are emitted under the group.',
-    adv: [A_RESDIR, ...ADV_VIS],
-    advNote: 'support is a single input: "true" (default, omitted) · "false" hides every child until the next [[group]] · any other string is a shell · tick -sh for support-sh (auto-sampled). load-key / load-key-sh is a page directive — emitted at the very top of the file. resource-dir (Advanced) extends the [[resource]] block.',
+    adv: [A_RESDIR],
+    advNote: 'The parser reads only title / title-sh / key / support on a group (load-after, min-sdk, max-sdk and allow-shortcut are ignored there, so they are not offered). support is a single input: "true" (default, omitted) · "false" hides every child until the next [[group]] · any other string is a shell · tick -sh to write support as a shell (auto-sampled). load-key / load-key-sh is a page directive — emitted at the very top of the file. resource-dir (Advanced) extends the [[resource]] block.',
     fields: [
       { key:'loadKey', label:'load-key (optional — page directive, emitted at the very top)', type:'text', default:'', sh:true, hint:'i18n key file path: every @name token in the whole document is replaced from it. Tick -sh to emit load-key-sh (dynamic path). Empty → omitted.' },
       { key:'title', label:'title', type:'text', default:'CPU', sh:true, hint:'Displayed uppercase and grey. Tick -sh to emit title-sh — the value becomes echo "…" automatically.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Unique ID — required for desktop shortcuts. A key starting with "@" disables shortcuts.' },
-      { key:'support', label:'support ("true" default · "false" hides the group + children · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to emit support-sh — a fitting visibility sample is filled automatically.' },
+      { key:'support', label:'support ("true" default · "false" hides the group + children · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to write support as a shell (support = "…") — a fitting visibility sample is filled automatically.' },
       { key:'child1', label:'first child title (preview only)', type:'text', default:'Optimize CPU' },
       { key:'child2', label:'second child title (preview only)', type:'text', default:'Governor' },
       { key:'resourceTitle', label:'[[resource]] title (optional)', type:'text', default:'Extract assets' },
       { key:'resourceFile', label:'resource-file (optional — APK asset PATH to extract under this group)', type:'text', default:'', hint:'Filled → a [[resource]] block is emitted after the group children. Use resource-dir (Advanced) for a whole folder. Empty → omitted.' },
-      { key:'mfItems', label:'menu / fab items (optional — one per line "title|style|type|preview|options-sh"; type: action/checkbox/spinner/file… — file uses the 4th segment as suffix; style: menu/fab)', type:'textarea', default:'', hint:'style = menu/fab; spinner items accept a 5th options-sh segment; file items use the 4th segment as suffix (e.g. "Flash zip|fab|file|zip"). Emitted after the children with a clarifying comment (page-level containers). Empty → no [[menu]]/[[fab]] output.' },
+      { key:'mfItems', label:'menu / fab items (optional — one per line "title|style|type|preview|options-sh")', type:'textarea', default:'', hint:'style = menu/fab; spinner items accept a 5th options-sh segment. Emitted after the children with a clarifying comment (page-level containers). Empty → no [[menu]]/[[fab]] output.' },
     ],
     code: f => {
       const lk = shOrStatic(f, 'loadKey', 'load-key');
       const loadKey = lk ? lk.slice(1) + '\n\n' : '';
       const keyLine = f.nodeKey ? `\nkey = "${tomlEsc(f.nodeKey)}"` : '';
-      let out = loadKey + `[[group]]${titleLine(f)}${keyLine}${supportLine(f)}${gating(f)}\n\n[[action]]\ntitle = "${tomlEsc(f.child1)}"\nscript = "..."\n\n[[picker]]\ntitle = "${tomlEsc(f.child2)}"\nget = "..."\nset = "..."\n`;
+      let out = loadKey + `[[group]]${titleLine(f)}${keyLine}${supportLine(f)}\n\n[[action]]\ntitle = "${tomlEsc(f.child1)}"\nscript = "..."\n\n[[picker]]\ntitle = "${tomlEsc(f.child2)}"\nget = "..."\nset = "..."\n`;
       const rf = (f.resourceFile||'').trim();
       if (rf) {
         const rt = (f.resourceTitle||'').trim() || 'Extract assets';
@@ -1308,7 +1183,7 @@ const TYPES = {
     hint: f => {
       if (supportHidden(f)) return 'support = false — set the field back to "true" to render this group and its children again.';
       let h = 'A group is a title + its children (cannot be nested). [[resource]] and [[menu]]/[[fab]] blocks authored here are emitted under the children.';
-      if (f.supportShOn) h += ' support-sh makes visibility dynamic — the demo cannot predict it.';
+      if (f.supportShOn) h += ' a shell support makes visibility dynamic — the demo cannot predict it.';
       if ((f.loadKey||'').trim()) h += ' load-key is emitted at the very top of the file (page-level i18n directive).';
       return h;
     }
@@ -1327,7 +1202,7 @@ const TYPES = {
       { key:'target', label:'target type', type:'select', options:['config (sub .toml)','html (WebView URL)','link (open browser)','activity (launch Activity)'], default:'config (sub .toml)' },
       { key:'targetValue', label:'target value (path / URL / activity)', type:'text', default:'pages/app_list.toml', hint:'Left empty → the target line is omitted from the output.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'' },
-      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to emit support-sh — a visibility sample is filled automatically.' },
+      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to write support as a shell (support = "…") — a visibility sample is filled automatically.' },
       { key:'lock', label:'lock ("1|message" · "1" · or a shell string returning "1" · empty = not locked)', type:'text', default:'', sh:true, hint:'Tick -sh to emit lock-sh — a lock-check sample is filled automatically.' },
       rowsField(),
     ],
@@ -1355,7 +1230,7 @@ const TYPES = {
     },
     hint: f => {
       if (supportHidden(f)) return 'support = false — set the field back to "true" to make this page item appear again.';
-      if (f.supportShOn) return 'support-sh makes visibility dynamic — the row shows only when the script returns "1".';
+      if (f.supportShOn) return 'a shell support makes visibility dynamic — the row shows only when the script returns "1".';
       if (f.advGroup) return `Group wrap is ON — in the real app this row sits under the "${esc((f.advGroupTitle||'My group').trim())}" section header.`;
       if ((f.lock||'').trim()) return f.lockShOn
         ? `lock-sh makes locking dynamic — the row locks when "${esc(f.lock.trim())}" returns "1".`
@@ -1368,17 +1243,30 @@ const TYPES = {
   action: {
     label: 'action',
     wrap: true,
-    desc: '[[action]] runs a shell script (optionally after a confirm / params dialog). The params dialog itself — including name, options and depend-* — is authored on the dedicated action.params tab next to download.',
+    desc: '[[action]] runs a shell script (optionally after a confirm / params dialog). The [[action.params]] input dialog — name, options, depend-* — is authored right here in the params block, and the preview shows the action together with its dialog.',
     adv: [...ADV_DYN, ...ADV_VIS, ...ADV_MEDIA, ...ADV_LOCKSEC, A_SHELLMODE, A_AUTOKILL, A_AUTORESTART, A_RELOADLIST],
-    advNote: 'Params (name, cards, options, depend-*) live on the action.params tab. warn is a single input with a -sh toggle. bg-task overrides shell mode; reload = "keys" overrides the reload checkbox. The group-wrap checkbox sits at the top of Fields.',
+    advNote: 'Params (name, cards, options, depend-*) are edited in the action.params block of Fields — every card = one [[action.params]] table, emitted after the action (and its rows). warn is a single input with a -sh toggle. bg-task overrides shell mode; reload = "keys" overrides the reload checkbox. The group-wrap checkbox sits at the top of Fields.',
     fields: [
-      { key:'title', label:'title', type:'text', default:'Clear cache', sh:true, hint:'Tick -sh to emit title-sh — the value becomes echo "…" automatically.' },
-      { key:'desc', label:'desc', type:'text', default:'Clear system cache', sh:true, hint:'Tick -sh to emit desc-sh — the value becomes echo "…" automatically.' },
+      { key:'title', label:'title', type:'text', default:'Set CPU governor', sh:true, hint:'Tick -sh to emit title-sh — the value becomes echo "…" automatically.' },
+      { key:'desc', label:'desc', type:'text', default:'Choose a governor before applying', sh:true, hint:'Tick -sh to emit desc-sh — the value becomes echo "…" automatically.' },
       { key:'icon', label:'icon (must be a file PATH — e.g. {ICON}/action.png · {HOME} ok · emoji here is preview only)', type:'text', default:'🔥', sh:true, hint:'The real app loads icon from a PATH. Tick -sh to emit icon-sh.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Required for desktop shortcuts; starting with "@" disables them.' },
-      { key:'script', label:'script', type:'textarea', default:'sync; echo 3 > /proc/sys/vm/drop_caches', hint:'Receives $name env vars from params (authored on the action.params tab) and $state where applicable. Multi-line scripts are escaped as \\n. Left empty → omitted.' },
+      { key:'script', label:'script', type:'textarea', default:'sleep $delay_sec; echo $governor > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor', hint:'Receives every action.params name as an env var ($delay_sec, $governor …) and $state where applicable. Multi-line scripts are escaped as \\n. Left empty → omitted.' },
+      { key:'paramList', label:'action.params — pick a type and press add; a card appears below for full editing (empty list = no params dialog)', type:'paramlist',
+        default:[
+          { name:'delay_sec', label:'Delay (seconds)', type:'int', mm:'0,60', value:'5', desc:'', support:'true', extra:'', options:null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
+          { name:'run_in_background', label:'Run in background', type:'switch', mm:'', value:'0', desc:'', support:'true', extra:'', options:null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
+          { name:'governor', label:'Governor', type:'spinner', mm:'', value:'', desc:'', support:'true', extra:'', options:[
+              { value:'performance', title:'Performance', shOn:false, shTitle:'' },
+              { value:'powersave', title:'Power saver', shOn:false, shTitle:'' },
+              { value:'schedutil', title:'Balanced (schedutil)', shOn:true, shTitle:'echo "Balanced (schedutil)"' },
+            ], optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
+          { name:'log_file', label:'Log file', type:'file', mm:'', value:'', desc:'', support:'true', extra:'log,txt', options:null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none' } },
+          { name:'seed', label:'Seed', type:'text', mm:'', value:'42', desc:'', support:'true', extra:'', options:null, optionsShOn:false, optionsSh:'', sh:{ value:'gen_seed.sh' }, shOn:{ value:true }, dep:{ on:'run_in_background', value:'1', mode:'none' } },
+        ],
+        hint:'Card legend: name → $env_var (blank = slug from title) · each cell with a -sh pill switches between its text value and a shell script (auto-sampled on tick) · dropdown types get the options editor — options-sh builds the whole list from a script, otherwise each row is value + title (+ optional title-sh) · the depend row gates this param. ↑ ↓ ✕ reorder / remove.' },
       { key:'confirm', label:'confirm before running', type:'checkbox', default:true },
-      { key:'warn', label:'warn (confirm-dialog text — shown when confirm is on)', type:'text', default:'This will clear all app caches', sh:true, hint:'Tick -sh to emit warn-sh — the value becomes echo "…" automatically. Empty → omitted.' },
+      { key:'warn', label:'warn (confirm-dialog text — shown when confirm is on)', type:'text', default:'Apply the selected governor?', sh:true, hint:'Tick -sh to emit warn-sh — the value becomes echo "…" automatically. Empty → omitted.' },
       { key:'menu', label:'show as toolbar icon (menu = true)', type:'checkbox', default:false },
       { key:'show', label:'show (auto-open this dialog on page enter, once)', type:'checkbox', default:false },
       { key:'autoOff', label:'auto-off (auto-close the log dialog when done)', type:'checkbox', default:false },
@@ -1387,7 +1275,7 @@ const TYPES = {
       { key:'bgTask', label:'bg-task (run in background — no log dialog)', type:'checkbox', default:false, hint:'Wins over the shell-mode select in Advanced options.' },
       { key:'interruptible', label:'interruptible (allow interrupting mid-run)', type:'checkbox', default:false },
       { key:'needInput', label:'need-input (script uses "read" for keyboard input)', type:'checkbox', default:false },
-      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to emit support-sh — a visibility sample is filled automatically.' },
+      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to write support as a shell (support = "…") — a visibility sample is filled automatically.' },
       { key:'lock', label:'lock ("1|message" · "1" · or a shell string returning "1" · empty = not locked)', type:'text', default:'', sh:true, hint:'Tick -sh to emit lock-sh — a lock-check sample is filled automatically.' },
       rowsField(),
     ],
@@ -1399,15 +1287,17 @@ const TYPES = {
         + `[[action]]${titleLine(f)}${descLine(f)}${summaryLine(f)}${iconLine(f)}${photoLine(f)}${bgLine(f)}${keyLine}${supportLine(f)}`
         + `${f.confirm?`\nconfirm = true`:''}${warnLine(f)}${f.menu?`\nmenu = true`:''}${f.show?`\nshow = true`:''}${f.autoOff?`\nauto-off = true`:''}${f.autoFinish?`\nauto-finish = true`:''}${shellLine(f)}${f.interruptible?`\ninterruptible = true`:''}${f.needInput?`\nneed-input = true`:''}`
         + `${lockLine(f)}${runnableTail(f)}${gating(f)}`
-        + scriptLine + rows + '\n';
+        + scriptLine + rows + (f.paramList || []).map(q => paramToToml(q)).join('') + '\n';
     },
     demo: f => {
       const locked = !!(f.lock||'').trim();
-      const noParamsMsg = 'No params here — the params dialog is authored on the action.params tab.';
+      const plist = f.paramList || [];
+      const paramRows = plist.map(paramToDemoRow).join('');
+      // the sample opens with its params dialog already visible; tapping the row toggles it
       const dialog = `
-        <div class="d-dialog" id="actionDialog" style="display:none;">
+        <div class="d-dialog" id="actionDialog" style="display:${plist.length ? 'block' : 'none'};">
           <div class="d-dialog-title">${esc(f.title)}</div>
-          <p style="font-size:12px;color:var(--fg-muted);margin:0;">${noParamsMsg}</p>
+          ${paramRows || '<p style="font-size:12px;color:var(--fg-muted);margin:0;">No params yet — add one in the action.params block.</p>'}
           <div class="d-dialog-btns"><span>CANCEL</span><span>RUN</span></div>
         </div>`;
       if (f.menu) {
@@ -1432,7 +1322,11 @@ const TYPES = {
       if ((f.lock||'').trim()) return f.lockShOn
         ? `lock-sh makes locking dynamic — the action locks when "${esc(f.lock.trim())}" returns "1".`
         : `Locked: lock = "${esc(f.lock.trim())}" — tapping shows the message part instead of running the script.`;
-      return 'Tap the row (or its toolbar icon) to preview the run flow. The params dialog lives on the action.params tab.';
+      const pl = f.paramList || [];
+      if (!pl.length) return 'Tap the row (or its toolbar icon) to preview the run flow. No action.params yet — add one in the params block to get an input dialog.';
+      const withSh = pl.filter(q => Object.keys(q.shOn||{}).some(k => q.shOn[k] && (q.sh[k]||'').trim())).length;
+      const withDep = pl.filter(q => ((q.dep||{}).on||'').trim()).length;
+      return `${pl.length} param(s) · ${withSh} use -sh scripts · ${withDep} carry a depend link. The dialog is shown open under the action; tap the row to hide/show it.`;
     }
   },
 
@@ -1446,7 +1340,7 @@ const TYPES = {
       { key:'title', label:'title', type:'text', default:'Fast charge', sh:true, hint:'Tick -sh to emit title-sh — the value becomes echo "…" automatically.' },
       { key:'desc', label:'desc', type:'text', default:'Enable fast charging', sh:true, hint:'Tick -sh to emit desc-sh — the value becomes echo "…" automatically.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'' },
-      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to emit support-sh — a visibility sample is filled automatically.' },
+      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to write support as a shell (support = "…") — a visibility sample is filled automatically.' },
       { key:'get', label:'get', type:'text', default:'getprop sys.fastcharge', hint:'Must output "1" or "0". Deferred — batched after the page renders. Empty → omitted.' },
       { key:'set', label:'set', type:'text', default:'setprop sys.fastcharge $state', hint:'Runs with $state = "1" or "0". Empty → omitted.' },
       { key:'lock', label:'lock ("1|message" · "1" · or a shell string returning "1" · empty = not locked)', type:'text', default:'', sh:true, hint:'Tick -sh to emit lock-sh — a lock-check sample is filled automatically.' },
@@ -1490,10 +1384,9 @@ const TYPES = {
     advNote: 'Options come from [[picker.options]] tables — or dynamically from options-sh (it REPLACES the static list). With multiple = true the chosen values join with separator before $state. get is deferred (pending). The -sh toggles convert title/icon/support/lock to dynamic forms (auto-sampled); the group-wrap checkbox sits at the top of Fields.',
     fields: [
       { key:'title', label:'title', type:'text', default:'Governor', sh:true, hint:'Tick -sh to emit title-sh — the value becomes echo "…" automatically.' },
-      { key:'desc', label:'desc', type:'text', default:'Select CPU governor', sh:true, hint:'Tick -sh to emit desc-sh — the value becomes echo "…" automatically.' },
       { key:'icon', label:'icon (must be a file PATH — e.g. {ICON}/picker.png · {HOME} ok · emoji here is preview only)', type:'text', default:'⚙️', sh:true, hint:'The real app loads icon from a PATH. Tick -sh to emit icon-sh.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'' },
-      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to emit support-sh — a visibility sample is filled automatically.' },
+      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to write support as a shell (support = "…") — a visibility sample is filled automatically.' },
       { key:'lock', label:'lock ("1|message" · "1" · or a shell string returning "1" · empty = not locked)', type:'text', default:'', sh:true, hint:'Tick -sh to emit lock-sh — a lock-check sample is filled automatically.' },
       { key:'multiple', label:'multiple (allow selecting more than one value)', type:'checkbox', default:false },
       { key:'get', label:'get', type:'text', default:'cat /sys/.../scaling_governor', hint:'Empty → omitted.' },
@@ -1511,7 +1404,7 @@ const TYPES = {
       const setLine = (f.set||'').trim() ? `\nset = "${tomlEsc(f.set)}"` : '';
       const sep = (f.multiple && (f.advSeparator||'').trim()) ? `\nseparator = "${tomlEsc(f.advSeparator.trim())}"` : '';
       return groupHeaderToml(f)
-        + `[[picker]]${titleLine(f)}${descLine(f)}${iconLine(f)}${summaryLine(f)}${photoLine(f)}${bgLine(f)}${keyLine}${supportLine(f)}${f.multiple?`\nmultiple = true`:''}${sep}`
+        + `[[picker]]${titleLine(f)}${iconLine(f)}${summaryLine(f)}${photoLine(f)}${bgLine(f)}${keyLine}${supportLine(f)}${f.multiple?`\nmultiple = true`:''}${sep}`
         + getLine + setLine + optionsLine(f) + lockLine(f) + gating(f) + opts + '\n';
     },
     demo: f => {
@@ -1522,7 +1415,7 @@ const TYPES = {
       const opts = f.options.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>l.split('|'));
       const current = opts[0] ? (opts[0][1]||opts[0][0]) : '';
       const list = opts.map((o,i)=>`<div class="d-mi" data-idx="${i}"><span>${esc(o[1]||o[0])}</span>${i===0?'<span class="d-check">&#10003;</span>':''}</div>`).join('');
-      const itemHtml = `<div class="d-item ${locked?'locked':''}" id="pickerRow" onclick="togglePickerDemo()">${f.icon?`<div class="d-icon">${esc(f.icon)}</div>`:''}<div class="d-content"><div class="d-title2">${esc(f.title)}</div>${((f.desc||'').trim())?`<div class="d-desc">${esc(f.desc)}</div>`:''}<div class="d-summary" id="pickerSummary">${esc(current)}</div></div>${locked?'<span class="d-lock">&#128274;</span>':'<div class="d-trail"><span class="d-chevron">&rsaquo;</span></div>'}</div>`;
+      const itemHtml = `<div class="d-item ${locked?'locked':''}" id="pickerRow" onclick="togglePickerDemo()">${f.icon?`<div class="d-icon">${esc(f.icon)}</div>`:''}<div class="d-content"><div class="d-title2">${esc(f.title)}</div><div class="d-summary" id="pickerSummary">${esc(current)}</div></div>${locked?'<span class="d-lock">&#128274;</span>':'<div class="d-trail"><span class="d-chevron">&rsaquo;</span></div>'}</div>`;
       return `
       <div class="d-toolbar"><span class="d-back">&lt;</span><span class="d-title">CPU</span></div>
       <div class="d-body">
@@ -1541,12 +1434,12 @@ const TYPES = {
   text: {
     label: 'text / text.rows',
     wrap: true,
-    desc: '[[text]] is a rich-text block made of [[text.rows]] lines — each row can be bold, italic, underlined, struck-through, monospace, a tappable link, pinned left/center/right, a divider, a toggle with REAL get/set, a dynamic sh line, markdown, an inline icon/photo, an inline WebView (html), an auto-refresh line, a reset button, or an inline progress bar with custom colors.',
+    desc: '[[text]] is a rich-text block made of [[text.rows]] lines — each row can be bold, italic, underlined, struck-through, monospace, a tappable link, pinned left/center/right, a divider, a toggle, or an inline progress bar.',
     adv: [...ADV_VIS],
-    advNote: 'Row syntax v3 — "style|text|key=value;key=value": trailing attrs work on EVERY row (align · link · color · bg · size · alpha · ls · lh · mt · mb · break · toast · confirm · script · visible · flash · flash-color). New styles: sh (dynamic text) · markdown · copy · refresh|text|every=5 (auto-refresh) · icon|text|{ICON}/x.png|pos=after;size=18 · photo|text|{ICON}/x.png|real-size=true · html|text|file=x.html;height=300 (or url=…) · reset|text|target=self;script=… · toggle|label|GET|SET (real scripts, get accepts 1/0/shell). progress gains max=, color=, track=, width=, height=, sh=. Rows also accept support (Bool|Shell — deferred like switch get) and icon/photo. The same [[<type>.rows]] block can be attached to page, action, switch, picker, editor and download. The -sh toggle converts title to title-sh. The group-wrap checkbox sits at the top of Fields.',
+    advNote: 'Rows also accept support (Bool|Shell — deferred like switch get) and icon/photo. The same [[<type>.rows]] block can be attached to page, action, switch, picker, editor and download. The -sh toggle converts title to title-sh. The group-wrap checkbox sits at the top of Fields.',
     fields: [
       { key:'title', label:'title', type:'text', default:'Device info', sh:true, hint:'Tick -sh to emit title-sh — the value becomes echo "…" automatically. Hidden from the preview header when group wrap is ON.' },
-      { key:'rowsMain', label:'rows (one per line — style|text|attrs; style ∈ plain/bold/italic/mono/underline/strike/link/center/right/divider/sh/markdown/copy/refresh/icon/photo/html/reset/toggle/progress — see Advanced options for the full syntax)', type:'textarea', default:'bold|Kernel version\nmono|5.10.101-perf+\nunderline|Important notice\nstrike|Deprecated field\nsh|cat /sys/class/thermal/thermal_zone0/temp\nmarkdown|Status: `{OK}(green)` — link: `[details](https://example.com)`\ncenter|— updated today —\ndivider\nprogress|Battery health|82|color=#FF9800;width=120\nicon|Temperature|{ICON}/temp.png|size=18\ntoggle|Show notifications|settings get global heads_up_notifications_enabled|settings put global heads_up_notifications_enabled $state\nreset|🔄 Refresh|target=self;align=right\nhtml|Changelog|file=changelog.html;height=140\nplain|Last updated 3 days ago\nlink|View full changelog|url=https://example.com/changelog' },
+      { key:'rowsMain', label:'rows (one per line — "style|text"; style ∈ bold/italic/mono/underline/strike/link/center/right/copy/markdown/plain, or "divider", "toggle|label", "progress|label|percent", "link|text|https://url", "html|text|file-or-url" — optional trailing key=value pairs: color=#f00 | size=16 | script=… | icon=… | support=…)', type:'textarea', default:'bold|Kernel version\nmono|5.10.101-perf+\nunderline|Important notice\nstrike|Deprecated field\ncenter|— updated today —\ndivider\nprogress|Battery health|82\ntoggle|Show notifications\nplain|Last updated 3 days ago\nlink|View full changelog' },
     ],
     code: f => {
       const rows = f.rowsMain.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>rowToToml('text', l)).join('');
@@ -1561,7 +1454,7 @@ const TYPES = {
         <div class="d-group"><div class="d-group-title">${esc(head)}</div><div class="d-richtext">${rows}</div></div>
       </div>`;
     },
-    hint: () => 'Each row is its own [[text.rows]] table — bold/italic/underline/strike are booleans, center/right set align, divider draws a line (line = true), toggle now carries your REAL get/set scripts, sh/markdown/copy/refresh/icon/photo/html/reset add the guide v3 row features, and progress accepts color/track/width/height/max attrs.'
+    hint: () => 'Each row is its own [[text.rows]] table — bold/italic/underline/strike are booleans, center/right set align, divider draws a line (line = true), toggle adds a switch, and progress needs progress/progress-max.'
   },
 
   editor: {
@@ -1573,26 +1466,30 @@ const TYPES = {
     fields: [
       { key:'title', label:'title', type:'text', default:'Edit build.prop', sh:true, hint:'Tick -sh to emit title-sh — the value becomes echo "…" automatically.' },
       { key:'desc', label:'desc', type:'text', default:'System build properties', sh:true, hint:'Tick -sh to emit desc-sh — the value becomes echo "…" automatically.' },
-      { key:'file', label:'file (must be a file PATH — {HOME}/{ICON} ok · empty = omitted)', type:'text', default:'/system/build.prop', hint:'The editor opens exactly this path and saves back to it.' },
-      { key:'value', label:'value — initial content (written ONLY when the file does not exist · use \\n for newlines)', type:'text', default:'', sh:true, hint:'Tick -sh to emit value-sh — a script printing the initial content (wins over value). Ignored when the file already exists.' },
-      { key:'placeholder', label:'placeholder — hint shown when the file is empty', type:'text', default:'', hint:'Empty → omitted.' },
-      { key:'wrap', label:'wrap (line wrapping — untick to emit wrap = false)', type:'checkbox', default:true },
-      { key:'needInput', label:'need-input (the run script reads what the user typed)', type:'checkbox', default:false },
-      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to emit support-sh — a visibility sample is filled automatically.' },
+      { key:'file', label:'file (must be a file PATH — {HOME}/{ICON} ok · empty = omitted)', type:'text', default:'/system/build.prop', hint:'The editor opens exactly this path and saves back to it. The parser drops the node when file is empty.' },
+      { key:'icon', label:'icon (must be a file PATH — {ICON}/edit.png · {HOME} ok)', type:'text', default:'', sh:true, hint:'Tick -sh to emit icon-sh. Empty → omitted.' },
+      { key:'nodeKey', label:'key (id, optional)', type:'text', default:'' },
+      { key:'wrap', label:'wrap — soft-wrap long lines when the editor opens (default on)', type:'checkbox', default:true },
+      { key:'placeholder', label:'placeholder — hint shown while the file is empty', type:'text', default:'' },
+      { key:'needInput', label:'need-input — the script being edited calls `read` (shows an input box on Run)', type:'checkbox', default:false },
+      { key:'value', label:'value — initial content, only written when the file does NOT exist yet', type:'text', default:'', sh:true, hint:'Tick -sh to emit value-sh (the script output becomes the initial content and wins over value).' },
+      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to write support as a shell (support = "…") — a visibility sample is filled automatically.' },
       { key:'lock', label:'lock ("1|message" · "1" · or a shell string returning "1" · empty = not locked)', type:'text', default:'', sh:true, hint:'Tick -sh to emit lock-sh — a lock-check sample is filled automatically.' },
+      rowsField(),
       { key:'preview', label:'file preview (one line per row)', type:'textarea', default:'ro.build.version.release=14\nro.product.model=Redmi Note 12\npersist.sys.fastcharge=1\nro.debuggable=0' },
     ],
     code: f => {
       const ro = (f.advReadonly||'').trim() ? `\nreadonly = "${tomlEsc(f.advReadonly.trim())}"` : '';
       const fileLine = (f.file||'').trim() ? `\nfile = "${tomlEsc(f.file)}"` : '';
-      const valueLine = f.valueShOn && (f.value||'').trim() ? `\nvalue-sh = "${tomlEsc(f.value.trim())}"`
-        : ((f.value||'').trim() ? `\nvalue = "${tomlEsc(f.value)}"` : '');
-      const phLine = (f.placeholder||'').trim() ? `\nplaceholder = "${tomlEsc(f.placeholder.trim())}"` : '';
-      const wrapLine = f.wrap ? '' : `\nwrap = false`;
-      const needLine = f.needInput ? `\nneed-input = true` : '';
+      const keyLine = f.nodeKey ? `\nkey = "${tomlEsc(f.nodeKey)}"` : '';
+      const misc = (f.wrap === false ? `\nwrap = false` : '')
+        + ((f.placeholder||'').trim() ? `\nplaceholder = "${tomlEsc(f.placeholder.trim())}"` : '')
+        + (f.needInput ? `\nneed-input = true` : '')
+        + shOrStatic(f, 'value', 'value');
       return groupHeaderToml(f)
-        + `[[editor]]${titleLine(f)}${descLine(f)}${summaryLine(f)}${photoLine(f)}${bgLine(f)}`
-        + fileLine + valueLine + phLine + wrapLine + ro + needLine + lockLine(f) + gating(f) + '\n';
+        + `[[editor]]${keyLine}${titleLine(f)}${descLine(f)}${iconLine(f)}${summaryLine(f)}${photoLine(f)}${bgLine(f)}`
+        + (fileLine || '\n# file is required — the parser skips this node without it') + ro + misc + supportLine(f) + lockLine(f) + gating(f)
+        + rowsBlockToml('editor', f.rows) + '\n';
     },
     demo: f => {
       const lines = f.preview.split('\n').filter(Boolean);
@@ -1609,7 +1506,7 @@ const TYPES = {
       </div>
       <div style="padding:8px 14px;border-top:1px solid var(--border);">${demoGroupWrap(f, `<div class="d-item ${locked?'locked':''}" style="padding:4px 0;border:none;"><div class="d-icon">&#128221;</div><div class="d-content"><div class="d-title2" style="font-size:12.5px;">${esc(f.title)}</div><div class="d-desc">${esc(f.desc)}</div></div>${locked?'<span class="d-lock">&#128274;</span>':''}</div>`)}</div>`;
     },
-    hint: () => 'The top part is the editor screen itself (opened by tapping the row shown at the bottom); the 💾 toolbar icon saves changes back to file. Group wrap shows how the row sits under a group header on the page.'
+    hint: f => ((f.file||'').trim() ? '' : '⚠ file is empty — the parser skips an editor node without file. ') + 'The top part is the editor screen itself (opened by tapping the row shown at the bottom); the 💾 toolbar icon saves changes back to file. Group wrap shows how the row sits under a group header on the page.'
   },
 
   download: {
@@ -1621,20 +1518,25 @@ const TYPES = {
     fields: [
       { key:'title', label:'title', type:'text', default:'Latest kernel module', sh:true, hint:'Tick -sh to emit title-sh — the value becomes echo "…" automatically.' },
       { key:'desc', label:'desc', type:'text', default:'v2.4 · 3.1 MB', sh:true, hint:'Tick -sh to emit desc-sh — the value becomes echo "…" automatically.' },
-      { key:'url', label:'url (http/https)', type:'text', default:'https://example.com/module.zip', sh:true, hint:'Tick -sh to emit url-sh — a script returning the URL. It runs once on the first tap and the result is cached for the rest of the page visit (overwrites url). Empty → omitted.' },
+      { key:'url', label:'url (required — the parser drops the node when both url and url-sh are empty)', type:'text', default:'https://example.com/module.zip', sh:true, hint:'Tick -sh to emit url-sh — the script prints the URL (auto-sampled).' },
+      { key:'icon', label:'icon (must be a file PATH — {ICON}/dl.png · {HOME} ok)', type:'text', default:'', sh:true, hint:'Tick -sh to emit icon-sh. Empty → omitted.' },
+      { key:'nodeKey', label:'key (id, optional)', type:'text', default:'' },
       { key:'warn', label:'warn (confirm-dialog text before the follow-up run)', type:'text', default:'', sh:true, hint:'Tick -sh to emit warn-sh — the value becomes echo "…" automatically. Empty → omitted.' },
-      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to emit support-sh — a visibility sample is filled automatically.' },
+      { key:'support', label:'support ("true" default · "false" hides the row · or a shell string returning "1")', type:'text', default:'true', sh:true, hint:'Tick -sh to write support as a shell (support = "…") — a visibility sample is filled automatically.' },
       { key:'lock', label:'lock ("1|message" · "1" · or a shell string returning "1" · empty = not locked)', type:'text', default:'', sh:true, hint:'Tick -sh to emit lock-sh — a lock-check sample is filled automatically.' },
       { key:'state', label:'preview state', type:'select', options:['idle','downloading','done','error'], default:'downloading' },
       { key:'pct', label:'preview progress % (when downloading)', type:'text', default:'45' },
+      rowsField(),
     ],
     code: f => {
       const scr = (f.advScript||'').trim() ? `\nscript = "${tomlEsc(f.advScript.trim())}"` : '';
-      const urlLine = f.urlShOn && (f.url||'').trim() ? `\nurl-sh = "${tomlEsc(f.url.trim())}"`
-        : ((f.url||'').trim() ? `\nurl = "${tomlEsc(f.url)}"` : '');
+      const urlLine = (f.url||'').trim() ? shOrStatic(f, 'url', 'url')
+        : '\n# url or url-sh is required — the parser skips this node without it';
+      const keyLine = f.nodeKey ? `\nkey = "${tomlEsc(f.nodeKey)}"` : '';
       return groupHeaderToml(f)
-        + `[[download]]${titleLine(f)}${descLine(f)}${summaryLine(f)}${photoLine(f)}${bgLine(f)}`
-        + urlLine + scr + shellLine(f) + runnableTail(f) + lockLine(f) + shOrStatic(f,'warn','warn') + gating(f) + '\n';
+        + `[[download]]${keyLine}${titleLine(f)}${descLine(f)}${iconLine(f)}${summaryLine(f)}${photoLine(f)}${bgLine(f)}`
+        + urlLine + scr + shellLine(f) + runnableTail(f) + supportLine(f) + lockLine(f) + shOrStatic(f,'warn','warn') + gating(f)
+        + rowsBlockToml('download', f.rows) + '\n';
     },
     demo: f => {
       const icons = { idle:'&#11015;', downloading:'&#11015;', done:'&#9989;', error:'&#9888;' };
@@ -1653,58 +1555,10 @@ const TYPES = {
         ${demoGroupWrap(f, itemHtml)}
       </div>`;
     },
-    hint: () => 'Shows download_done once the download and any follow-up script both finish successfully; a failed download or script keeps the item tappable to retry.'
+    hint: f => ((f.url||'').trim() ? '' : '⚠ url is empty — the parser skips a download node that has neither url nor url-sh. ')
+      + 'Shows download_done once the download and any follow-up script both finish successfully; a failed download or script keeps the item tappable to retry.'
   },
 
-  params: {
-    label: 'action.params',
-    desc: '[[action.params]] builds the input dialog shown before an action runs. Add a param with the type row, then edit it in its card: explicit name (the $env_var), per-field -sh pills on title / label / value / desc / desc-on / placeholder / support, type-aware cells (maxlength · mime · path-home · editable · multiple · allow-no-selection · required · readonly · sort · remember), an options editor with an options-sh switch, and the full depend-* row (logic / default / initial / readonly / sort).',
-    adv: [],
-    advNote: 'Every card = one [[action.params]] table: name names the $env_var (blank = derived from the title). Each pill (-sh) swaps its cell between text and shell; the emitted key follows the pill (title / title-sh, value / value-sh, desc-on / desc-on-sh, placeholder / placeholder-sh…). Type-aware cells appear only when relevant: maxlength (text) · mime/path-home/multiple/editable (file) · path-home/multiple/editable (folder) · allow-no-selection (dropdowns) · desc-on (bool types). readonly accepts true/false OR a shell; remember only emits an explicit false. Options: tick options-sh to build the list from a script — it replaces the value/title rows; in row mode each option can carry its own option-sh (dynamic title). The depend row gates the card — logic/default/initial/readonly/sort included (depend-sort needs depend-readonly).',
-    fields: [
-      { key:'hostTitle', label:'host action title (context — these params attach to this action)', type:'text', default:'Set frequencies' },
-      { key:'paramList', label:'params — pick a type and press add; a card appears below for full editing', type:'paramlist',
-        default:[
-          { name:'delay_sec', label:'Delay (seconds)', type:'int', mm:'0,60', value:'5', desc:'', support:'true', extra:'', options:null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none', logic:'', default:'', initial:'auto', dreadonly:false, dsort:false }, plabel:'', placeholder:'seconds to wait', required:false, readonly:'', maxlength:'', descon:'', mime:'', pathhome:'', editable:false, multiple:false, sort:false, allownosel:false, remember:'' },
-          { name:'run_in_background', label:'Run in background', type:'switch', mm:'', value:'0', desc:'', support:'true', extra:'', options:null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none', logic:'', default:'', initial:'auto', dreadonly:false, dsort:false }, plabel:'', placeholder:'', required:false, readonly:'', maxlength:'', descon:'The script keeps running after the dialog closes', mime:'', pathhome:'', editable:false, multiple:false, sort:false, allownosel:false, remember:'' },
-          { name:'governor', label:'Governor', type:'spinner', mm:'', value:'', desc:'', support:'true', extra:'', options:[
-              { value:'performance', title:'Performance', shOn:false, shTitle:'' },
-              { value:'powersave', title:'Power saver', shOn:false, shTitle:'' },
-              { value:'schedutil', title:'Balanced (schedutil)', shOn:true, shTitle:'echo "Balanced (schedutil)"' },
-            ], optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'run_in_background', value:'1', mode:'dim', logic:'', default:'', initial:'auto', dreadonly:true, dsort:false }, plabel:'', placeholder:'', required:false, readonly:'', maxlength:'', descon:'', mime:'', pathhome:'', editable:false, multiple:false, sort:false, allownosel:false, remember:'' },
-          { name:'log_file', label:'Log file', type:'file', mm:'', value:'', desc:'', support:'true', extra:'log,txt', options:null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none', logic:'', default:'', initial:'auto', dreadonly:false, dsort:false }, plabel:'', placeholder:'', required:false, readonly:'', maxlength:'', descon:'', mime:'', pathhome:'/sdcard/TREE/logs', editable:false, multiple:false, sort:false, allownosel:false, remember:'' },
-          { name:'seed', label:'Seed', type:'text', mm:'', value:'42', desc:'', support:'true', extra:'', options:null, optionsShOn:false, optionsSh:'', sh:{ value:'gen_seed.sh' }, shOn:{ value:true }, dep:{ on:'run_in_background', value:'1', mode:'hide', logic:'', default:'', initial:'auto', dreadonly:false, dsort:false }, plabel:'', placeholder:'random seed', required:false, readonly:'', maxlength:'8', descon:'', mime:'', pathhome:'', editable:false, multiple:false, sort:false, allownosel:false, remember:'false' },
-        ],
-        hint:'Card legend: name → $env_var (blank = slug from title) · each cell with a -sh pill switches between its text value and a shell script (auto-sampled on tick) · type-aware cells (maxlength / mime / path-home / multiple / editable / allow-no-selection / desc-on / placeholder / required / readonly / sort / remember) appear by type · dropdown types get the options editor — options-sh builds the whole list from a script, otherwise each row is value + title (+ optional option-sh) · the depend row gates this param (logic / default / initial / readonly / sort). ↑ ↓ ✕ reorder / remove.' },
-    ],
-    code: f => {
-      const list = f.paramList || [];
-      const params = list.map(p => paramToToml(p)).join('');
-      const firstName = list.length ? paramVar(list[0]) : '$value';
-      return `[[action]]\ntitle = "${tomlEsc(f.hostTitle)}"\nscript = "echo ${firstName}"${params}\n`;
-    },
-    demo: f => {
-      const list = f.paramList || [];
-      const paramRows = list.map(paramToDemoRow).join('');
-      return `
-      <div class="d-toolbar"><span class="d-back">&lt;</span><span class="d-title">CPU</span></div>
-      <div class="d-body">
-        <div class="d-item" onclick="toggleActionDialog()"><div class="d-icon">&#9881;</div><div class="d-content"><div class="d-title2">${esc(f.hostTitle)}</div><div class="d-desc">Tap to preview the params dialog</div></div><div class="d-trail"><span class="d-chevron">&rsaquo;</span></div></div>
-        <div class="d-dialog" id="actionDialog" style="display:none;">
-          <div class="d-dialog-title">${esc(f.hostTitle)}</div>
-          ${paramRows || '<p style="font-size:12px;color:var(--fg-muted);margin:0;">No params yet — add one above.</p>'}
-          <div class="d-dialog-btns"><span>CANCEL</span><span>RUN</span></div>
-        </div>
-      </div>`;
-    },
-    hint: f => {
-      const list = f.paramList || [];
-      if (!list.length) return 'Pick a type above and press "+ add param" — a card appears for full editing.';
-      const withSh = list.filter(p => Object.keys(p.shOn||{}).some(k => p.shOn[k] && (p.sh[k]||'').trim())).length;
-      const withDep = list.filter(p => (p.dep||{}).on && (p.dep.on||'').trim()).length;
-      return `${list.length} param(s) — ${withSh} use -sh scripts, ${withDep} carry a depend link. Tap the row to preview the dialog.`;
-    }
-  },
 };
 
 // ============================================================================
@@ -1718,10 +1572,10 @@ const DOCS = {
       ['title','','String','""','Group title, displayed uppercase and grey. Accepts <code>@string/…</code>'],
       ['title-sh','','String','""','<span class="badge shell">shell</span> Script producing the title dynamically; overrides <code>title</code>'],
       ['key','index, id','String','auto UUID','Unique ID of the group'],
-      ['support','visible','Bool|Shell','true','Show/hide the group — a hidden group ALSO hides every child until the next <code>[[group]]</code> (their shells never run). Accepts "true"/"1"/"false"/"0" or a shell returning "1" (<code>support-sh</code> via the -sh toggle)'],
-      ['load-after','','Bool','false','Build &amp; insert this entry after the page has finished loading — use when a <code>support</code>/<code>title-sh</code> shell is expensive'],
+      ['support','visible','Bool|Shell','true','Show/hide the group — a hidden group ALSO hides every child until the next <code>[[group]]</code> (their shells never run). Accepts "true"/"1"/"false"/"0" or a shell returning "1" (the -sh toggle only fills a shell sample — the key stays <code>support</code>)'],
     ],
     notes: [
+      ['warn','<code>load-after</code>, <code>min-sdk</code>, <code>max-sdk</code> and <code>allow-shortcut</code> are <b>not read on a group</b> — put them on the child nodes instead.'],
       ['danger','<b>Dot-notation removed:</b> nested entries like <code>[[group.action]]</code> are <b>silently ignored</b> — the parser only reads node tables at the top level of the document.'],
       ['warn','Groups have no <code>desc</code>/<code>summary</code> and cannot inline <code>resource-file</code>/<code>resource-dir</code> — the generator emits a separate <code>[[resource]]</code> node instead.'],
       ['tip','Groups cannot be nested: declaring a new <code>[[group]]</code> closes the previous one. Reserved name: <code>[[toml]]</code> is a parser marker (inline TOML from <code>config-sh</code>), not a node — it is skipped harmlessly. To wrap a single node in a group, use the <b>wrap in [[group]]</b> checkbox at the top of its Fields panel.'],
@@ -1798,13 +1652,13 @@ lock = "{LOT}|Requires root access"`
     notes: [
       ['tip','<code>menu = true</code> moves the action out of the list into the toolbar; <code>show = true</code> auto-opens its dialog once per page enter — handy for a "start here" wizard.'],
       ['tip','Refreshing: use <code>reload-page = true</code> / <code>reload = true</code> to reload the whole page after the script finishes, or <code>reload = "id1,id2"</code> to refresh only specific blocks (e.g. the affected switches).'],
-      ['tip','Building the params dialog (name, cards, options, depend-*)? Switch to the <b>action.params</b> tab next to download.'],
+      ['tip','The <code>[[action.params]]</code> dialog is authored in the params block of this same tab — its reference follows below.'],
     ],
     example: `[[action]]
 title = "Set frequencies"
 script = "echo $delay_sec $governor"
 
-[[action.params]]        # authored on the action.params tab
+[[action.params]]
 name = "delay_sec"
 title = "Delay (seconds)"
 type = "int"
@@ -1813,52 +1667,44 @@ max = 60
 value = "5"`
   },
 
-  params: {
+  'action.params': {
     intro: `<code>[[action.params]]</code> defines the input dialog shown before an action runs. Each params table renders one control; its <b>name</b> is the explicit env var (<code>name = "delay_sec"</code> → <code>$delay_sec</code>), and <b>title</b> is the displayed label. In this generator every param is an editable <b>card</b>: quick-add only asks for a type, the card handles everything else.`,
     fields: [
       ['name','','String','','<span class="badge req">req</span> Env var name used in the action script (<code>$delay_sec</code>). Blank = slug derived from the title (spaces → underscores). Always emitted first'],
       ['title','title-sh','String','','Displayed label; with the -sh pill it becomes <code>title-sh</code> (dynamic label)'],
-      ['label','label-sh','String','','Secondary label; with the -sh pill it becomes <code>label-sh</code>'],
       ['type','','String','text','One of the 15 control types (see the table below)'],
       ['value','value-sh','String','','Default value; with the -sh pill it becomes <code>value-sh</code> (dynamic default)'],
       ['desc','desc-sh','String','','Hint line under the label; with the -sh pill it becomes <code>desc-sh</code>'],
-      ['desc-on','desc-on-sh','String','','Note shown SPECIFICALLY while the checkbox/switch is ON (bool types only); -sh pill → <code>desc-on-sh</code>'],
-      ['placeholder','placeholder-sh','String','','Hint when the input is empty (text / int / number); -sh pill → <code>placeholder-sh</code>'],
-      ['required','','Bool','false','<code>required = true</code> — empty input blocks OK'],
-      ['readonly','','Bool|Shell','false','true/1 → <code>readonly = true</code> · false/0/empty → omitted · other string → shell form (<code>readonly = "test … && echo 1"</code>)'],
-      ['maxlength','','Int','','Max character count — type=text only'],
-      ['sort','','Bool','false','Move readonly params to the bottom (only effective when readonly is declared)'],
-      ['remember','','Bool','true','Persist the last chosen value across dialog opens — only an explicit <code>remember = false</code> is emitted to opt out'],
-      ['support','support-sh','Bool|Shell','true','Visibility; "true"/"1"/empty → omitted · "false"/"0" → <code>support = false</code> · other string → shell · the -sh pill emits <code>support-sh</code>'],
+      ['support','visible','Bool|Shell','true','Visibility; "true"/"1"/empty → omitted · "false"/"0" → <code>support = false</code> · other string → run as shell ("1" = shown) · the -sh pill only fills a shell sample, the emitted key is still <code>support</code>'],
+      ['required','','Bool','false','Input must not be empty (card: more fields)'],
+      ['readonly','','Bool|Shell','false','<code>true</code>/<code>false</code> or a shell returning "1" = read-only; with <code>sort = true</code> read-only params sink to the bottom'],
+      ['placeholder','placeholder-sh','String','','Hint when empty (text / int / number)'],
+      ['maxlength','','Int','','Max characters (text)'],
+      ['desc-on','desc-on-sh','String','','Note shown while a switch / bool / checkbox is ON'],
+      ['remember','','Bool','true','<code>remember = false</code> = do not restore the last entered value next time'],
+      ['allow-no-selection','','Bool','false','Spinner may stay empty'],
+      ['mime / multiple / editable','','String|Bool','','File picker: MIME filter · several files · manual path entry (folder: multiple / editable)'],
+      ['separator','','String','\\n','Joins multiple selected values (multi-select · multiple file/folder/app)'],
       ['min / max','','Int','','Bounds for int / number / seekbar'],
       ['suffix','','String','','File-picker extension filter, e.g. "log,txt"'],
-      ['mime','','String','','File-picker MIME filter, e.g. <code>application/zip</code>'],
-      ['path-home','','String','','Starting directory for the file / folder picker'],
-      ['editable','','Bool','false','Allow manual path entry in the file / folder picker (emitted when ticked)'],
-      ['multiple','','Bool','false','Allow several selections (multi-select · file · app/packages)'],
-      ['allow-no-selection','','Bool','false','<code>allow-no-selection = true</code> — spinner/single-select may stay empty'],
-      ['items','','Array','','Shorthand choice list — each entry "value|title" or just "value"; takes priority over options tables (documented here — author choices via the options editor)'],
+      ['path-home','','String','','Starting directory for the folder picker'],
+      ['multiple','','Bool','false','Allow several selections (multi-select · app/packages)'],
       ['options','','Array','','<code>[[action.params.options]]</code> child tables — one per dropdown entry'],
       ['options-sh','','String','','<span class="badge shell">shell</span> Shell producing "value|Title" lines — replaces the whole static options list (one-variant at param level)'],
-      ['options → option-sh','','String','','<span class="badge shell">shell</span> Dynamic title for one option — emitted as <code>option-sh</code> inside that option\'s table (via the -sh pill on the option row)'],
-      ['depend-on / depend-value','depend','String','—','Link this param to a controlling param — see the full depend-* reference below'],
-      ['depend-hide / depend-dim','depend','Bool','false','Mutually exclusive gate behaviors — hidden or dimmed+locked until matched'],
-      ['depend-logic','depend','String','and','How several conditions combine — and (default) / priority / priority-rtl / xor / nand'],
-      ['depend-default','depend','String','','Value used when no condition matches'],
-      ['depend-initial','depend','String','auto','Pin the first paint — show / hide (avoids flicker until evaluation completes)'],
-      ['depend-readonly','depend','Bool','false','Unmatched state renders as read-only instead of editable'],
-      ['depend-sort','depend','Bool','false','Move depend-locked params to the bottom — only works when depend-readonly = true'],
+      ['options → title-sh','','String','','<span class="badge shell">shell</span> Dynamic title for one option — emitted as <code>title-sh</code> inside that option\'s table (via the -sh pill on the option row)'],
+      ['depend-on / depend-value','depend','String','—','Link this param to one or more controlling params by <b>name</b> (<code>a|b</code>) — see the full depend-* reference below'],
+      ['depend-mode / depend-readonly / depend-logic / …','depend','String|Bool','','Gate behavior: <code>depend-mode = "hide"</code> · <code>depend-readonly = true</code> (dim + lock) · plus logic/default/initial/negate/threshold/cascade/onchange — see the depend-* reference below'],
     ],
     extra: `<h4>type → cell meaning</h4>
 <div class="doc-tbl-wrap"><table class="doc-tbl">
 <tr><th>type</th><th>cells shown</th><th>Notes</th></tr>
-<tr><td>text</td><td>name · title · label · maxlength · value · placeholder · desc · support · readonly · required · sort · remember</td><td>Plain single-line input</td></tr>
-<tr><td>int / number</td><td>+ min,max · placeholder</td><td>value is validated against min/max on OK</td></tr>
+<tr><td>text</td><td>name · title · value · desc · support</td><td>Plain single-line input</td></tr>
+<tr><td>int / number</td><td>+ min,max</td><td>value = default</td></tr>
 <tr><td>seekbar</td><td>+ min,max</td><td>Slider</td></tr>
-<tr><td>switch / bool / checkbox</td><td>value · desc-on</td><td>Initial "0"/"1" · desc-on shows while ON</td></tr>
-<tr><td>spinner / single-select / multi-select</td><td>options editor · allow-no-selection</td><td>Rows (value + title) OR options-sh — one form only; multi-select adds <code>multiple = true</code></td></tr>
-<tr><td>file</td><td>suffix · mime · path-home · multiple · editable</td><td>e.g. <code>log,txt</code></td></tr>
-<tr><td>folder</td><td>path-home · multiple · editable</td><td>Folder picker</td></tr>
+<tr><td>switch / bool / checkbox</td><td>value</td><td>Initial "0"/"1"</td></tr>
+<tr><td>spinner / single-select / multi-select</td><td>options editor</td><td>Rows (value + title) OR options-sh — one form only; multi-select adds <code>multiple = true</code></td></tr>
+<tr><td>file</td><td>suffix</td><td>e.g. <code>log,txt</code></td></tr>
+<tr><td>folder</td><td>path-home</td><td>Folder picker</td></tr>
 <tr><td>app / packages</td><td>extra</td><td>"multi" for multiple</td></tr>
 <tr><td>color</td><td>value</td><td><code>#RRGGBB</code></td></tr>
 </table></div>
@@ -1867,23 +1713,25 @@ value = "5"`
 <tr><th>Field</th><th>Type</th><th>Description</th></tr>
 <tr><td>value</td><td>String</td><td><span class="badge req">req</span> The value passed to <code>$state</code> / the env var</td></tr>
 <tr><td>title</td><td>String</td><td>Displayed label (falls back to value)</td></tr>
-<tr><td>option-sh</td><td>String</td><td><span class="badge shell">shell</span> Dynamic title for this option — tick the -sh pill on the option row (auto-sampled as <code>echo "…"</code>)</td></tr>
+<tr><td>title-sh</td><td>String</td><td><span class="badge shell">shell</span> Dynamic title for this option — tick the -sh pill on the option row (auto-sampled as <code>echo "…"</code>)</td></tr>
 </table></div>
-<div class="doc-note tip"><b>Authoring here:</b> the quick-add row only asks for a <b>type</b> — press <b>+ add param</b> and a card appears below. In the card, every dynamic cell (title / value / desc / support) carries its own <b>-sh pill</b>: tick it and the SAME input switches to its shell form (auto-sampled, editable); untick and it is plain text again. The emitted key follows the pill. For dropdown types the <b>options editor</b> has an <code>options-sh</code> switch — ON: the whole list comes from one script; OFF: one row per entry with value + title (+ optional per-row <code>option-sh</code>). Only one form is active at a time — switching the switch disables the other. The <b>depend row</b> gates the card. Use the card's ↑ ↓ ✕ to reorder or remove.</div>
+<div class="doc-note tip"><b>Authoring here:</b> the quick-add row only asks for a <b>type</b> — press <b>+ add param</b> and a card appears below. In the card, every dynamic cell (title / value / desc / support) carries its own <b>-sh pill</b>: tick it and the SAME input switches to its shell form (auto-sampled, editable); untick and it is plain text again. The emitted key follows the pill. For dropdown types the <b>options editor</b> has an <code>options-sh</code> switch — ON: the whole list comes from one script; OFF: one row per entry with value + title (+ optional per-row <code>title-sh</code>). Only one form is active at a time — switching the switch disables the other. The <b>depend row</b> gates the card. Use the card's ↑ ↓ ✕ to reorder or remove.</div>
 <h4>depend-* — param-to-param links (full reference)</h4>
 <div class="doc-tbl-wrap"><table class="doc-tbl">
 <tr><th>Field</th><th>Type</th><th>Description</th></tr>
-<tr><td>depend-on</td><td>String</td><td>Title of the <b>controlling</b> param (e.g. a spinner named "Mode"). Accepts <code>@string/…</code> like any title. Empty = no dependency</td></tr>
-<tr><td>depend-value</td><td>String</td><td>Activating value(s). A <b>comma-separated list</b> means "any of these values" — e.g. <code>"custom,advanced"</code> matches either</td></tr>
-<tr><td>depend-logic</td><td>String</td><td>How several conditions combine: <b>and</b> (default — all must match) · <b>priority</b> (left-to-right, first match wins) · <b>priority-rtl</b> (right-to-left) · <b>xor</b> (exactly one) · <b>nand</b> (NOT all). "and" is omitted from the output</td></tr>
-<tr><td>depend-default</td><td>String</td><td>Value used when no condition matches</td></tr>
-<tr><td>depend-initial</td><td>String</td><td><b>auto</b> (default) or an explicit <b>show</b>/<b>hide</b> that pins the first paint to avoid "flicker" while evaluation completes</td></tr>
-<tr><td>depend-hide</td><td>Bool</td><td>Hide this param entirely <b>until</b> the controlling value matches — it pops back in as soon as it matches</td></tr>
-<tr><td>depend-dim</td><td>Bool</td><td>Dim + lock instead of hiding — the param stays visible but is not editable until matched</td></tr>
-<tr><td>depend-readonly</td><td>Bool</td><td>Unmatched state renders as read-only</td></tr>
-<tr><td>depend-sort</td><td>Bool</td><td>Move depend-locked params to the bottom — the parser forces it to false without depend-readonly (View.GONE has no slot to move into)</td></tr>
+<tr><td>depend-on</td><td>String</td><td><b>name</b> (the $env_var) of the controlling param — <b>not</b> its title. Several parents: <code>"a|b"</code>. Empty = no dependency; a name that matches no param is ignored (always shown)</td></tr>
+<tr><td>depend-value</td><td>String</td><td>Activating value(s). <code>a,b</code> = any of these values; with several parents separate per-parent lists by <code>|</code> (<code>"x,y|z"</code>)</td></tr>
+<tr><td>depend-mode</td><td>String</td><td><code>show</code> (default: visible while matched) or <code>hide</code> (hidden while matched); per parent with <code>show|hide</code>. The card's "hide when matched" writes <code>depend-mode = "hide"</code></td></tr>
+<tr><td>depend-readonly</td><td>Bool</td><td>Dim + lock instead of hiding — the param stays visible but is not editable until the condition is met. The card's "dim + lock" writes this</td></tr>
+<tr><td>depend-sort</td><td>Bool</td><td>With <code>depend-readonly</code>: move locked params to the bottom</td></tr>
+<tr><td>depend-logic</td><td>String</td><td><code>and</code> (default, all must match) · <code>priority</code> (left→right, first match wins) · <code>priority-rtl</code> · <code>xor</code> (exactly one) · <code>nand</code> (not all)</td></tr>
+<tr><td>depend-default / depend-initial</td><td>String</td><td>State when nothing matches (<code>show</code>/<code>hide</code>) and the pinned state before the first evaluation (<code>auto</code>/<code>show</code>/<code>hide</code>, avoids flicker)</td></tr>
+<tr><td>depend-negate</td><td>Bool</td><td>Invert every condition</td></tr>
+<tr><td>depend-threshold</td><td>Int</td><td>With logic <code>and</code>: percentage of conditions that must match</td></tr>
+<tr><td>depend-cascade / depend-include-hidden</td><td>Bool</td><td>Both default true; <code>false</code> makes hidden parents not count / not take part in the result</td></tr>
+<tr><td>depend-onchange</td><td>String</td><td><span class="badge shell">shell</span> Script run when this param's shown/hidden state changes</td></tr>
 </table></div>
-<div class="doc-note tip"><b>Semantics:</b> the link is directional — the param <i>carrying</i> depend-* is the affected one; <code>depend-on</code> names the controlling one. While unmatched: hidden (<code>depend-hide</code>) or dimmed+locked (<code>depend-dim</code>). The match is <b>re-evaluated live on every dialog change</b> of the controlling param. If <code>depend-on</code> names a param that does not exist in the dialog, the dependency is ignored and this param is always shown. <code>depend-hide</code> and <code>depend-dim</code> are mutually exclusive; the card's behavior select enforces that.</div>
+<div class="doc-note tip"><b>Semantics:</b> the link is directional — the param <i>carrying</i> depend-* is the affected one; <code>depend-on</code> names the controlling one. By default the param shows only while the condition matches; <code>depend-mode = "hide"</code> inverts that, and <code>depend-readonly = true</code> dims + locks it instead of hiding. The match is <b>re-evaluated live on every dialog change</b> of the controlling param. If <code>depend-on</code> names a param that does not exist in the dialog, the dependency is ignored and this param is always shown.  <code>depend-mode</code> and <code>depend-readonly</code> can be combined; the card offers the three common combinations.</div>
 <pre>[[action]]
 title = "Set frequencies"
 script = "echo $delay_sec"
@@ -1896,7 +1744,7 @@ min = 0
 max = 60
 value = "5"
 
-# Hidden until Mode = custom (pops in when matched)
+# Shown only while the param named "mode" = custom
 [[action.params]]
 name = "custom_freq"
 title = "Custom frequency (kHz)"
@@ -1904,9 +1752,8 @@ type = "int"
 min = 200000
 max = 3000000
 value = "2600000"
-depend-on = "Mode"
-depend-value = "custom"
-depend-hide = true</pre>`,
+depend-on = "mode"
+depend-value = "custom"</pre>`,
     example: `[[action]]
 title = "CPU mode"
 script = "echo $governor"
@@ -1922,8 +1769,7 @@ title = "Performance"
 
 [[action.params.options]]
 value = "schedutil"
-title = "Balanced (schedutil)"
-option-sh = "echo \\"Balanced (schedutil)\\""
+title-sh = "echo \\"Balanced (schedutil)\\""
 
 [[action.params]]
 name = "seed"
@@ -1931,8 +1777,7 @@ title = "Seed"
 type = "text"
 value-sh = "gen_seed.sh"
 depend-on = "run_in_background"
-depend-value = "1"
-depend-hide = true`
+depend-value = "1"`
   },
 
   switch: {
@@ -1958,7 +1803,6 @@ reload = true`
   picker: {
     intro: `<code>[[picker]]</code> shows the current value (from <code>get</code>) as a grey summary; tapping opens a dropdown of options. Options come from <code>[[picker.options]]</code> child tables (<code>value</code> + <code>title</code>) — or dynamically from <code>options-sh</code>.`,
     fields: [
-      ['desc','desc-sh','String','','Short description shown below the title'],
       ['get','','String','','<span class="badge shell">shell</span> Current value shown as the summary line (deferred/pending)'],
       ['set','script','String','','<span class="badge shell">shell</span> Runs with <code>$state</code> = the selected value (or the values joined by <code>separator</code>)'],
       ['multiple','','Bool','false','Allow selecting more than one value'],
@@ -1987,35 +1831,25 @@ title = "Performance"`
       ['title','','String','""','Block title (optional header)'],
       ['rows','','Array','','<code>[[text.rows]]</code> — one table per displayed line'],
     ],
-    extra: `<h4>[[text.rows]] — row fields (generator syntax: style|text|key=value)</h4>
+    extra: `<h4>[[text.rows]] — row fields</h4>
 <div class="doc-tbl-wrap"><table class="doc-tbl">
 <tr><th>Field</th><th>Type</th><th>Description</th></tr>
-<tr><td>text / sh</td><td>String</td><td>Row content — <code>sh</code> (alias text-sh) produces it dynamically, re-run on every rows render (NOT cached)</td></tr>
+<tr><td>text</td><td>String</td><td>Row content (accepts <code>@string/…</code>)</td></tr>
 <tr><td>bold / italic / underline / strikethrough / monospace</td><td>Bool</td><td>Text styles</td></tr>
-<tr><td>markdown</td><td>Bool</td><td>Parse the text as inline Markdown — <code>**bold**</code> · <code>*italic*</code> · <code>~~strike~~</code> · <code>{text}(color)</code> · <code>[text](url)</code> · <code>\`chip\`</code> (nesting inside single backticks; <code>\`\`\`literal\`\`\`</code> keeps raw)</td></tr>
 <tr><td>link</td><td>String</td><td>Tappable URL — renders the row as a link</td></tr>
-<tr><td>activity</td><td>String</td><td>Intent opened on click (instead of link)</td></tr>
-<tr><td>align</td><td>String</td><td>normal / center / right — rows on one line are pinned into up to 3 zones (max 4 rows per zone; >4 silently falls back to shared-line)</td></tr>
-<tr><td>letter-spacing / line-height / margin-top / margin-bottom / size / alpha / foregroundcolor / bg</td><td>—</td><td>Typography tuning (ls / lh / mt / mb / size / alpha / color / bg in the generator attrs)</td></tr>
-<tr><td>break</td><td>Bool</td><td>Force a line break after this row</td></tr>
+<tr><td>align</td><td>String</td><td><code>"center"</code> or <code>"right"</code></td></tr>
 <tr><td>line</td><td>Bool</td><td><code>true</code> = horizontal divider instead of text</td></tr>
 <tr><td>toggle</td><td>String</td><td><code>"switch"</code> — inline on/off switch on the row</td></tr>
-<tr><td>get / set</td><td>String</td><td><span class="badge shell">shell</span> For toggle rows — same semantics as [[switch]]; get accepts the 3 boolean forms and is queued into pending states</td></tr>
-<tr><td>confirm</td><td>String</td><td>Confirmation text before running script / applying a toggle change — "Cancel" runs nothing</td></tr>
-<tr><td>toast</td><td>Bool</td><td>Show the (non-empty) script/set result as a Toast instead of the log dialog</td></tr>
-<tr><td>script</td><td>String</td><td><span class="badge shell">shell</span> Runs on a background thread when the row is clicked (thin progress bar on the toolbar while running)</td></tr>
-<tr><td>reset</td><td>Int|String</td><td>Refresh button — re-runs the TARGET row's sh/icon-sh/progress-sh only. Numeric index (0-based) · "self"/"this" · "all" (rebind whole block). Combine with script</td></tr>
-<tr><td>refresh-interval</td><td>Int</td><td>Seconds — auto re-run this row's sh/icon-sh/photo-sh and redraw (shortest interval wins)</td></tr>
-<tr><td>flash / flash-color</td><td>Bool / String</td><td>Amber highlight when a reset changes this row's text (default on; flash-color e.g. <code>#FFC107</code>)</td></tr>
-<tr><td>copy</td><td>Bool</td><td>Long-press select/copy — applies to the WHOLE rows block at once</td></tr>
-<tr><td>photo / photo-sh · photo-real-size</td><td>String / Bool</td><td>Large image on its own line; photo-sh re-runs every render (batched); real-size shows the image at original dimensions</td></tr>
-<tr><td>html-file / html-url / html-height</td><td>String / Int</td><td>Inline WebView block below the text (one per item; last wins; default height 260dp)</td></tr>
-<tr><td>icon / icon-sh · icon-position · icon-size</td><td>String / Int</td><td>Inline small icon on the same line (pos = before/after; size in dp)</td></tr>
-<tr><td>progress / progress-max · progress-sh</td><td>Float / String</td><td>Inline progress bar; progress-sh re-runs every render (output = a number)</td></tr>
-<tr><td>progress-color · progress-track-color · progress-width · progress-height</td><td>String / Int</td><td>Bar styling (default material green on translucent grey, 120×8dp)</td></tr>
+<tr><td>get / set</td><td>String</td><td><span class="badge shell">shell</span> For toggle rows — same semantics as [[switch]]</td></tr>
+<tr><td>progress / progress-max</td><td>Int</td><td>Inline progress bar (progress-max default 100)</td></tr>
 <tr><td>support</td><td>Bool|Shell</td><td>Show/hide the row (shell form is deferred/pending)</td></tr>
+<tr><td>icon / photo</td><td>String</td><td>Image on the row — <code>{HOME}</code>/<code>{ICON}</code> accepted</td></tr>
+<tr><td>color / size</td><td>String / Int</td><td>Text color (<code>#RRGGBB</code>) and size in sp</td></tr>
+<tr><td>copy</td><td>Bool</td><td>Tap copies the row text to the clipboard</td></tr>
+<tr><td>script</td><td>String</td><td><span class="badge shell">shell</span> Run when the row is tapped</td></tr>
+<tr><td>markdown / html-file / html-url</td><td>Bool / String</td><td>Render the text as Markdown, or as HTML from a file / URL</td></tr>
 </table></div>
-<div class="doc-note tip"><b>Generator syntax:</b> every row line accepts trailing attributes — <code>style|text|key=value;key=value</code>. Examples: <code>toggle|Show notifications|settings get global x|settings put global x $state</code> · <code>progress|Battery|82|color=#FF9800;width=120</code> · <code>reset|🔄 Refresh|target=self;align=right</code> · <code>refresh|Temp|every=5</code> · <code>icon|Temp|{ICON}/temp.png|size=18</code> · <code>photo||{ICON}/big.png|real-size=true</code> · <code>html|Changelog|file=changelog.html;height=300</code> · <code>markdown|Status: \`{OK}(green)\`</code>.</div>`,
+<div class="doc-note tip"><b>Rows syntax in this generator:</b> <code>style|text|extra…</code>. Styles: bold, italic, mono, underline, strike, center, right, copy, markdown, plain · <code>link|text|https://url</code> · <code>html|text|file-or-url</code> · <code>progress|label|percent</code> · <code>toggle|label</code> · <code>divider</code>. Any trailing <code>key=value</code> segment is passed through as that row key (e.g. <code>bold|Warning|color=#e53935|size=16</code>, <code>plain|Tap me|script=echo hi</code>). A <code>|</code> inside a value is not supported — move long scripts to a file.</div>`,
     example: `[[text]]
 title = "Device info"
 
@@ -2040,35 +1874,30 @@ progress-max = 100`
     intro: `<code>[[editor]]</code> opens a file in the built-in text editor for viewing/editing (a build.prop, a script file…). Changes are saved back to <code>file</code> via the toolbar save icon.`,
     fields: [
       ['file','','String','','<span class="badge req">req</span> File PATH to open — accepts <code>{HOME}</code>/<code>{ICON}</code>'],
-      ['value','value-sh','String','','Initial content — written ONLY when the file does not exist; existing files keep their content. <code>value-sh</code> (script printing the content) wins over <code>value</code>'],
-      ['placeholder','','String','','Hint shown when the file is empty'],
-      ['wrap','','Bool','true','Line wrapping — untick in the generator to emit <code>wrap = false</code>'],
-      ['need-input','','Bool','false','The run script reads what the user typed'],
       ['readonly','','Bool|Shell','false','<code>true</code>/<code>1</code> opens read-only, or a shell returning "1" (resolveBoolOrShell)'],
+      ['wrap','','Bool','true','Soft-wrap long lines when the editor opens (<code>wrap = false</code> to disable)'],
+      ['placeholder','','String','','Hint shown while the file is empty'],
+      ['need-input','','Bool','false','The edited script calls <code>read</code> — an input box appears on Run'],
+      ['value / value-sh','','String','','Initial content, written ONLY when the file does not exist yet; <code>value-sh</code> wins over <code>value</code>'],
+      ['key / support / icon','','—','','Same as every node: <code>support</code> takes true/false or a shell'],
       ['lock / lock-sh','','String','','<code>"1|message"</code> / <code>"1"</code> / a shell returning "1"'],
       ['rows','','Array','','<code>[[editor.rows]]</code> rich-text lines shown below the item'],
     ],
     notes: [
       ['tip','Because <code>readonly</code> accepts a shell, you can make a file editable only under certain conditions, e.g. <code>readonly = "test -w /system && echo 0 || echo 1"</code>.'],
-      ['tip','<code>value</code> is perfect for "create new script" editors — e.g. <code>value = "#!/system/bin/sh\\necho hello"</code>; it never overwrites an existing file.'],
     ],
     example: `[[editor]]
 title = "Edit build.prop"
 desc = "System build properties"
 file = "/system/build.prop"
-readonly = "test -w /system && echo 0 || echo 1"
-
-[[editor]]
-title = "Create new script"
-file = "/sdcard/myscript.sh"
-value = "#!/system/bin/sh\\necho hello"
-wrap = false`
+readonly = "test -w /system && echo 0 || echo 1"`
   },
 
   download: {
     intro: `<code>[[download]]</code> downloads a file over HTTP with an inline progress bar, then optionally runs a follow-up <code>script</code> on the result (e.g. unzip/install).`,
     fields: [
-      ['url','url-sh','String','','<span class="badge req">req</span> HTTP(S) URL — or tick the -sh pill to emit <code>url-sh</code>: a script returning the URL, run once on the first tap and cached into url for the rest of the page visit (overwrites url)'],
+      ['url','url-sh','String','','<span class="badge req">req</span> HTTP(S) URL of the file; <code>url-sh</code> = a shell printing the URL. The node is <b>dropped</b> when both are empty'],
+      ['key / support / icon','','—','','Same as every node: <code>support</code> takes true/false or a shell'],
       ['script','','String','','Follow-up script run after a successful download'],
       ['warn / warn-sh','warning','String','','Warning text before the follow-up run; <code>warn-sh</code> for dynamic'],
       ['lock / lock-sh','','String','','<code>"1|message"</code> / <code>"1"</code> / a shell returning "1"'],
@@ -2091,7 +1920,7 @@ script = "unzip -o $state -d {HOME}/modules"`
 const TOPICS = [
 { id:'intro', title:'1. Introduction — what a TOML page is', html:`
 <p><strong>Tool-Tree</strong> powers the function menu of the <code>com.tool.tree</code> Android app. Every page is described by a single <strong>TOML</strong> file (XML support has been removed). The parser lives in <code>com.omarea.krscript.config.PageConfigReader</code> and uses the <code>org.tomlj:tomlj</code> library.</p>
-<p>A page file is a <b>flat list of nodes</b> — group, page, action, switch, picker, text, editor, download — plus the <code>[[action.params]]</code> dialog (its own tab, next to download) — displayed top-to-bottom in the order they appear in the file. A node that follows a <code>[[group]]</code> (and precedes the next one) automatically becomes that group's child; no nesting is needed (or allowed).</p>
+<p>A page file is a <b>flat list of nodes</b> — group, page, action, switch, picker, text, editor, download — plus the <code>[[action.params]]</code> input dialog (authored inside the action tab) — displayed top-to-bottom in the order they appear in the file. A node that follows a <code>[[group]]</code> (and precedes the next one) automatically becomes that group's child; no nesting is needed (or allowed).</p>
 <div class="doc-note tip">This generator + guide replaces the old reference: pick a tab above for a node type, tweak the merged Fields &amp; Advanced panel (auto-expanded on desktop, collapsed on mobile — click the header to toggle), preview the UI, and copy the TOML. <code>[[resource]]</code> and <code>[[menu]]</code>/<code>[[fab]]</code> are authored on the <b>group</b> tab; <code>[[action.params]]</code> on its own <b>action.params</b> tab.</div>`
 },
 { id:'overview', title:'2. Node overview — quick reference', html:`
@@ -2099,7 +1928,7 @@ const TOPICS = [
 <tr><th>Table</th><th>Kind</th><th>Summary</th></tr>
 <tr><td>group</td><td>container</td><td>Section header; following flat entries become its children. Also hosts [[resource]] and [[menu]]/[[fab]] authoring</td></tr>
 <tr><td>page</td><td>link</td><td>Opens another page: sub .toml (config / config-sh), WebView (html), browser (link), Activity (activity)</td></tr>
-<tr><td>action</td><td>runnable</td><td>Runs a shell script, optionally after confirm/params dialogs (params authored on the action.params tab)</td></tr>
+<tr><td>action</td><td>runnable</td><td>Runs a shell script, optionally after confirm/params dialogs (params authored in the action tab)</td></tr>
 <tr><td>action.params</td><td>dialog</td><td>Input controls for an action — cards with explicit name + per-field -sh pills, an options editor (rows OR options-sh) and depend rows</td></tr>
 <tr><td>switch</td><td>runnable</td><td>On/off toggle; get returns state, set applies <code>$state</code></td></tr>
 <tr><td>picker</td><td>runnable</td><td>Single/multi value selector with options tables or a dynamic options-sh list</td></tr>
@@ -2142,7 +1971,7 @@ const TOPICS = [
 <tr><td>desc / desc-sh</td><td>-</td><td>String</td><td>Description line; dynamic variant overrides</td></tr>
 <tr><td>summary / summary-sh</td><td>-</td><td>String</td><td>Extra small grey text; dynamic variant overrides</td></tr>
 <tr><td>key</td><td>index, id</td><td>String</td><td>Unique ID — required for desktop shortcuts; a key starting with <code>@</code> disables shortcuts</td></tr>
-<tr><td>support</td><td>visible</td><td>Bool|Shell</td><td>Show/hide; accepts true/1, false/0, or a shell returning "1" (runs during parse); <code>support-sh</code> for dynamic</td></tr>
+<tr><td>support</td><td>visible</td><td>Bool|Shell</td><td>Show/hide; accepts true/1, false/0, or a shell returning "1" (runs during parse); a shell string makes it dynamic (there is no <code>support-sh</code> key)</td></tr>
 <tr><td>load-after</td><td>-</td><td>Bool</td><td>Build &amp; insert this entry (at its original position) AFTER the page shows — for expensive shells</td></tr>
 </table></div>
 <h4>ClickableNode — page, action, switch, picker, editor, download</h4>
@@ -2180,9 +2009,9 @@ const TOPICS = [
 <tr><td>icon-sh / photo-sh / bg-sh</td><td>clickable nodes</td><td>Parse time (pending batch)</td></tr>
 <tr><td>warn-sh</td><td>runnable nodes</td><td>Parse time</td></tr>
 <tr><td>lock-sh</td><td>clickable nodes</td><td>Parse time — "1" = locked</td></tr>
-<tr><td>support-sh</td><td>every node</td><td>Parse time — "1" = shown; an expensive one delays the page → use <code>load-after</code></td></tr>
-<tr><td>param title-sh / value-sh / desc-sh / support-sh</td><td>[[action.params]]</td><td>Parse time — per-param, per-cell -sh pills on the card</td></tr>
-<tr><td>option option-sh</td><td>[[action.params.options]]</td><td>Parse time — per-option dynamic title, toggled on its option row</td></tr>
+<tr><td>support (shell form)</td><td>every node</td><td>Parse time — "1" = shown; an expensive one delays the page → use <code>load-after</code></td></tr>
+<tr><td>param title-sh / value-sh / desc-sh / support (shell)</td><td>[[action.params]]</td><td>Parse time — per-param, per-cell -sh pills on the card</td></tr>
+<tr><td>option title-sh</td><td>[[action.params.options]]</td><td>Parse time — per-option dynamic title, toggled on its option row</td></tr>
 <tr><td>options-sh</td><td>[[action.params]] (dropdown types) · picker · menu/fab spinner items</td><td>Parse time — outputs <code>value|Title</code> lines, replacing the static options list</td></tr>
 <tr><td>config-sh</td><td>[[page]]</td><td>When the sub-page opens — .toml path or inline TOML</td></tr>
 <tr><td>load-key-sh</td><td>directive</td><td>Before parsing — outputs the key file path</td></tr>
@@ -2204,7 +2033,7 @@ const TOPICS = [
 <p>To keep the first render fast, these evaluations are <b>queued</b> while the page builds and executed in one batch afterwards:</p>
 <ul>
 <li><code>get</code> of switch / picker / rich-text toggle rows (state summaries)</li>
-<li><code>support</code> of individual text rows and <code>support-sh</code> of params</li>
+<li><code>support</code> of individual text rows (when it is a shell)</li>
 <li>all display <code>*-sh</code> dynamic strings (title-sh, desc-sh, summary-sh, icon-sh, photo-sh, bg-sh)</li>
 </ul>
 <p>Results are applied in place once ready — the page never blocks on them. Contrast with layout-affecting shells (<code>support</code> of whole nodes, <code>show</code>) which run immediately during parsing, and with <code>load-after = true</code> which moves the entire node build until after the page is visible.</p>`
@@ -2306,8 +2135,7 @@ title = "Performance"
 
 [[action.params.options]]
 value = "schedutil"
-title = "Balanced (schedutil)"
-option-sh = "echo \\"Balanced (schedutil)\\""
+title-sh = "echo \\"Balanced (schedutil)\\""
 
 [[action.params]]
 name = "seed"
@@ -2316,7 +2144,6 @@ type = "text"
 value-sh = "gen_seed.sh"
 depend-on = "run_in_background"
 depend-value = "1"
-depend-hide = true
 
 [[switch]]
 title = "Fast charge"
@@ -2351,12 +2178,12 @@ lock = "{LOT}|Requires root access"</pre>`
 <li>Always <code>[[name]]</code> — mixing <code>[name]</code> with <code>[[name]]</code> is a parse error.</li>
 <li>No dot-notation: <code>[[group.action]]</code> is silently ignored. Children attach to the nearest preceding <code>[[group]]</code>.</li>
 <li>Wrap a lone node in a section header with <code>[[group]]</code> — the generator's "wrap in [[group]]" checkbox at the top of Fields emits this for you.</li>
-<li>Author <code>[[resource]]</code> and <code>[[menu]]</code>/<code>[[fab]]</code> from the <b>group</b> tab; <code>[[action.params]]</code> from its own tab next to download.</li>
+<li>Author <code>[[resource]]</code> and <code>[[menu]]</code>/<code>[[fab]]</code> from the <b>group</b> tab; <code>[[action.params]]</code> inside the <b>action</b> tab.</li>
 <li><code>support = false</code> on a group hides AND skips its children's shells entirely.</li>
-<li>Expensive <code>support-sh</code>? Add <code>load-after = true</code> so the page shows first.</li>
+<li>Expensive shell in <code>support</code>? Add <code>load-after = true</code> so the page shows first.</li>
 <li>Never write both a static field and its <code>*-sh</code> variant — keep exactly one (the generator auto-switches the input between text and shell form when you toggle the pill).</li>
 <li>Params: set an explicit <code>name</code> (the $env_var); title / value / desc / support each carry their own -sh pill swapping text ↔ shell.</li>
-<li>Options: pick ONE form — <code>options-sh</code> (whole list from a script) OR the value/title rows (each optionally with its own <code>option-sh</code>); the card's switch enforces that.</li>
+<li>Options: pick ONE form — <code>options-sh</code> (whole list from a script) OR the value/title rows (each optionally with its own <code>title-sh</code>); the card's switch enforces that.</li>
 <li>depend-* is directional — put it on the AFFECTED param; <code>depend-value</code> accepts comma-separated "any of" values; hide and dim are mutually exclusive.</li>
 <li><code>icon</code>/<code>photo</code>/<code>bg</code> must be file PATHS — use <code>{ICON}/x.png</code> or <code>{HOME}/…</code>, never emoji or resource IDs.</li>
 <li>Leave a field blank and it is omitted from the generated TOML — no empty keys like <code>script = ""</code> (param <code>name</code> is the exception: it always emits, auto-derived when blank).</li>
@@ -2373,21 +2200,15 @@ lock = "{LOT}|Requires root access"</pre>`
 },
 { id:'changelog', title:'13. Changelog (recently added fields)', html:`
 <ul>
-<li><b>Generator build v3 — synced with the full TOML guide</b> — every gap between the generator and <code>Toml.html</code> is closed. Highlights below.</li>
-<li><b>text.rows syntax v3</b> — every row line accepts trailing attributes <code>style|text|key=value;key=value</code>. New styles: <code>sh</code> (dynamic text) · <code>markdown</code> · <code>copy</code> · <code>refresh|text|every=5</code> (refresh-interval) · <code>icon|text|{ICON}/x.png|pos=after;size=18</code> · <code>photo|text|{ICON}/x.png|real-size=true</code> · <code>html|text|file=x.html;height=300</code> (or <code>url=</code>) · <code>reset|text|target=self;script=…</code> · <code>toggle|label|GET|SET</code> with REAL scripts (no more <code>get = "..."</code> placeholders). Generic attrs: align · link · activity · color · bg · size · alpha · ls · lh · mt · mb · break · toast · confirm · script · visible · flash · flash-color. progress gains <code>max= · color= · track= · width= · height= · sh=</code> (progress-sh). Link rows now emit a real <code>link = "URL"</code> instead of the invalid <code>link = true</code>.</li>
-<li><b>[[action.params]] — 12 new fields</b> — label(-sh) · placeholder(-sh) · desc-on(-sh) (bool types) · required · readonly (Bool|Shell) · maxlength (text) · sort · remember (opt-out) · mime / path-home / editable / multiple (file &amp; folder) · allow-no-selection (spinner/single-select). <code>items</code> documented (author via the options editor).</li>
-<li><b>depend-* full set</b> — depend-logic (and/priority/priority-rtl/xor/nand) · depend-default · depend-initial (auto/show/hide) · depend-readonly · depend-sort — all editable on the card's depend row.</li>
-<li><b>[[editor]] completed</b> — value / value-sh (initial content, written only when the file does not exist) · placeholder · wrap (untick → wrap = false) · need-input.</li>
-<li><b>[[download]] url-sh</b> — the url field carries a -sh pill now: emit <code>url-sh</code> (run once on first tap, cached).</li>
-<li><b>[[picker]] desc</b> — the missing desc / desc-sh field (shown under the title in the preview).</li>
-<li><b>menu / fab file items</b> — type <code>file</code> uses the 4th segment as <code>suffix</code> (e.g. <code>Flash zip|fab|file|zip</code> → suffix = "zip" + script).</li>
-<li><b>Per-cell -sh pills on param cards</b> — the separate "dynamic (-sh)" block is gone: title / value / desc / support cells each carry their own -sh pill that swaps the SAME input between its text value and a shell script (auto-sampled on tick, unwrapped on untick). The emitted key follows the pill: title ↔ title-sh, value ↔ value-sh, desc ↔ desc-sh, support ↔ support-sh. desc is a new optional cell.</li>
-<li><b>Compact options editor with options-sh</b> — the dropdown options block now has one header switch: <code>options-sh</code> ON = the whole list comes from a script (rows hidden), OFF = one row per entry (value + title + optional per-row option-sh). Only one form is active at a time — no more duplicated option sources.</li>
+<li><b>Parser-accuracy pass (checked against PageConfigReader.kt)</b> — <code>support-sh</code> (not a parser key) → <code>support = "&lt;shell&gt;"</code> · depend "hide"/"dim" (<code>depend-hide</code>/<code>depend-dim</code> do not exist) → <code>depend-mode = "hide"</code> / <code>depend-readonly = true</code> · menu/fab spinner <code>options = [..]</code> → <code>items = [..]</code> · per-option <code>option-sh</code> → <code>title-sh</code> · row <code>link</code> now takes a URL (<code>link|text|https://…</code>) · group no longer offers load-after/min-sdk/max-sdk/allow-shortcut (ignored there) · download: <code>url-sh</code>, key, support, icon, rows · editor: key, support, icon, wrap, placeholder, need-input, value/value-sh, rows (support was shown but never emitted before).</li>
+<li><b>New authoring fields</b> — param cards: required, readonly (+sort), placeholder(-sh), maxlength, desc-on(-sh), remember, allow-no-selection, mime/multiple/editable, separator; depend: several parents (<code>a|b</code>), depend-logic, default, initial, negate, threshold, cascade, include-hidden, onchange, per-parent depend-mode, live check that depend-on names an existing param <b>name</b>. Rows: <code>copy</code>, <code>markdown</code>, <code>html</code>, plus trailing <code>key=value</code> pairs (color, size, script, icon, support…). Menu/fab items: real per-type keys for file / folder / link / activity / html / config.</li>
+<li><b>Per-cell -sh pills on param cards</b> — the separate "dynamic (-sh)" block is gone: title / value / desc / support cells each carry their own -sh pill that swaps the SAME input between its text value and a shell script (auto-sampled on tick, unwrapped on untick). The emitted key follows the pill: title ↔ title-sh, value ↔ value-sh, desc ↔ desc-sh, support stays <code>support</code> (the pill only makes its value a shell). desc is a new optional cell.</li>
+<li><b>Compact options editor with options-sh</b> — the dropdown options block now has one header switch: <code>options-sh</code> ON = the whole list comes from a script (rows hidden), OFF = one row per entry (value + title + optional per-row title-sh). Only one form is active at a time — no more duplicated option sources.</li>
 <li><b>params name field</b> — every [[action.params]] emits an explicit <code>name = "…"</code> (the $env_var) before <code>title</code>; the card has a dedicated name input (blank = slug from the title, chip updates live).</li>
-<li><b>option-sh</b> — the per-option dynamic title inside [[action.params.options]] is <code>option-sh</code>.</li>
+<li><b>per-option title-sh</b> — the per-option dynamic title inside [[action.params.options]] is <code>title-sh</code> (replaces <code>title</code>; <code>option-sh</code> does not exist there).</li>
 <li><b>Back-to-top anchored correctly</b> — removed <code>height:100%</code> on html/body (it made body a scroll container that re-anchored the fixed button on some WebViews) and made the bottom offset safe-area-aware.</li>
 <li><b>depend-* expanded</b> — <code>depend-value</code> accepts comma-separated "any of" values; full semantics documented; the card's depend row got an inline legend.</li>
-<li><b>[[action.params]] is its own tab</b> — placed right next to download.</li>
+<li><b>[[action.params]] merged into the action tab</b> — one tab, one sample: the preview shows the action with its params dialog already open.</li>
 <li><b>Options editor</b> — one row per option with value + title inputs, a -sh pill per option, plus ↑ ↓ ✕ and "+ add option".</li>
 <li><b>-sh pills: text ↔ shell</b> — ticking a -sh pill shows the value as a shell form (plain text → <code>echo "…"</code>, support/lock → fitting checks, command-like values kept); unticking unwraps <code>echo "…"</code> back to plain text.</li>
 <li><b>Output bug fixed (text / editor / download)</b> — string hints where functions were expected aborted rendering; hints are functions now and every render step is failure-isolated.</li>
@@ -2420,7 +2241,7 @@ let cur = 'group';
 const state = {};
 
 function newParam(type, label) {
-  return { name:'', label: label || 'Param', type: type || 'text', mm:'', value:'', desc:'', support:'true', extra:'', options: null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, dep:{ on:'', value:'', mode:'none', logic:'', default:'', initial:'auto', dreadonly:false, dsort:false }, plabel:'', placeholder:'', required:false, readonly:'', maxlength:'', descon:'', mime:'', pathhome:'', editable:false, multiple:false, sort:false, allownosel:false, remember:'' };
+  return { name:'', label: label || 'Param', type: type || 'text', mm:'', value:'', desc:'', support:'true', extra:'', options: null, optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, x:{}, dep:{ on:'', value:'', mode:'none' } };
 }
 function initState(type) {
   const t = TYPES[type];
@@ -2452,7 +2273,7 @@ function fieldHtml(field, val, prefix) {
     let h = `<div class="field"><label>${esc(field.label)}</label>`;
     h += `<div class="pb-row"><select id="pb_type">${PARAM_TYPES.map(t=>`<option>${t}</option>`).join('')}</select><button type="button" class="pb-add" onclick="pbAdd()">+ add param</button></div>`;
     h += list.length
-      ? `<div class="param-list">${list.map((p,i)=>paramCardHtml(p,i)).join('')}</div>`
+      ? `<div class="param-list">${list.map((p,i)=>paramCardHtml(p,i,list)).join('')}</div>`
       : `<p class="adv-empty">No params — pick a type above and press "+ add param" to create one.</p>`;
     h += hint + `</div>`;
     return h;
@@ -2511,6 +2332,7 @@ function docsHtml(type) {
   const d = DOCS[type];
   if (!d) return '<p>No additional reference for this type.</p>';
   let h = d.intro ? `<p>${d.intro}</p>` : '';
+  const tail = type === 'action' ? `<h3 style="margin:22px 0 8px;">[[action.params]]</h3>` + docsHtml('action.params') : '';
   if (d.fields && d.fields.length) {
     h += '<div class="doc-tbl-wrap"><table class="doc-tbl"><tr><th>Field</th><th>-sh form</th><th>Type</th><th>Default</th><th>Description</th></tr>'
       + d.fields.map(r=>`<tr><td>${r[0]}</td><td>${r[1]||'-'}</td><td>${r[2]}</td><td>${r[3]!==undefined&&r[3]!==''?r[3]:'—'}</td><td>${r[4]}</td></tr>`).join('')
@@ -2519,7 +2341,7 @@ function docsHtml(type) {
   (d.notes||[]).forEach(([k,html])=>{ h += `<div class="doc-note ${k}">${html}</div>`; });
   if (d.extra) h += d.extra;
   if (d.example) h += `<pre>${esc(d.example)}</pre>`;
-  return h;
+  return h + tail;
 }
 function renderGuide() {
   el('guideTitle').textContent = 'Guide · ' + TYPES[cur].label;
@@ -2543,6 +2365,14 @@ el('typeTabs').addEventListener('click', e => {
   const b = e.target.closest('.type-btn');
   if (b) selectType(b.dataset.type);
 });
+function refreshDepWarnings() {
+  const list = state[cur] && state[cur].paramList;
+  if (!list) return;
+  document.querySelectorAll('#formFields .param-card').forEach((card, i) => {
+    const w = card.querySelector('.dep-warn');
+    if (w && list[i]) w.innerHTML = depWarnHtml(list, list[i]);
+  });
+}
 function applyInput(e) {
   const t = e.target;
 
@@ -2568,13 +2398,18 @@ function applyInput(e) {
     const list = state[cur].paramList || [];
     const p = list[+t.dataset.pidx];
     if (!p) return;
-    if (t.dataset.pfield === 'name') {
+    if (t.dataset.pfield && t.dataset.pfield.startsWith('x:')) {
+      p.x = p.x || {};
+      const xk = t.dataset.pfield.slice(2);
+      p.x[xk] = t.type === 'checkbox' ? t.checked : t.value;
+    } else if (t.dataset.pfield === 'name') {
       p.name = t.value;
       const card = t.closest('.param-card');
       if (card) {
         const vc = card.querySelector('.param-var');
         if (vc) vc.textContent = paramVar(p);
       }
+      refreshDepWarnings();
     } else if (t.dataset.pfield === 'label') {
       p.label = t.value;
       const card = t.closest('.param-card');
@@ -2584,6 +2419,7 @@ function applyInput(e) {
         const nm = card.querySelector('input[data-pfield="name"]');
         if (nm && !nm.value) nm.placeholder = paramNameFrom(p.label);
       }
+      refreshDepWarnings();
     } else if (t.dataset.pfield === 'type') {
       p.type = t.value;
       renderForm(); // swap the cell set + options editor
@@ -2597,8 +2433,6 @@ function applyInput(e) {
       p.desc = t.value;
     } else if (t.dataset.pfield === 'support') {
       p.support = t.value;
-    } else if (PFIELDS.includes(t.dataset.pfield)) {
-      p[t.dataset.pfield] = t.type === 'checkbox' ? t.checked : t.value;
     } else if (t.dataset.pfield && t.dataset.pfield.startsWith('sh:')) {
       const f = t.dataset.pfield.slice(3);
       p.sh = p.sh || {};
@@ -2613,9 +2447,8 @@ function applyInput(e) {
         else if (f === 'desc') p.sh.desc = 'echo "Description"';
         else if (f === 'value') p.sh.value = 'echo "value"';
         else if (f === 'support') p.sh.support = 'test -e {HOME}/flag && echo 1';
-        else if (f === 'label') p.sh.label = 'echo "Secondary label"';
-        else if (f === 'placeholder') p.sh.placeholder = 'echo "Hint text"';
-        else if (f === 'descon') p.sh.descon = 'echo "Enabled"';
+        else if (f === 'placeholder') p.sh.placeholder = 'echo "Type here"';
+        else if (f === 'descOn') p.sh.descOn = 'echo "Enabled"';
       }
       renderForm(); // re-render the cell in its new form
     } else if (t.dataset.popts === 'optionsShOn') {
@@ -2641,8 +2474,11 @@ function applyInput(e) {
       const o = (p.options = p.options || [])[+t.dataset.oidx];
       if (o) o.shTitle = t.value;
     } else if (t.dataset.pdep) {
-      p.dep = p.dep || { on:'', value:'', mode:'none', logic:'', default:'', initial:'auto', dreadonly:false, dsort:false };
-      p.dep[t.dataset.pdep] = t.type === 'checkbox' ? t.checked : t.value;
+      p.dep = p.dep || { on:'', value:'', mode:'none' };
+      const dk = t.dataset.pdep;
+      p.dep[dk] = t.type === 'checkbox' ? t.checked : t.value;
+      if (dk === 'mode') renderForm();   // the "depend-sort" checkbox only exists for dim
+      else refreshDepWarnings();
     }
     safe(renderDemo); safe(renderHint); safe(renderCode);
     return;
