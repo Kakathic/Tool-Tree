@@ -225,7 +225,7 @@ object ThemeModeState {
             activity.findViewById<View>(R.id.blur_top_container)?.setPadding(0, systemBars.top, 0, 0)
             activity.findViewById<View>(R.id.main_list)?.setPadding(0, systemBars.top, 0, 0)
             activity.findViewById<View>(R.id.blur_bottom_container)?.setPadding(0, 0, 0, systemBars.bottom)
-            activity.findViewById<View>(R.id.kr_online_webview)?.setPadding(0, systemBars.top, 0, 0)
+            // activity.findViewById<View>(R.id.kr_online_webview)?.setPadding(0, systemBars.top, 0, 0)
             
             insets
         }
