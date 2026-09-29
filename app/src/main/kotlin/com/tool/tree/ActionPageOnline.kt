@@ -38,6 +38,7 @@ class ActionPageOnline : AppCompatActivity() {
     private val loadProgressBar by lazy { findViewById<ProgressBar>(R.id.page_load_progress) }
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
     private val ACTION_FILE_PATH_CHOOSER = 65400
+    private val ACTION_WEB_FILE_CHOOSER = 65401
     private val MENU_FIND = 1002
     private val MENU_FIND_PREV = 1003
     private val MENU_FIND_NEXT = 1004
@@ -47,6 +48,11 @@ class ActionPageOnline : AppCompatActivity() {
     private var findPrevItem: MenuItem? = null
     private var findNextItem: MenuItem? = null
     private var findQuery = ""
+    private var webFilePathCallback: ValueCallback<Array<Uri>>? = null
+    private var pageLoading = false
+    private val hideProgressRunnable = Runnable {
+        loadProgressBar.visibility = View.GONE
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -259,12 +265,52 @@ class ActionPageOnline : AppCompatActivity() {
         binding.krOnlineWebview.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 super.onProgressChanged(view, newProgress)
-                if (newProgress < 100) {
-                    loadProgressBar.isIndeterminate = false
-                    loadProgressBar.progress = newProgress
-                    loadProgressBar.visibility = View.VISIBLE
-                } else {
+                // GitHub và các trang SPA có thể tiếp tục phát progress callback sau khi
+                // tài liệu chính đã tải xong (ví dụ tải fragment Assets). Không được mở
+                // lại thanh progress trong trường hợp đó.
+                if (!pageLoading) {
+                    return
+                }
+
+                loadProgressBar.isIndeterminate = false
+                loadProgressBar.progress = newProgress
+                if (newProgress >= 100) {
                     loadProgressBar.visibility = View.GONE
+                } else {
+                    loadProgressBar.visibility = View.VISIBLE
+                }
+            }
+
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                // HTML <input type="file"> (GitHub upload/release Assets, v.v.)
+                // không đi qua ParamsFileChooserRender.fileChooser(), nên WebView phải
+                // nhận callback URI trực tiếp.
+                webFilePathCallback?.onReceiveValue(null)
+                webFilePathCallback = filePathCallback
+
+                return try {
+                    val params = fileChooserParams
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = params?.acceptTypes
+                            ?.firstOrNull { it.isNotBlank() }
+                            ?.takeIf { it != "*/*" } ?: "*/*"
+
+                        if (params?.mode == FileChooserParams.MODE_OPEN_MULTIPLE) {
+                            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                        }
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivityForResult(intent, ACTION_WEB_FILE_CHOOSER)
+                    true
+                } catch (_: Exception) {
+                    webFilePathCallback?.onReceiveValue(null)
+                    webFilePathCallback = null
+                    false
                 }
             }
 
@@ -294,12 +340,28 @@ class ActionPageOnline : AppCompatActivity() {
         binding.krOnlineWebview.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                loadProgressBar.visibility = View.GONE
+
+                pageLoading = false
+                hideProgressRunnable.run()
                 view?.title?.let { setTitle(it) }
+
+                // GitHub Releases tải danh sách Assets bằng <include-fragment>. Một số
+                // Android WebView không hoàn tất custom element này, khiến UI giữ spinner
+                // vô hạn dù trang chính đã tải xong. Fallback bên dưới tải fragment trực
+                // tiếp bằng fetch() và thay thế include-fragment bằng HTML trả về từ GitHub.
+                if (url?.contains("github.com", ignoreCase = true) == true) {
+                    binding.krOnlineWebview.postDelayed({
+                        if (!isFinishing && !isDestroyed) {
+                            loadGithubFragmentsFallback()
+                        }
+                    }, 700L)
+                }
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
+                pageLoading = true
+                loadProgressBar.removeCallbacks(hideProgressRunnable)
                 loadProgressBar.isIndeterminate = true
                 loadProgressBar.visibility = View.VISIBLE
                 findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
@@ -326,6 +388,50 @@ class ActionPageOnline : AppCompatActivity() {
         url?.let { binding.krOnlineWebview.loadUrl(it) }
     }
 
+
+    /**
+     * GitHub dùng <include-fragment> để lazy-load phần Assets của Release.
+     * Nếu custom element của GitHub không được WebView xử lý, fallback này fetch fragment
+     * với cookie phiên hiện tại rồi thay thế node loading bằng HTML thực tế.
+     */
+    private fun loadGithubFragmentsFallback() {
+        val script = """
+            (function() {
+                function loadFragment(el) {
+                    if (!el || el.dataset.toolTreeLoading === '1') return;
+                    var src = el.getAttribute('src');
+                    if (!src) return;
+
+                    el.dataset.toolTreeLoading = '1';
+                    fetch(new URL(src, location.href).href, {
+                        credentials: 'include',
+                        headers: { 'Accept': 'text/html' }
+                    }).then(function(response) {
+                        if (!response.ok) throw new Error('HTTP ' + response.status);
+                        return response.text();
+                    }).then(function(html) {
+                        var template = document.createElement('template');
+                        template.innerHTML = html;
+                        el.replaceWith(template.content.cloneNode(true));
+                    }).catch(function() {
+                        delete el.dataset.toolTreeLoading;
+                    });
+                }
+
+                function scan() {
+                    document.querySelectorAll('include-fragment[src]').forEach(loadFragment);
+                }
+
+                scan();
+                setTimeout(scan, 1000);
+                setTimeout(scan, 2500);
+                setTimeout(scan, 5000);
+            })();
+        """.trimIndent()
+
+        binding.krOnlineWebview.evaluateJavascript(script, null)
+    }
+
     private fun chooseFilePath(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
         return try {
             val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
@@ -341,7 +447,26 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == ACTION_FILE_PATH_CHOOSER) {
+        if (requestCode == ACTION_WEB_FILE_CHOOSER) {
+            val callback = webFilePathCallback
+            webFilePathCallback = null
+
+            if (callback != null) {
+                if (resultCode != RESULT_OK || data == null) {
+                    callback.onReceiveValue(null)
+                } else {
+                    val uris = ArrayList<Uri>()
+                    data.data?.let { uris.add(it) }
+                    data.clipData?.let { clipData ->
+                        for (i in 0 until clipData.itemCount) {
+                            val uri = clipData.getItemAt(i).uri
+                            if (!uris.contains(uri)) uris.add(uri)
+                        }
+                    }
+                    callback.onReceiveValue(uris.toTypedArray().takeIf { it.isNotEmpty() })
+                }
+            }
+        } else if (requestCode == ACTION_FILE_PATH_CHOOSER) {
             val result = if (data == null || resultCode != RESULT_OK) null else data.data
             if (fileSelectedInterface != null) {
                 val absPath = result?.let { getPath(it) }
@@ -371,6 +496,9 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        loadProgressBar.removeCallbacks(hideProgressRunnable)
+        webFilePathCallback?.onReceiveValue(null)
+        webFilePathCallback = null
         loadProgressBar.visibility = View.GONE
         binding.krOnlineWebview.apply {
             stopLoading()
