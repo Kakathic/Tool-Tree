@@ -7,13 +7,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup
-import android.webkit.JsResult
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.addCallback
@@ -42,9 +36,9 @@ class ActionPageOnline : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        
         themeMode = ThemeModeState.switchTheme(this)
-
+        
         binding = ActivityActionPageOnlineBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -62,9 +56,10 @@ class ActionPageOnline : AppCompatActivity() {
             finish()
         }
 
+        binding.krOnlineWebview.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
         onBackPressedDispatcher.addCallback(this) {
             if (binding.krOnlineWebview.canGoBack()) {
-                // Cho WebView tự phục hồi history/cache ở lần back này.
                 skipInterceptForBackNav = true
                 binding.krOnlineWebview.goBack()
             } else {
@@ -75,7 +70,6 @@ class ActionPageOnline : AppCompatActivity() {
         loadIntentData()
     }
 
-    // Giữ menu mở bằng SearchView nhưng vẫn để AppCompat quản lý ActionBar của bản cũ.
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menu?.add(0, MENU_OPEN_BROWSER, 0, R.string.open_in_browser)?.apply {
             setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
@@ -104,7 +98,7 @@ class ActionPageOnline : AppCompatActivity() {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(currentUrl))
                 startActivity(intent)
             } catch (e: Exception) {
-                Toast.makeText(this, R.string.online_browser_not_found, Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "No suitable browser found.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -127,20 +121,26 @@ class ActionPageOnline : AppCompatActivity() {
     private fun initWebview(url: String?) {
         binding.krOnlineWebview.visibility = View.VISIBLE
         val settings = binding.krOnlineWebview.settings
+        
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.databaseEnabled = true
+        settings.cacheMode = WebSettings.LOAD_DEFAULT
+        
+        settings.blockNetworkImage = false
+        settings.loadsImagesAutomatically = true
 
         if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
             val isDark = ThemeModeState.isDarkMode()
             WebSettingsCompat.setForceDark(settings, if (isDark) FORCE_DARK_ON else FORCE_DARK_OFF)
         }
 
-        val webViewInjector = WebViewInjector(
-            binding.krOnlineWebview,
+        val webViewInjector = WebViewInjector(binding.krOnlineWebview,
             object : ParamsFileChooserRender.FileChooserInterface {
                 override fun openFileChooser(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
                     return chooseFilePath(fileSelectedInterface)
                 }
-            }
-        )
+            })
 
         binding.krOnlineWebview.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
@@ -209,14 +209,22 @@ class ActionPageOnline : AppCompatActivity() {
                 }
             }
 
-            // Giữ cơ chế intercept của file cũ: chỉ xử lý HTML main-frame GET khi Content-Type
-            // rỗng hoặc text/plain. CSS/JS/ảnh/XHR và các request không phải GET vẫn do WebView xử lý.
+            // Chỉ can thiệp request HTML gốc (main frame) qua http/https: tự fetch rồi ép luôn
+            // trả về Content-Type "text/html" nếu server báo thiếu/mập mờ (rỗng hoặc
+            // "text/plain") - đây chính là nguyên nhân WebView đôi lúc tự hiện nguyên trang dưới
+            // dạng văn bản thô thay vì render, hoặc tự bật hộp thoại tải về (setDownloadListener)
+            // thay vì hiển thị. KHÔNG đụng tới file:// (mở bằng file vẫn load như cũ), KHÔNG đụng
+            // tài nguyên phụ (ảnh/css/js/xhr) hay request không phải GET (form submit...) để tránh
+            // ảnh hưởng ngoài ý muốn - các trường hợp đó fallback về hành vi mặc định của WebView.
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 val requestUrl = request?.url ?: return null
                 if (request.isForMainFrame != true) return null
                 if (requestUrl.scheme?.startsWith("http") != true) return null
                 if (request.method != "GET") return null
 
+                // Đang back (goBack()) - để WebView tự phục hồi trang trước từ cache/lịch sử
+                // của chính nó thay vì ép fetch lại thủ công qua mạng, tránh chậm/nháy hình
+                // không cần thiết. Chỉ bỏ qua đúng 1 lần cho điều hướng back này.
                 if (skipInterceptForBackNav) {
                     skipInterceptForBackNav = false
                     return null
@@ -234,22 +242,23 @@ class ActionPageOnline : AppCompatActivity() {
                     }
                     connection.connect()
 
+                    // Giữ lại cookie server set qua request thủ công này để không mất session so
+                    // với việc để WebView tự tải như trước.
                     connection.headerFields["Set-Cookie"]?.forEach {
                         CookieManager.getInstance().setCookie(requestUrl.toString(), it)
                     }
 
                     val declaredType = connection.contentType ?: ""
+                    // Chỉ ép về "text/html" khi kiểu khai báo mập mờ (rỗng/text/plain) - kiểu tải
+                    // về thật sự (pdf/apk/zip/octet-stream...) vẫn giữ nguyên, không can thiệp.
                     val ambiguous = declaredType.isEmpty() ||
                         declaredType.substringBefore(";").trim().equals("text/plain", ignoreCase = true)
-
                     if (!ambiguous) {
                         connection.disconnect()
                         return null
                     }
-
                     val charset = Regex("charset=([^;]+)", RegexOption.IGNORE_CASE)
-                        .find(declaredType)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotEmpty() }
-                        ?: "utf-8"
+                        .find(declaredType)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotEmpty() } ?: "utf-8"
 
                     WebResourceResponse("text/html", charset, connection.inputStream)
                 } catch (_: Exception) {
@@ -297,7 +306,6 @@ class ActionPageOnline : AppCompatActivity() {
         }
     }
 
-
     override fun onDestroy() {
         loadProgressBar.visibility = View.GONE
         binding.krOnlineWebview.apply {
@@ -307,4 +315,5 @@ class ActionPageOnline : AppCompatActivity() {
         }
         super.onDestroy()
     }
+
 }
