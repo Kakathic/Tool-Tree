@@ -269,7 +269,7 @@ class MainActivity : AppCompatActivity() {
             binding.tabLayout.addTab(tab)
         }
 
-        attachTabTouchSelect()
+        attachTabTouchSelect(tabHelper)
 
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
@@ -283,24 +283,33 @@ class MainActivity : AppCompatActivity() {
             override fun onTabReselected(tab: TabLayout.Tab) {}
         })
 
+        var userSwiping = false
         binding.viewPager.setOnPageChangeListener(object : SwipePager.OnPageChangeListener {
             override fun onPageSelected(position: Int) {
                 binding.tabLayout.getTabAt(position)?.select()
             }
 
+            override fun onPageScrollStateChanged(state: Int) {
+                if (state == SwipePager.SCROLL_STATE_DRAGGING) userSwiping = true
+                if (state == SwipePager.SCROLL_STATE_IDLE) userSwiping = false
+                tabHelper.setPagerDragging(binding.tabLayout, state == SwipePager.SCROLL_STATE_DRAGGING)
+            }
+
             override fun onPageScrolled(position: Int, offset: Float) {
+                if (!userSwiping) return
                 val highlightPosition = if (offset > 0.5f) position + 1 else position
                 tabHelper.updateHighlight(binding.tabLayout, highlightPosition)
             }
         })
     }
 
-    private fun attachTabTouchSelect() {
+    private fun attachTabTouchSelect(tabHelper: TabIconHelper) {
         for (position in 0 until binding.tabLayout.tabCount) {
             val customView = binding.tabLayout.getTabAt(position)?.customView ?: continue
             customView.setOnTouchListener { v, event ->
                 when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
+                        tabHelper.setTabTouching(binding.tabLayout, true)
                         binding.tabLayout.getTabAt(position)?.select()
                         true
                     }
@@ -313,6 +322,7 @@ class MainActivity : AppCompatActivity() {
                         true
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        tabHelper.setTabTouching(binding.tabLayout, false)
                         v.performClick()
                         true
                     }
