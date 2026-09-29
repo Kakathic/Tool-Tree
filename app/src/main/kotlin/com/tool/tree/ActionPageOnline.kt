@@ -37,7 +37,6 @@ class ActionPageOnline : AppCompatActivity() {
     private lateinit var binding: ActivityActionPageOnlineBinding
     private val loadProgressBar by lazy { findViewById<ProgressBar>(R.id.page_load_progress) }
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
-    private var skipInterceptForBackNav = false
     private val ACTION_FILE_PATH_CHOOSER = 65400
     private val MENU_FIND = 1002
     private val MENU_FIND_PREV = 1003
@@ -69,7 +68,6 @@ class ActionPageOnline : AppCompatActivity() {
             if (findItem?.isActionViewExpanded == true) {
                 handleSearchBack()
             } else if (binding.krOnlineWebview.canGoBack()) {
-                skipInterceptForBackNav = true
                 binding.krOnlineWebview.goBack()
             } else {
                 finish()
@@ -246,6 +244,13 @@ class ActionPageOnline : AppCompatActivity() {
         binding.krOnlineWebview.visibility = View.VISIBLE
         val settings = binding.krOnlineWebview.settings
 
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.databaseEnabled = true
+        settings.cacheMode = WebSettings.LOAD_DEFAULT
+        settings.blockNetworkImage = false
+        settings.loadsImagesAutomatically = true
+
         if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
             val isDark = ThemeModeState.isDarkMode()
             WebSettingsCompat.setForceDark(settings, if (isDark) FORCE_DARK_ON else FORCE_DARK_OFF)
@@ -305,10 +310,6 @@ class ActionPageOnline : AppCompatActivity() {
                 loadProgressBar.isIndeterminate = true
                 loadProgressBar.visibility = View.VISIBLE
                 findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
-
-                // Nếu WebView phục hồi trang từ cache/lịch sử mà không gọi
-                // shouldInterceptRequest, không để cờ bỏ qua ảnh hưởng tới lần điều hướng sau.
-                skipInterceptForBackNav = false
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -323,80 +324,6 @@ class ActionPageOnline : AppCompatActivity() {
                     }
                 } catch (_: Exception) {
                     super.shouldOverrideUrlLoading(view, request)
-                }
-            }
-
-            override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
-                val requestUrl = request?.url ?: return null
-
-                // Chỉ xử lý document chính của trang HTTP/HTTPS.
-                // Request phụ (CSS/JS/ảnh/XHR...) và file:// vẫn để WebView tự xử lý.
-                if (request.isForMainFrame != true) return null
-                if (requestUrl.scheme?.startsWith("http") != true) return null
-                if (request.method != "GET") return null
-
-                // Khi người dùng Back, để WebView tự phục hồi trang từ history/cache,
-                // tránh fetch lại thủ công và gây chậm/nháy trang.
-                if (skipInterceptForBackNav) {
-                    skipInterceptForBackNav = false
-                    return null
-                }
-
-                return try {
-                    val connection = (java.net.URL(requestUrl.toString()).openConnection()
-                        as java.net.HttpURLConnection).apply {
-                        instanceFollowRedirects = true
-                        connectTimeout = 15000
-                        readTimeout = 15000
-
-                        // Giữ các header WebView gửi trong request gốc.
-                        request.requestHeaders.forEach { (key, value) ->
-                            setRequestProperty(key, value)
-                        }
-
-                        // Giữ session/cookie hiện tại của WebView.
-                        CookieManager.getInstance().getCookie(requestUrl.toString())?.let {
-                            setRequestProperty("Cookie", it)
-                        }
-                    }
-
-                    connection.connect()
-
-                    // Đồng bộ cookie server trả về để các request tiếp theo vẫn có session.
-                    connection.headerFields["Set-Cookie"]?.forEach {
-                        CookieManager.getInstance().setCookie(requestUrl.toString(), it)
-                    }
-
-                    val declaredType = connection.contentType ?: ""
-
-                    // Chỉ sửa Content-Type mơ hồ. Nếu server đã trả về kiểu thực sự như
-                    // PDF/APK/ZIP/octet-stream thì không can thiệp.
-                    val ambiguous = declaredType.isEmpty() ||
-                        declaredType.substringBefore(";")
-                            .trim()
-                            .equals("text/plain", ignoreCase = true)
-
-                    if (!ambiguous) {
-                        connection.disconnect()
-                        return null
-                    }
-
-                    val charset = Regex("charset=([^;]+)", RegexOption.IGNORE_CASE)
-                        .find(declaredType)
-                        ?.groupValues
-                        ?.get(1)
-                        ?.trim()
-                        ?.takeIf { it.isNotEmpty() }
-                        ?: "utf-8"
-
-                    WebResourceResponse(
-                        "text/html",
-                        charset,
-                        connection.inputStream
-                    )
-                } catch (_: Exception) {
-                    // Nếu fetch thủ công thất bại, trả null để WebView tự xử lý request.
-                    null
                 }
             }
         }

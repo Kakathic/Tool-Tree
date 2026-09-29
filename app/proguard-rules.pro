@@ -16,24 +16,16 @@
 #   public *;
 #}
 
--keep class com.omarea.common.ui.**{*;}
--keep class com.omarea.common.shell.**{*;}
--keep class com.omarea.common.shared.**{*;}
--keep class com.omarea.common.model.**{*;}
--keep class com.omarea.overscroll.**{*;}
+# Giữ lại toàn bộ package com.omarea và các package con
+-keep class com.omarea.** { *; }
 
--keep class com.omarea.krscript.**{*;}
--keep class com.omarea.krscript.ui.**{*;}
--keep class com.omarea.krscript.model.**{*;}
--keep class com.omarea.krscript.config.**{*;}
--keep class com.omarea.krscript.shortcut.**{*;}
--keep class com.omarea.krscript.executor.**{*;}
--keep class com.omarea.krscript.downloader.**{*;}
-
--keep class com.tool.tree.utils.** { *; }
--keep class com.tool.tree.ui.** { *; }
+# Giữ lại toàn bộ package com.tool.tree và các package con
 -keep class com.tool.tree.** { *; }
+
+# Serializable
 -keepclassmembers class * implements java.io.Serializable { *; }
+
+# org.tomlj & dontwarn
 -keep class org.tomlj.** { *; }
 -dontwarn org.tomlj.**
 -dontwarn com.google.errorprone.**
