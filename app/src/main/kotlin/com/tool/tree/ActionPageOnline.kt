@@ -251,6 +251,16 @@ class ActionPageOnline : AppCompatActivity() {
         settings.blockNetworkImage = false
         settings.loadsImagesAutomatically = true
 
+        // Giữ WebView sử dụng hardware rendering để tránh khác biệt rendering
+        // giữa bản này và ActionPageOnline.kt bên ngoài.
+        binding.krOnlineWebview.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
+        // Cho phép WebView lưu và gửi cookie, bao gồm cookie của bên thứ ba.
+        // GitHub có thể sử dụng cookie/session cho các request động trên trang Release.
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.setAcceptCookie(true)
+        cookieManager.setAcceptThirdPartyCookies(binding.krOnlineWebview, true)
+
         if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
             val isDark = ThemeModeState.isDarkMode()
             WebSettingsCompat.setForceDark(settings, if (isDark) FORCE_DARK_ON else FORCE_DARK_OFF)
