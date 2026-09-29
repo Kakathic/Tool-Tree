@@ -1,13 +1,18 @@
 package com.tool.tree
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.webkit.*
 import android.widget.ProgressBar
 import android.widget.Toast
@@ -16,8 +21,9 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebSettingsCompat.FORCE_DARK_OFF
@@ -37,13 +43,14 @@ class ActionPageOnline : AppCompatActivity() {
     private val MENU_FIND = 1002
     private val MENU_FIND_PREV = 1003
     private val MENU_FIND_NEXT = 1004
-    private val MENU_OPEN_BROWSER = 1001
+    private val MENU_LINK = 1001
 
     private var findItem: MenuItem? = null
     private var findPrevItem: MenuItem? = null
     private var findNextItem: MenuItem? = null
     private var findQuery = ""
-    private var searchView: SearchView? = null
+    private var imeVisible = false
+    private var imeHiddenAt = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,11 +74,19 @@ class ActionPageOnline : AppCompatActivity() {
             finish()
         }
 
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val visible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            if (imeVisible && !visible) imeHiddenAt = SystemClock.uptimeMillis()
+            imeVisible = visible
+            insets
+        }
+
         onBackPressedDispatcher.addCallback(this) {
             val find = findItem
             if (find != null && find.isActionViewExpanded) {
-                if (isImeVisible()) {
-                    hideKeyboardKeepFind()
+                // Back 1: ẩn bàn phím -> Back 2: đóng tìm kiếm -> Back 3: về trang web trước
+                if (isKeyboardShowing()) {
+                    hideFindKeyboard()
                 } else {
                     find.collapseActionView()
                 }
@@ -96,7 +111,7 @@ class ActionPageOnline : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         if (menu == null) return true
 
-        val sv = SearchView(supportActionBar?.themedContext ?: this).apply {
+        val searchView = SearchView(supportActionBar?.themedContext ?: this).apply {
             queryHint = getString(R.string.online_find_in_page)
             maxWidth = Int.MAX_VALUE
             setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -112,11 +127,9 @@ class ActionPageOnline : AppCompatActivity() {
             })
         }
 
-        searchView = sv
-
         findItem = menu.add(0, MENU_FIND, 0, R.string.online_find_in_page).apply {
             setIcon(R.drawable.ic_search_web)
-            actionView = sv
+            actionView = searchView
             setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW)
             setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
                 override fun onMenuItemActionExpand(item: MenuItem): Boolean {
@@ -143,8 +156,9 @@ class ActionPageOnline : AppCompatActivity() {
             isVisible = false
         }
 
-        menu.add(0, MENU_OPEN_BROWSER, 3, R.string.open_in_browser).apply {
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+        menu.add(0, MENU_LINK, 3, R.string.open_in_browser).apply {
+            icon = createLinkIcon()
+            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         }
         return true
     }
@@ -159,7 +173,7 @@ class ActionPageOnline : AppCompatActivity() {
                 binding.krOnlineWebview.findNext(true)
                 true
             }
-            MENU_OPEN_BROWSER -> {
+            MENU_LINK -> {
                 openInDefaultBrowser()
                 true
             }
@@ -171,17 +185,6 @@ class ActionPageOnline : AppCompatActivity() {
         }
     }
 
-    private fun isImeVisible(): Boolean {
-        return ViewCompat.getRootWindowInsets(window.decorView)
-            ?.isVisible(WindowInsetsCompat.Type.ime()) == true
-    }
-
-    private fun hideKeyboardKeepFind() {
-        searchView?.clearFocus()
-        WindowCompat.getInsetsController(window, window.decorView)
-            .hide(WindowInsetsCompat.Type.ime())
-    }
-
     private fun findInPage(query: String) {
         findQuery = query
         if (query.isEmpty()) {
@@ -190,6 +193,28 @@ class ActionPageOnline : AppCompatActivity() {
         } else {
             binding.krOnlineWebview.findAllAsync(query)
         }
+    }
+
+    private fun createLinkIcon(): Drawable? {
+        val toolbarContext = binding.webappbar.toolbar.context
+        val typedArray = toolbarContext.obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary))
+        val tint = typedArray.getColor(0, Color.GRAY)
+        typedArray.recycle()
+        val base = ContextCompat.getDrawable(this, R.drawable.kr_link)?.mutate() ?: return null
+        val wrapped = DrawableCompat.wrap(base)
+        DrawableCompat.setTint(wrapped, tint)
+        return wrapped
+    }
+
+    private fun isKeyboardShowing(): Boolean {
+        val live = ViewCompat.getRootWindowInsets(binding.root)?.isVisible(WindowInsetsCompat.Type.ime())
+        return live ?: (imeVisible || SystemClock.uptimeMillis() - imeHiddenAt < 400)
+    }
+
+    private fun hideFindKeyboard() {
+        (findItem?.actionView as? SearchView)?.clearFocus()
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(binding.root.windowToken, 0)
     }
 
     private fun clearFind() {
