@@ -40,6 +40,7 @@ class ActionPageOnline : AppCompatActivity() {
     private var webFilePathCallback: ValueCallback<Array<Uri>>? = null
     private val ACTION_FILE_PATH_CHOOSER = 65400
     private val ACTION_WEB_FILE_CHOOSER = 65401
+    private var githubFragmentJobId = 0L
     private val MENU_FIND = 1002
     private val MENU_FIND_PREV = 1003
     private val MENU_FIND_NEXT = 1004
@@ -49,8 +50,6 @@ class ActionPageOnline : AppCompatActivity() {
     private var findPrevItem: MenuItem? = null
     private var findNextItem: MenuItem? = null
     private var findQuery = ""
-    private var pageLoading = false
-    private var destroyed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -263,21 +262,12 @@ class ActionPageOnline : AppCompatActivity() {
         binding.krOnlineWebview.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 super.onProgressChanged(view, newProgress)
-
-                // WebView có thể gửi thêm progress < 100 sau onPageFinished().
-                // Không được để callback này bật progress bar trở lại sau khi
-                // trang chính đã hoàn tất.
-                if (!pageLoading || destroyed) {
-                    return
-                }
-
-                if (newProgress >= 100) {
-                    pageLoading = false
-                    loadProgressBar.visibility = View.GONE
-                } else {
+                if (newProgress < 100) {
                     loadProgressBar.isIndeterminate = false
-                    loadProgressBar.progress = newProgress.coerceIn(0, 100)
+                    loadProgressBar.progress = newProgress
                     loadProgressBar.visibility = View.VISIBLE
+                } else {
+                    loadProgressBar.visibility = View.GONE
                 }
             }
 
@@ -286,39 +276,30 @@ class ActionPageOnline : AppCompatActivity() {
                 filePathCallback: ValueCallback<Array<Uri>>?,
                 fileChooserParams: FileChooserParams?
             ): Boolean {
-                // Hủy callback cũ trước khi mở picker mới để WebView không bị
-                // treo nếu người dùng bấm input[type=file] nhiều lần.
                 webFilePathCallback?.onReceiveValue(null)
                 webFilePathCallback = filePathCallback
 
                 return try {
                     val acceptTypes = fileChooserParams?.acceptTypes
-                        ?.mapNotNull { it.takeIf(String::isNotBlank) }
-                        ?.flatMap { it.split(',') }
-                        ?.map { it.trim() }
-                        ?.filter { it.isNotEmpty() }
+                        ?.filter { it.isNotBlank() }
                         ?.toTypedArray()
                         ?: emptyArray()
 
                     val mimeType = when {
-                        acceptTypes.isEmpty() -> "*/*"
-                        acceptTypes.size == 1 -> acceptTypes[0]
+                        acceptTypes.size == 1 && acceptTypes[0] != "*/*" -> acceptTypes[0]
+                        acceptTypes.any { it == "*/*" || it.isBlank() } -> "*/*"
+                        acceptTypes.isNotEmpty() -> acceptTypes.first()
                         else -> "*/*"
                     }
 
                     val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                         type = mimeType
                         addCategory(Intent.CATEGORY_OPENABLE)
-                        putExtra(
-                            Intent.EXTRA_ALLOW_MULTIPLE,
-                            fileChooserParams?.mode == FileChooserParams.MODE_OPEN_MULTIPLE
-                        )
-
+                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, fileChooserParams?.mode == FileChooserParams.MODE_OPEN_MULTIPLE)
                         if (acceptTypes.size > 1) {
                             putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes)
                         }
                     }
-
                     startActivityForResult(intent, ACTION_WEB_FILE_CHOOSER)
                     true
                 } catch (_: Exception) {
@@ -354,37 +335,17 @@ class ActionPageOnline : AppCompatActivity() {
         binding.krOnlineWebview.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                pageLoading = false
                 loadProgressBar.visibility = View.GONE
                 view?.title?.let { setTitle(it) }
-
-                // GitHub Releases tải danh sách Assets bằng <include-fragment>.
-                // Fragment này được lazy-load trong trình duyệt và WebView có thể
-                // giữ placeholder spinner vô hạn. Tự tải các fragment sau khi
-                // document chính hoàn tất để Assets xuất hiện giống trình duyệt.
-                if (!url.isNullOrEmpty() && isGithubUrl(url)) {
-                    loadGithubFragments(view)
-                }
+                loadGithubFragments(view, url)
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
-                pageLoading = true
+                githubFragmentJobId++
                 loadProgressBar.isIndeterminate = true
                 loadProgressBar.visibility = View.VISIBLE
                 findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
-            }
-
-            override fun onReceivedError(
-                view: WebView?,
-                request: WebResourceRequest?,
-                error: WebResourceError?
-            ) {
-                super.onReceivedError(view, request, error)
-                if (request?.isForMainFrame != false) {
-                    pageLoading = false
-                    loadProgressBar.visibility = View.GONE
-                }
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -408,71 +369,123 @@ class ActionPageOnline : AppCompatActivity() {
         url?.let { binding.krOnlineWebview.loadUrl(it) }
     }
 
-    private fun isGithubUrl(url: String): Boolean {
-        return try {
-            Uri.parse(url).host?.equals("github.com", ignoreCase = true) == true
-        } catch (_: Exception) {
-            false
-        }
-    }
-
     /**
-     * GitHub dùng @github/include-fragment-element để tải HTML động, trong đó
-     * Release Assets thường nằm ở /releases/expanded_assets/<tag>. Trình duyệt
-     * đầy đủ xử lý custom element này, nhưng một WebView có thể để nguyên
-     * spinner. Ta fetch fragment bằng chính cookie/session của WebView rồi
-     * thay <include-fragment> bằng HTML nhận được.
+     * GitHub loads Release Assets through <include-fragment> after the main document
+     * has finished. WebView does not always execute GitHub's custom element lifecycle
+     * the same way as a full browser, so explicitly load those fragments when needed.
      */
-    private fun loadGithubFragments(webView: WebView?) {
-        if (webView == null || destroyed) return
+    private fun loadGithubFragments(view: WebView?, pageUrl: String?) {
+        if (view == null || pageUrl.isNullOrBlank()) return
+        val uri = runCatching { Uri.parse(pageUrl) }.getOrNull() ?: return
+        if (uri.host != "github.com" && uri.host != "www.github.com") return
 
+        val jobId = ++githubFragmentJobId
         val script = """
             (function() {
-                function loadFragment(el) {
-                    if (!el || el.dataset.toolTreeLoading === '1' || !el.getAttribute('src')) return;
-                    var src = el.getAttribute('src');
-                    if (!/^\/[^\s]*$/.test(src) && !/^https?:\/\//i.test(src)) return;
+                if (window.__toolTreeGithubFragmentLoader) return;
+                window.__toolTreeGithubFragmentLoader = true;
+
+                const MAX_RETRIES = 12;
+                let retry = 0;
+                const loaded = new Set();
+
+                function log(message) {
+                    try { console.log('[Tool-Tree][GitHub] ' + message); } catch (_) {}
+                }
+
+                function isFragmentElement(el) {
+                    return el && el.tagName && el.tagName.toLowerCase() === 'include-fragment';
+                }
+
+                async function loadFragment(el) {
+                    if (!isFragmentElement(el)) return;
+                    if (el.dataset.toolTreeLoading === '1' || el.dataset.toolTreeLoaded === '1') return;
+
+                    const src = el.getAttribute('src');
+                    if (!src) return;
+
+                    let target;
+                    try {
+                        target = new URL(src, location.href).href;
+                    } catch (_) {
+                        return;
+                    }
+
+                    if (!/^https:\/\/((www\.)?github\.com)\//i.test(target)) return;
+                    if (loaded.has(target)) return;
 
                     el.dataset.toolTreeLoading = '1';
-                    var target = new URL(src, location.href).href;
+                    loaded.add(target);
+                    log('fragment detected: ' + target);
 
-                    fetch(target, {
-                        method: 'GET',
-                        credentials: 'include',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        cache: 'no-store'
-                    }).then(function(response) {
+                    try {
+                        const response = await fetch(target, {
+                            method: 'GET',
+                            credentials: 'include',
+                            cache: 'no-store',
+                            headers: { 'Accept': 'text/html,application/xhtml+xml' }
+                        });
+
+                        log('fragment HTTP ' + response.status + ': ' + target);
                         if (!response.ok) throw new Error('HTTP ' + response.status);
-                        return response.text();
-                    }).then(function(html) {
-                        if (!el.isConnected) return;
-                        var template = document.createElement('template');
+
+                        const html = await response.text();
+                        if (!html || !html.trim()) throw new Error('empty response');
+
+                        const template = document.createElement('template');
                         template.innerHTML = html;
-                        var fragment = template.content;
-                        el.replaceWith(fragment.cloneNode(true));
-                    }).catch(function() {
+                        const fragment = template.content;
+                        const parent = el.parentNode;
+                        if (!parent) throw new Error('fragment parent missing');
+
+                        parent.insertBefore(fragment, el);
+                        el.remove();
+                        log('fragment inserted');
+                    } catch (error) {
+                        loaded.delete(target);
                         el.dataset.toolTreeLoading = '0';
-                    });
+                        log('fragment failed: ' + (error && error.message ? error.message : error));
+                    }
                 }
 
-                function scan() {
-                    document.querySelectorAll('include-fragment[src]').forEach(loadFragment);
+                function scan(root) {
+                    if (!root) return;
+                    if (isFragmentElement(root)) loadFragment(root);
+                    if (root.querySelectorAll) {
+                        root.querySelectorAll('include-fragment[src]').forEach(loadFragment);
+                    }
                 }
 
-                scan();
-                [500, 1200, 2500, 5000, 9000].forEach(function(delay) {
-                    setTimeout(scan, delay);
-                });
-
-                if (window.MutationObserver) {
-                    var observer = new MutationObserver(function() { scan(); });
-                    observer.observe(document.documentElement, { childList: true, subtree: true });
-                    setTimeout(function() { observer.disconnect(); }, 12000);
+                function scanRepeatedly() {
+                    scan(document);
+                    retry++;
+                    if (retry < MAX_RETRIES) {
+                        setTimeout(scanRepeatedly, retry < 4 ? 500 : 1000);
+                    }
                 }
+
+                try {
+                    new MutationObserver(function(mutations) {
+                        mutations.forEach(function(mutation) {
+                            mutation.addedNodes.forEach(function(node) {
+                                if (node.nodeType === 1) scan(node);
+                            });
+                        });
+                    }).observe(document.documentElement || document, { childList: true, subtree: true });
+                } catch (_) {}
+
+                scanRepeatedly();
             })();
         """.trimIndent()
 
-        webView.evaluateJavascript(script, null)
+        view.evaluateJavascript(script, null)
+
+        // A second injection covers pages that replace the document after onPageFinished.
+        view.postDelayed({
+            if (!isFinishing && jobId == githubFragmentJobId && view.url == pageUrl) {
+                view.evaluateJavascript(script, null)
+            }
+        }, 2500L)
     }
 
     private fun chooseFilePath(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
@@ -490,39 +503,27 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        when (requestCode) {
-            ACTION_WEB_FILE_CHOOSER -> {
-                val callback = webFilePathCallback
-                webFilePathCallback = null
-
-                if (callback != null) {
-                    if (resultCode != RESULT_OK || data == null) {
-                        callback.onReceiveValue(null)
-                    } else {
-                        val uris = ArrayList<Uri>()
-                        val clipData = data.clipData
-
-                        if (clipData != null) {
-                            for (i in 0 until clipData.itemCount) {
-                                clipData.getItemAt(i).uri?.let(uris::add)
-                            }
-                        } else {
-                            data.data?.let(uris::add)
-                        }
-
-                        callback.onReceiveValue(uris.toTypedArray().takeIf { it.isNotEmpty() })
+        if (requestCode == ACTION_WEB_FILE_CHOOSER) {
+            val callback = webFilePathCallback
+            webFilePathCallback = null
+            if (callback != null) {
+                val uris = if (resultCode == RESULT_OK && data != null) {
+                    val clipData = data.clipData
+                    when {
+                        clipData != null -> Array(clipData.itemCount) { index -> clipData.getItemAt(index).uri }
+                        data.data != null -> arrayOf(data.data!!)
+                        else -> null
                     }
-                }
+                } else null
+                callback.onReceiveValue(uris)
             }
-
-            ACTION_FILE_PATH_CHOOSER -> {
-                val result = if (data == null || resultCode != RESULT_OK) null else data.data
-                if (fileSelectedInterface != null) {
-                    val absPath = result?.let { getPath(it) }
-                    fileSelectedInterface?.onFileSelected(absPath)
-                }
-                this.fileSelectedInterface = null
+        } else if (requestCode == ACTION_FILE_PATH_CHOOSER) {
+            val result = if (data == null || resultCode != RESULT_OK) null else data.data
+            if (fileSelectedInterface != null) {
+                val absPath = result?.let { getPath(it) }
+                fileSelectedInterface?.onFileSelected(absPath)
             }
+            this.fileSelectedInterface = null
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -546,8 +547,7 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        destroyed = true
-        pageLoading = false
+        githubFragmentJobId++
         webFilePathCallback?.onReceiveValue(null)
         webFilePathCallback = null
         loadProgressBar.visibility = View.GONE
