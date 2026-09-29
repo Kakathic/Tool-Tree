@@ -6,17 +6,20 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.os.SystemClock
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.webkit.*
+import android.window.OnBackInvokedCallback
+import android.window.OnBackInvokedDispatcher
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.addCallback
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
@@ -49,8 +52,7 @@ class ActionPageOnline : AppCompatActivity() {
     private var findPrevItem: MenuItem? = null
     private var findNextItem: MenuItem? = null
     private var findQuery = ""
-    private var imeVisible = false
-    private var imeHiddenAt = 0L
+    private var searchBackCallback: OnBackInvokedCallback? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,22 +76,9 @@ class ActionPageOnline : AppCompatActivity() {
             finish()
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
-            val visible = insets.isVisible(WindowInsetsCompat.Type.ime())
-            if (imeVisible && !visible) imeHiddenAt = SystemClock.uptimeMillis()
-            imeVisible = visible
-            insets
-        }
-
         onBackPressedDispatcher.addCallback(this) {
-            val find = findItem
-            if (find != null && find.isActionViewExpanded) {
-                // Back 1: ẩn bàn phím -> Back 2: đóng tìm kiếm -> Back 3: về trang web trước
-                if (isKeyboardShowing()) {
-                    hideFindKeyboard()
-                } else {
-                    find.collapseActionView()
-                }
+            if (findItem?.isActionViewExpanded == true) {
+                handleSearchBack()
             } else if (binding.krOnlineWebview.canGoBack()) {
                 binding.krOnlineWebview.goBack()
             } else {
@@ -135,12 +124,14 @@ class ActionPageOnline : AppCompatActivity() {
                 override fun onMenuItemActionExpand(item: MenuItem): Boolean {
                     findPrevItem?.isVisible = true
                     findNextItem?.isVisible = true
+                    registerSearchBackCallback()
                     return true
                 }
 
                 override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
                     findPrevItem?.isVisible = false
                     findNextItem?.isVisible = false
+                    unregisterSearchBackCallback()
                     clearFind()
                     return true
                 }
@@ -206,9 +197,45 @@ class ActionPageOnline : AppCompatActivity() {
         return wrapped
     }
 
+    // Back 1: ẩn bàn phím -> Back 2: đóng tìm kiếm -> Back 3: về trang web trước
+    private fun handleSearchBack() {
+        val find = findItem ?: return
+        if (!find.isActionViewExpanded) return
+        if (isKeyboardShowing()) {
+            hideFindKeyboard()
+        } else {
+            find.collapseActionView()
+        }
+    }
+
     private fun isKeyboardShowing(): Boolean {
-        val live = ViewCompat.getRootWindowInsets(binding.root)?.isVisible(WindowInsetsCompat.Type.ime())
-        return live ?: (imeVisible || SystemClock.uptimeMillis() - imeHiddenAt < 400)
+        val hasFocus = (findItem?.actionView as? SearchView)?.hasFocus() == true
+        val imeShown = ViewCompat.getRootWindowInsets(binding.root)?.isVisible(WindowInsetsCompat.Type.ime())
+        return hasFocus && (imeShown ?: true)
+    }
+
+    // AppCompat tự đóng ô tìm kiếm ở callback back của nó; PRIORITY_OVERLAY đảm bảo callback này chạy trước
+    private fun registerSearchBackCallback() {
+        if (Build.VERSION.SDK_INT >= 33) registerSearchBackCallbackApi33()
+    }
+
+    private fun unregisterSearchBackCallback() {
+        if (Build.VERSION.SDK_INT >= 33) unregisterSearchBackCallbackApi33()
+    }
+
+    @RequiresApi(33)
+    private fun registerSearchBackCallbackApi33() {
+        if (searchBackCallback != null) return
+        val callback = OnBackInvokedCallback { handleSearchBack() }
+        searchBackCallback = callback
+        onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_OVERLAY, callback)
+    }
+
+    @RequiresApi(33)
+    private fun unregisterSearchBackCallbackApi33() {
+        val callback = searchBackCallback ?: return
+        onBackInvokedDispatcher.unregisterOnBackInvokedCallback(callback)
+        searchBackCallback = null
     }
 
     private fun hideFindKeyboard() {
@@ -381,6 +408,7 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        unregisterSearchBackCallback()
         loadProgressBar.visibility = View.GONE
         binding.krOnlineWebview.apply {
             stopLoading()
