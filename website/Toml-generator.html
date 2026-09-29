@@ -351,8 +351,8 @@ main {
 
 /* ---------- template tools (per-type clear / restore) ---------- */
 .form-actions { display:flex; flex-direction:column; align-items:stretch; gap:6px; margin:0 0 12px; }
-.form-actions .fa-btns { display:flex; gap:6px; }
-.form-actions .fa-btn { flex:1 1 0; padding:7px 10px; }
+.form-actions .fa-btns { display:flex; flex-wrap:wrap; gap:6px; }
+.form-actions .fa-btn { flex:1 1 auto; padding:7px 9px; font-size:11.5px; }
 .form-actions .fa-btn.danger { background:rgba(239,68,68,.15); border-color:rgba(239,68,68,.60); color:#f87171; }
 .form-actions .fa-btn.danger:hover { background:var(--red); border-color:var(--red); color:#fff; }
 .form-actions .fa-btn.ok { background:rgba(16,185,129,.15); border-color:rgba(16,185,129,.60); color:#34d399; }
@@ -480,7 +480,7 @@ details.adv-topic .topic-body { padding:0 14px 14px; font-size:12.5px; line-heig
 }
 @media (min-width:821px) {
   .topnav { box-shadow:0 10px 20px -14px rgba(0,0,0,.5); }
-  .panel-form { position:sticky; top:60px; align-self:start; max-height:calc(100vh - 60px); overflow-y:auto; scrollbar-width:thin; }
+  .panel-form { position:sticky; top:62px; align-self:start; max-height:calc(100vh - 62px); overflow-y:auto; scrollbar-width:thin; }
 }
 @media (max-width:600px) {
   header { padding:14px 16px 12px; }
@@ -509,15 +509,15 @@ details.adv-topic .topic-body { padding:0 14px 14px; font-size:12.5px; line-heig
 </head>
 <body>
 
+<div class="topnav">
+  <div class="types" id="typeTabs"></div>
+</div>
+
 <header>
   <div class="brand-line"><span class="brand-dot"></span><span class="brand-tag">tool-tree</span><span>· config generator + guide</span></div>
   <h1>TOML Template Generator</h1>
   <p>Pick a node type, fill the Fields &amp; Advanced panel, check the live preview and copy the generated TOML. Every tab follows the same pattern: one field or one card per TOML key, a -sh pill wherever a value can be a shell, and empty fields are simply omitted from the output.</p>
 </header>
-
-<div class="topnav">
-  <div class="types" id="typeTabs"></div>
-</div>
 
 <main>
   <section class="panel-form">
