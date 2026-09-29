@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
+import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
@@ -31,7 +32,6 @@ import com.omarea.common.ui.ThemeMode
 import com.omarea.krscript.WebViewInjector
 import com.omarea.krscript.ui.ParamsFileChooserRender
 import com.tool.tree.databinding.ActivityActionPageOnlineBinding
-import android.view.Menu
 
 class ActionPageOnline : AppCompatActivity() {
     private lateinit var themeMode: ThemeMode
@@ -315,21 +315,11 @@ class ActionPageOnline : AppCompatActivity() {
         }
     }
 
-    override fun onPause() {
-        binding.krOnlineWebview.onPause()
-        super.onPause()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        binding.krOnlineWebview.onResume()
-    }
 
     override fun onDestroy() {
         loadProgressBar.visibility = View.GONE
         binding.krOnlineWebview.apply {
             stopLoading()
-            (parent as? ViewGroup)?.removeView(this)
             removeAllViews()
             destroy()
         }
