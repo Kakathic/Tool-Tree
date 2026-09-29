@@ -37,10 +37,8 @@ class ActionPageOnline : AppCompatActivity() {
     private lateinit var binding: ActivityActionPageOnlineBinding
     private val loadProgressBar by lazy { findViewById<ProgressBar>(R.id.page_load_progress) }
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
-    private var webFilePathCallback: ValueCallback<Array<Uri>>? = null
+    private var skipInterceptForBackNav = false
     private val ACTION_FILE_PATH_CHOOSER = 65400
-    private val ACTION_WEB_FILE_CHOOSER = 65401
-    private var githubFragmentJobId = 0L
     private val MENU_FIND = 1002
     private val MENU_FIND_PREV = 1003
     private val MENU_FIND_NEXT = 1004
@@ -71,6 +69,7 @@ class ActionPageOnline : AppCompatActivity() {
             if (findItem?.isActionViewExpanded == true) {
                 handleSearchBack()
             } else if (binding.krOnlineWebview.canGoBack()) {
+                skipInterceptForBackNav = true
                 binding.krOnlineWebview.goBack()
             } else {
                 finish()
@@ -271,44 +270,6 @@ class ActionPageOnline : AppCompatActivity() {
                 }
             }
 
-            override fun onShowFileChooser(
-                webView: WebView?,
-                filePathCallback: ValueCallback<Array<Uri>>?,
-                fileChooserParams: FileChooserParams?
-            ): Boolean {
-                webFilePathCallback?.onReceiveValue(null)
-                webFilePathCallback = filePathCallback
-
-                return try {
-                    val acceptTypes = fileChooserParams?.acceptTypes
-                        ?.filter { it.isNotBlank() }
-                        ?.toTypedArray()
-                        ?: emptyArray()
-
-                    val mimeType = when {
-                        acceptTypes.size == 1 && acceptTypes[0] != "*/*" -> acceptTypes[0]
-                        acceptTypes.any { it == "*/*" || it.isBlank() } -> "*/*"
-                        acceptTypes.isNotEmpty() -> acceptTypes.first()
-                        else -> "*/*"
-                    }
-
-                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                        type = mimeType
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, fileChooserParams?.mode == FileChooserParams.MODE_OPEN_MULTIPLE)
-                        if (acceptTypes.size > 1) {
-                            putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes)
-                        }
-                    }
-                    startActivityForResult(intent, ACTION_WEB_FILE_CHOOSER)
-                    true
-                } catch (_: Exception) {
-                    webFilePathCallback?.onReceiveValue(null)
-                    webFilePathCallback = null
-                    false
-                }
-            }
-
             override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
                 DialogHelper.animDialog(
                     AlertDialog.Builder(this@ActionPageOnline)
@@ -337,15 +298,17 @@ class ActionPageOnline : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 loadProgressBar.visibility = View.GONE
                 view?.title?.let { setTitle(it) }
-                loadGithubFragments(view, url)
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
-                githubFragmentJobId++
                 loadProgressBar.isIndeterminate = true
                 loadProgressBar.visibility = View.VISIBLE
                 findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
+
+                // Nếu WebView phục hồi trang từ cache/lịch sử mà không gọi
+                // shouldInterceptRequest, không để cờ bỏ qua ảnh hưởng tới lần điều hướng sau.
+                skipInterceptForBackNav = false
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -362,130 +325,85 @@ class ActionPageOnline : AppCompatActivity() {
                     super.shouldOverrideUrlLoading(view, request)
                 }
             }
+
+            override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                val requestUrl = request?.url ?: return null
+
+                // Chỉ xử lý document chính của trang HTTP/HTTPS.
+                // Request phụ (CSS/JS/ảnh/XHR...) và file:// vẫn để WebView tự xử lý.
+                if (request.isForMainFrame != true) return null
+                if (requestUrl.scheme?.startsWith("http") != true) return null
+                if (request.method != "GET") return null
+
+                // Khi người dùng Back, để WebView tự phục hồi trang từ history/cache,
+                // tránh fetch lại thủ công và gây chậm/nháy trang.
+                if (skipInterceptForBackNav) {
+                    skipInterceptForBackNav = false
+                    return null
+                }
+
+                return try {
+                    val connection = (java.net.URL(requestUrl.toString()).openConnection()
+                        as java.net.HttpURLConnection).apply {
+                        instanceFollowRedirects = true
+                        connectTimeout = 15000
+                        readTimeout = 15000
+
+                        // Giữ các header WebView gửi trong request gốc.
+                        request.requestHeaders.forEach { (key, value) ->
+                            setRequestProperty(key, value)
+                        }
+
+                        // Giữ session/cookie hiện tại của WebView.
+                        CookieManager.getInstance().getCookie(requestUrl.toString())?.let {
+                            setRequestProperty("Cookie", it)
+                        }
+                    }
+
+                    connection.connect()
+
+                    // Đồng bộ cookie server trả về để các request tiếp theo vẫn có session.
+                    connection.headerFields["Set-Cookie"]?.forEach {
+                        CookieManager.getInstance().setCookie(requestUrl.toString(), it)
+                    }
+
+                    val declaredType = connection.contentType ?: ""
+
+                    // Chỉ sửa Content-Type mơ hồ. Nếu server đã trả về kiểu thực sự như
+                    // PDF/APK/ZIP/octet-stream thì không can thiệp.
+                    val ambiguous = declaredType.isEmpty() ||
+                        declaredType.substringBefore(";")
+                            .trim()
+                            .equals("text/plain", ignoreCase = true)
+
+                    if (!ambiguous) {
+                        connection.disconnect()
+                        return null
+                    }
+
+                    val charset = Regex("charset=([^;]+)", RegexOption.IGNORE_CASE)
+                        .find(declaredType)
+                        ?.groupValues
+                        ?.get(1)
+                        ?.trim()
+                        ?.takeIf { it.isNotEmpty() }
+                        ?: "utf-8"
+
+                    WebResourceResponse(
+                        "text/html",
+                        charset,
+                        connection.inputStream
+                    )
+                } catch (_: Exception) {
+                    // Nếu fetch thủ công thất bại, trả null để WebView tự xử lý request.
+                    null
+                }
+            }
         }
 
         webViewInjector.inject(this, url?.startsWith("file:///android_asset") == true)
 
         url?.let { binding.krOnlineWebview.loadUrl(it) }
-    }
-
-    /**
-     * GitHub loads Release Assets through <include-fragment> after the main document
-     * has finished. WebView does not always execute GitHub's custom element lifecycle
-     * the same way as a full browser, so explicitly load those fragments when needed.
-     */
-    private fun loadGithubFragments(view: WebView?, pageUrl: String?) {
-        if (view == null || pageUrl.isNullOrBlank()) return
-        val uri = runCatching { Uri.parse(pageUrl) }.getOrNull() ?: return
-        if (uri.host != "github.com" && uri.host != "www.github.com") return
-
-        val jobId = ++githubFragmentJobId
-        val script = """
-            (function() {
-                if (window.__toolTreeGithubFragmentLoader) return;
-                window.__toolTreeGithubFragmentLoader = true;
-
-                const MAX_RETRIES = 12;
-                let retry = 0;
-                const loaded = new Set();
-
-                function log(message) {
-                    try { console.log('[Tool-Tree][GitHub] ' + message); } catch (_) {}
-                }
-
-                function isFragmentElement(el) {
-                    return el && el.tagName && el.tagName.toLowerCase() === 'include-fragment';
-                }
-
-                async function loadFragment(el) {
-                    if (!isFragmentElement(el)) return;
-                    if (el.dataset.toolTreeLoading === '1' || el.dataset.toolTreeLoaded === '1') return;
-
-                    const src = el.getAttribute('src');
-                    if (!src) return;
-
-                    let target;
-                    try {
-                        target = new URL(src, location.href).href;
-                    } catch (_) {
-                        return;
-                    }
-
-                    if (!/^https:\/\/((www\.)?github\.com)\//i.test(target)) return;
-                    if (loaded.has(target)) return;
-
-                    el.dataset.toolTreeLoading = '1';
-                    loaded.add(target);
-                    log('fragment detected: ' + target);
-
-                    try {
-                        const response = await fetch(target, {
-                            method: 'GET',
-                            credentials: 'include',
-                            cache: 'no-store',
-                            headers: { 'Accept': 'text/html,application/xhtml+xml' }
-                        });
-
-                        log('fragment HTTP ' + response.status + ': ' + target);
-                        if (!response.ok) throw new Error('HTTP ' + response.status);
-
-                        const html = await response.text();
-                        if (!html || !html.trim()) throw new Error('empty response');
-
-                        const template = document.createElement('template');
-                        template.innerHTML = html;
-                        const fragment = template.content;
-                        const parent = el.parentNode;
-                        if (!parent) throw new Error('fragment parent missing');
-
-                        parent.insertBefore(fragment, el);
-                        el.remove();
-                        log('fragment inserted');
-                    } catch (error) {
-                        loaded.delete(target);
-                        el.dataset.toolTreeLoading = '0';
-                        log('fragment failed: ' + (error && error.message ? error.message : error));
-                    }
-                }
-
-                function scan(root) {
-                    if (!root) return;
-                    if (isFragmentElement(root)) loadFragment(root);
-                    if (root.querySelectorAll) {
-                        root.querySelectorAll('include-fragment[src]').forEach(loadFragment);
-                    }
-                }
-
-                function scanRepeatedly() {
-                    scan(document);
-                    retry++;
-                    if (retry < MAX_RETRIES) {
-                        setTimeout(scanRepeatedly, retry < 4 ? 500 : 1000);
-                    }
-                }
-
-                try {
-                    new MutationObserver(function(mutations) {
-                        mutations.forEach(function(mutation) {
-                            mutation.addedNodes.forEach(function(node) {
-                                if (node.nodeType === 1) scan(node);
-                            });
-                        });
-                    }).observe(document.documentElement || document, { childList: true, subtree: true });
-                } catch (_) {}
-
-                scanRepeatedly();
-            })();
-        """.trimIndent()
-
-        view.evaluateJavascript(script, null)
-
-        // A second injection covers pages that replace the document after onPageFinished.
-        view.postDelayed({
-            if (!isFinishing && jobId == githubFragmentJobId && view.url == pageUrl) {
-                view.evaluateJavascript(script, null)
-            }
-        }, 2500L)
     }
 
     private fun chooseFilePath(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
@@ -503,21 +421,7 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == ACTION_WEB_FILE_CHOOSER) {
-            val callback = webFilePathCallback
-            webFilePathCallback = null
-            if (callback != null) {
-                val uris = if (resultCode == RESULT_OK && data != null) {
-                    val clipData = data.clipData
-                    when {
-                        clipData != null -> Array(clipData.itemCount) { index -> clipData.getItemAt(index).uri }
-                        data.data != null -> arrayOf(data.data!!)
-                        else -> null
-                    }
-                } else null
-                callback.onReceiveValue(uris)
-            }
-        } else if (requestCode == ACTION_FILE_PATH_CHOOSER) {
+        if (requestCode == ACTION_FILE_PATH_CHOOSER) {
             val result = if (data == null || resultCode != RESULT_OK) null else data.data
             if (fileSelectedInterface != null) {
                 val absPath = result?.let { getPath(it) }
@@ -547,9 +451,6 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        githubFragmentJobId++
-        webFilePathCallback?.onReceiveValue(null)
-        webFilePathCallback = null
         loadProgressBar.visibility = View.GONE
         binding.krOnlineWebview.apply {
             stopLoading()
