@@ -9,7 +9,6 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import com.omarea.common.shell.KeepShellPublic
 import com.omarea.common.shell.ShellExecutor
 import com.omarea.common.ui.DialogHelper
@@ -69,18 +68,21 @@ class WebViewInjector(
             "KrScriptCore"
         )
 
+        // Xác nhận tải về bằng hộp thoại confirm có sẵn của app (không cho đóng ngoài nút).
         webView.setDownloadListener { url, _, contentDisposition, mimetype, contentLength ->
-            DialogHelper.Companion.animDialog(
-                AlertDialog.Builder(context)
-                    .setTitle(R.string.kr_download_confirm)
-                    .setMessage("$url\n\n$mimetype\n${contentLength}Bytes")
-                    .setPositiveButton(R.string.btn_confirm) { _, _ ->
-                        Downloader(context, null).downloadBySystem(
-                            url, contentDisposition, mimetype, UUID.randomUUID().toString(), null
-                        )
-                    }
-                    .setNegativeButton(R.string.btn_cancel) { _, _ -> }
-            ).setCancelable(false)
+            DialogHelper.confirm(
+                context = activity,
+                title = activity.getString(R.string.kr_download_confirm),
+                message = "$url\n\n$mimetype\n${contentLength}Bytes",
+                contentView = null,
+                onConfirm = DialogHelper.DialogButton(activity.getString(R.string.btn_confirm), Runnable {
+                    Downloader(context, null).downloadBySystem(
+                        url, contentDisposition, mimetype, UUID.randomUUID().toString(), null
+                    )
+                }),
+                onCancel = DialogHelper.DialogButton(activity.getString(R.string.btn_cancel)),
+                cancelable = false
+            )
         }
     }
 

@@ -15,7 +15,6 @@ import android.webkit.*
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.addCallback
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
@@ -268,25 +267,28 @@ class ActionPageOnline : AppCompatActivity() {
                 }
             }
 
+            // Alert/confirm của JS dùng hộp thoại có sẵn của app; không cho đóng ngoài nút để
+            // JsResult luôn được confirm()/cancel().
             override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
-                DialogHelper.animDialog(
-                    AlertDialog.Builder(this@ActionPageOnline)
-                        .setMessage(message)
-                        .setPositiveButton(R.string.btn_confirm) { _, _ -> }
-                        .setOnDismissListener { result?.confirm() }
-                        .create()
-                )?.setCancelable(false)
+                DialogHelper.alert(
+                    context = this@ActionPageOnline,
+                    message = message.orEmpty(),
+                    onConfirm = Runnable { result?.confirm() },
+                    cancelable = false
+                )
                 return true
             }
 
             override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
-                DialogHelper.animDialog(
-                    AlertDialog.Builder(this@ActionPageOnline)
-                        .setMessage(message)
-                        .setPositiveButton(R.string.btn_confirm) { _, _ -> result?.confirm() }
-                        .setNeutralButton(R.string.btn_cancel) { _, _ -> result?.cancel() }
-                        .create()
-                )?.setCancelable(false)
+                DialogHelper.confirm(
+                    context = this@ActionPageOnline,
+                    title = "",
+                    message = message.orEmpty(),
+                    contentView = null,
+                    onConfirm = DialogHelper.DialogButton(getString(R.string.btn_confirm), Runnable { result?.confirm() }),
+                    onCancel = DialogHelper.DialogButton(getString(R.string.btn_cancel), Runnable { result?.cancel() }),
+                    cancelable = false
+                )
                 return true
             }
         }

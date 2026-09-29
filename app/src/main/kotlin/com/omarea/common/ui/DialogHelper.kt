@@ -353,8 +353,9 @@ class DialogHelper {
         fun alert(context: Context,
                   title: String = "",
                   message: String = "",
-                  onConfirm: Runnable? = null): DialogWrap {
-            return openContinueAlert(context, R.layout.dialog_alert, title, message, onConfirm, null)
+                  onConfirm: Runnable? = null,
+                  cancelable: Boolean = true): DialogWrap {
+            return openContinueAlert(context, R.layout.dialog_alert, title, message, onConfirm, null, cancelable)
         }
 
         fun alert(context: Context,
