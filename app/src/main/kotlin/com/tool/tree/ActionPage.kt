@@ -120,12 +120,15 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     // Tránh chạy lại checkPageLock khi onResume() gọi lại trong lúc vẫn đang đợi.
     private var lockCheckStarted = false
 
-    // Đếm số lý do đang yêu cầu "đóng băng" WebView (html-file/html-url) cùng lúc - cuộn trang,
-    // vuốt-lùi, activity pause, ... - chỉ thực sự pause khi có ít nhất 1 lý do (0 -> 1), chỉ
-    // thực sự resume lại khi KHÔNG còn lý do nào (1 -> 0), tránh trường hợp 2 nguyên nhân
-    // trùng lúc (vd đang cuộn thì cũng bắt đầu vuốt-lùi) làm "mở khoá" sớm khi 1 trong 2 kết thúc
-    // trước.
+    // Đóng băng WebView (html-file/html-url) theo 2 nhóm lý do tách biệt:
+    // - Tạm thời (cuộn, vuốt-lùi): đếm bằng webViewFreezeCount, pause WebView + pauseTimers().
+    // - Vòng đời activity (onPause/onResume): webViewLifecyclePaused, CHỈ pause WebView,
+    //   KHÔNG đụng pauseTimers() vì nó có hiệu lực toàn process - gọi ở đây sẽ làm trang html
+    //   (ActionPageOnline) hay trang con mở ngay sau đó không load được.
     private var webViewFreezeCount = 0
+    private var webViewLifecyclePaused = false
+    private var webViewsPaused = false
+    private var webViewTimersPaused = false
     private var scrollFreezeRunnable: Runnable? = null
     private var scrollChangedListener: ViewTreeObserver.OnScrollChangedListener? = null
 
@@ -166,11 +169,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                     binding.swipeBackPreviewSharp.visibility = visibility
                     if (!dragging) binding.swipeBackPreviewSharp.alpha = 0f
                 }
-                // Đang vuốt-lùi (kể cả lúc còn phân vân, chưa chắc buông tay có thật sự lùi
-                // trang hay không) -> đóng băng ngay, đỡ phải vẽ+chạy JS cho các WebView sắp bị
-                // che khuất bởi preview trang trước hoặc sắp biến mất hẳn - dragging=false chỉ
-                // xảy ra khi buông tay HUỶ (không lùi trang), lúc đó mới cần mở khoá lại; nếu
-                // vuốt-lùi thành công thì trang này bị destroy luôn, không cần mở khoá.
+                // Vuốt-lùi: đóng băng tạm thời; buông tay huỷ thì mở lại.
                 if (dragging) freezeWebViews() else unfreezeWebViews()
             },
             onDragProgress = { progress ->
@@ -588,25 +587,19 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    // Activity bị pause: về Home, mở app khác, vuốt-lùi bằng cử chỉ hệ thống (không qua
-    // SwipeBackHelper tự viết), màn hình tắt, ... - đằng nào cũng không ai nhìn trang này nữa,
-    // đóng băng luôn cho đỡ tốn CPU/GPU chạy ngầm. resume lại thì mở khoá bình thường.
     override fun onPause() {
         super.onPause()
-        freezeWebViews()
+        webViewLifecyclePaused = true
+        applyWebViewFreezeState()
     }
 
     override fun onResume() {
         super.onResume()
-        unfreezeWebViews()
+        webViewLifecyclePaused = false
+        applyWebViewFreezeState()
     }
 
-    // Theo dõi cuộn trang (kr_content nằm trong fragment, nhưng ViewTreeObserver của root đã
-    // nhận được mọi sự kiện cuộn của toàn bộ cây view bên trong, không cần tìm đúng ScrollView).
-    // Cuộn NHIỀU WebView (html-file/html-url) cùng lúc rất dễ giật vì mỗi WebView đều phải vẽ
-    // lại/compositing theo từng frame cuộn - đóng băng (pause) trong lúc đang cuộn, đợi hết
-    // rung (debounce 200ms không còn sự kiện cuộn mới) rồi mới mở khoá lại, giảm hẳn số WebView
-    // phải vẽ trong lúc tay đang lướt.
+    // Đóng băng tạm thời khi đang cuộn: đợi 200ms không còn sự kiện cuộn mới rồi mở lại.
     private fun setupWebViewScrollFreeze() {
         val listener = ViewTreeObserver.OnScrollChangedListener {
             if (scrollFreezeRunnable == null) {
@@ -632,20 +625,9 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    // onPause() + pauseTimers() từng WebView đang có trên trang - giữ nguyên visibility (vẫn
-    // hiện frame cuối cùng đã vẽ, đứng yên) thay vì ẩn hẳn, để lúc vuốt/cuộn WebView trông như
-    // "đóng băng" chứ không "biến mất". pauseTimers()/resumeTimers() tuy gọi trên 1 instance
-    // nhưng theo tài liệu Android có hiệu lực toàn app; webViewFreezeCount đảm bảo chỉ áp dụng
-    // 1 lần dù nhiều lý do đóng băng trùng lúc.
     private fun freezeWebViews() {
         webViewFreezeCount++
-        if (webViewFreezeCount != 1 || !::binding.isInitialized) {
-            return
-        }
-        forEachWebView(binding.root) {
-            it.onPause()
-            // it.pauseTimers()
-        }
+        applyWebViewFreezeState()
     }
 
     private fun unfreezeWebViews() {
@@ -653,12 +635,27 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             return
         }
         webViewFreezeCount--
-        if (webViewFreezeCount != 0 || !::binding.isInitialized) {
+        applyWebViewFreezeState()
+    }
+
+    // Đưa WebView về đúng trạng thái mong muốn, chỉ gọi khi trạng thái thật sự đổi:
+    // - pause WebView: có lý do tạm thời HOẶC activity đang pause.
+    // - pauseTimers() (toàn process): chỉ khi có lý do tạm thời VÀ activity đang hiển thị,
+    //   nên activity pause/destroy luôn trả timers về trạng thái chạy cho trang khác.
+    private fun applyWebViewFreezeState() {
+        if (!::binding.isInitialized) {
             return
         }
-        forEachWebView(binding.root) {
-            it.onResume()
-            it.resumeTimers()
+        val wantPaused = webViewFreezeCount > 0 || webViewLifecyclePaused
+        val wantTimersPaused = webViewFreezeCount > 0 && !webViewLifecyclePaused
+
+        if (wantPaused != webViewsPaused) {
+            webViewsPaused = wantPaused
+            forEachWebView(binding.root) { if (wantPaused) it.onPause() else it.onResume() }
+        }
+        if (wantTimersPaused != webViewTimersPaused) {
+            webViewTimersPaused = wantTimersPaused
+            forEachWebView(binding.root) { if (wantTimersPaused) it.pauseTimers() else it.resumeTimers() }
         }
     }
 
@@ -1480,6 +1477,10 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         handler.removeCallbacksAndMessages(null)
         if (::binding.isInitialized) {
             scrollChangedListener?.let { binding.root.viewTreeObserver.removeOnScrollChangedListener(it) }
+            scrollFreezeRunnable = null
+            webViewFreezeCount = 0
+            webViewLifecyclePaused = true
+            applyWebViewFreezeState()
         }
         if (::swipeBackHelper.isInitialized) swipeBackHelper.release()
         // Chỉ recycle bitmap khi đóng hẳn, không recycle khi recreate (xoay/reload).
