@@ -1,16 +1,12 @@
 package com.tool.tree
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Color
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.InputMethodManager
 import android.webkit.CookieManager
 import android.webkit.JsResult
 import android.webkit.WebChromeClient
@@ -24,12 +20,7 @@ import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.DrawableCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebSettingsCompat.FORCE_DARK_OFF
 import androidx.webkit.WebSettingsCompat.FORCE_DARK_ON
@@ -49,15 +40,6 @@ class ActionPageOnline : AppCompatActivity() {
     private var skipInterceptForBackNav = false
     private val ACTION_FILE_PATH_CHOOSER = 65400
     private val MENU_OPEN_BROWSER = 1001
-    private val MENU_FIND = 1002
-    private val MENU_FIND_PREV = 1003
-    private val MENU_FIND_NEXT = 1004
-    private val MENU_LINK = MENU_OPEN_BROWSER
-
-    private var findItem: MenuItem? = null
-    private var findPrevItem: MenuItem? = null
-    private var findNextItem: MenuItem? = null
-    private var findQuery = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,8 +63,6 @@ class ActionPageOnline : AppCompatActivity() {
             finish()
         }
 
-        setupToolbarMenu(toolbar)
-
         // Giữ hardware rendering như bản mới.
         binding.krOnlineWebview.setLayerType(View.LAYER_TYPE_HARDWARE, null)
 
@@ -92,9 +72,7 @@ class ActionPageOnline : AppCompatActivity() {
         cookieManager.setAcceptThirdPartyCookies(binding.krOnlineWebview, true)
 
         onBackPressedDispatcher.addCallback(this) {
-            if (findItem?.isActionViewExpanded == true) {
-                handleSearchBack()
-            } else if (binding.krOnlineWebview.canGoBack()) {
+            if (binding.krOnlineWebview.canGoBack()) {
                 // Cho WebView tự phục hồi history/cache ở lần back này.
                 skipInterceptForBackNav = true
                 binding.krOnlineWebview.goBack()
@@ -103,150 +81,29 @@ class ActionPageOnline : AppCompatActivity() {
             }
         }
 
-        binding.krOnlineWebview.setFindListener { activeMatchOrdinal, numberOfMatches, _ ->
-            binding.webappbar.toolbar.subtitle = when {
-                findQuery.isEmpty() -> null
-                numberOfMatches > 0 -> "${activeMatchOrdinal + 1}/$numberOfMatches"
-                else -> "0/0"
-            }
-        }
-
         loadIntentData()
     }
 
     // Giữ menu mở bằng SearchView nhưng vẫn để AppCompat quản lý ActionBar của bản cũ.
-    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
-        // Không thêm mục trùng MENU_OPEN_BROWSER; link/search được tạo trong toolbar.menu.
-        return super.onCreateOptionsMenu(menu)
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menu?.add(0, MENU_OPEN_BROWSER, 0, R.string.open_in_browser)?.apply {
+            setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+        }
+        return true
     }
 
-    override fun onTitleChanged(title: CharSequence?, color: Int) {
-        super.onTitleChanged(title, color)
-        if (::binding.isInitialized) {
-            binding.webappbar.toolbar.title = title
-        }
-    }
-
-    private fun setupToolbarMenu(toolbar: Toolbar) {
-        val menu = toolbar.menu
-
-        val searchView = SearchView(toolbar.context).apply {
-            queryHint = getString(R.string.online_find_in_page)
-            maxWidth = Int.MAX_VALUE
-            setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-                override fun onQueryTextSubmit(query: String?): Boolean {
-                    binding.krOnlineWebview.findNext(true)
-                    return true
-                }
-
-                override fun onQueryTextChange(newText: String?): Boolean {
-                    findInPage(newText.orEmpty())
-                    return true
-                }
-            })
-        }
-
-        findItem = menu.add(0, MENU_FIND, 0, R.string.online_find_in_page).apply {
-            setIcon(R.drawable.ic_search_web)
-            actionView = searchView
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW)
-            setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
-                override fun onMenuItemActionExpand(item: MenuItem): Boolean {
-                    findPrevItem?.isVisible = true
-                    findNextItem?.isVisible = true
-                    return true
-                }
-
-                override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
-                    findPrevItem?.isVisible = false
-                    findNextItem?.isVisible = false
-                    clearFind()
-                    return true
-                }
-            })
-        }
-
-        findPrevItem = menu.add(0, MENU_FIND_PREV, 1, "▲").apply {
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-            isVisible = false
-        }
-        findNextItem = menu.add(0, MENU_FIND_NEXT, 2, "▼").apply {
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-            isVisible = false
-        }
-
-        menu.add(0, MENU_LINK, 3, R.string.open_in_browser).apply {
-            icon = createLinkIcon()
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-        }
-
-        toolbar.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                MENU_FIND_PREV -> {
-                    binding.krOnlineWebview.findNext(false)
-                    true
-                }
-                MENU_FIND_NEXT -> {
-                    binding.krOnlineWebview.findNext(true)
-                    true
-                }
-                MENU_LINK -> {
-                    openInDefaultBrowser()
-                    true
-                }
-                else -> false
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            MENU_OPEN_BROWSER -> {
+                openInDefaultBrowser()
+                true
             }
+            android.R.id.home -> {
+                finish()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    private fun findInPage(query: String) {
-        findQuery = query
-        if (query.isEmpty()) {
-            binding.krOnlineWebview.clearMatches()
-            binding.webappbar.toolbar.subtitle = null
-        } else {
-            binding.krOnlineWebview.findAllAsync(query)
-        }
-    }
-
-    private fun createLinkIcon(): Drawable? {
-        val toolbarContext = binding.webappbar.toolbar.context
-        val typedArray = toolbarContext.obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary))
-        val tint = typedArray.getColor(0, Color.GRAY)
-        typedArray.recycle()
-        val base = ContextCompat.getDrawable(this, R.drawable.kr_link)?.mutate() ?: return null
-        val wrapped = DrawableCompat.wrap(base)
-        DrawableCompat.setTint(wrapped, tint)
-        return wrapped
-    }
-
-    // Back 1: ẩn bàn phím -> Back 2: đóng tìm kiếm -> Back 3: về trang web trước.
-    private fun handleSearchBack() {
-        val find = findItem ?: return
-        if (!find.isActionViewExpanded) return
-        if (isKeyboardShowing()) {
-            hideFindKeyboard()
-        } else {
-            find.collapseActionView()
-        }
-    }
-
-    private fun isKeyboardShowing(): Boolean {
-        val hasFocus = (findItem?.actionView as? SearchView)?.hasFocus() == true
-        val imeShown = ViewCompat.getRootWindowInsets(binding.root)?.isVisible(WindowInsetsCompat.Type.ime())
-        return hasFocus && (imeShown ?: true)
-    }
-
-    private fun hideFindKeyboard() {
-        (findItem?.actionView as? SearchView)?.clearFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        imm?.hideSoftInputFromWindow(binding.root.windowToken, 0)
-    }
-
-    private fun clearFind() {
-        findQuery = ""
-        binding.krOnlineWebview.clearMatches()
-        binding.webappbar.toolbar.subtitle = null
     }
 
     private fun openInDefaultBrowser() {
@@ -348,7 +205,9 @@ class ActionPageOnline : AppCompatActivity() {
                 super.onPageStarted(view, url, favicon)
                 loadProgressBar.isIndeterminate = true
                 loadProgressBar.visibility = View.VISIBLE
-                findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
+                // Lưới an toàn: nếu WebView phục hồi hẳn từ cache nội bộ (không gọi tới
+                // shouldInterceptRequest lần nào) thì cờ vẫn phải tắt ở đây, tránh lỡ bỏ qua
+                // interception của 1 điều hướng khác sau này.
                 skipInterceptForBackNav = false
             }
 
