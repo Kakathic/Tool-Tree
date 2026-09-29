@@ -40,7 +40,8 @@ class ActionPageOnline : AppCompatActivity() {
         findViewById<ProgressBar>(R.id.page_load_progress)
     }
 
-    private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
+    private var fileSelectedInterface:
+        ParamsFileChooserRender.FileSelectedInterface? = null
 
     private val ACTION_FILE_PATH_CHOOSER = 65400
 
@@ -54,6 +55,23 @@ class ActionPageOnline : AppCompatActivity() {
     private var findNextItem: MenuItem? = null
 
     private var findQuery = ""
+
+    /*
+     * true khi WebView đang quay lại trang trước.
+     *
+     * Trong quá trình WebView restore history, HTML có thể xuất hiện
+     * trước CSS/JS. Tạm ẩn bằng alpha để người dùng không nhìn thấy
+     * trạng thái "trang thô".
+     */
+    private var isGoingBack = false
+
+    /*
+     * Thời gian chờ ngắn sau onPageFinished().
+     *
+     * onPageFinished() không đảm bảo rằng mọi thao tác DOM/JS/CSS
+     * đã hoàn toàn ổn định trên màn hình.
+     */
+    private val backRevealDelay = 80L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,7 +97,28 @@ class ActionPageOnline : AppCompatActivity() {
             if (findItem?.isActionViewExpanded == true) {
                 handleSearchBack()
             } else if (binding.krOnlineWebview.canGoBack()) {
+
+                /*
+                 * Đánh dấu trước khi gọi goBack().
+                 *
+                 * onPageStarted() có thể được gọi gần như ngay lập tức
+                 * sau thao tác này.
+                 */
+                isGoingBack = true
+
+                /*
+                 * Không dùng INVISIBLE/GONE.
+                 *
+                 * Alpha = 0 giúp giữ nguyên kích thước/layout WebView
+                 * và tránh hiện tượng layout nhảy.
+                 */
+                binding.krOnlineWebview.animate()
+                    .alpha(0f)
+                    .setDuration(0L)
+                    .start()
+
                 binding.krOnlineWebview.goBack()
+
             } else {
                 finish()
             }
@@ -94,12 +133,11 @@ class ActionPageOnline : AppCompatActivity() {
          * numberOfMatches:
          *   tổng số kết quả tìm được
          *
-         * Vì vậy phải +1 cho activeMatchOrdinal để hiển thị:
+         * Hiển thị:
          *
          * 1/10
          * 2/10
          * 3/10
-         * ...
          */
         binding.krOnlineWebview.setFindListener {
                 activeMatchOrdinal,
@@ -124,9 +162,10 @@ class ActionPageOnline : AppCompatActivity() {
         loadIntentData()
     }
 
-    // Toolbar độc lập (không setSupportActionBar)
-    // để AppCompat không tự đóng ô tìm kiếm khi back.
-    override fun onTitleChanged(title: CharSequence?, color: Int) {
+    override fun onTitleChanged(
+        title: CharSequence?,
+        color: Int
+    ) {
         super.onTitleChanged(title, color)
 
         if (::binding.isInitialized) {
@@ -317,9 +356,11 @@ class ActionPageOnline : AppCompatActivity() {
         return wrapped
     }
 
-    // Back 1: ẩn bàn phím
-    // Back 2: đóng tìm kiếm
-    // Back 3: về trang web trước
+    /*
+     * Back 1: ẩn bàn phím
+     * Back 2: đóng tìm kiếm
+     * Back 3: về trang web trước
+     */
     private fun handleSearchBack() {
 
         val find = findItem ?: return
@@ -432,6 +473,13 @@ class ActionPageOnline : AppCompatActivity() {
 
         binding.krOnlineWebview.visibility = View.VISIBLE
 
+        /*
+         * Trang mới luôn hiển thị bình thường.
+         *
+         * Chỉ khi Back mới alpha = 0.
+         */
+        binding.krOnlineWebview.alpha = 1f
+
         val settings = binding.krOnlineWebview.settings
 
         if (
@@ -499,9 +547,6 @@ class ActionPageOnline : AppCompatActivity() {
                     }
                 }
 
-                // Alert/confirm của JS dùng hộp thoại có sẵn của app;
-                // không cho đóng ngoài nút để JsResult luôn được
-                // confirm()/cancel().
                 override fun onJsAlert(
                     view: WebView?,
                     url: String?,
@@ -571,6 +616,36 @@ class ActionPageOnline : AppCompatActivity() {
                     view?.title?.let {
                         setTitle(it)
                     }
+
+                    /*
+                     * Chỉ reveal khi đây là navigation Back.
+                     *
+                     * Delay rất ngắn cho WebView hoàn thành thêm một
+                     * vòng render sau khi document/history đã được restore.
+                     */
+                    if (isGoingBack) {
+
+                        binding.krOnlineWebview.postDelayed(
+                            {
+
+                                if (
+                                    !isFinishing &&
+                                    !isDestroyed
+                                ) {
+
+                                    binding.krOnlineWebview
+                                        .animate()
+                                        .alpha(1f)
+                                        .setDuration(100L)
+                                        .start()
+                                }
+
+                                isGoingBack = false
+
+                            },
+                            backRevealDelay
+                        )
+                    }
                 }
 
                 override fun onPageStarted(
@@ -591,6 +666,12 @@ class ActionPageOnline : AppCompatActivity() {
                     loadProgressBar.visibility =
                         View.VISIBLE
 
+                    /*
+                     * Không alpha = 0 ở đây.
+                     *
+                     * Việc này đã được thực hiện ngay trước goBack().
+                     * Nếu đặt ở đây có thể gây thêm một frame nhấp nháy.
+                     */
                     findItem
                         ?.takeIf {
                             it.isActionViewExpanded
@@ -746,6 +827,12 @@ class ActionPageOnline : AppCompatActivity() {
 
     override fun onPause() {
 
+        /*
+         * Chỉ pause chính WebView này.
+         *
+         * Không gọi pauseTimers() vì phương thức đó có phạm vi
+         * rộng và trước đây đã gây ảnh hưởng đến WebView khác.
+         */
         binding.krOnlineWebview.onPause()
 
         super.onPause()
@@ -758,18 +845,20 @@ class ActionPageOnline : AppCompatActivity() {
         binding.krOnlineWebview.onResume()
 
         /*
-         * ActionPage không được gọi pauseTimers() khi mở
-         * ActionPageOnline, vì pauseTimers() có phạm vi toàn app.
+         * Không gọi resumeTimers().
          *
-         * Tuy nhiên ActionPageOnline có thể tự bị pause/resume
-         * trong lifecycle riêng của nó, nên giữ resumeTimers()
-         * ở đây để khôi phục trạng thái nếu Activity này từng
-         * bị pause trước đó.
+         * resumeTimers() có phạm vi rộng tương ứng với WebView
+         * timers và không cần thiết cho lifecycle thông thường
+         * của Activity này.
          */
-        binding.krOnlineWebview.resumeTimers()
     }
 
     override fun onDestroy() {
+
+        /*
+         * Hủy callback reveal nếu Activity bị destroy giữa lúc Back.
+         */
+        binding.krOnlineWebview.animate().cancel()
 
         loadProgressBar.visibility =
             View.GONE
