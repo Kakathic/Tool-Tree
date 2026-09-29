@@ -158,7 +158,7 @@ elif [ "$dang_tep" == 'super' ]; then
     mv "$file_img_tmp/$PVUGBIN.img" "$file_img_tmp/${PVUGBIN%_a}.img"
     file_img="$file_img_tmp/${PVUGBIN%_a}.img"
     echo
-    if [[ $PVUGBIN == *_b ]]; then
+    elif [[ $PVUGBIN == *_b ]]; then
     echo "Move: $PVUGBIN ➠ ${PVUGBIN%_b}"
     mv "$file_img_tmp/$PVUGBIN.img" "$file_img_tmp/${PVUGBIN%_b}.img"
     file_img="$file_img_tmp/${PVUGBIN%_b}.img"
