@@ -33,10 +33,17 @@ import com.omarea.krscript.ui.ParamsFileChooserRender
 import com.tool.tree.databinding.ActivityActionPageOnlineBinding
 
 class ActionPageOnline : AppCompatActivity() {
+
     private lateinit var binding: ActivityActionPageOnlineBinding
-    private val loadProgressBar by lazy { findViewById<ProgressBar>(R.id.page_load_progress) }
+
+    private val loadProgressBar by lazy {
+        findViewById<ProgressBar>(R.id.page_load_progress)
+    }
+
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
+
     private val ACTION_FILE_PATH_CHOOSER = 65400
+
     private val MENU_FIND = 1002
     private val MENU_FIND_PREV = 1003
     private val MENU_FIND_NEXT = 1004
@@ -45,6 +52,7 @@ class ActionPageOnline : AppCompatActivity() {
     private var findItem: MenuItem? = null
     private var findPrevItem: MenuItem? = null
     private var findNextItem: MenuItem? = null
+
     private var findQuery = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,11 +64,15 @@ class ActionPageOnline : AppCompatActivity() {
         setContentView(binding.root)
 
         val toolbar: Toolbar = binding.webappbar.toolbar
+
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+
         toolbar.setNavigationOnClickListener {
             finish()
         }
+
         setupToolbarMenu(toolbar)
+
         setTitle(R.string.app_name)
 
         onBackPressedDispatcher.addCallback(this) {
@@ -73,21 +85,53 @@ class ActionPageOnline : AppCompatActivity() {
             }
         }
 
-        binding.krOnlineWebview.setFindListener { activeMatchOrdinal, numberOfMatches, _ ->
+        /*
+         * WebView.findAllAsync() trả kết quả thông qua FindListener.
+         *
+         * activeMatchOrdinal:
+         *   vị trí kết quả hiện tại, bắt đầu từ 0
+         *
+         * numberOfMatches:
+         *   tổng số kết quả tìm được
+         *
+         * Vì vậy phải +1 cho activeMatchOrdinal để hiển thị:
+         *
+         * 1/10
+         * 2/10
+         * 3/10
+         * ...
+         */
+        binding.krOnlineWebview.setFindListener {
+                activeMatchOrdinal,
+                numberOfMatches,
+                _ ->
+
             binding.webappbar.toolbar.subtitle = when {
-                findQuery.isEmpty() -> null
-                numberOfMatches > 0 -> "${activeMatchOrdinal + 1}/$numberOfMatches"
-                else -> "0/0"
+                findQuery.isEmpty() -> {
+                    null
+                }
+
+                numberOfMatches > 0 -> {
+                    "${activeMatchOrdinal + 1}/$numberOfMatches"
+                }
+
+                else -> {
+                    "0/0"
+                }
             }
         }
 
         loadIntentData()
     }
 
-    // Toolbar độc lập (không setSupportActionBar) để AppCompat không tự đóng ô tìm kiếm khi back
+    // Toolbar độc lập (không setSupportActionBar)
+    // để AppCompat không tự đóng ô tìm kiếm khi back.
     override fun onTitleChanged(title: CharSequence?, color: Int) {
         super.onTitleChanged(title, color)
-        if (::binding.isInitialized) binding.webappbar.toolbar.title = title
+
+        if (::binding.isInitialized) {
+            binding.webappbar.toolbar.title = title
+        }
     }
 
     private fun setupToolbarMenu(toolbar: Toolbar) {
@@ -96,97 +140,194 @@ class ActionPageOnline : AppCompatActivity() {
         val searchView = SearchView(toolbar.context).apply {
             queryHint = getString(R.string.online_find_in_page)
             maxWidth = Int.MAX_VALUE
-            setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-                override fun onQueryTextSubmit(query: String?): Boolean {
-                    binding.krOnlineWebview.findNext(true)
-                    return true
-                }
 
-                override fun onQueryTextChange(newText: String?): Boolean {
-                    findInPage(newText.orEmpty())
-                    return true
+            setOnQueryTextListener(
+                object : SearchView.OnQueryTextListener {
+
+                    override fun onQueryTextSubmit(
+                        query: String?
+                    ): Boolean {
+                        binding.krOnlineWebview.findNext(true)
+                        return true
+                    }
+
+                    override fun onQueryTextChange(
+                        newText: String?
+                    ): Boolean {
+                        findInPage(newText.orEmpty())
+                        return true
+                    }
                 }
-            })
+            )
         }
 
-        findItem = menu.add(0, MENU_FIND, 0, R.string.online_find_in_page).apply {
+        findItem = menu.add(
+            0,
+            MENU_FIND,
+            0,
+            R.string.online_find_in_page
+        ).apply {
+
             setIcon(R.drawable.ic_search_web)
+
             actionView = searchView
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW)
-            setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
-                override fun onMenuItemActionExpand(item: MenuItem): Boolean {
-                    findPrevItem?.isVisible = true
-                    findNextItem?.isVisible = true
-                    return true
-                }
 
-                override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
-                    findPrevItem?.isVisible = false
-                    findNextItem?.isVisible = false
-                    clearFind()
-                    return true
+            setShowAsAction(
+                MenuItem.SHOW_AS_ACTION_ALWAYS or
+                    MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW
+            )
+
+            setOnActionExpandListener(
+                object : MenuItem.OnActionExpandListener {
+
+                    override fun onMenuItemActionExpand(
+                        item: MenuItem
+                    ): Boolean {
+
+                        findPrevItem?.isVisible = true
+                        findNextItem?.isVisible = true
+
+                        return true
+                    }
+
+                    override fun onMenuItemActionCollapse(
+                        item: MenuItem
+                    ): Boolean {
+
+                        findPrevItem?.isVisible = false
+                        findNextItem?.isVisible = false
+
+                        clearFind()
+
+                        return true
+                    }
                 }
-            })
+            )
         }
 
-        findPrevItem = menu.add(0, MENU_FIND_PREV, 1, "▲").apply {
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        findPrevItem = menu.add(
+            0,
+            MENU_FIND_PREV,
+            1,
+            "▲"
+        ).apply {
+
+            setShowAsAction(
+                MenuItem.SHOW_AS_ACTION_ALWAYS
+            )
+
             isVisible = false
         }
-        findNextItem = menu.add(0, MENU_FIND_NEXT, 2, "▼").apply {
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+
+        findNextItem = menu.add(
+            0,
+            MENU_FIND_NEXT,
+            2,
+            "▼"
+        ).apply {
+
+            setShowAsAction(
+                MenuItem.SHOW_AS_ACTION_ALWAYS
+            )
+
             isVisible = false
         }
 
-        menu.add(0, MENU_LINK, 3, R.string.open_in_browser).apply {
+        menu.add(
+            0,
+            MENU_LINK,
+            3,
+            R.string.open_in_browser
+        ).apply {
+
             icon = createLinkIcon()
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+
+            setShowAsAction(
+                MenuItem.SHOW_AS_ACTION_ALWAYS
+            )
         }
 
         toolbar.setOnMenuItemClickListener { item ->
+
             when (item.itemId) {
+
                 MENU_FIND_PREV -> {
                     binding.krOnlineWebview.findNext(false)
                     true
                 }
+
                 MENU_FIND_NEXT -> {
                     binding.krOnlineWebview.findNext(true)
                     true
                 }
+
                 MENU_LINK -> {
                     openInDefaultBrowser()
                     true
                 }
-                else -> false
+
+                else -> {
+                    false
+                }
             }
         }
     }
 
     private fun findInPage(query: String) {
         findQuery = query
+
         if (query.isEmpty()) {
+
             binding.krOnlineWebview.clearMatches()
+
             binding.webappbar.toolbar.subtitle = null
+
         } else {
+
             binding.krOnlineWebview.findAllAsync(query)
         }
     }
 
     private fun createLinkIcon(): Drawable? {
         val toolbarContext = binding.webappbar.toolbar.context
-        val typedArray = toolbarContext.obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary))
-        val tint = typedArray.getColor(0, Color.GRAY)
+
+        val typedArray = toolbarContext.obtainStyledAttributes(
+            intArrayOf(android.R.attr.textColorPrimary)
+        )
+
+        val tint = typedArray.getColor(
+            0,
+            Color.GRAY
+        )
+
         typedArray.recycle()
-        val base = ContextCompat.getDrawable(this, R.drawable.kr_link)?.mutate() ?: return null
+
+        val base = ContextCompat.getDrawable(
+            this,
+            R.drawable.kr_link
+        )?.mutate() ?: return null
+
         val wrapped = DrawableCompat.wrap(base)
-        DrawableCompat.setTint(wrapped, tint)
+
+        DrawableCompat.setTint(
+            wrapped,
+            tint
+        )
+
         return wrapped
     }
 
-    // Back 1: ẩn bàn phím -> Back 2: đóng tìm kiếm -> Back 3: về trang web trước
+    // Back 1: ẩn bàn phím
+    // Back 2: đóng tìm kiếm
+    // Back 3: về trang web trước
     private fun handleSearchBack() {
+
         val find = findItem ?: return
-        if (!find.isActionViewExpanded) return
+
+        if (!find.isActionViewExpanded) {
+            return
+        }
+
         if (isKeyboardShowing()) {
             hideFindKeyboard()
         } else {
@@ -195,192 +336,456 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     private fun isKeyboardShowing(): Boolean {
-        val hasFocus = (findItem?.actionView as? SearchView)?.hasFocus() == true
-        val imeShown = ViewCompat.getRootWindowInsets(binding.root)?.isVisible(WindowInsetsCompat.Type.ime())
+
+        val hasFocus =
+            (findItem?.actionView as? SearchView)?.hasFocus() == true
+
+        val imeShown =
+            ViewCompat
+                .getRootWindowInsets(binding.root)
+                ?.isVisible(
+                    WindowInsetsCompat.Type.ime()
+                )
+
         return hasFocus && (imeShown ?: true)
     }
 
     private fun hideFindKeyboard() {
+
         (findItem?.actionView as? SearchView)?.clearFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        imm?.hideSoftInputFromWindow(binding.root.windowToken, 0)
+
+        val imm =
+            getSystemService(
+                Context.INPUT_METHOD_SERVICE
+            ) as? InputMethodManager
+
+        imm?.hideSoftInputFromWindow(
+            binding.root.windowToken,
+            0
+        )
     }
 
     private fun clearFind() {
+
         findQuery = ""
+
         binding.krOnlineWebview.clearMatches()
+
         binding.webappbar.toolbar.subtitle = null
     }
 
     private fun openInDefaultBrowser() {
+
         val currentUrl = binding.krOnlineWebview.url
+
         if (!currentUrl.isNullOrEmpty()) {
+
             try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(currentUrl))
+
+                val intent = Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(currentUrl)
+                )
+
                 startActivity(intent)
+
             } catch (e: Exception) {
-                Toast.makeText(this, R.string.online_browser_not_found, Toast.LENGTH_SHORT).show()
+
+                Toast.makeText(
+                    this,
+                    R.string.online_browser_not_found,
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
 
     private fun loadIntentData() {
+
         val intent = this.intent
         val extras = intent.extras
+
         if (extras != null) {
+
             if (extras.containsKey("title")) {
                 title = extras.getString("title")
             }
 
             when {
-                extras.containsKey("config") -> initWebview(extras.getString("config"))
-                extras.containsKey("url") -> initWebview(extras.getString("url"))
+
+                extras.containsKey("config") -> {
+                    initWebview(
+                        extras.getString("config")
+                    )
+                }
+
+                extras.containsKey("url") -> {
+                    initWebview(
+                        extras.getString("url")
+                    )
+                }
             }
         }
     }
 
     private fun initWebview(url: String?) {
+
         binding.krOnlineWebview.visibility = View.VISIBLE
+
         val settings = binding.krOnlineWebview.settings
 
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
-            val isDark = ThemeModeState.isDarkMode()
-            WebSettingsCompat.setForceDark(settings, if (isDark) FORCE_DARK_ON else FORCE_DARK_OFF)
-        }
+        if (
+            WebViewFeature.isFeatureSupported(
+                WebViewFeature.FORCE_DARK
+            )
+        ) {
 
-        val webViewInjector = WebViewInjector(binding.krOnlineWebview,
-            object : ParamsFileChooserRender.FileChooserInterface {
-                override fun openFileChooser(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
-                    return chooseFilePath(fileSelectedInterface)
-                }
-            })
+            val isDark =
+                ThemeModeState.isDarkMode()
 
-        binding.krOnlineWebview.webChromeClient = object : WebChromeClient() {
-            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                super.onProgressChanged(view, newProgress)
-                if (newProgress < 100) {
-                    loadProgressBar.isIndeterminate = false
-                    loadProgressBar.progress = newProgress
-                    loadProgressBar.visibility = View.VISIBLE
+            WebSettingsCompat.setForceDark(
+                settings,
+                if (isDark) {
+                    FORCE_DARK_ON
                 } else {
-                    loadProgressBar.visibility = View.GONE
+                    FORCE_DARK_OFF
                 }
-            }
-
-            // Alert/confirm của JS dùng hộp thoại có sẵn của app; không cho đóng ngoài nút để
-            // JsResult luôn được confirm()/cancel().
-            override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
-                DialogHelper.alert(
-                    context = this@ActionPageOnline,
-                    message = message.orEmpty(),
-                    onConfirm = Runnable { result?.confirm() },
-                    cancelable = false
-                )
-                return true
-            }
-
-            override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
-                DialogHelper.confirm(
-                    context = this@ActionPageOnline,
-                    title = "",
-                    message = message.orEmpty(),
-                    contentView = null,
-                    onConfirm = DialogHelper.DialogButton(getString(R.string.btn_confirm), Runnable { result?.confirm() }),
-                    onCancel = DialogHelper.DialogButton(getString(R.string.btn_cancel), Runnable { result?.cancel() }),
-                    cancelable = false
-                )
-                return true
-            }
+            )
         }
 
-        binding.krOnlineWebview.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                loadProgressBar.visibility = View.GONE
-                view?.title?.let { setTitle(it) }
-            }
+        val webViewInjector = WebViewInjector(
+            binding.krOnlineWebview,
+            object : ParamsFileChooserRender.FileChooserInterface {
 
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                loadProgressBar.isIndeterminate = true
-                loadProgressBar.visibility = View.VISIBLE
-                findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
-            }
+                override fun openFileChooser(
+                    fileSelectedInterface:
+                    ParamsFileChooserRender.FileSelectedInterface
+                ): Boolean {
 
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                return try {
-                    val requestUrl = request?.url
-                    if (requestUrl != null && requestUrl.scheme?.startsWith("http") != true) {
-                        val intent = Intent(Intent.ACTION_VIEW, requestUrl)
-                        startActivity(intent)
-                        true
+                    return chooseFilePath(
+                        fileSelectedInterface
+                    )
+                }
+            }
+        )
+
+        binding.krOnlineWebview.webChromeClient =
+            object : WebChromeClient() {
+
+                override fun onProgressChanged(
+                    view: WebView?,
+                    newProgress: Int
+                ) {
+
+                    super.onProgressChanged(
+                        view,
+                        newProgress
+                    )
+
+                    if (newProgress < 100) {
+
+                        loadProgressBar.isIndeterminate = false
+
+                        loadProgressBar.progress =
+                            newProgress
+
+                        loadProgressBar.visibility =
+                            View.VISIBLE
+
                     } else {
-                        super.shouldOverrideUrlLoading(view, request)
+
+                        loadProgressBar.visibility =
+                            View.GONE
                     }
-                } catch (_: Exception) {
-                    super.shouldOverrideUrlLoading(view, request)
+                }
+
+                // Alert/confirm của JS dùng hộp thoại có sẵn của app;
+                // không cho đóng ngoài nút để JsResult luôn được
+                // confirm()/cancel().
+                override fun onJsAlert(
+                    view: WebView?,
+                    url: String?,
+                    message: String?,
+                    result: JsResult?
+                ): Boolean {
+
+                    DialogHelper.alert(
+                        context = this@ActionPageOnline,
+                        message = message.orEmpty(),
+                        onConfirm = Runnable {
+                            result?.confirm()
+                        },
+                        cancelable = false
+                    )
+
+                    return true
+                }
+
+                override fun onJsConfirm(
+                    view: WebView?,
+                    url: String?,
+                    message: String?,
+                    result: JsResult?
+                ): Boolean {
+
+                    DialogHelper.confirm(
+                        context = this@ActionPageOnline,
+                        title = "",
+                        message = message.orEmpty(),
+                        contentView = null,
+                        onConfirm = DialogHelper.DialogButton(
+                            getString(R.string.btn_confirm),
+                            Runnable {
+                                result?.confirm()
+                            }
+                        ),
+                        onCancel = DialogHelper.DialogButton(
+                            getString(R.string.btn_cancel),
+                            Runnable {
+                                result?.cancel()
+                            }
+                        ),
+                        cancelable = false
+                    )
+
+                    return true
                 }
             }
+
+        binding.krOnlineWebview.webViewClient =
+            object : WebViewClient() {
+
+                override fun onPageFinished(
+                    view: WebView?,
+                    url: String?
+                ) {
+
+                    super.onPageFinished(
+                        view,
+                        url
+                    )
+
+                    loadProgressBar.visibility =
+                        View.GONE
+
+                    view?.title?.let {
+                        setTitle(it)
+                    }
+                }
+
+                override fun onPageStarted(
+                    view: WebView?,
+                    url: String?,
+                    favicon: Bitmap?
+                ) {
+
+                    super.onPageStarted(
+                        view,
+                        url,
+                        favicon
+                    )
+
+                    loadProgressBar.isIndeterminate =
+                        true
+
+                    loadProgressBar.visibility =
+                        View.VISIBLE
+
+                    findItem
+                        ?.takeIf {
+                            it.isActionViewExpanded
+                        }
+                        ?.collapseActionView()
+                }
+
+                override fun shouldOverrideUrlLoading(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): Boolean {
+
+                    return try {
+
+                        val requestUrl =
+                            request?.url
+
+                        if (
+                            requestUrl != null &&
+                            requestUrl.scheme
+                                ?.startsWith("http") != true
+                        ) {
+
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                requestUrl
+                            )
+
+                            startActivity(intent)
+
+                            true
+
+                        } else {
+
+                            super.shouldOverrideUrlLoading(
+                                view,
+                                request
+                            )
+                        }
+
+                    } catch (_: Exception) {
+
+                        super.shouldOverrideUrlLoading(
+                            view,
+                            request
+                        )
+                    }
+                }
+            }
+
+        webViewInjector.inject(
+            this,
+            url?.startsWith(
+                "file:///android_asset"
+            ) == true
+        )
+
+        url?.let {
+            binding.krOnlineWebview.loadUrl(it)
         }
-
-        webViewInjector.inject(this, url?.startsWith("file:///android_asset") == true)
-
-        url?.let { binding.krOnlineWebview.loadUrl(it) }
     }
 
-    private fun chooseFilePath(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
+    private fun chooseFilePath(
+        fileSelectedInterface:
+        ParamsFileChooserRender.FileSelectedInterface
+    ): Boolean {
+
         return try {
-            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                type = "*/*"
-                addCategory(Intent.CATEGORY_OPENABLE)
-            }
-            startActivityForResult(intent, ACTION_FILE_PATH_CHOOSER)
-            this.fileSelectedInterface = fileSelectedInterface
+
+            val intent =
+                Intent(Intent.ACTION_GET_CONTENT).apply {
+
+                    type = "*/*"
+
+                    addCategory(
+                        Intent.CATEGORY_OPENABLE
+                    )
+                }
+
+            startActivityForResult(
+                intent,
+                ACTION_FILE_PATH_CHOOSER
+            )
+
+            this.fileSelectedInterface =
+                fileSelectedInterface
+
             true
+
         } catch (ex: Exception) {
+
             false
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == ACTION_FILE_PATH_CHOOSER) {
-            val result = if (data == null || resultCode != RESULT_OK) null else data.data
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?
+    ) {
+
+        if (
+            requestCode ==
+            ACTION_FILE_PATH_CHOOSER
+        ) {
+
+            val result =
+                if (
+                    data == null ||
+                    resultCode != RESULT_OK
+                ) {
+                    null
+                } else {
+                    data.data
+                }
+
             if (fileSelectedInterface != null) {
-                val absPath = result?.let { getPath(it) }
-                fileSelectedInterface?.onFileSelected(absPath)
+
+                val absPath =
+                    result?.let {
+                        getPath(it)
+                    }
+
+                fileSelectedInterface?.onFileSelected(
+                    absPath
+                )
             }
+
             this.fileSelectedInterface = null
         }
-        super.onActivityResult(requestCode, resultCode, data)
+
+        super.onActivityResult(
+            requestCode,
+            resultCode,
+            data
+        )
     }
 
     private fun getPath(uri: Uri): String? {
+
         return try {
-            FilePathResolver().getPath(this, uri)
+
+            FilePathResolver().getPath(
+                this,
+                uri
+            )
+
         } catch (_: Exception) {
+
             null
         }
     }
 
     override fun onPause() {
+
         binding.krOnlineWebview.onPause()
+
         super.onPause()
     }
 
     override fun onResume() {
+
         super.onResume()
+
         binding.krOnlineWebview.onResume()
+
+        /*
+         * ActionPage không được gọi pauseTimers() khi mở
+         * ActionPageOnline, vì pauseTimers() có phạm vi toàn app.
+         *
+         * Tuy nhiên ActionPageOnline có thể tự bị pause/resume
+         * trong lifecycle riêng của nó, nên giữ resumeTimers()
+         * ở đây để khôi phục trạng thái nếu Activity này từng
+         * bị pause trước đó.
+         */
         binding.krOnlineWebview.resumeTimers()
     }
 
     override fun onDestroy() {
-        loadProgressBar.visibility = View.GONE
+
+        loadProgressBar.visibility =
+            View.GONE
+
         binding.krOnlineWebview.apply {
+
             stopLoading()
-            (parent as? ViewGroup)?.removeView(this)
+
+            (parent as? ViewGroup)
+                ?.removeView(this)
+
             removeAllViews()
+
             destroy()
         }
+
         super.onDestroy()
     }
 }
