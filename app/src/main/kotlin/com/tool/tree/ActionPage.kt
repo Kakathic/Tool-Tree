@@ -644,7 +644,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
         forEachWebView(binding.root) {
             it.onPause()
-            it.pauseTimers()
+            // it.pauseTimers()
         }
     }
 

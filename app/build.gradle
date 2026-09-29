@@ -66,7 +66,7 @@ dependencies {
     implementation "androidx.recyclerview:recyclerview:1.4.0"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.11.0"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0"
-    implementation "androidx.webkit:webkit:1.15.0"
+    implementation "androidx.webkit:webkit:1.17.0"
     implementation "org.tomlj:tomlj:1.1.1"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.2.0"
     implementation "dev.rikka.shizuku:api:13.1.5"
