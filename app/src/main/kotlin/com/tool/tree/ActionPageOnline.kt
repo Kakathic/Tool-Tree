@@ -56,8 +56,6 @@ class ActionPageOnline : AppCompatActivity() {
             finish()
         }
 
-        binding.krOnlineWebview.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-
         onBackPressedDispatcher.addCallback(this) {
             if (binding.krOnlineWebview.canGoBack()) {
                 skipInterceptForBackNav = true
@@ -119,6 +117,8 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     private fun initWebview(url: String?) {
+        // Chẩn đoán tạm: cho phép soi WebView qua chrome://inspect
+        WebView.setWebContentsDebuggingEnabled(true)
         binding.krOnlineWebview.visibility = View.VISIBLE
         val settings = binding.krOnlineWebview.settings
         
@@ -154,6 +154,12 @@ class ActionPageOnline : AppCompatActivity() {
                 }
             }
 
+            // Chẩn đoán tạm: đẩy lỗi/log JS của trang ra logcat (tag TomlDebug)
+            override fun onConsoleMessage(msg: ConsoleMessage?): Boolean {
+                android.util.Log.e("TomlDebug", "${msg?.message()} @${msg?.sourceId()}:${msg?.lineNumber()}")
+                return super.onConsoleMessage(msg)
+            }
+
             override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
                 DialogHelper.animDialog(
                     AlertDialog.Builder(this@ActionPageOnline)
@@ -182,15 +188,16 @@ class ActionPageOnline : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 loadProgressBar.visibility = View.GONE
                 view?.title?.let { setTitle(it) }
+                // Chẩn đoán tạm: hiện Toast cho biết trang có chứa/chạy JS tìm kiếm hay không
+                view?.evaluateJavascript(
+                    """(function(){return JSON.stringify({run:typeof runSearch,hasCode:document.documentElement.innerHTML.indexOf('highlightText')>-1,input:!!document.getElementById('search'),chrome:(navigator.userAgent.match(/Chrome\/[\d.]+/)||[''])[0]})})()"""
+                ) { r -> Toast.makeText(this@ActionPageOnline, r, Toast.LENGTH_LONG).show() }
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
                 loadProgressBar.isIndeterminate = true
                 loadProgressBar.visibility = View.VISIBLE
-                // Lưới an toàn: nếu WebView phục hồi hẳn từ cache nội bộ (không gọi tới
-                // shouldInterceptRequest lần nào) thì cờ vẫn phải tắt ở đây, tránh lỡ bỏ qua
-                // interception của 1 điều hướng khác sau này.
                 skipInterceptForBackNav = false
             }
 
@@ -209,22 +216,12 @@ class ActionPageOnline : AppCompatActivity() {
                 }
             }
 
-            // Chỉ can thiệp request HTML gốc (main frame) qua http/https: tự fetch rồi ép luôn
-            // trả về Content-Type "text/html" nếu server báo thiếu/mập mờ (rỗng hoặc
-            // "text/plain") - đây chính là nguyên nhân WebView đôi lúc tự hiện nguyên trang dưới
-            // dạng văn bản thô thay vì render, hoặc tự bật hộp thoại tải về (setDownloadListener)
-            // thay vì hiển thị. KHÔNG đụng tới file:// (mở bằng file vẫn load như cũ), KHÔNG đụng
-            // tài nguyên phụ (ảnh/css/js/xhr) hay request không phải GET (form submit...) để tránh
-            // ảnh hưởng ngoài ý muốn - các trường hợp đó fallback về hành vi mặc định của WebView.
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 val requestUrl = request?.url ?: return null
                 if (request.isForMainFrame != true) return null
                 if (requestUrl.scheme?.startsWith("http") != true) return null
                 if (request.method != "GET") return null
 
-                // Đang back (goBack()) - để WebView tự phục hồi trang trước từ cache/lịch sử
-                // của chính nó thay vì ép fetch lại thủ công qua mạng, tránh chậm/nháy hình
-                // không cần thiết. Chỉ bỏ qua đúng 1 lần cho điều hướng back này.
                 if (skipInterceptForBackNav) {
                     skipInterceptForBackNav = false
                     return null
@@ -242,15 +239,11 @@ class ActionPageOnline : AppCompatActivity() {
                     }
                     connection.connect()
 
-                    // Giữ lại cookie server set qua request thủ công này để không mất session so
-                    // với việc để WebView tự tải như trước.
                     connection.headerFields["Set-Cookie"]?.forEach {
                         CookieManager.getInstance().setCookie(requestUrl.toString(), it)
                     }
 
                     val declaredType = connection.contentType ?: ""
-                    // Chỉ ép về "text/html" khi kiểu khai báo mập mờ (rỗng/text/plain) - kiểu tải
-                    // về thật sự (pdf/apk/zip/octet-stream...) vẫn giữ nguyên, không can thiệp.
                     val ambiguous = declaredType.isEmpty() ||
                         declaredType.substringBefore(";").trim().equals("text/plain", ignoreCase = true)
                     if (!ambiguous) {
