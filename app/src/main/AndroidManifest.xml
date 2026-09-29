@@ -51,7 +51,7 @@
         </activity>
         <activity
             android:name=".ActionPageOnline"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_action_page"
             android:configChanges="keyboardHidden|orientation|layoutDirection|screenLayout|colorMode|fontScale|smallestScreenSize|density|keyboard|screenSize|touchscreen">
             <intent-filter>
