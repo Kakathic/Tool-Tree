@@ -32,6 +32,7 @@ import android.widget.Toast
 import com.omarea.common.ui.BlurEngine
 import com.omarea.common.ui.DialogHelper
 import com.omarea.krscript.TryOpenActivity
+import com.omarea.krscript.WebLauncher
 import com.omarea.krscript.config.IconPathAnalysis
 import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.model.NodeInfoBase
@@ -686,9 +687,7 @@ object RowsRenderHelper {
                 override fun onClick(widget: View) {
                     if (row.link.isNotEmpty()) {
                         try {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(row.link))
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            context.startActivity(intent)
+                            WebLauncher.open(context, row.link)
                         } catch (ex: Exception) {
                             Toast.makeText(context, context.getString(R.string.kr_slice_activity_fail), Toast.LENGTH_SHORT).show()
                         }

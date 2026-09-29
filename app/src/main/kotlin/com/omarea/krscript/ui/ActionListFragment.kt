@@ -11,7 +11,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.net.toUri
+import com.omarea.krscript.WebLauncher
 import androidx.lifecycle.lifecycleScope
 import com.omarea.common.model.SelectItem
 import com.omarea.common.ui.DialogFullScreen
@@ -338,9 +338,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         if (context != null && item.link.isNotEmpty()) {
             nodeUnlockedAsync(item) {
                 try {
-                    val intent = Intent(Intent.ACTION_VIEW, item.link.toUri())
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    context?.startActivity(intent)
+                    context?.let { WebLauncher.open(it, item.link) }
                 } catch (ex: Exception) {
                     Toast.makeText(context, context?.getString(R.string.kr_slice_activity_fail), Toast.LENGTH_SHORT).show()
                 }

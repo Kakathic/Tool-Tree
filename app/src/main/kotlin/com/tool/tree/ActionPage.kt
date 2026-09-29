@@ -36,6 +36,7 @@ import com.omarea.common.ui.DialogHelper
 import com.omarea.common.ui.DialogItemChooser
 import com.omarea.common.ui.ProgressBarDialog
 import com.omarea.krscript.TryOpenActivity
+import com.omarea.krscript.WebLauncher
 import com.omarea.krscript.config.IconPathAnalysis
 import com.omarea.krscript.config.PageConfigReader
 import com.omarea.krscript.config.PageConfigSh
@@ -713,9 +714,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     private fun openMenuOptionAsPage(menuOption: PageMenuOption) {
         if (menuOption.link.isNotEmpty()) {
             try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(menuOption.link))
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(intent)
+                WebLauncher.open(this, menuOption.link)
             } catch (_: Exception) {
                 Toast.makeText(this, getString(R.string.kr_slice_activity_fail), Toast.LENGTH_SHORT).show()
             }
