@@ -34,7 +34,11 @@
 html, body { width:100%; max-width:100vw; overflow-x:clip; }
 body {
   margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans);
-  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  /* The native Tool-Tree toolbar already applies the top system inset.
+     Applying safe-area-inset-top here again creates the large blank gap
+     above the group/page/action/switch/picker tabs on Android. */
+  padding-top:0;
+  padding-bottom:env(safe-area-inset-bottom,0px);
 }
 header {
   padding:14px 20px 12px; border-bottom:1px solid var(--border);
