@@ -16,6 +16,9 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebSettingsCompat.FORCE_DARK_OFF
 import androidx.webkit.WebSettingsCompat.FORCE_DARK_ON
@@ -40,6 +43,7 @@ class ActionPageOnline : AppCompatActivity() {
     private var findPrevItem: MenuItem? = null
     private var findNextItem: MenuItem? = null
     private var findQuery = ""
+    private var searchView: SearchView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,7 +70,11 @@ class ActionPageOnline : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this) {
             val find = findItem
             if (find != null && find.isActionViewExpanded) {
-                find.collapseActionView()
+                if (isImeVisible()) {
+                    hideKeyboardKeepFind()
+                } else {
+                    find.collapseActionView()
+                }
             } else if (binding.krOnlineWebview.canGoBack()) {
                 binding.krOnlineWebview.goBack()
             } else {
@@ -88,7 +96,7 @@ class ActionPageOnline : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         if (menu == null) return true
 
-        val searchView = SearchView(supportActionBar?.themedContext ?: this).apply {
+        val sv = SearchView(supportActionBar?.themedContext ?: this).apply {
             queryHint = getString(R.string.online_find_in_page)
             maxWidth = Int.MAX_VALUE
             setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -104,9 +112,11 @@ class ActionPageOnline : AppCompatActivity() {
             })
         }
 
+        searchView = sv
+
         findItem = menu.add(0, MENU_FIND, 0, R.string.online_find_in_page).apply {
             setIcon(R.drawable.ic_search_web)
-            actionView = searchView
+            actionView = sv
             setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW)
             setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
                 override fun onMenuItemActionExpand(item: MenuItem): Boolean {
@@ -159,6 +169,17 @@ class ActionPageOnline : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun isImeVisible(): Boolean {
+        return ViewCompat.getRootWindowInsets(window.decorView)
+            ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+    }
+
+    private fun hideKeyboardKeepFind() {
+        searchView?.clearFocus()
+        WindowCompat.getInsetsController(window, window.decorView)
+            .hide(WindowInsetsCompat.Type.ime())
     }
 
     private fun findInPage(query: String) {

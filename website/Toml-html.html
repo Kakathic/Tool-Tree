@@ -58,8 +58,35 @@ a:hover{text-decoration:underline;}
 .topbar .logo{font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;}
 .topbar .logo .dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));}
 .topbar .spacer{flex:1;}
-.topbar .search{flex:0 1 320px;padding:7px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-soft);color:var(--fg);font-size:14px;outline:none;transition:border-color .15s;}
+.topbar .search{flex:0 1 420px;padding:7px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-soft);color:var(--fg);font-size:14px;outline:none;transition:border-color .15s,flex-basis .2s ease;}
 .topbar .search:focus{border-color:var(--accent);}
+.topbar .search.has-text{flex-basis:260px;}
+.topbar .search{min-width:0;}
+.search-count{flex:none;min-width:34px;text-align:center;font-size:12px;color:var(--fg-muted);font-variant-numeric:tabular-nums;}
+.search-nav{flex:none;width:28px;height:28px;padding:0;border:1px solid var(--border);border-radius:6px;background:var(--bg-soft);color:var(--fg-soft);font-size:11px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+.search-nav:hover:not(:disabled){color:var(--accent);border-color:var(--accent);}
+.search-nav:disabled{opacity:.4;cursor:default;}
+.search-count[hidden],.search-nav[hidden]{display:none;}
+
+.tok-comment{color:var(--fg-muted);font-style:italic;}
+.tok-table{color:#7c3aed;font-weight:600;}
+.tok-key{color:#0f766e;}
+.tok-str{color:#b45309;}
+.tok-num{color:#c2410c;}
+.tok-bool{color:#be185d;}
+
+.code-wrap{position:relative;margin:1em 0;}
+.code-wrap>pre{margin:0;padding-right:48px;}
+.copy-btn{position:absolute;top:8px;right:8px;width:30px;height:30px;padding:0;border:1px solid var(--border);border-radius:6px;background:var(--bg-elev);color:var(--fg-soft);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:.85;transition:color .15s,border-color .15s,opacity .15s;}
+.copy-btn:hover{color:var(--accent);border-color:var(--accent);opacity:1;}
+.copy-btn::before{content:"";width:15px;height:15px;background:currentColor;-webkit-mask:var(--icon-copy) center/contain no-repeat;mask:var(--icon-copy) center/contain no-repeat;}
+.copy-btn.copied{color:var(--green);border-color:var(--green);opacity:1;}
+.copy-btn.copied::before{-webkit-mask-image:var(--icon-check);mask-image:var(--icon-check);}
+:root{
+  --icon-copy:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z'/%3E%3C/svg%3E");
+  --icon-check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+}
+@media print{.copy-btn{display:none;}}
 
 /* Nút ẩn/hiện Mục lục */
 .btn-toc {
@@ -309,30 +336,35 @@ footer {
   }
   .main{padding:20px 16px 60px;}
   
-  /* Đã cho phép hiện ô tìm kiếm và tinh chỉnh kích thước trên tablet/mobile lớn */
   .topbar .search {
-    flex: 0 1 140px;
+    flex: 0 1 240px;
     font-size: 13px;
     padding: 5px 8px;
   }
+  .topbar .search.has-text { flex-basis: 130px; }
 }
 
 @media (max-width: 600px){
   .topbar{padding:10px 12px; gap: 8px;}
   .topbar .logo{font-size:13px;}
   
-  /* Tinh chỉnh tiếp cho màn hình điện thoại nhỏ */
   .topbar .search {
-    flex: 0 1 100px;
+    flex: 0 1 170px;
     font-size: 12px;
     padding: 4px 6px;
   }
+  .topbar .search.has-text { flex-basis: 90px; }
   
   .main h1{font-size:22px;}
   .main h2{font-size:18px;scroll-margin-top:60px;}
   .main h3{font-size:15px;}
   .toc-grid{grid-template-columns:1fr;}
   .kv-list{grid-template-columns:1fr;}
+}
+
+@media (max-width: 480px){
+  .search-count{display:none;}
+  .search-nav{width:26px;height:26px;}
 }
 
 </style>
@@ -345,6 +377,9 @@ footer {
   <div>TOML Guide</div>
   <div class="spacer"></div>
   <input type="text" class="search" id="search" placeholder="Search section / field..." autocomplete="off" />
+  <span class="search-count" id="searchCount" aria-live="polite" hidden></span>
+  <button type="button" class="search-nav" id="searchPrev" aria-label="Previous match" title="Previous (Shift+Enter)" disabled hidden>&#9650;</button>
+  <button type="button" class="search-nav" id="searchNext" aria-label="Next match" title="Next (Enter)" disabled hidden>&#9660;</button>
 </div>
 <div id="sidebarOverlay" class="sidebar-overlay"></div>
 <div class="layout">
@@ -1961,6 +1996,142 @@ script = "sh $state"
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
+  // Simple TOML syntax highlighting (DOM-built, text content is unchanged)
+  function highlightToml(code) {
+    const lines = code.textContent.split('\n');
+    const frag = document.createDocumentFragment();
+    let plain = '';
+    let inMulti = false;
+
+    function flush() {
+      if (plain) { frag.appendChild(document.createTextNode(plain)); plain = ''; }
+    }
+    function emit(cls, str) {
+      if (!str) return;
+      if (!cls) { plain += str; return; }
+      flush();
+      const span = document.createElement('span');
+      span.className = 'tok-' + cls;
+      span.textContent = str;
+      frag.appendChild(span);
+    }
+    function scan(str) {
+      let i = 0;
+      while (i < str.length) {
+        const c = str[i];
+        if (str.startsWith('"""', i)) {
+          const e = str.indexOf('"""', i + 3);
+          if (e === -1) { emit('str', str.slice(i)); inMulti = true; return; }
+          emit('str', str.slice(i, e + 3));
+          i = e + 3;
+          continue;
+        }
+        if (c === '"' || c === "'") {
+          let j = i + 1;
+          while (j < str.length && str[j] !== c) { if (c === '"' && str[j] === '\\') j++; j++; }
+          emit('str', str.slice(i, j + 1));
+          i = j + 1;
+          continue;
+        }
+        if (c === '#') { emit('comment', str.slice(i)); return; }
+        const m = /^[A-Za-z0-9_.+:\-]+/.exec(str.slice(i));
+        if (m) {
+          const w = m[0];
+          emit(/^(true|false)$/.test(w) ? 'bool' : (/^[+\-]?\d/.test(w) ? 'num' : ''), w);
+          i += w.length;
+          continue;
+        }
+        emit('', c);
+        i++;
+      }
+    }
+
+    lines.forEach((line, idx) => {
+      const nl = idx < lines.length - 1 ? '\n' : '';
+      if (inMulti) {
+        const end = line.indexOf('"""');
+        if (end === -1) { emit('str', line + nl); return; }
+        emit('str', line.slice(0, end + 3));
+        inMulti = false;
+        scan(line.slice(end + 3));
+        emit('', nl);
+        return;
+      }
+      if (/^\s*#/.test(line)) { emit('comment', line); emit('', nl); return; }
+      let m = /^(\s*)(\[\[?)([\w.\-"' ]+)(\]\]?)(\s*)(#.*)?$/.exec(line);
+      if (m) {
+        emit('', m[1]); emit('table', m[2] + m[3] + m[4]); emit('', m[5]);
+        if (m[6]) emit('comment', m[6]);
+        emit('', nl);
+        return;
+      }
+      m = /^(\s*)([A-Za-z0-9_\-."]+)(\s*=\s*)(.*)$/.exec(line);
+      if (m) {
+        emit('', m[1]); emit('key', m[2]); emit('', m[3]);
+        scan(m[4]);
+        emit('', nl);
+        return;
+      }
+      scan(line);
+      emit('', nl);
+    });
+    flush();
+    code.textContent = '';
+    code.appendChild(frag);
+  }
+
+  document.querySelectorAll('main pre code').forEach(highlightToml);
+
+  // Copy button for every code block
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).then(() => true, () => fallbackCopy(text));
+    }
+    return Promise.resolve(fallbackCopy(text));
+  }
+
+  document.querySelectorAll('main pre').forEach(pre => {
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-btn';
+    btn.title = 'Copy';
+    btn.setAttribute('aria-label', 'Copy code');
+    wrap.appendChild(btn);
+
+    let resetTimer = null;
+    btn.addEventListener('click', () => {
+      copyText(pre.textContent.replace(/\n+$/, '')).then(ok => {
+        if (!ok) return;
+        btn.classList.add('copied');
+        btn.title = 'Copied';
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.title = 'Copy';
+        }, 1500);
+      });
+    });
+  });
+
   // Live search functionality - highlights matches and hides sections with no match
   const searchInput = document.getElementById('search');
   if (searchInput) {
@@ -2032,14 +2203,53 @@ script = "sh $state"
       }
     }
 
+    let marks = [];
+    let currentIdx = -1;
+    let lastQuery = '';
+    const prevBtn = document.getElementById('searchPrev');
+    const nextBtn = document.getElementById('searchNext');
+    const countEl = document.getElementById('searchCount');
+
+    function updateNav() {
+      const has = marks.length > 0;
+      const show = lastQuery !== '';
+      searchInput.classList.toggle('has-text', show);
+      if (prevBtn) prevBtn.hidden = !show;
+      if (nextBtn) nextBtn.hidden = !show;
+      if (countEl) countEl.hidden = !show;
+      if (prevBtn) prevBtn.disabled = !has;
+      if (nextBtn) nextBtn.disabled = !has;
+      if (countEl) {
+        countEl.textContent = has ? (currentIdx + 1) + '/' + marks.length : (lastQuery ? '0/0' : '');
+      }
+    }
+
+    function goToMatch(idx, scroll) {
+      if (currentIdx >= 0 && marks[currentIdx]) marks[currentIdx].classList.remove('current');
+      if (!marks.length) {
+        currentIdx = -1;
+        updateNav();
+        return;
+      }
+      currentIdx = (idx + marks.length) % marks.length;
+      const mark = marks[currentIdx];
+      mark.classList.add('current');
+      if (scroll) mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      updateNav();
+    }
+
     function runSearch(rawQuery) {
       const query = rawQuery.trim();
+      lastQuery = query;
 
       mainSections.forEach(section => clearHighlights(section));
+      marks = [];
+      currentIdx = -1;
 
       if (!query) {
         mainSections.forEach(section => { section.style.display = ''; });
         showNoResult(false);
+        updateNav();
         return;
       }
 
@@ -2059,13 +2269,8 @@ script = "sh $state"
 
       showNoResult(matchCount === 0);
 
-      if (firstMatchSection) {
-        const firstMark = firstMatchSection.querySelector('mark.search-hit');
-        if (firstMark) {
-          firstMark.classList.add('current');
-          firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
+      marks = Array.from(document.querySelectorAll('main mark.search-hit'));
+      goToMatch(0, true);
     }
 
     searchInput.addEventListener('input', (e) => {
@@ -2074,7 +2279,20 @@ script = "sh $state"
       debounceTimer = setTimeout(() => runSearch(value), 150);
     });
 
+    if (prevBtn) prevBtn.addEventListener('click', () => goToMatch(currentIdx - 1, true));
+    if (nextBtn) nextBtn.addEventListener('click', () => goToMatch(currentIdx + 1, true));
+
     searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(debounceTimer);
+        if (searchInput.value.trim() !== lastQuery) {
+          runSearch(searchInput.value);
+        } else {
+          goToMatch(currentIdx + (e.shiftKey ? -1 : 1), true);
+        }
+        return;
+      }
       if (e.key === 'Escape') {
         searchInput.value = '';
         runSearch('');
