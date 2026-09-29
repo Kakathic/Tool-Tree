@@ -71,6 +71,7 @@ dependencies {
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.2.0"
     implementation "dev.rikka.shizuku:api:13.1.5"
     implementation "dev.rikka.shizuku:provider:13.1.5"
+    implementation "androidx.browser:browser:1.9.0"
 }
 repositories {
     google()
