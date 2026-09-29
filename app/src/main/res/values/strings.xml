@@ -209,5 +209,7 @@ If you agree, press the confirm button to continue."</string>
     <string name="debug_text_quit">If the application fails the testing steps, it will stop working.</string>
     <string name="check_time">Total time</string>
     <string name="editor_toggle_monospace">Monospace</string>
+    <string name="online_find_in_page">Find in page</string>
+    <string name="online_browser_not_found">No suitable browser found.</string>
     
 </resources>

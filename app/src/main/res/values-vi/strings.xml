@@ -196,5 +196,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="debug_text_notes">Chuyển sang chế độ debug</string>
     <string name="debug_text_quit">Ứng dụng không đáp ứng các bước kiểm tra, sẽ ngừng hoạt động.</string>
     <string name="check_time">Tổng thời gian</string>
-
+    <string name="online_find_in_page">Tìm trong trang</string>
+    <string name="online_browser_not_found">Không tìm thấy trình duyệt phù hợp.</string>
+    
 </resources>
