@@ -59,8 +59,8 @@ amlogic, apk, apex, capex, squashfs, ...
 | [Development](https://Kakathic.github.io/Tool-Tree/website/Instruct.html) | Basic add-on creation guide |
 | [Information](https://Kakathic.github.io/Tool-Tree/website/Information.html) | Project developer information |
 | [TOML Guide](https://Kakathic.github.io/Tool-Tree/website/Toml.html) | TOML configuration guide MD |
-| [TOML HTML](https://Kakathic.github.io/Tool-Tree/website/Toml-html.html) | TOML configuration guide html |
-| [TOML Generator](https://Kakathic.github.io/Tool-Tree/website/Toml-generator.html) | TOML code generator, guide |
+| [TOML Guide HTML](https://Kakathic.github.io/Tool-Tree/website/Toml-html.html) | TOML configuration guide html |
+| [TOML Generator](https://Kakathic.github.io/Tool-Tree/website/Toml-generator.html) | TOML code generator |
 
 ---
 

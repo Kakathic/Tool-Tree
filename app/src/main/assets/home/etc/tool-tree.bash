@@ -1,53 +1,5 @@
 #!/data/data/com.tool.tree/files/home/bin/bash
 
-Account(){
-echo '
-  [[group]]
-  [[action]]
-  icon = "'$urlicon'"
-  title = "Phòng thí nghiệm"
-  desc = "Tạo tài khoản, đăng nhập, quên mật khẩu"
-  warn = "Đăng ký tài khoản để có thể tải lên add-on, và cập nhật add-on"
-  script = ""
-  
-  [[action.params]]
-  name = "NAME"
-  label = "Lựa chọn"
-  desc = ""
-  options-sh = """
-  echo -e "1|Tạo tài khoản\n2|Đăng nhập\n3|Quên mật khẩu"
-  """
-  
-  [[action.params]]
-  name = "NAME2"
-  label = "Tài khoản"
-  placeholder = "test"
-  type = "text"
-  required = true
-  
-  [[action.params]]
-  name = "NAME3"
-  label = "Mật khẩu"
-  placeholder = "123456"
-  type = "text"
-  required = true
-  
-  [[action.params]]
-  name = "NAME4"
-  label = "Mật khẩu mới"
-  placeholder = "654321"
-  type = "text"
-  required = true
-  
-  [[action.params]]
-  name = "NAME5"
-  placeholder = "name_022098"
-  label = "Văn bản"
-  desc = "Mục này dùng để khôi phục mật khẩu, hãy lưu lại tên tài khoản, và mục này để khi quên mật khẩu có thể lấy lại"
-  type = "text"
-  required = true
-  '
-}
 
 Addss(){
 
@@ -57,13 +9,13 @@ echo '
   title = "Phòng thí nghiệm"
   desc = "Tạo add-on cơ bản và upload lên"
   icon = "'$urlicon'/add_user.png"
-  config-sh = "'$ETC'/tool-tree.bash Account"
+  config = "'$ETC'/toml/manager.toml"
 
   [[page]]
   title = "Demo tính năng"
   desc = "Hướng dẫn dành cho nhà phát triển"
   icon = "'$urlicon'/add_list.png"
-  config-sh = "'$ETC'/tool-tree.bash"
+  config = "'$ETC'/toml/demo.toml"
   
   [[group]]
   [[page]]
