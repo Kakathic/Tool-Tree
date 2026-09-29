@@ -47,6 +47,7 @@ class ActionPageOnline : AppCompatActivity() {
     private var findPrevItem: MenuItem? = null
     private var findNextItem: MenuItem? = null
     private var findQuery = ""
+    private var skipInterceptForBackNav = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +69,7 @@ class ActionPageOnline : AppCompatActivity() {
             if (findItem?.isActionViewExpanded == true) {
                 handleSearchBack()
             } else if (binding.krOnlineWebview.canGoBack()) {
+                skipInterceptForBackNav = true
                 binding.krOnlineWebview.goBack()
             } else {
                 finish()
@@ -320,6 +322,9 @@ class ActionPageOnline : AppCompatActivity() {
                 loadProgressBar.isIndeterminate = true
                 loadProgressBar.visibility = View.VISIBLE
                 findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
+                // Nếu WebView phục hồi từ cache mà không gọi shouldInterceptRequest(),
+                // không để cờ back làm ảnh hưởng lần điều hướng tiếp theo.
+                skipInterceptForBackNav = false
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -334,6 +339,60 @@ class ActionPageOnline : AppCompatActivity() {
                     }
                 } catch (_: Exception) {
                     super.shouldOverrideUrlLoading(view, request)
+                }
+            }
+
+            // Chỉ intercept request HTML chính (main frame) qua HTTP/HTTPS.
+            // Không can thiệp CSS/JS/ảnh/XHR hoặc các request POST.
+            // Nếu Content-Type rỗng/text/plain thì ép về text/html để WebView render.
+            override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                val requestUrl = request?.url ?: return null
+                if (request.isForMainFrame != true) return null
+                if (requestUrl.scheme?.lowercase() !in setOf("http", "https")) return null
+                if (request.method != "GET") return null
+
+                if (skipInterceptForBackNav) {
+                    skipInterceptForBackNav = false
+                    return null
+                }
+
+                return try {
+                    val connection = (java.net.URL(requestUrl.toString()).openConnection() as java.net.HttpURLConnection).apply {
+                        instanceFollowRedirects = true
+                        connectTimeout = 15000
+                        readTimeout = 15000
+                        request.requestHeaders.forEach { (key, value) ->
+                            if (!key.equals("Host", ignoreCase = true) &&
+                                !key.equals("Content-Length", ignoreCase = true)) {
+                                setRequestProperty(key, value)
+                            }
+                        }
+                        CookieManager.getInstance().getCookie(requestUrl.toString())?.let {
+                            setRequestProperty("Cookie", it)
+                        }
+                    }
+                    connection.connect()
+
+                    connection.headerFields["Set-Cookie"]?.forEach { cookie ->
+                        CookieManager.getInstance().setCookie(requestUrl.toString(), cookie)
+                    }
+
+                    val declaredType = connection.contentType ?: ""
+                    val mimeType = declaredType.substringBefore(";").trim()
+                    val ambiguous = mimeType.isEmpty() || mimeType.equals("text/plain", ignoreCase = true)
+
+                    if (!ambiguous) {
+                        connection.disconnect()
+                        return null
+                    }
+
+                    val charset = Regex("charset=([^;]+)", RegexOption.IGNORE_CASE)
+                        .find(declaredType)?.groupValues?.get(1)?.trim()
+                        ?.takeIf { it.isNotEmpty() } ?: "utf-8"
+
+                    WebResourceResponse("text/html", charset, connection.inputStream)
+                } catch (_: Exception) {
+                    null
                 }
             }
         }
