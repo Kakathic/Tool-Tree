@@ -8,12 +8,10 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.CookieManager
 import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
-import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.ProgressBar
@@ -63,14 +61,6 @@ class ActionPageOnline : AppCompatActivity() {
         toolbar.setNavigationOnClickListener {
             finish()
         }
-
-        // Giữ hardware rendering như bản mới.
-        binding.krOnlineWebview.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-
-        // Cookie/session của các trang hiện đại như GitHub.
-        val cookieManager = CookieManager.getInstance()
-        cookieManager.setAcceptCookie(true)
-        cookieManager.setAcceptThirdPartyCookies(binding.krOnlineWebview, true)
 
         onBackPressedDispatcher.addCallback(this) {
             if (binding.krOnlineWebview.canGoBack()) {
@@ -137,14 +127,6 @@ class ActionPageOnline : AppCompatActivity() {
     private fun initWebview(url: String?) {
         binding.krOnlineWebview.visibility = View.VISIBLE
         val settings = binding.krOnlineWebview.settings
-
-        // Các WebSettings mới.
-        settings.javaScriptEnabled = true
-        settings.domStorageEnabled = true
-        settings.databaseEnabled = true
-        settings.cacheMode = WebSettings.LOAD_DEFAULT
-        settings.blockNetworkImage = false
-        settings.loadsImagesAutomatically = true
 
         if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
             val isDark = ThemeModeState.isDarkMode()
