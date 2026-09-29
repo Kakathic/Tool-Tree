@@ -160,6 +160,11 @@ class ActionPageOnline : AppCompatActivity() {
                 return super.onConsoleMessage(msg)
             }
 
+            override fun onReceivedTitle(view: WebView?, title: String?) {
+                super.onReceivedTitle(view, title)
+                title?.let { setTitle(it) }
+            }
+
             override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
                 DialogHelper.animDialog(
                     AlertDialog.Builder(this@ActionPageOnline)
@@ -188,10 +193,11 @@ class ActionPageOnline : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 loadProgressBar.visibility = View.GONE
                 view?.title?.let { setTitle(it) }
-                // Chẩn đoán tạm: hiện Toast cho biết trang có chứa/chạy JS tìm kiếm hay không
+                // Chẩn đoán tạm: gắn bộ đếm sự kiện gõ vào ô #search, kết quả hiện trên tiêu đề toolbar
                 view?.evaluateJavascript(
-                    """(function(){return JSON.stringify({run:typeof runSearch,hasCode:document.documentElement.innerHTML.indexOf('highlightText')>-1,input:!!document.getElementById('search'),chrome:(navigator.userAgent.match(/Chrome\/[\d.]+/)||[''])[0]})})()"""
-                ) { r -> Toast.makeText(this@ActionPageOnline, r, Toast.LENGTH_LONG).show() }
+                    """(function(){var i=document.getElementById('search');if(!i)return;var c=0;i.addEventListener('input',function(){c++;setTimeout(function(){document.title='in:'+c+' mark:'+document.querySelectorAll('mark.search-hit').length+' vis:'+Array.prototype.filter.call(document.querySelectorAll('main section'),function(x){return x.style.display!=='none'}).length+' y:'+Math.round(window.scrollY)},400)})})()""",
+                    null
+                )
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
