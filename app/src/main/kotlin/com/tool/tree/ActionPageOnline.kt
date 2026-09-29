@@ -11,7 +11,14 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
-import android.webkit.*
+import android.webkit.CookieManager
+import android.webkit.JsResult
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.addCallback
@@ -29,46 +36,66 @@ import androidx.webkit.WebSettingsCompat.FORCE_DARK_ON
 import androidx.webkit.WebViewFeature
 import com.omarea.common.shared.FilePathResolver
 import com.omarea.common.ui.DialogHelper
+import com.omarea.common.ui.ThemeMode
 import com.omarea.krscript.WebViewInjector
 import com.omarea.krscript.ui.ParamsFileChooserRender
 import com.tool.tree.databinding.ActivityActionPageOnlineBinding
 
 class ActionPageOnline : AppCompatActivity() {
+    private lateinit var themeMode: ThemeMode
     private lateinit var binding: ActivityActionPageOnlineBinding
     private val loadProgressBar by lazy { findViewById<ProgressBar>(R.id.page_load_progress) }
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
+    private var skipInterceptForBackNav = false
     private val ACTION_FILE_PATH_CHOOSER = 65400
+    private val MENU_OPEN_BROWSER = 1001
     private val MENU_FIND = 1002
     private val MENU_FIND_PREV = 1003
     private val MENU_FIND_NEXT = 1004
-    private val MENU_LINK = 1001
+    private val MENU_LINK = MENU_OPEN_BROWSER
 
     private var findItem: MenuItem? = null
     private var findPrevItem: MenuItem? = null
     private var findNextItem: MenuItem? = null
     private var findQuery = ""
-    private var skipInterceptForBackNav = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        ThemeModeState.switchTheme(this)
+        themeMode = ThemeModeState.switchTheme(this)
 
         binding = ActivityActionPageOnlineBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         val toolbar: Toolbar = binding.webappbar.toolbar
-        toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+        setSupportActionBar(toolbar)
+        setTitle(R.string.app_name)
+
+        supportActionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            setHomeButtonEnabled(true)
+            setHomeAsUpIndicator(R.drawable.ic_arrow_back)
+        }
+
         toolbar.setNavigationOnClickListener {
             finish()
         }
+
         setupToolbarMenu(toolbar)
-        setTitle(R.string.app_name)
+
+        // Giữ hardware rendering như bản mới.
+        binding.krOnlineWebview.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
+        // Cookie/session của các trang hiện đại như GitHub.
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.setAcceptCookie(true)
+        cookieManager.setAcceptThirdPartyCookies(binding.krOnlineWebview, true)
 
         onBackPressedDispatcher.addCallback(this) {
             if (findItem?.isActionViewExpanded == true) {
                 handleSearchBack()
             } else if (binding.krOnlineWebview.canGoBack()) {
+                // Cho WebView tự phục hồi history/cache ở lần back này.
                 skipInterceptForBackNav = true
                 binding.krOnlineWebview.goBack()
             } else {
@@ -87,10 +114,17 @@ class ActionPageOnline : AppCompatActivity() {
         loadIntentData()
     }
 
-    // Toolbar độc lập (không setSupportActionBar) để AppCompat không tự đóng ô tìm kiếm khi back
+    // Giữ menu mở bằng SearchView nhưng vẫn để AppCompat quản lý ActionBar của bản cũ.
+    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
+        // Không thêm mục trùng MENU_OPEN_BROWSER; link/search được tạo trong toolbar.menu.
+        return super.onCreateOptionsMenu(menu)
+    }
+
     override fun onTitleChanged(title: CharSequence?, color: Int) {
         super.onTitleChanged(title, color)
-        if (::binding.isInitialized) binding.webappbar.toolbar.title = title
+        if (::binding.isInitialized) {
+            binding.webappbar.toolbar.title = title
+        }
     }
 
     private fun setupToolbarMenu(toolbar: Toolbar) {
@@ -186,7 +220,7 @@ class ActionPageOnline : AppCompatActivity() {
         return wrapped
     }
 
-    // Back 1: ẩn bàn phím -> Back 2: đóng tìm kiếm -> Back 3: về trang web trước
+    // Back 1: ẩn bàn phím -> Back 2: đóng tìm kiếm -> Back 3: về trang web trước.
     private fun handleSearchBack() {
         val find = findItem ?: return
         if (!find.isActionViewExpanded) return
@@ -246,6 +280,7 @@ class ActionPageOnline : AppCompatActivity() {
         binding.krOnlineWebview.visibility = View.VISIBLE
         val settings = binding.krOnlineWebview.settings
 
+        // Các WebSettings mới.
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.databaseEnabled = true
@@ -253,27 +288,19 @@ class ActionPageOnline : AppCompatActivity() {
         settings.blockNetworkImage = false
         settings.loadsImagesAutomatically = true
 
-        // Giữ WebView sử dụng hardware rendering để tránh khác biệt rendering
-        // giữa bản này và ActionPageOnline.kt bên ngoài.
-        binding.krOnlineWebview.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-
-        // Cho phép WebView lưu và gửi cookie, bao gồm cookie của bên thứ ba.
-        // GitHub có thể sử dụng cookie/session cho các request động trên trang Release.
-        val cookieManager = CookieManager.getInstance()
-        cookieManager.setAcceptCookie(true)
-        cookieManager.setAcceptThirdPartyCookies(binding.krOnlineWebview, true)
-
         if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
             val isDark = ThemeModeState.isDarkMode()
             WebSettingsCompat.setForceDark(settings, if (isDark) FORCE_DARK_ON else FORCE_DARK_OFF)
         }
 
-        val webViewInjector = WebViewInjector(binding.krOnlineWebview,
+        val webViewInjector = WebViewInjector(
+            binding.krOnlineWebview,
             object : ParamsFileChooserRender.FileChooserInterface {
                 override fun openFileChooser(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
                     return chooseFilePath(fileSelectedInterface)
                 }
-            })
+            }
+        )
 
         binding.krOnlineWebview.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
@@ -322,8 +349,6 @@ class ActionPageOnline : AppCompatActivity() {
                 loadProgressBar.isIndeterminate = true
                 loadProgressBar.visibility = View.VISIBLE
                 findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
-                // Nếu WebView phục hồi từ cache mà không gọi shouldInterceptRequest(),
-                // không để cờ back làm ảnh hưởng lần điều hướng tiếp theo.
                 skipInterceptForBackNav = false
             }
 
@@ -342,13 +367,12 @@ class ActionPageOnline : AppCompatActivity() {
                 }
             }
 
-            // Chỉ intercept request HTML chính (main frame) qua HTTP/HTTPS.
-            // Không can thiệp CSS/JS/ảnh/XHR hoặc các request POST.
-            // Nếu Content-Type rỗng/text/plain thì ép về text/html để WebView render.
+            // Giữ cơ chế intercept của file cũ: chỉ xử lý HTML main-frame GET khi Content-Type
+            // rỗng hoặc text/plain. CSS/JS/ảnh/XHR và các request không phải GET vẫn do WebView xử lý.
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 val requestUrl = request?.url ?: return null
                 if (request.isForMainFrame != true) return null
-                if (requestUrl.scheme?.lowercase() !in setOf("http", "https")) return null
+                if (requestUrl.scheme?.startsWith("http") != true) return null
                 if (request.method != "GET") return null
 
                 if (skipInterceptForBackNav) {
@@ -361,25 +385,20 @@ class ActionPageOnline : AppCompatActivity() {
                         instanceFollowRedirects = true
                         connectTimeout = 15000
                         readTimeout = 15000
-                        request.requestHeaders.forEach { (key, value) ->
-                            if (!key.equals("Host", ignoreCase = true) &&
-                                !key.equals("Content-Length", ignoreCase = true)) {
-                                setRequestProperty(key, value)
-                            }
-                        }
+                        request.requestHeaders.forEach { (key, value) -> setRequestProperty(key, value) }
                         CookieManager.getInstance().getCookie(requestUrl.toString())?.let {
                             setRequestProperty("Cookie", it)
                         }
                     }
                     connection.connect()
 
-                    connection.headerFields["Set-Cookie"]?.forEach { cookie ->
-                        CookieManager.getInstance().setCookie(requestUrl.toString(), cookie)
+                    connection.headerFields["Set-Cookie"]?.forEach {
+                        CookieManager.getInstance().setCookie(requestUrl.toString(), it)
                     }
 
                     val declaredType = connection.contentType ?: ""
-                    val mimeType = declaredType.substringBefore(";").trim()
-                    val ambiguous = mimeType.isEmpty() || mimeType.equals("text/plain", ignoreCase = true)
+                    val ambiguous = declaredType.isEmpty() ||
+                        declaredType.substringBefore(";").trim().equals("text/plain", ignoreCase = true)
 
                     if (!ambiguous) {
                         connection.disconnect()
@@ -387,8 +406,8 @@ class ActionPageOnline : AppCompatActivity() {
                     }
 
                     val charset = Regex("charset=([^;]+)", RegexOption.IGNORE_CASE)
-                        .find(declaredType)?.groupValues?.get(1)?.trim()
-                        ?.takeIf { it.isNotEmpty() } ?: "utf-8"
+                        .find(declaredType)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotEmpty() }
+                        ?: "utf-8"
 
                     WebResourceResponse("text/html", charset, connection.inputStream)
                 } catch (_: Exception) {
