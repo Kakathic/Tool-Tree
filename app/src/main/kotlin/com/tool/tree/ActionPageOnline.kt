@@ -1,5 +1,6 @@
 package com.tool.tree
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -38,21 +39,24 @@ class ActionPageOnline : AppCompatActivity() {
     private val loadProgressBar by lazy { findViewById<ProgressBar>(R.id.page_load_progress) }
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
     private val ACTION_FILE_PATH_CHOOSER = 65400
-    private val ACTION_WEB_FILE_CHOOSER = 65401
     private val MENU_FIND = 1002
     private val MENU_FIND_PREV = 1003
     private val MENU_FIND_NEXT = 1004
     private val MENU_LINK = 1001
 
+    // Fix 2: callback cho trình chọn file của trang web (<input type="file">)
+    private var uploadFileCallback: ValueCallback<Array<Uri>>? = null
+    private val ACTION_WEB_FILE_CHOOSER = 65401
+
+    // Fix 1: cờ đánh dấu trang đã tải xong. Sau khi xong, mọi callback progress "rác"
+    // phát sinh từ iframe/XHR/SPA (GitHub Turbo...) sẽ bị bỏ qua để thanh tiến trình
+    // không bị hiện lại rồi kẹt mãi trên màn hình.
+    private var pageLoadFinished = false
+
     private var findItem: MenuItem? = null
     private var findPrevItem: MenuItem? = null
     private var findNextItem: MenuItem? = null
     private var findQuery = ""
-    private var webFilePathCallback: ValueCallback<Array<Uri>>? = null
-    private var pageLoading = false
-    private val hideProgressRunnable = Runnable {
-        loadProgressBar.visibility = View.GONE
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -250,6 +254,13 @@ class ActionPageOnline : AppCompatActivity() {
         binding.krOnlineWebview.visibility = View.VISIBLE
         val settings = binding.krOnlineWebview.settings
 
+        // Fix 3 (phần 1): bỏ marker "; wv" trong User-Agent để các trang web (GitHub...)
+        // phục vụ bản dành cho trình duyệt Chrome thật thay vì bản degraded dành cho WebView
+        val systemUa = WebSettings.getDefaultUserAgent(this)
+        if (systemUa.contains("; wv)")) {
+            settings.userAgentString = systemUa.replace("; wv)", ")")
+        }
+
         if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
             val isDark = ThemeModeState.isDarkMode()
             WebSettingsCompat.setForceDark(settings, if (isDark) FORCE_DARK_ON else FORCE_DARK_OFF)
@@ -265,51 +276,40 @@ class ActionPageOnline : AppCompatActivity() {
         binding.krOnlineWebview.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 super.onProgressChanged(view, newProgress)
-                // GitHub và các trang SPA có thể tiếp tục phát progress callback sau khi
-                // tài liệu chính đã tải xong (ví dụ tải fragment Assets). Không được mở
-                // lại thanh progress trong trường hợp đó.
-                if (!pageLoading) {
-                    return
-                }
-
-                loadProgressBar.isIndeterminate = false
-                loadProgressBar.progress = newProgress
-                if (newProgress >= 100) {
-                    loadProgressBar.visibility = View.GONE
-                } else {
+                // Fix 1: bỏ qua progress "rác" phát sinh sau khi trang đã tải xong
+                // (do iframe/XHR/SPA như GitHub Turbo kích hoạt) — nguyên nhân khiến
+                // thanh tiến trình hiện lại rồi kẹt mãi không ẩn
+                if (pageLoadFinished) return
+                if (newProgress < 100) {
+                    loadProgressBar.isIndeterminate = false
+                    loadProgressBar.progress = newProgress
                     loadProgressBar.visibility = View.VISIBLE
+                } else {
+                    pageLoadFinished = true
+                    loadProgressBar.visibility = View.GONE
                 }
             }
 
+            // Fix 2 (phần 1): hỗ trợ upload file từ trang web qua thẻ <input type="file">
+            // (nút "Add files" trên GitHub, upload ảnh, đính kèm...)
             override fun onShowFileChooser(
                 webView: WebView?,
-                filePathCallback: ValueCallback<Array<Uri>>?,
-                fileChooserParams: FileChooserParams?
+                filePathCallback: ValueCallback<Array<Uri>>,
+                fileChooserParams: WebChromeClient.FileChooserParams
             ): Boolean {
-                // HTML <input type="file"> (GitHub upload/release Assets, v.v.)
-                // không đi qua ParamsFileChooserRender.fileChooser(), nên WebView phải
-                // nhận callback URI trực tiếp.
-                webFilePathCallback?.onReceiveValue(null)
-                webFilePathCallback = filePathCallback
-
+                // Nhả callback cũ nếu còn treo để tránh lỗi "Failed to grant file permission" khi chọn lại
+                uploadFileCallback?.onReceiveValue(null)
+                uploadFileCallback = filePathCallback
                 return try {
-                    val params = fileChooserParams
-                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = params?.acceptTypes
-                            ?.firstOrNull { it.isNotBlank() }
-                            ?.takeIf { it != "*/*" } ?: "*/*"
-
-                        if (params?.mode == FileChooserParams.MODE_OPEN_MULTIPLE) {
-                            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                        }
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
+                    val intent = fileChooserParams.createIntent()
                     startActivityForResult(intent, ACTION_WEB_FILE_CHOOSER)
                     true
-                } catch (_: Exception) {
-                    webFilePathCallback?.onReceiveValue(null)
-                    webFilePathCallback = null
+                } catch (e: ActivityNotFoundException) {
+                    // Không có trình quản lý file nào xử lý được intent
+                    uploadFileCallback = null
+                    false
+                } catch (e: Exception) {
+                    uploadFileCallback = null
                     false
                 }
             }
@@ -340,31 +340,47 @@ class ActionPageOnline : AppCompatActivity() {
         binding.krOnlineWebview.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-
-                pageLoading = false
-                hideProgressRunnable.run()
+                pageLoadFinished = true
+                loadProgressBar.visibility = View.GONE
                 view?.title?.let { setTitle(it) }
-
-                // GitHub Releases tải danh sách Assets bằng <include-fragment>. Một số
-                // Android WebView không hoàn tất custom element này, khiến UI giữ spinner
-                // vô hạn dù trang chính đã tải xong. Fallback bên dưới tải fragment trực
-                // tiếp bằng fetch() và thay thế include-fragment bằng HTML trả về từ GitHub.
-                if (url?.contains("github.com", ignoreCase = true) == true) {
-                    binding.krOnlineWebview.postDelayed({
-                        if (!isFinishing && !isDestroyed) {
-                            loadGithubFragmentsFallback()
-                        }
-                    }, 700L)
-                }
+                // Fix 3 (phần 2): vá vòng xoay vô hạn ở mục Assets trên trang phát hành GitHub
+                maybeInjectGithubFragmentFix(view)
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
-                pageLoading = true
-                loadProgressBar.removeCallbacks(hideProgressRunnable)
+                pageLoadFinished = false
                 loadProgressBar.isIndeterminate = true
+                loadProgressBar.progress = 0
                 loadProgressBar.visibility = View.VISIBLE
                 findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
+            }
+
+            override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                super.doUpdateVisitedHistory(view, url, isReload)
+                // Trang SPA (GitHub Turbo...) đổi URL bằng pushState không kích hoạt
+                // onPageStarted/onPageFinished — cập nhật tiêu đề cho kịp, nhưng chỉ
+                // sau khi trang đầu tiên tải xong để tránh hiện URL như tiêu đề
+                if (pageLoadFinished) {
+                    view?.title?.takeIf { it.isNotBlank() }?.let { setTitle(it) }
+                }
+            }
+
+            override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+                super.onReceivedError(view, request, error)
+                // Lỗi frame chính cũng phải kết thúc trạng thái tải, tránh treo thanh tiến trình
+                if (request?.isForMainFrame == true) {
+                    pageLoadFinished = true
+                    loadProgressBar.visibility = View.GONE
+                }
+            }
+
+            override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
+                super.onReceivedHttpError(view, request, errorResponse)
+                if (request?.isForMainFrame == true) {
+                    pageLoadFinished = true
+                    loadProgressBar.visibility = View.GONE
+                }
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -388,48 +404,19 @@ class ActionPageOnline : AppCompatActivity() {
         url?.let { binding.krOnlineWebview.loadUrl(it) }
     }
 
-
-    /**
-     * GitHub dùng <include-fragment> để lazy-load phần Assets của Release.
-     * Nếu custom element của GitHub không được WebView xử lý, fallback này fetch fragment
-     * với cookie phiên hiện tại rồi thay thế node loading bằng HTML thực tế.
-     */
-    private fun loadGithubFragmentsFallback() {
-        val script = """
-            (function() {
-                function loadFragment(el) {
-                    if (!el || el.dataset.toolTreeLoading === '1') return;
-                    var src = el.getAttribute('src');
-                    if (!src) return;
-
-                    el.dataset.toolTreeLoading = '1';
-                    fetch(new URL(src, location.href).href, {
-                        credentials: 'include',
-                        headers: { 'Accept': 'text/html' }
-                    }).then(function(response) {
-                        if (!response.ok) throw new Error('HTTP ' + response.status);
-                        return response.text();
-                    }).then(function(html) {
-                        var template = document.createElement('template');
-                        template.innerHTML = html;
-                        el.replaceWith(template.content.cloneNode(true));
-                    }).catch(function() {
-                        delete el.dataset.toolTreeLoading;
-                    });
-                }
-
-                function scan() {
-                    document.querySelectorAll('include-fragment[src]').forEach(loadFragment);
-                }
-
-                scan();
-                setTimeout(scan, 1000);
-                setTimeout(scan, 2500);
-                setTimeout(scan, 5000);
-            })();
-        """.trimIndent()
-
-        binding.krOnlineWebview.evaluateJavascript(script, null)
+    // Fix 3 (phần 2): GitHub tải danh sách Assets (và một số khối khác) qua custom element
+    // <include-fragment> — JS hiện đại của GitHub có thể không chạy/nâng cấp được element
+    // này trên một số WebView, khiến vòng xoay quay mãi mà không hiện link tải.
+    // Server vẫn trả fragment bình thường nên ta tự fetch nội dung đó và thay spinner
+    // bằng HTML thật (link tải về). Chỉ chạy trên github.com.
+    private fun maybeInjectGithubFragmentFix(view: WebView?) {
+        val host = try {
+            Uri.parse(view?.url ?: return).host ?: return
+        } catch (_: Exception) {
+            return
+        }
+        if (host != "github.com" && !host.endsWith(".github.com")) return
+        view?.evaluateJavascript(GITHUB_INCLUDE_FRAGMENT_FIX, null)
     }
 
     private fun chooseFilePath(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
@@ -447,32 +434,21 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == ACTION_WEB_FILE_CHOOSER) {
-            val callback = webFilePathCallback
-            webFilePathCallback = null
-
-            if (callback != null) {
-                if (resultCode != RESULT_OK || data == null) {
-                    callback.onReceiveValue(null)
-                } else {
-                    val uris = ArrayList<Uri>()
-                    data.data?.let { uris.add(it) }
-                    data.clipData?.let { clipData ->
-                        for (i in 0 until clipData.itemCount) {
-                            val uri = clipData.getItemAt(i).uri
-                            if (!uris.contains(uri)) uris.add(uri)
-                        }
-                    }
-                    callback.onReceiveValue(uris.toTypedArray().takeIf { it.isNotEmpty() })
+        when (requestCode) {
+            ACTION_FILE_PATH_CHOOSER -> {
+                val result = if (data == null || resultCode != RESULT_OK) null else data.data
+                if (fileSelectedInterface != null) {
+                    val absPath = result?.let { getPath(it) }
+                    fileSelectedInterface?.onFileSelected(absPath)
                 }
+                this.fileSelectedInterface = null
             }
-        } else if (requestCode == ACTION_FILE_PATH_CHOOSER) {
-            val result = if (data == null || resultCode != RESULT_OK) null else data.data
-            if (fileSelectedInterface != null) {
-                val absPath = result?.let { getPath(it) }
-                fileSelectedInterface?.onFileSelected(absPath)
+            // Fix 2 (phần 2): nhận kết quả chọn file và trả về cho trang web
+            ACTION_WEB_FILE_CHOOSER -> {
+                val results = WebChromeClient.FileChooserParams.parseResult(resultCode, data)
+                uploadFileCallback?.onReceiveValue(results)
+                uploadFileCallback = null
             }
-            this.fileSelectedInterface = null
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -496,10 +472,10 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        loadProgressBar.removeCallbacks(hideProgressRunnable)
-        webFilePathCallback?.onReceiveValue(null)
-        webFilePathCallback = null
         loadProgressBar.visibility = View.GONE
+        // Nhả callback upload để tránh rò rỉ bộ nhớ khi activity bị hủy giữa chừng
+        uploadFileCallback?.onReceiveValue(null)
+        uploadFileCallback = null
         binding.krOnlineWebview.apply {
             stopLoading()
             (parent as? ViewGroup)?.removeView(this)
@@ -507,5 +483,74 @@ class ActionPageOnline : AppCompatActivity() {
             destroy()
         }
         super.onDestroy()
+    }
+
+    private companion object {
+        // Fix 3: script thuần ES5 (tương thích cả WebView cũ) quét các <include-fragment>
+        // còn kẹt spinner (svg.anim-rotate) rồi tự fetch nội dung với header
+        // "Accept: text/fragment+html" như chính element của GitHub vẫn làm.
+        // setInterval để vẫn hoạt động khi GitHub điều hướng SPA (Turbo) không reload trang.
+        private val GITHUB_INCLUDE_FRAGMENT_FIX = """
+            (function () {
+              if (window.__krIncludeFragmentFix) return;
+              window.__krIncludeFragmentFix = true;
+              var SPIN = 'svg.anim-rotate';
+              var ORIGIN = location.origin || (location.protocol + '//' + location.host);
+              var MAX_TRIES = 3;
+
+              function originOf(src) {
+                if (!src) return null;
+                if (src.charAt(0) === '/') return ORIGIN;
+                var i = src.indexOf('://');
+                if (i > 0) {
+                  var rest = src.substring(i + 3);
+                  var slash = rest.indexOf('/');
+                  var host = slash === -1 ? rest : rest.substring(0, slash);
+                  return src.substring(0, i) + '://' + host;
+                }
+                return ORIGIN;
+              }
+
+              function fix(el) {
+                if (!el || !el.getAttribute('src')) return;
+                if (!el.querySelector(SPIN)) return;
+                var tries = parseInt(el.getAttribute('data-kr-fix') || '0', 10);
+                if (tries >= MAX_TRIES) return;
+                var src = el.getAttribute('src');
+                if (originOf(src) !== ORIGIN) return;
+                el.setAttribute('data-kr-fix', String(tries + 1));
+                el.setAttribute('data-kr-fixing', '1');
+                var done = function () { el.removeAttribute('data-kr-fixing'); };
+                var apply = function (text) {
+                  if (el.querySelector(SPIN)) {
+                    try { el.innerHTML = text; } catch (e) {}
+                  }
+                  done();
+                };
+                try {
+                  var xhr = new XMLHttpRequest();
+                  xhr.open('GET', src, true);
+                  try { xhr.setRequestHeader('Accept', 'text/fragment+html'); } catch (e) {}
+                  xhr.onload = function () {
+                    if (xhr.status >= 200 && xhr.status < 400 && xhr.responseText) apply(xhr.responseText);
+                    else done();
+                  };
+                  xhr.onerror = done;
+                  xhr.ontimeout = done;
+                  xhr.send();
+                } catch (e) { done(); }
+              }
+
+              function sweep() {
+                try {
+                  var list = document.querySelectorAll('include-fragment:not([data-kr-fixing])');
+                  for (var i = 0; i < list.length; i++) fix(list[i]);
+                } catch (e) {}
+              }
+
+              setInterval(sweep, 3000);
+              setTimeout(sweep, 2500);
+            })();
+        """.trimIndent()
     }
 }
