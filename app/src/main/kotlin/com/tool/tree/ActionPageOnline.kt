@@ -7,11 +7,15 @@ import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.Message
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.webkit.*
+import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.addCallback
@@ -22,6 +26,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebSettingsCompat.FORCE_DARK_OFF
 import androidx.webkit.WebSettingsCompat.FORCE_DARK_ON
@@ -47,6 +52,13 @@ class ActionPageOnline : AppCompatActivity() {
     private var findNextItem: MenuItem? = null
     private var findQuery = ""
 
+    // Stack tab: tabs[0] là WebView gốc, tab con mở từ onCreateWindow xếp sau, chỉ tab cuối được hiện
+    private val MAX_TABS = 6
+    private val tabs = ArrayList<WebView>()
+    private val currentWebView: WebView get() = tabs.last()
+    private lateinit var tabContainer: FrameLayout
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -54,6 +66,7 @@ class ActionPageOnline : AppCompatActivity() {
 
         binding = ActivityActionPageOnlineBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        setupTabContainer()
 
         val toolbar: Toolbar = binding.webappbar.toolbar
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
@@ -63,31 +76,46 @@ class ActionPageOnline : AppCompatActivity() {
         setupToolbarMenu(toolbar)
         setTitle(R.string.app_name)
 
+        // Back: đóng bàn phím/tìm kiếm -> goBack trong tab -> đóng tab về tab trước -> finish
         onBackPressedDispatcher.addCallback(this) {
             if (findItem?.isActionViewExpanded == true) {
                 handleSearchBack()
-            } else if (binding.krOnlineWebview.canGoBack()) {
-                binding.krOnlineWebview.goBack()
+            } else if (currentWebView.canGoBack()) {
+                currentWebView.goBack()
+            } else if (tabs.size > 1) {
+                closeTab(currentWebView)
             } else {
                 finish()
-            }
-        }
-
-        binding.krOnlineWebview.setFindListener { activeMatchOrdinal, numberOfMatches, _ ->
-            binding.webappbar.toolbar.subtitle = when {
-                findQuery.isEmpty() -> null
-                numberOfMatches > 0 -> "${activeMatchOrdinal + 1}/$numberOfMatches"
-                else -> "0/0"
             }
         }
 
         loadIntentData()
     }
 
-    // Toolbar độc lập (không setSupportActionBar) để AppCompat không tự đóng ô tìm kiếm khi back
     override fun onTitleChanged(title: CharSequence?, color: Int) {
         super.onTitleChanged(title, color)
         if (::binding.isInitialized) binding.webappbar.toolbar.title = title
+    }
+
+    // Bọc WebView gốc vào FrameLayout cùng vị trí/id để thêm tab bằng code mà không đổi XML
+    private fun setupTabContainer() {
+        val root = binding.krOnlineWebview
+        val parent = root.parent as ViewGroup
+        val index = parent.indexOfChild(root)
+        val originalParams = root.layoutParams
+
+        parent.removeViewAt(index)
+        tabContainer = FrameLayout(this)
+        tabContainer.id = root.id
+        root.id = View.NO_ID
+        root.layoutParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        tabContainer.addView(root)
+        parent.addView(tabContainer, index, originalParams)
+
+        tabs.add(root)
     }
 
     private fun setupToolbarMenu(toolbar: Toolbar) {
@@ -98,7 +126,7 @@ class ActionPageOnline : AppCompatActivity() {
             maxWidth = Int.MAX_VALUE
             setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                 override fun onQueryTextSubmit(query: String?): Boolean {
-                    binding.krOnlineWebview.findNext(true)
+                    currentWebView.findNext(true)
                     return true
                 }
 
@@ -146,11 +174,11 @@ class ActionPageOnline : AppCompatActivity() {
         toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 MENU_FIND_PREV -> {
-                    binding.krOnlineWebview.findNext(false)
+                    currentWebView.findNext(false)
                     true
                 }
                 MENU_FIND_NEXT -> {
-                    binding.krOnlineWebview.findNext(true)
+                    currentWebView.findNext(true)
                     true
                 }
                 MENU_LINK -> {
@@ -165,10 +193,10 @@ class ActionPageOnline : AppCompatActivity() {
     private fun findInPage(query: String) {
         findQuery = query
         if (query.isEmpty()) {
-            binding.krOnlineWebview.clearMatches()
+            currentWebView.clearMatches()
             binding.webappbar.toolbar.subtitle = null
         } else {
-            binding.krOnlineWebview.findAllAsync(query)
+            currentWebView.findAllAsync(query)
         }
     }
 
@@ -183,7 +211,6 @@ class ActionPageOnline : AppCompatActivity() {
         return wrapped
     }
 
-    // Back 1: ẩn bàn phím -> Back 2: đóng tìm kiếm -> Back 3: về trang web trước
     private fun handleSearchBack() {
         val find = findItem ?: return
         if (!find.isActionViewExpanded) return
@@ -208,12 +235,17 @@ class ActionPageOnline : AppCompatActivity() {
 
     private fun clearFind() {
         findQuery = ""
-        binding.krOnlineWebview.clearMatches()
+        currentWebView.clearMatches()
         binding.webappbar.toolbar.subtitle = null
     }
 
+    // Phải gọi TRƯỚC khi đổi tab để highlight tìm kiếm được xoá đúng trên tab đang tìm
+    private fun closeSearchIfOpen() {
+        findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
+    }
+
     private fun openInDefaultBrowser() {
-        val currentUrl = binding.krOnlineWebview.url
+        val currentUrl = currentWebView.url
         if (!currentUrl.isNullOrEmpty()) {
             try {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(currentUrl))
@@ -240,24 +272,40 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     private fun initWebview(url: String?) {
-        binding.krOnlineWebview.visibility = View.VISIBLE
-        val settings = binding.krOnlineWebview.settings
+        val root = binding.krOnlineWebview
+        root.visibility = View.VISIBLE
+        setupWebView(root, url?.startsWith("file:///android_asset") == true)
+        url?.let { root.loadUrl(it) }
+    }
 
+    // Cấu hình dùng chung cho WebView gốc và mọi tab con
+    private fun setupWebView(wv: WebView, isAssetPage: Boolean) {
         if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
             val isDark = ThemeModeState.isDarkMode()
-            WebSettingsCompat.setForceDark(settings, if (isDark) FORCE_DARK_ON else FORCE_DARK_OFF)
+            WebSettingsCompat.setForceDark(wv.settings, if (isDark) FORCE_DARK_ON else FORCE_DARK_OFF)
         }
 
-        val webViewInjector = WebViewInjector(binding.krOnlineWebview,
+        val webViewInjector = WebViewInjector(wv,
             object : ParamsFileChooserRender.FileChooserInterface {
                 override fun openFileChooser(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
                     return chooseFilePath(fileSelectedInterface)
                 }
             })
 
-        binding.krOnlineWebview.webChromeClient = object : WebChromeClient() {
+        wv.setFindListener { activeMatchOrdinal, numberOfMatches, _ ->
+            if (wv === currentWebView) {
+                binding.webappbar.toolbar.subtitle = when {
+                    findQuery.isEmpty() -> null
+                    numberOfMatches > 0 -> "${activeMatchOrdinal + 1}/$numberOfMatches"
+                    else -> "0/0"
+                }
+            }
+        }
+
+        wv.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 super.onProgressChanged(view, newProgress)
+                if (view !== currentWebView) return
                 if (newProgress < 100) {
                     loadProgressBar.isIndeterminate = false
                     loadProgressBar.progress = newProgress
@@ -267,8 +315,19 @@ class ActionPageOnline : AppCompatActivity() {
                 }
             }
 
-            // Alert/confirm của JS dùng hộp thoại có sẵn của app; không cho đóng ngoài nút để
-            // JsResult luôn được confirm()/cancel().
+            // Trả WebView mới cho trang gọi (window.open / target=_blank) để giữ window.opener
+            override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message?): Boolean {
+                if (resultMsg == null || tabs.size >= MAX_TABS) return false
+                val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
+                transport.webView = openTab()
+                resultMsg.sendToTarget()
+                return true
+            }
+
+            override fun onCloseWindow(window: WebView?) {
+                window?.let { closeTab(it) }
+            }
+
             override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
                 DialogHelper.alert(
                     context = this@ActionPageOnline,
@@ -293,18 +352,20 @@ class ActionPageOnline : AppCompatActivity() {
             }
         }
 
-        binding.krOnlineWebview.webViewClient = object : WebViewClient() {
+        wv.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                if (view !== currentWebView) return
                 loadProgressBar.visibility = View.GONE
                 view?.title?.let { setTitle(it) }
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
+                if (view !== currentWebView) return
                 loadProgressBar.isIndeterminate = true
                 loadProgressBar.visibility = View.VISIBLE
-                findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
+                closeSearchIfOpen()
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -323,9 +384,69 @@ class ActionPageOnline : AppCompatActivity() {
             }
         }
 
-        webViewInjector.inject(this, url?.startsWith("file:///android_asset") == true)
+        webViewInjector.inject(this, isAssetPage)
+        wv.settings.setSupportMultipleWindows(true)
+    }
 
-        url?.let { binding.krOnlineWebview.loadUrl(it) }
+    // Tạo tab con: ẩn (không destroy) tab đang hiện để khi quay lại không tải lại, không lộ trang thô
+    private fun openTab(): WebView {
+        closeSearchIfOpen()
+
+        val wv = WebView(this)
+        wv.layoutParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        tabs.first().background?.constantState?.newDrawable()?.let { wv.background = it }
+        setupWebView(wv, false)
+
+        val previous = currentWebView
+        previous.visibility = View.GONE
+        previous.onPause()
+
+        tabContainer.addView(wv)
+        tabs.add(wv)
+        syncUiToCurrentTab()
+        return wv
+    }
+
+    // Không đóng tab gốc; nếu đóng tab đang hiện thì hiện lại tab ngay trước đó
+    private fun closeTab(wv: WebView) {
+        if (tabs.size <= 1 || wv === tabs.first() || !tabs.contains(wv)) return
+
+        val wasCurrent = wv === currentWebView
+        if (wasCurrent) closeSearchIfOpen()
+
+        tabs.remove(wv)
+        tabContainer.removeView(wv)
+        wv.stopLoading()
+        // destroy() hoãn qua handler vì onCloseWindow có thể đang chạy ngay trong callback của chính WebView này
+        mainHandler.post {
+            wv.removeAllViews()
+            wv.destroy()
+        }
+
+        if (wasCurrent) {
+            val top = currentWebView
+            top.visibility = View.VISIBLE
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) top.onResume()
+            syncUiToCurrentTab()
+        }
+    }
+
+    // Đồng bộ tiêu đề, thanh tiến trình và số kết quả tìm kiếm theo tab đang hiện
+    private fun syncUiToCurrentTab() {
+        val wv = currentWebView
+        wv.title?.takeIf { it.isNotEmpty() }?.let { setTitle(it) }
+        val progress = wv.progress
+        if (progress < 100) {
+            loadProgressBar.isIndeterminate = progress <= 0
+            if (progress > 0) loadProgressBar.progress = progress
+            loadProgressBar.visibility = View.VISIBLE
+        } else {
+            loadProgressBar.visibility = View.GONE
+        }
+        binding.webappbar.toolbar.subtitle = null
     }
 
     private fun chooseFilePath(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
@@ -363,24 +484,25 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onPause() {
-        binding.krOnlineWebview.onPause()
+        currentWebView.onPause()
         super.onPause()
     }
 
     override fun onResume() {
         super.onResume()
-        binding.krOnlineWebview.onResume()
-        binding.krOnlineWebview.resumeTimers()
+        currentWebView.onResume()
+        currentWebView.resumeTimers()
     }
 
     override fun onDestroy() {
         loadProgressBar.visibility = View.GONE
-        binding.krOnlineWebview.apply {
-            stopLoading()
-            (parent as? ViewGroup)?.removeView(this)
-            removeAllViews()
-            destroy()
+        tabs.forEach { wv ->
+            wv.stopLoading()
+            (wv.parent as? ViewGroup)?.removeView(wv)
+            wv.removeAllViews()
+            wv.destroy()
         }
+        tabs.clear()
         super.onDestroy()
     }
 }
