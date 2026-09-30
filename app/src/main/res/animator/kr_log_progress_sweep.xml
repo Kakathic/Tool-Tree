@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <objectAnimator xmlns:android="http://schemas.android.com/apk/res/android"
-    android:duration="2000"
+    android:duration="1500"
     android:repeatCount="-1"
     android:repeatMode="restart">
     <propertyValuesHolder
@@ -10,15 +10,12 @@
             android:fraction="0"
             android:value="0" />
         <keyframe
-            android:fraction="0.2"
-            android:value="0" />
-        <keyframe
-            android:fraction="0.5915"
-            android:value="83.67142"
+            android:fraction="0.5"
+            android:value="30"
             android:interpolator="@interpolator/kr_log_pi_pt_a" />
         <keyframe
             android:fraction="1"
-            android:value="200.611057"
+            android:value="92"
             android:interpolator="@interpolator/kr_log_pi_pt_b" />
     </propertyValuesHolder>
     <propertyValuesHolder
@@ -28,11 +25,8 @@
             android:fraction="0"
             android:value="0.08" />
         <keyframe
-            android:fraction="0.3665"
-            android:value="0.08" />
-        <keyframe
-            android:fraction="0.6915"
-            android:value="0.661479"
+            android:fraction="0.5"
+            android:value="0.65"
             android:interpolator="@interpolator/kr_log_pi_ps_a" />
         <keyframe
             android:fraction="1"
