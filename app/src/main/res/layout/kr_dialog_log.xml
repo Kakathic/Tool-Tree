@@ -193,7 +193,7 @@
         android:layout_height="2dp"
         android:layout_alignTop="@id/log_scroll_view"
         android:indeterminate="true"
-        android:indeterminateDrawable="@drawable/kr_log_progress_indeterminate"
+        android:indeterminateDrawable="@drawable/kr_log_progress_indeterminate_md"
         android:max="100"
         android:progress="0"
         android:progressDrawable="@drawable/kr_log_progress_determinate" />
