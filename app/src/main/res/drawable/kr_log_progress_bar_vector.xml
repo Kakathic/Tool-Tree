@@ -5,14 +5,6 @@
     android:viewportWidth="100"
     android:viewportHeight="2">
     <group
-        android:name="secondary"
-        android:pivotX="0"
-        android:scaleX="0.08">
-        <path
-            android:fillColor="?android:attr/colorAccent"
-            android:pathData="M0,0h100v2h-100z" />
-    </group>
-    <group
         android:name="primary"
         android:pivotX="0"
         android:scaleX="0.08">

@@ -4,7 +4,4 @@
     <target
         android:name="primary"
         android:animation="@animator/kr_log_progress_sweep" />
-    <target
-        android:name="secondary"
-        android:animation="@animator/kr_log_progress_sweep_2" />
 </animated-vector>
