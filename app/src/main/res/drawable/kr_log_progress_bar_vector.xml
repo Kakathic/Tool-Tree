@@ -4,12 +4,9 @@
     android:height="2dp"
     android:viewportWidth="100"
     android:viewportHeight="2">
-    <path
-        android:name="bar"
-        android:pathData="M0,1L100,1"
-        android:strokeColor="?android:attr/colorAccent"
-        android:strokeLineCap="butt"
-        android:strokeWidth="2"
-        android:trimPathEnd="0"
-        android:trimPathStart="0" />
+    <group android:name="bar">
+        <path
+            android:fillColor="?android:attr/colorAccent"
+            android:pathData="M0,0h35v2h-35z" />
+    </group>
 </vector>

@@ -9,7 +9,7 @@
     <color name="cardBgLight">#CCFFFFFF</color>
     <color name="cardBgLightTransparent">#74FFFFFF</color>
     <color name="logPanelBgLight">#66FFFFFF</color>
-    <color name="logPanelBgDark">#66222222</color>
+    <color name="logPanelBgDark">#66000000</color>
 
     <color name="colorBlurLight">#5AFFFFFF</color>
     <color name="colorBlurDark">#41000000</color>

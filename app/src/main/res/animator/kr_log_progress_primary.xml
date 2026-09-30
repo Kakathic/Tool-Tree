@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Đoạn chính: trượt từ trái sang phải, dài ra rồi nghỉ ở ngoài khung -->
+<objectAnimator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="2100"
+    android:repeatCount="-1"
+    android:repeatMode="restart">
+    <propertyValuesHolder
+        android:propertyName="translateX"
+        android:valueType="floatType">
+        <keyframe android:fraction="0" android:value="-35" />
+        <keyframe
+            android:fraction="0.6"
+            android:interpolator="@interpolator/kr_log_ease_primary"
+            android:value="100" />
+        <keyframe android:fraction="1" android:value="100" />
+    </propertyValuesHolder>
+    <propertyValuesHolder
+        android:propertyName="scaleX"
+        android:valueType="floatType">
+        <keyframe android:fraction="0" android:value="0.35" />
+        <keyframe
+            android:fraction="0.6"
+            android:interpolator="@interpolator/kr_log_ease_primary"
+            android:value="0.9" />
+        <keyframe android:fraction="1" android:value="0.9" />
+    </propertyValuesHolder>
+</objectAnimator>
