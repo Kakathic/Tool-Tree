@@ -329,12 +329,14 @@ class XmlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
  */
 class TomlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     editText = editText,
-    keywordColor = 0xFFE5C07B.toInt(),     // Vàng: Table headers [[section]]
-    builtinColor = 0xFF61AFEF.toInt(),     // Xanh dương: Key names (title, desc, script...)
-    stringColor = 0xFF98C379.toInt(),      // Cam đào/Hồng đỏ: Chuỗi ("...")
-    commentColor = 0xFF7F848E.toInt(),     // Xám mờ: Chú thích (#)
-    numberColor = 0xFFE06C75.toInt(),      // Xanh lá: Số (0, 60...) và DateTime
-    punctuationColor = 0xFFABB2BF.toInt(), // Xám sáng: Dấu câu (=, ., [, ], {, })
+    // Catppuccin Mocha
+    keywordColor = 0xFFF9E2AF.toInt(),     // Vàng kem: Table
+    builtinColor = 0xFF89B4FA.toInt(),     // Xanh lam pastel: Key
+    stringColor = 0xFFA6E3A1.toInt(),      // Xanh lá dịu: String
+    commentColor = 0xFF6C7086.toInt(),     // Xám xịn: Comment
+    numberColor = 0xFFFAB387.toInt(),      // Cam đào: Number & DateTime
+    booleanColor = 0xFFF5C2E7.toInt(),     // Hồng phớt: Boolean
+    punctuationColor = 0xFFBAC2DE.toInt(), // Xám xanh sáng: Punctuation
 ) {
     private val bareKey = "[A-Za-z0-9_-]+"
     private val quotedKey = "\"(?:\\\\.|[^\"\\\\])*\"|'[^']*'"
@@ -374,7 +376,7 @@ class TomlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
                     }
                 }
                 groups["STRING"] != null -> color(text, start, end, stringColor())
-                groups["BOOLEAN"] != null -> color(text, start, end, 0xFF56B6C2.toInt()) // Cyan sáng cho boolean
+                groups["BOOLEAN"] != null -> color(text, start, end, booleanColor())
                 groups["DATETIME"] != null -> color(text, start, end, numberColor())
                 groups["NUMBER"] != null -> color(text, start, end, numberColor())
                 groups["PUNCTUATION"] != null -> color(text, start, end, punctuationColor())
