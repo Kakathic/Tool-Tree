@@ -331,9 +331,9 @@ class TomlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     editText = editText,
     keywordColor = 0xFFE5C07B.toInt(),     // Vàng: Table headers [[section]]
     builtinColor = 0xFF61AFEF.toInt(),     // Xanh dương: Key names (title, desc, script...)
-    stringColor = 0xFFE06C75.toInt(),      // Cam đào/Hồng đỏ: Chuỗi ("...")
+    stringColor = 0xFF98C379.toInt(),      // Cam đào/Hồng đỏ: Chuỗi ("...")
     commentColor = 0xFF7F848E.toInt(),     // Xám mờ: Chú thích (#)
-    numberColor = 0xFF98C379.toInt(),      // Xanh lá: Số (0, 60...) và DateTime
+    numberColor = 0xFFE06C75.toInt(),      // Xanh lá: Số (0, 60...) và DateTime
     punctuationColor = 0xFFABB2BF.toInt(), // Xám sáng: Dấu câu (=, ., [, ], {, })
 ) {
     private val bareKey = "[A-Za-z0-9_-]+"
