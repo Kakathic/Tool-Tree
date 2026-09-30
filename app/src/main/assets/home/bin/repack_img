@@ -161,6 +161,10 @@ process_erofss(){
   progress -1/0
 }
 
+thay_mau() {
+    sed '/info: ignored token/d'
+}
+
 if [ "$partition" == "erofs" ]; then
     [ "$DISATFS" == 0 ] || patch "$INPUT" "$fs_config" "$file_contexts" >"$TMP/patch_fs.log"
     if [ "$tool_erofs" == 1 ]; then
@@ -173,8 +177,8 @@ if [ "$partition" == "erofs" ]; then
         --fs-config-file="$fs_config" \
         --file-contexts="$file_contexts" \
         "$saved" "$INPUT" \
-        > "$TMP/mkfs_erofs.log" 2>$TMP/mkfs_erofs_error.log \
-        || killtree "Error build process mkfs.erofs\n$(cat $TMP/mkfs_erofs_error.log)" "$saved" &
+        > "$TMP/mkfs_erofs.log" 2> >(thay_mau >&2) \
+        || killtree "Error build process mkfs.erofs" "$saved" &
         process_erofss "$TMP/mkfs_erofs.log"
     fi
 elif [ "$partition" = "boot" ] || [ "$partition" = "vendor_boot" ]; then
@@ -286,7 +290,7 @@ elif [ "$partition" == "ext" ]; then
         if [ "$tool_ext" == 1 ]; then
             size="$(echo "$size_real / 4096" | bc)"
             mke2fs -O ^has_journal -t ext4 -N "$inodes" -b 4096 -m 0 -I 256 -L "${INPUT##*/}" -M "/${INPUT##*/}" "$saved" "$size" 2>&1
-            e2fsdroid -e -T "$time_build" -C "$fs_config" -S "$file_contexts" -f "$INPUT" -a "/${INPUT##*/}" "$saved" || killtree "Error build process e2fsdroid" "$saved"
+            e2fsdroid -e -T "$time_build" -C "$fs_config" -S "$file_contexts" -f "$INPUT" -a "/${INPUT##*/}" "$saved" 2> >(thay_mau >&2) || killtree "Error build process e2fsdroid" "$saved"
         elif [ "$tool_ext" == 2 ]; then
             imgkit_scuti pack --type ext4 -s "$INPUT" -o "$saved" -z "$size_real" --file-contexts "$file_contexts" --fs-config "$fs_config" -m "/${INPUT##*/}" --label "${INPUT##*/}" | tee "$TMP/imgkit_repack.log" || killtree "Error build process imgkit_scuti" "$saved"
         else
@@ -298,7 +302,7 @@ elif [ "$partition" == "ext" ]; then
         if [ "$tool_ext" == 1 ]; then
             size="$(echo "$size_orig / 4096" | bc)"
             mke2fs -O ^has_journal -t ext4 -N "$inodes" -b 4096 -m 0 -I 256 -L "${INPUT##*/}" -M "/${INPUT##*/}" "$saved" "$size" 2>&1
-            e2fsdroid -e -T "$time_build" -C "$fs_config" -S "$file_contexts" -f "$INPUT" -a "/${INPUT##*/}" "$saved" || killtree "Error build process e2fsdroid" "$saved"
+            e2fsdroid -e -T "$time_build" -C "$fs_config" -S "$file_contexts" -f "$INPUT" -a "/${INPUT##*/}" "$saved" 2> >(thay_mau >&2) || killtree "Error build process e2fsdroid" "$saved"
         elif [ "$tool_ext" == 2 ]; then
             imgkit_scuti pack --type ext4 -s "$INPUT" -o "$saved" -z "$size_orig" --file-contexts "$file_contexts" --fs-config "$fs_config" -m "/${INPUT##*/}" --label "${INPUT##*/}" | tee "$TMP/imgkit_repack.log" || killtree "Error build process imgkit_scuti" "$saved"
         else
