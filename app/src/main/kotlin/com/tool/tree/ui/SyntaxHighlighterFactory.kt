@@ -329,11 +329,11 @@ class XmlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
  */
 class TomlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     editText = editText,
-    keywordColor = 0xFFC678DD.toInt(),     // Tím: Table headers [[section]]
-    builtinColor = 0xFF61AFEF.toInt(),     // Xanh dương: Key names (title, test, get, set)
-    stringColor = 0xFF98C379.toInt(),      // Xanh lá: Chuỗi ký tự ("...")
+    keywordColor = 0xFFE5C07B.toInt(),     // Vàng: Table headers [[section]]
+    builtinColor = 0xFF61AFEF.toInt(),     // Xanh dương: Key names (title, desc, script...)
+    stringColor = 0xFFE06C75.toInt(),      // Cam đào/Hồng đỏ: Chuỗi ("...")
     commentColor = 0xFF7F848E.toInt(),     // Xám mờ: Chú thích (#)
-    numberColor = 0xFFD19A66.toInt(),      // Cam: Boolean (true/false), Numbers, DateTime
+    numberColor = 0xFF98C379.toInt(),      // Xanh lá: Số (0, 60...) và DateTime
     punctuationColor = 0xFFABB2BF.toInt(), // Xám sáng: Dấu câu (=, ., [, ], {, })
 ) {
     private val bareKey = "[A-Za-z0-9_-]+"
@@ -374,7 +374,7 @@ class TomlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
                     }
                 }
                 groups["STRING"] != null -> color(text, start, end, stringColor())
-                groups["BOOLEAN"] != null -> color(text, start, end, numberColor())
+                groups["BOOLEAN"] != null -> color(text, start, end, 0xFF56B6C2.toInt()) // Cyan sáng cho boolean
                 groups["DATETIME"] != null -> color(text, start, end, numberColor())
                 groups["NUMBER"] != null -> color(text, start, end, numberColor())
                 groups["PUNCTUATION"] != null -> color(text, start, end, punctuationColor())
