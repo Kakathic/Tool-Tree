@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/kr_progress_aosp_vector">
+    <target
+        android:name="rect2_grp"
+        android:animation="@animator/kr_log_progress_aosp_rect2" />
+    <target
+        android:name="rect1_grp"
+        android:animation="@animator/kr_log_progress_aosp_rect1" />
+</animated-vector>

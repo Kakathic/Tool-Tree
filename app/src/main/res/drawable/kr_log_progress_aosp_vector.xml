@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dựa trên vector_drawable_progress_indeterminate_horizontal của AOSP (Apache 2.0).
+     Chỉ đổi chiều cao: viewport 360x2 để thanh vừa khít ProgressBar cao 2dp. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="360dp"
+    android:height="2dp"
+    android:viewportWidth="360"
+    android:viewportHeight="2">
+    <group
+        android:name="progress_group"
+        android:translateX="180"
+        android:translateY="1">
+        <path
+            android:name="background_track"
+            android:fillAlpha="?android:attr/disabledAlpha"
+            android:fillColor="?android:attr/colorAccent"
+            android:pathData="M -180.0,-1.0 l 360.0,0 l 0,2.0 l -360.0,0 Z" />
+        <group
+            android:name="rect2_grp"
+            android:scaleX="0.1"
+            android:translateX="-197.60001">
+            <path
+                android:name="rect2"
+                android:fillColor="?android:attr/colorAccent"
+                android:pathData="M -144.0,-1.0 l 288.0,0 l 0,2.0 l -288.0,0 Z" />
+        </group>
+        <group
+            android:name="rect1_grp"
+            android:scaleX="0.1"
+            android:translateX="-522.59998">
+            <path
+                android:name="rect1"
+                android:fillColor="?android:attr/colorAccent"
+                android:pathData="M -144.0,-1.0 l 288.0,0 l 0,2.0 l -288.0,0 Z" />
+        </group>
+    </group>
+</vector>

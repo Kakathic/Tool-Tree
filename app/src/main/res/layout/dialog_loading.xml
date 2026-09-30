@@ -14,6 +14,7 @@
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp">
         <ProgressBar
+            android:indeterminateDrawable="@drawable/kr_progress_indeterminate_aosp"
             android:layout_gravity="center_horizontal"
             android:id="@+id/dialog_app_details_progress"
             android:layout_width="match_parent"

@@ -118,6 +118,7 @@
     </RelativeLayout>
 
     <ProgressBar
+        android:indeterminateDrawable="@drawable/kr_progress_indeterminate_aosp"
         android:id="@+id/action_progress"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"

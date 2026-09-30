@@ -72,6 +72,7 @@
         android:layout_height="0dp" />
 
     <ProgressBar
+        android:indeterminateDrawable="@drawable/kr_progress_indeterminate_aosp"
         android:layout_gravity="center_horizontal"
         android:id="@+id/loading"
         android:visibility="gone"
