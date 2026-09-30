@@ -10,16 +10,17 @@
             android:fraction="0"
             android:value="0" />
         <keyframe
-            android:fraction="0.2"
-            android:value="0" />
+            android:fraction="0.25"
+            android:value="37.651913"
+            android:interpolator="@interpolator/kr_log_pi_st_a" />
         <keyframe
-            android:fraction="0.5915"
-            android:value="83.67142"
-            android:interpolator="@interpolator/kr_log_pi_pt_a" />
+            android:fraction="0.4835"
+            android:value="84.386165"
+            android:interpolator="@interpolator/kr_log_pi_st_b" />
         <keyframe
             android:fraction="1"
-            android:value="200.611057"
-            android:interpolator="@interpolator/kr_log_pi_pt_b" />
+            android:value="160.277782"
+            android:interpolator="@interpolator/kr_log_pi_st_c" />
     </propertyValuesHolder>
     <propertyValuesHolder
         android:propertyName="scaleX"
@@ -28,15 +29,16 @@
             android:fraction="0"
             android:value="0.08" />
         <keyframe
-            android:fraction="0.3665"
-            android:value="0.08" />
+            android:fraction="0.1915"
+            android:value="0.457104"
+            android:interpolator="@interpolator/kr_log_pi_ss_a" />
         <keyframe
-            android:fraction="0.6915"
-            android:value="0.661479"
-            android:interpolator="@interpolator/kr_log_pi_ps_a" />
+            android:fraction="0.4415"
+            android:value="0.72796"
+            android:interpolator="@interpolator/kr_log_pi_ss_b" />
         <keyframe
             android:fraction="1"
             android:value="0.08"
-            android:interpolator="@interpolator/kr_log_pi_ps_b" />
+            android:interpolator="@interpolator/kr_log_pi_ss_c" />
     </propertyValuesHolder>
 </objectAnimator>
