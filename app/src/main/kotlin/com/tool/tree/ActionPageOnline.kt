@@ -1,7 +1,11 @@
 package com.tool.tree
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -11,6 +15,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Menu
 import android.view.MenuItem
 import android.view.PixelCopy
@@ -73,9 +78,21 @@ class ActionPageOnline : AppCompatActivity() {
     private val backNoLoadRunnable = Runnable { removeBackOverlay() }
     private val backSafetyRunnable = Runnable { removeBackOverlay() }
 
+    // Trạng thái tự ẩn/hiện toolbar khi cuộn (fraction: 0 = hiện, 1 = ẩn hoàn toàn)
+    private var toolbarFraction = 0f
+    private var toolbarHidden = false
+    private var toolbarAnimator: ValueAnimator? = null
+    private var toolbarShowPending = false
+    private var scrollAccum = 0
+    private var ignoreScrollUntil = 0L
+
     private companion object {
         const val BACK_NO_LOAD_TIMEOUT = 600L
         const val BACK_SAFETY_TIMEOUT = 10000L
+        const val TOOLBAR_HIDE_DP = 48
+        const val TOOLBAR_SHOW_DP = 24
+        const val TOOLBAR_ANIM_DURATION = 200L
+        const val TOOLBAR_SETTLE_MS = 150L
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,7 +129,18 @@ class ActionPageOnline : AppCompatActivity() {
             }
         }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            binding.krOnlineWebview.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
+                onWebScroll(scrollY, oldScrollY)
+            }
+        }
+
         loadIntentData()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        resetToolbar()
     }
 
     override fun onTitleChanged(title: CharSequence?, color: Int) {
@@ -191,7 +219,6 @@ class ActionPageOnline : AppCompatActivity() {
         }
     }
 
-    // Popup List Item bo góc dùng chung toàn app (OverflowMenuPopup)
     private fun showOnlineOverflowPopup(anchor: View) {
         val rows = listOf(
             PopupMenuRow(
@@ -217,6 +244,7 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     private fun startFind() {
+        setToolbarHidden(false)
         val toolbar = binding.webappbar.toolbar
         toolbar.post {
             findItem?.let {
@@ -236,7 +264,6 @@ class ActionPageOnline : AppCompatActivity() {
         }
     }
 
-    // Trong tìm kiếm: Back 1 ẩn bàn phím -> Back 2 đóng thanh tìm kiếm
     private fun handleSearchBack() {
         val find = findItem ?: return
         if (!find.isActionViewExpanded) return
@@ -378,6 +405,7 @@ class ActionPageOnline : AppCompatActivity() {
                     backLoadStarted = true
                     backHandler.removeCallbacks(backNoLoadRunnable)
                 }
+                showToolbarOrDefer()
                 findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
             }
 
@@ -402,7 +430,6 @@ class ActionPageOnline : AppCompatActivity() {
         url?.let { binding.krOnlineWebview.loadUrl(it) }
     }
 
-    // Full màn hình video HTML5: phủ container đen lên toàn bộ root, ẩn system bars
     private fun showCustomView(view: View, callback: WebChromeClient.CustomViewCallback?) {
         findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
         val container = FrameLayout(this).apply {
@@ -438,11 +465,11 @@ class ActionPageOnline : AppCompatActivity() {
         if (!readingMode) setSystemBarsHidden(false)
     }
 
-    // Chế độ đọc: ẩn toolbar + system bars, WebView chiếm toàn màn hình, thoát bằng Back
     private fun enterReadingMode() {
         if (readingMode || backBusy || customView != null) return
         findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
         readingMode = true
+        resetToolbar()
         binding.webappbar.root.visibility = View.GONE
         updateWebViewTopRule(belowToolbar = false)
         setSystemBarsHidden(true)
@@ -455,6 +482,77 @@ class ActionPageOnline : AppCompatActivity() {
         binding.webappbar.root.visibility = View.VISIBLE
         updateWebViewTopRule(belowToolbar = true)
         setSystemBarsHidden(false)
+    }
+
+    // Cuộn xuống quá ngưỡng thì ẩn toolbar, cuộn ngược lên một đoạn hoặc về đầu trang thì hiện lại
+    private fun onWebScroll(scrollY: Int, oldScrollY: Int) {
+        if (SystemClock.uptimeMillis() < ignoreScrollUntil || !canAutoHideToolbar()) return
+        if (scrollY <= 0) {
+            scrollAccum = 0
+            setToolbarHidden(false)
+            return
+        }
+        val dy = scrollY - oldScrollY
+        if (dy == 0) return
+        if ((dy > 0) != (scrollAccum > 0)) scrollAccum = 0
+        scrollAccum += dy
+        val density = resources.displayMetrics.density
+        if (!toolbarHidden && scrollAccum > TOOLBAR_HIDE_DP * density) {
+            setToolbarHidden(true)
+        } else if (toolbarHidden && scrollAccum < -TOOLBAR_SHOW_DP * density) {
+            setToolbarHidden(false)
+        }
+    }
+
+    private fun canAutoHideToolbar(): Boolean {
+        return !readingMode && customView == null && backOverlay == null &&
+            findItem?.isActionViewExpanded != true
+    }
+
+    private fun setToolbarHidden(hidden: Boolean) {
+        if (toolbarHidden == hidden) return
+        if (binding.webappbar.root.height <= 0) return
+        toolbarHidden = hidden
+        scrollAccum = 0
+        toolbarAnimator?.cancel()
+        val animator = ValueAnimator.ofFloat(toolbarFraction, if (hidden) 1f else 0f)
+        animator.duration = TOOLBAR_ANIM_DURATION
+        animator.addUpdateListener { applyToolbarFraction(it.animatedValue as Float) }
+        animator.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                ignoreScrollUntil = SystemClock.uptimeMillis() + TOOLBAR_SETTLE_MS
+            }
+        })
+        // Bỏ qua sự kiện cuộn do WebView đổi kích thước trong lúc/ngay sau animation (tránh nhấp nháy)
+        ignoreScrollUntil = SystemClock.uptimeMillis() + TOOLBAR_ANIM_DURATION + TOOLBAR_SETTLE_MS
+        toolbarAnimator = animator
+        animator.start()
+    }
+
+    // Trượt toolbar lên và kéo WebView lên theo; chừa lại vùng status bar phía trên WebView
+    private fun applyToolbarFraction(fraction: Float) {
+        toolbarFraction = fraction
+        val bar = binding.webappbar.root
+        val statusTop = binding.webappbar.blurTopContainer.paddingTop
+        bar.translationY = -bar.height * fraction
+        val webView = binding.krOnlineWebview
+        val params = webView.layoutParams as? RelativeLayout.LayoutParams ?: return
+        params.topMargin = -((bar.height - statusTop) * fraction).toInt()
+        webView.layoutParams = params
+    }
+
+    private fun resetToolbar() {
+        toolbarAnimator?.cancel()
+        toolbarAnimator = null
+        toolbarHidden = false
+        toolbarShowPending = false
+        scrollAccum = 0
+        applyToolbarFraction(0f)
+    }
+
+    // Đang có overlay của nút Back thì hoãn hiện toolbar đến khi overlay được gỡ
+    private fun showToolbarOrDefer() {
+        if (backOverlay != null) toolbarShowPending = true else setToolbarHidden(false)
     }
 
     private fun updateWebViewTopRule(belowToolbar: Boolean) {
@@ -587,6 +685,10 @@ class ActionPageOnline : AppCompatActivity() {
         backOverlayBitmap = null
         backLoadStarted = false
         backBusy = false
+        if (toolbarShowPending) {
+            toolbarShowPending = false
+            if (!isFinishing && !isDestroyed) setToolbarHidden(false)
+        }
     }
 
     private fun chooseFilePath(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
@@ -635,6 +737,7 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        toolbarAnimator?.cancel()
         hideCustomView()
         backHandler.removeCallbacksAndMessages(null)
         removeBackOverlay()
