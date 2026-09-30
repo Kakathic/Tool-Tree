@@ -36,12 +36,12 @@
             </com.omarea.common.ui.BlurTopBarLayout>
 
             <ProgressBar
-                android:indeterminateDrawable="@drawable/kr_progress_indeterminate_aosp"
+                android:indeterminateDrawable="@drawable/kr_log_progress_indeterminate_aosp"
+                android:progressDrawable="@drawable/kr_log_progress_determinate"
                 android:id="@+id/page_load_progress"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
-                android:layout_height="8dp"
-                android:translationY="3dp"
+                android:layout_height="2dp"
                 android:layout_gravity="bottom"
                 android:max="100"
                 android:progress="0"
