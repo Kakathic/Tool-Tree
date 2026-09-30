@@ -6,18 +6,20 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Rect
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.Menu
 import android.view.MenuItem
 import android.view.PixelCopy
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.webkit.*
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.RelativeLayout
@@ -27,9 +29,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebSettingsCompat.FORCE_DARK_OFF
 import androidx.webkit.WebSettingsCompat.FORCE_DARK_ON
@@ -39,23 +41,29 @@ import com.omarea.common.ui.DialogHelper
 import com.omarea.krscript.WebViewInjector
 import com.omarea.krscript.ui.ParamsFileChooserRender
 import com.tool.tree.databinding.ActivityActionPageOnlineBinding
+import com.tool.tree.ui.OverflowMenuPopup
+import com.tool.tree.ui.PopupMenuRow
+import com.tool.tree.ui.PopupRowTypeIcon
 
 class ActionPageOnline : AppCompatActivity() {
     private lateinit var binding: ActivityActionPageOnlineBinding
     private val loadProgressBar by lazy { findViewById<ProgressBar>(R.id.page_load_progress) }
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
     private val ACTION_FILE_PATH_CHOOSER = 65400
-    private val MENU_FIND = 1002
+    private val MENU_FIND_VIEW = 1005
     private val MENU_FIND_PREV = 1003
     private val MENU_FIND_NEXT = 1004
-    private val MENU_LINK = 1001
 
     private var findItem: MenuItem? = null
     private var findPrevItem: MenuItem? = null
     private var findNextItem: MenuItem? = null
     private var findQuery = ""
 
-    // Back trong WebView: phủ ảnh chụp trang hiện tại cho tới khi trang cũ tải + vẽ xong
+    private var customView: View? = null
+    private var customViewCallback: WebChromeClient.CustomViewCallback? = null
+    private var videoContainer: FrameLayout? = null
+    private var readingMode = false
+
     private val backHandler = Handler(Looper.getMainLooper())
     private var backOverlay: ImageView? = null
     private var backOverlayBitmap: Bitmap? = null
@@ -87,12 +95,12 @@ class ActionPageOnline : AppCompatActivity() {
         setTitle(R.string.app_name)
 
         onBackPressedDispatcher.addCallback(this) {
-            if (findItem?.isActionViewExpanded == true) {
-                handleSearchBack()
-            } else if (binding.krOnlineWebview.canGoBack()) {
-                goBackKeepCurrentPage()
-            } else {
-                finish()
+            when {
+                customView != null -> hideCustomView()
+                findItem?.isActionViewExpanded == true -> handleSearchBack()
+                readingMode -> exitReadingMode()
+                binding.krOnlineWebview.canGoBack() -> goBackKeepCurrentPage()
+                else -> finish()
             }
         }
 
@@ -131,10 +139,11 @@ class ActionPageOnline : AppCompatActivity() {
             })
         }
 
-        findItem = menu.add(0, MENU_FIND, 0, R.string.online_find_in_page).apply {
+        findItem = menu.add(0, MENU_FIND_VIEW, 0, R.string.online_find_in_page).apply {
             setIcon(R.drawable.ic_search_web)
             actionView = searchView
             setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW)
+            isVisible = false
             setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
                 override fun onMenuItemActionExpand(item: MenuItem): Boolean {
                     findPrevItem?.isVisible = true
@@ -146,6 +155,7 @@ class ActionPageOnline : AppCompatActivity() {
                     findPrevItem?.isVisible = false
                     findNextItem?.isVisible = false
                     clearFind()
+                    toolbar.post { item.isVisible = false }
                     return true
                 }
             })
@@ -160,10 +170,11 @@ class ActionPageOnline : AppCompatActivity() {
             isVisible = false
         }
 
-        menu.add(0, MENU_LINK, 3, R.string.open_in_browser).apply {
-            icon = createLinkIcon()
-            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-        }
+        val overflowItem = menu.add(Menu.NONE, Menu.NONE, 10, getString(R.string.kr_more_options))
+        overflowItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        val overflowButton = OverflowMenuPopup.buildButton(this)
+        overflowButton.setOnClickListener { showOnlineOverflowPopup(overflowButton) }
+        overflowItem.actionView = overflowButton
 
         toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -175,11 +186,42 @@ class ActionPageOnline : AppCompatActivity() {
                     binding.krOnlineWebview.findNext(true)
                     true
                 }
-                MENU_LINK -> {
-                    openInDefaultBrowser()
-                    true
-                }
                 else -> false
+            }
+        }
+    }
+
+    // Popup List Item bo góc dùng chung toàn app (OverflowMenuPopup)
+    private fun showOnlineOverflowPopup(anchor: View) {
+        val rows = listOf(
+            PopupMenuRow(
+                title = getString(R.string.online_find_in_page),
+                leftIcon = ContextCompat.getDrawable(this, R.drawable.ic_search_web),
+                typeIcon = PopupRowTypeIcon.NONE,
+                checked = false
+            ) { startFind() },
+            PopupMenuRow(
+                title = getString(R.string.online_fullscreen),
+                leftIcon = ContextCompat.getDrawable(this, R.drawable.ic_expand_fullscreen),
+                typeIcon = PopupRowTypeIcon.NONE,
+                checked = false
+            ) { enterReadingMode() },
+            PopupMenuRow(
+                title = getString(R.string.open_in_browser),
+                leftIcon = null,
+                typeIcon = PopupRowTypeIcon.LINK,
+                checked = false
+            ) { openInDefaultBrowser() }
+        )
+        OverflowMenuPopup.show(this, anchor, rows)
+    }
+
+    private fun startFind() {
+        val toolbar = binding.webappbar.toolbar
+        toolbar.post {
+            findItem?.let {
+                it.isVisible = true
+                it.expandActionView()
             }
         }
     }
@@ -194,18 +236,7 @@ class ActionPageOnline : AppCompatActivity() {
         }
     }
 
-    private fun createLinkIcon(): Drawable? {
-        val toolbarContext = binding.webappbar.toolbar.context
-        val typedArray = toolbarContext.obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary))
-        val tint = typedArray.getColor(0, Color.GRAY)
-        typedArray.recycle()
-        val base = ContextCompat.getDrawable(this, R.drawable.kr_link)?.mutate() ?: return null
-        val wrapped = DrawableCompat.wrap(base)
-        DrawableCompat.setTint(wrapped, tint)
-        return wrapped
-    }
-
-    // Back 1: ẩn bàn phím -> Back 2: đóng tìm kiếm -> Back 3: về trang web trước
+    // Trong tìm kiếm: Back 1 ẩn bàn phím -> Back 2 đóng thanh tìm kiếm
     private fun handleSearchBack() {
         val find = findItem ?: return
         if (!find.isActionViewExpanded) return
@@ -278,6 +309,22 @@ class ActionPageOnline : AppCompatActivity() {
             })
 
         binding.krOnlineWebview.webChromeClient = object : WebChromeClient() {
+            override fun onShowCustomView(view: View?, callback: WebChromeClient.CustomViewCallback?) {
+                if (view == null || customView != null) {
+                    callback?.onCustomViewHidden()
+                    return
+                }
+                showCustomView(view, callback)
+            }
+
+            override fun onHideCustomView() {
+                hideCustomView()
+            }
+
+            override fun getDefaultVideoPoster(): Bitmap? {
+                return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+            }
+
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 super.onProgressChanged(view, newProgress)
                 if (newProgress < 100) {
@@ -355,6 +402,93 @@ class ActionPageOnline : AppCompatActivity() {
         url?.let { binding.krOnlineWebview.loadUrl(it) }
     }
 
+    // Full màn hình video HTML5: phủ container đen lên toàn bộ root, ẩn system bars
+    private fun showCustomView(view: View, callback: WebChromeClient.CustomViewCallback?) {
+        findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
+        val container = FrameLayout(this).apply {
+            setBackgroundColor(Color.BLACK)
+            isClickable = true
+            layoutParams = RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            addView(view, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            ))
+        }
+        binding.root.addView(container)
+        videoContainer = container
+        customView = view
+        customViewCallback = callback
+        setSystemBarsHidden(true)
+    }
+
+    private fun hideCustomView() {
+        if (customView == null) return
+        videoContainer?.let {
+            it.removeAllViews()
+            (it.parent as? ViewGroup)?.removeView(it)
+        }
+        videoContainer = null
+        customView = null
+        val callback = customViewCallback
+        customViewCallback = null
+        callback?.onCustomViewHidden()
+        if (!readingMode) setSystemBarsHidden(false)
+    }
+
+    // Chế độ đọc: ẩn toolbar + system bars, WebView chiếm toàn màn hình, thoát bằng Back
+    private fun enterReadingMode() {
+        if (readingMode || backBusy || customView != null) return
+        findItem?.takeIf { it.isActionViewExpanded }?.collapseActionView()
+        readingMode = true
+        binding.webappbar.root.visibility = View.GONE
+        updateWebViewTopRule(belowToolbar = false)
+        setSystemBarsHidden(true)
+        Toast.makeText(this, R.string.online_fullscreen_hint, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun exitReadingMode() {
+        if (!readingMode) return
+        readingMode = false
+        binding.webappbar.root.visibility = View.VISIBLE
+        updateWebViewTopRule(belowToolbar = true)
+        setSystemBarsHidden(false)
+    }
+
+    private fun updateWebViewTopRule(belowToolbar: Boolean) {
+        val webView = binding.krOnlineWebview
+        val params = webView.layoutParams as? RelativeLayout.LayoutParams ?: return
+        if (belowToolbar) {
+            params.removeRule(RelativeLayout.ALIGN_PARENT_TOP)
+            params.addRule(RelativeLayout.BELOW, R.id.webappbar)
+        } else {
+            params.removeRule(RelativeLayout.BELOW)
+            params.addRule(RelativeLayout.ALIGN_PARENT_TOP)
+        }
+        webView.layoutParams = params
+    }
+
+    private fun setSystemBarsHidden(hidden: Boolean) {
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        if (hidden) {
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+        } else {
+            controller.show(WindowInsetsCompat.Type.systemBars())
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val attrs = window.attributes
+            attrs.layoutInDisplayCutoutMode = if (hidden) {
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            } else {
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+            }
+            window.attributes = attrs
+        }
+    }
+
     private fun goBackKeepCurrentPage() {
         if (backBusy) return
         backBusy = true
@@ -429,7 +563,6 @@ class ActionPageOnline : AppCompatActivity() {
         return true
     }
 
-    // onPageFinished chưa chắc DOM đã sẵn sàng vẽ -> đợi visual state rồi mới gỡ ảnh phủ
     private fun releaseBackOverlayWhenPainted(view: WebView) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             view.postVisualStateCallback(++backRequestId, object : WebView.VisualStateCallback() {
@@ -502,6 +635,7 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        hideCustomView()
         backHandler.removeCallbacksAndMessages(null)
         removeBackOverlay()
         loadProgressBar.visibility = View.GONE
