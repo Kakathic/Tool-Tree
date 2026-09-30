@@ -2,6 +2,6 @@
 <animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:drawable="@drawable/kr_log_progress_bar_vector">
     <target
-        android:name="primary"
+        android:name="bar"
         android:animation="@animator/kr_log_progress_sweep" />
 </animated-vector>

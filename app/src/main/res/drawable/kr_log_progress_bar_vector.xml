@@ -4,12 +4,12 @@
     android:height="2dp"
     android:viewportWidth="100"
     android:viewportHeight="2">
-    <group
-        android:name="primary"
-        android:pivotX="0"
-        android:scaleX="0.08">
-        <path
-            android:fillColor="?android:attr/colorAccent"
-            android:pathData="M0,0h100v2h-100z" />
-    </group>
+    <path
+        android:name="bar"
+        android:pathData="M0,1L100,1"
+        android:strokeColor="?android:attr/colorAccent"
+        android:strokeLineCap="butt"
+        android:strokeWidth="2"
+        android:trimPathEnd="0"
+        android:trimPathStart="0" />
 </vector>

@@ -4,33 +4,31 @@
     android:repeatCount="-1"
     android:repeatMode="restart">
     <propertyValuesHolder
-        android:propertyName="translateX"
+        android:propertyName="trimPathEnd"
         android:valueType="floatType">
         <keyframe
             android:fraction="0"
             android:value="0" />
         <keyframe
-            android:fraction="0.5"
-            android:value="30"
-            android:interpolator="@interpolator/kr_log_pi_pt_a" />
+            android:fraction="0.6"
+            android:value="1"
+            android:interpolator="@interpolator/kr_log_pi_head" />
         <keyframe
             android:fraction="1"
-            android:value="92"
-            android:interpolator="@interpolator/kr_log_pi_pt_b" />
+            android:value="1" />
     </propertyValuesHolder>
     <propertyValuesHolder
-        android:propertyName="scaleX"
+        android:propertyName="trimPathStart"
         android:valueType="floatType">
         <keyframe
             android:fraction="0"
-            android:value="0.08" />
+            android:value="0" />
         <keyframe
-            android:fraction="0.5"
-            android:value="0.65"
-            android:interpolator="@interpolator/kr_log_pi_ps_a" />
+            android:fraction="0.3"
+            android:value="0" />
         <keyframe
             android:fraction="1"
-            android:value="0.08"
-            android:interpolator="@interpolator/kr_log_pi_ps_b" />
+            android:value="1"
+            android:interpolator="@interpolator/kr_log_pi_tail" />
     </propertyValuesHolder>
 </objectAnimator>
