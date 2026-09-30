@@ -375,6 +375,13 @@ class ActionPageOnline : AppCompatActivity() {
                         val intent = Intent(Intent.ACTION_VIEW, requestUrl)
                         startActivity(intent)
                         true
+                    } else if (request != null && requestUrl != null && view === currentWebView &&
+                        request.isForMainFrame && request.hasGesture() && !request.isRedirect &&
+                        request.method.equals("GET", true) && tabs.size < MAX_TABS
+                    ) {
+                        // Link người dùng bấm mở thành tab mới: trang cũ đứng yên nên Back không phải nạp lại
+                        openTab().loadUrl(requestUrl.toString())
+                        true
                     } else {
                         super.shouldOverrideUrlLoading(view, request)
                     }
