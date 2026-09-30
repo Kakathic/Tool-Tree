@@ -18,25 +18,18 @@ class PathAnalysis(private var context: Context, private var parentDir: String =
 
     fun getCurrentAbsPath(): String = currentAbsPath
 
-    // Thay "{HOME}" bằng thư mục home thật của app (đúng kiểu lấy dùng chung trong project:
-    // ThemeModeState/LanguageManager... File(context.filesDir, "home")), áp dụng cho MỌI path
-    // đi qua parsePath (icon, html, load-key, text editor...), không chỉ riêng load-key.
     private fun resolveHomePlaceholder(filePath: String): String {
         if (!filePath.contains("{HOME}")) return filePath
         val homeDir = File(context.filesDir, "home").absolutePath
         return filePath.replace("{HOME}", homeDir)
     }
 
-    // Thay "{ICON}" bằng thư mục icon thật của app (home/etc/icon), cùng quy ước với {HOME}.
     private fun resolveIconPlaceholder(filePath: String): String {
         if (!filePath.contains("{ICON}")) return filePath
         val iconDir = File(context.filesDir, "home/etc/icon").absolutePath
         return filePath.replace("{ICON}", iconDir)
     }
 
-    // Flag file "Ticon" trong home/usr/log/ (cùng kiểu dissblur/directbg/language ở
-    // ThemeModeState/LanguageManager), nội dung "1" thì tắt riêng các path dùng {ICON}
-    // (path tĩnh khác không dùng {ICON} vẫn hiện icon bình thường).
     private fun isIconDisabled(): Boolean {
         val file = File(context.filesDir, "home/usr/log/Ticon")
         return try {
@@ -47,8 +40,6 @@ class PathAnalysis(private var context: Context, private var parentDir: String =
     }
 
     fun parsePath(filePath: String): InputStream? {
-        // Ticon=1 chỉ tắt riêng các path dùng {ICON} - kiểm tra trên placeholder gốc, trước khi
-        // thử {HOME}, để không mở nhầm file thật khi icon đã bị tắt.
         if (filePath.contains("{ICON}") && isIconDisabled()) return null
 
         return openResolvedPath(filePath)
@@ -68,12 +59,6 @@ class PathAnalysis(private var context: Context, private var parentDir: String =
         }
     }
 
-    // Thời gian sửa đổi cuối của file vừa parsePath() thành công, dùng để phát hiện file bị
-    // THAY NỘI DUNG dù giữ nguyên tên/đường dẫn (vd icon đổi ảnh mới cùng path cũ). Trả về 0
-    // khi không xác định được (asset - không có mtime filesystem thật; hoặc file phải mở qua
-    // root - currentAbsPath không trỏ tới file gốc nên đọc mtime trực tiếp sẽ luôn ra 0/lỗi
-    // do không có quyền, không cố tình chạy thêm lệnh root chỉ để lấy mtime). 0 nghĩa là bên
-    // gọi nên coi cache là còn hợp lệ mãi (giữ đúng hành vi cache cũ cho 2 trường hợp này).
     fun getCurrentLastModified(): Long {
         if (currentAbsPath.isEmpty() || currentAbsPath.startsWith(ASSETS_FILE)) return 0L
         return try {
@@ -83,35 +68,26 @@ class PathAnalysis(private var context: Context, private var parentDir: String =
         }
     }
 
-    /**
-     * Tối ưu hóa việc nối đường dẫn bằng cách sử dụng java.net.URI 
-     * để tự động xử lý các ký hiệu ../ và ./ một cách chuẩn xác.
-     */
     private fun pathConcat(parent: String, target: String): String {
         return try {
             val isAssets = parent.startsWith(ASSETS_FILE)
-            val base = if (isAssets) parent else "file://$parent"
-            
-            // Sử dụng URI để normalize đường dẫn (xử lý ../ và ./)
+            // parent luôn là thư mục: thêm "/" cuối để URI.resolve không coi đoạn cuối là tên file
+            val dir = if (parent.endsWith("/")) parent else "$parent/"
+            val base = if (isAssets) dir else "file://$dir"
             val uri = URI(base).resolve(target).normalize()
             
             val result = uri.toString()
             if (isAssets) result else result.removePrefix("file:")
         } catch (e: Exception) {
-            // Fallback nếu URI fail
             if (parent.endsWith("/")) parent + target else "$parent/$target"
         }
     }
 
-    /**
-     * Cải tiến việc mở file bằng Root: sử dụng tên file động để tránh xung đột (Collision)
-     */
     private fun useRootOpenFile(filePath: String): InputStream? {
         if (RootFile.fileExists(filePath)) {
             val cacheDir = File(FileWrite.getPrivateFilePath(context, "icons"))
             if (!cacheDir.exists()) cacheDir.mkdirs()
 
-            // Tạo tên file cache dựa trên hash đường dẫn để tránh ghi đè khi mở nhiều file cùng lúc
             val fileName = "cache_${filePath.hashCode()}"
             val cachePath = File(cacheDir, fileName).absolutePath
             val fileOwner = FileOwner(context).getFileOwner()
@@ -148,7 +124,6 @@ class PathAnalysis(private var context: Context, private var parentDir: String =
     }
 
     private fun findDiskResource(filePath: String): InputStream? {
-        // 1. Tìm tương đối so với parentDir
         if (parentDir.isNotEmpty()) {
             val relativePath = pathConcat(parentDir, filePath)
             val file = File(relativePath)
@@ -159,7 +134,6 @@ class PathAnalysis(private var context: Context, private var parentDir: String =
             useRootOpenFile(relativePath)?.let { return it }
         }
 
-        // 2. Tìm trong thư mục riêng của ứng dụng (Private Data)
         val privateDir = FileWrite.getPrivateFileDir(context)
         val privatePath = pathConcat(privateDir, filePath)
         val pFile = File(privatePath)

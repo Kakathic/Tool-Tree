@@ -10,3 +10,18 @@ title = "Trình tạo mã TOML"
 desc = "Giúp bạn tạo mã toml nhanh hơn"
 icon = "🔥"
 link = "https://kakathic.github.io/Tool-Tree/website/Toml-generator.html"
+
+[[group]]
+[[editor]]
+title = "Chỉnh sửa TEST"
+desc = "Sửa trực tiếp code khu vực test"
+icon = "⚙️"
+file = "test.toml"
+placeholder = "[[toml]]"
+
+[[page]]
+title = "Khu vực TEST"
+config = "{HOME}/etc/toml/test.toml"
+lock-sh = """
+test -f $ETC/toml/test.toml && echo 0 || echo "Mở chỉnh sửa TEST trước"
+"""
