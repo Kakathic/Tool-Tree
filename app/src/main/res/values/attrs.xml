@@ -13,6 +13,7 @@
 
     <!-- Thuộc tính chung -->
     <attr name="cardBg" format="color"/>
+    <attr name="logPanelBg" format="color" />
     <attr name="colorParse" format="color" />
     <attr name="colorPirm" format="color" />
     

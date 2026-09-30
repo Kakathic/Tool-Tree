@@ -44,7 +44,7 @@ link = "https://Kakathic.github.io/Tool-Tree/website/Information.html"
 [[page]]
 title = "@update_text_5"
 icon = "{ICON}/website.png"
-html = "https://Kakathic.github.io/Tool-Tree"
+link = "https://Kakathic.github.io/Tool-Tree"
 
 [[group]]
 [[page]]
