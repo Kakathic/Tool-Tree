@@ -2,7 +2,7 @@
 <!-- Đoạn phụ: đuổi theo đoạn chính, co dần khi tới cuối -->
 <objectAnimator xmlns:android="http://schemas.android.com/apk/res/android"
     android:duration="2100"
-    android:repeatCount="-1"
+    android:repeatCount="0"
     android:repeatMode="restart"
     android:startOffset="1150">
     <propertyValuesHolder
@@ -10,19 +10,17 @@
         android:valueType="floatType">
         <keyframe android:fraction="0" android:value="-200" />
         <keyframe
-            android:fraction="0.6"
+            android:fraction="1"
             android:interpolator="@interpolator/kr_log_ease_secondary"
             android:value="107" />
-        <keyframe android:fraction="1" android:value="107" />
     </propertyValuesHolder>
     <propertyValuesHolder
         android:propertyName="scaleX"
         android:valueType="floatType">
         <keyframe android:fraction="0" android:value="2" />
         <keyframe
-            android:fraction="0.6"
+            android:fraction="1"
             android:interpolator="@interpolator/kr_log_ease_secondary"
             android:value="0.01" />
-        <keyframe android:fraction="1" android:value="0.01" />
     </propertyValuesHolder>
 </objectAnimator>
