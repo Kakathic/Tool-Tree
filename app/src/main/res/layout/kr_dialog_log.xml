@@ -94,7 +94,7 @@
         android:background="@drawable/kr_log_panel_bg"
         android:fillViewport="true"
         android:overScrollMode="never"
-        android:scrollbarSize="1dp">
+        android:scrollbarSize="2dp">
 
         <!-- 2. Đổi layout_height của TextView thành match_parent -->
         <TextView
