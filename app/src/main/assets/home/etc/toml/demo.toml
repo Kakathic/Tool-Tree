@@ -13,15 +13,23 @@ link = "https://kakathic.github.io/Tool-Tree/website/Toml-generator.html"
 
 [[group]]
 [[editor]]
-title = "Chỉnh sửa TEST"
+title = "Chỉnh sửa TOML"
 desc = "Sửa trực tiếp code khu vực test"
 icon = "⚙️"
 file = "test.toml"
 placeholder = "[[toml]]"
+value = """
+[[group]]
+[[switch]]
+title = "Test switch"
+get = "glog test_log_nut"
+set = "slog test_log_nut $state"
+"""
 
+[[group]]
 [[page]]
-title = "Khu vực TEST"
-config = "{HOME}/etc/toml/test.toml"
+title = "Kiểm thử mã TOML"
+config = "test.toml"
 lock-sh = """
-test -f $ETC/toml/test.toml && echo 0 || echo "Mở chỉnh sửa TEST trước"
+test -f $ETC/toml/test.toml && echo 0 || echo "Mở kiểm thử mã TOML trước"
 """
