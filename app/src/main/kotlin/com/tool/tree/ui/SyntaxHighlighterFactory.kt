@@ -335,9 +335,10 @@ class TomlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     stringColor = 0xFFA6E3A1.toInt(),      // Xanh lá dịu: String
     commentColor = 0xFF6C7086.toInt(),     // Xám xịn: Comment
     numberColor = 0xFFFAB387.toInt(),      // Cam đào: Number & DateTime
-    booleanColor = 0xFFF5C2E7.toInt(),     // Hồng phớt: Boolean
     punctuationColor = 0xFFBAC2DE.toInt(), // Xám xanh sáng: Punctuation
 ) {
+    private val booleanColor = 0xFFF5C2E7.toInt() // Hồng phớt: Boolean
+
     private val bareKey = "[A-Za-z0-9_-]+"
     private val quotedKey = "\"(?:\\\\.|[^\"\\\\])*\"|'[^']*'"
     private val keyPart = "(?:$bareKey|$quotedKey)"
@@ -376,7 +377,7 @@ class TomlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
                     }
                 }
                 groups["STRING"] != null -> color(text, start, end, stringColor())
-                groups["BOOLEAN"] != null -> color(text, start, end, booleanColor())
+                groups["BOOLEAN"] != null -> color(text, start, end, booleanColor)
                 groups["DATETIME"] != null -> color(text, start, end, numberColor())
                 groups["NUMBER"] != null -> color(text, start, end, numberColor())
                 groups["PUNCTUATION"] != null -> color(text, start, end, punctuationColor())
