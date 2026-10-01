@@ -125,8 +125,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         this.onRendered = onRendered
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.kr_action_list_fragment, container, false)
     }
 
@@ -331,8 +330,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
     }
 
     override fun onPageClick(item: PageNode, onCompleted: Runnable) {
-        if (!checkAndLockClick()) return
-
         // link/activity: mở thẳng ra ngoài (trình duyệt/activity khác), không có "trang" riêng
         // nào để tự kiểm tra khoá SAU khi mở - vẫn phải kiểm tra khoá ở đây TRƯỚC khi mở như cũ.
         if (context != null && item.link.isNotEmpty()) {
@@ -359,7 +356,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
     }
 
     override fun onItemLongClick(clickableNode: ClickableNode) {
-        if (!checkAndLockClick()) return
         if (clickableNode.key.isEmpty()) {
             DialogHelper.alert(this.requireActivity(), getString(R.string.kr_shortcut_create_fail), getString(R.string.kr_ushortcut_nsupported))
         } else {
