@@ -32,6 +32,9 @@ import com.tool.tree.ui.SwipeBackPreviewCache
 import com.tool.tree.ui.SpinnerPopupHelper
 import com.omarea.common.model.SelectItem
 import com.omarea.common.shared.FilePathResolver
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import com.omarea.common.ui.BlurTopBarLayout
 import com.omarea.common.ui.DialogHelper
 import com.omarea.common.ui.DialogItemChooser
 import com.omarea.common.ui.ProgressBarDialog
@@ -161,6 +164,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             setHomeAsUpIndicator(R.drawable.ic_arrow_back)
         }
         toolbar.setNavigationOnClickListener { finish() }
+        setupToolbarLiveBlur()
 
         val extras = intent.extras
         if (extras != null) {
@@ -532,6 +536,34 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         super.onResume()
         webViewLifecyclePaused = false
         applyWebViewFreezeState()
+    }
+
+    private fun setupToolbarLiveBlur() {
+        val bar = findViewById<BlurTopBarLayout>(R.id.blur_top_container) ?: return
+        bar.blurSource = binding.mainList
+        bar.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (bottom - top != oldBottom - oldTop) applyListTopInset(null)
+        }
+        supportFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
+            override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
+                if (f is ActionListFragment) applyListTopInset(v)
+            }
+        }, false)
+    }
+
+    private fun applyListTopInset(target: View?) {
+        val inset = findViewById<View>(R.id.blur_top_container)?.height ?: return
+        val apply = { v: View ->
+            if (v.paddingTop != inset) v.setPadding(v.paddingLeft, inset, v.paddingRight, v.paddingBottom)
+        }
+        if (target != null) {
+            apply(target)
+            return
+        }
+        for (i in 0 until binding.mainList.childCount) {
+            val child = binding.mainList.getChildAt(i)
+            if (child.id == R.id.kr_content) apply(child)
+        }
     }
 
     private fun setupWebViewScrollFreeze() {

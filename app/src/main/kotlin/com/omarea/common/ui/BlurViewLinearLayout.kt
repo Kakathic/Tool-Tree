@@ -42,6 +42,8 @@ open class BlurViewLinearLayout(context: Context, attrs: AttributeSet?) : Linear
                 dstRect.set(0, 0, width, height)
                 canvas.drawBitmap(blurFragment, srcRect, dstRect, null)
             }
+
+            drawOverBlur(canvas)
         }
 
         super.onDraw(canvas)
@@ -50,6 +52,8 @@ open class BlurViewLinearLayout(context: Context, attrs: AttributeSet?) : Linear
             drawStroke(canvas)
         }
     }
+
+    protected open fun drawOverBlur(canvas: Canvas) {}
 
     protected open fun drawStroke(canvas: Canvas) {
         val paint = BlurEngine.getStrokePaint(context)

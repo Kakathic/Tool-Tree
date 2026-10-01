@@ -26,16 +26,15 @@
         android:layout_height="match_parent"
         android:fitsSystemWindows="false">
 
+        <FrameLayout
+            android:id="@+id/main_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
         <include
             layout="@layout/app_bar_main"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
-
-        <FrameLayout
-            android:id="@+id/main_list"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="?android:actionBarSize" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:visibility="gone"
