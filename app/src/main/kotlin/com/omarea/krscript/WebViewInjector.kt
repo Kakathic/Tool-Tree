@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -13,7 +14,7 @@ import com.omarea.common.shell.KeepShellPublic
 import com.omarea.common.shell.ShellExecutor
 import com.omarea.common.ui.DialogHelper
 import com.omarea.common.ui.ProgressBarDialog
-import com.omarea.krscript.downloader.Downloader
+import com.omarea.krscript.downloader.WebDownloadHelper
 import com.omarea.krscript.executor.ExtractAssets
 import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.model.NodeInfoBase
@@ -27,7 +28,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
-import java.util.UUID
 
 class WebViewInjector(
     private val webView: WebView,
@@ -63,15 +63,16 @@ class WebViewInjector(
             "KrScriptCore"
         )
 
-        webView.setDownloadListener { url, _, contentDisposition, mimetype, contentLength ->
+        webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, contentLength ->
             DialogHelper.confirm(
                 context = activity,
                 title = activity.getString(R.string.kr_download_confirm),
                 message = "$url\n\n$mimetype\n${contentLength}Bytes",
                 contentView = null,
                 onConfirm = DialogHelper.DialogButton(activity.getString(R.string.btn_confirm), Runnable {
-                    Downloader(context, null).downloadBySystem(
-                        url, contentDisposition, mimetype, UUID.randomUUID().toString(), null
+                    WebDownloadHelper.start(
+                        context, url, userAgent, contentDisposition, mimetype, contentLength,
+                        CookieManager.getInstance().getCookie(url), webView.url
                     )
                 }),
                 onCancel = DialogHelper.DialogButton(activity.getString(R.string.btn_cancel)),
