@@ -25,6 +25,7 @@ import com.omarea.krscript.downloader.DownloadTaskHelper
 import com.tool.tree.R
 import com.omarea.krscript.TryOpenActivity
 import com.omarea.krscript.config.IconPathAnalysis
+import com.omarea.krscript.config.ActionShowMemory
 import com.omarea.krscript.config.ActionParamMemory
 import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.model.*
@@ -577,6 +578,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                         try {
                             val paramsValue = render.readParamsValue(actionParamInfos)
                             ActionParamMemory.save(requireContext(), action, actionParamInfos, paramsValue)
+                            if (isAutoShow) ActionShowMemory.markConfirmed(requireContext(), action)
                             actionExecute(action, script, onExit, paramsValue)
                         } catch (ex: Exception) {
                             Toast.makeText(requireContext(), "" + ex.message, Toast.LENGTH_LONG).show()
@@ -638,6 +640,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             try {
                                 val paramsValue = render.readParamsValue(actionParamInfos)
                                 ActionParamMemory.save(requireContext(), action, actionParamInfos, paramsValue)
+                                if (isAutoShow) ActionShowMemory.markConfirmed(requireContext(), action)
                                 actionExecute(action, script, onExit, paramsValue)
                                 dialog?.dismiss()
                             } catch (ex: Exception) {
@@ -649,6 +652,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
             }
             return
         }
+        if (isAutoShow) ActionShowMemory.markConfirmed(requireContext(), action)
         actionExecute(action, script, onExit, null)
     }
 

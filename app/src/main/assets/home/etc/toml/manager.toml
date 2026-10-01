@@ -1,0 +1,23 @@
+[[group]]
+[[menu]]
+[[menu.items]]
+title = "Hướng dẫn TOML"
+link = "https://kakathic.github.io/Tool-Tree/website/Toml-html.html"
+[[menu.items]]
+title = "Trình tạo mã TOML"
+link = "https://kakathic.github.io/Tool-Tree/website/Toml-generator.html"
+
+[[group]]
+[[action]]
+title = "Thư mục"
+menu = true
+show = true
+shell = "hidden"
+
+[[action.params]]
+name = "test"
+title = "Param 1"
+label = "Jdjej"
+type = "single-select"
+options-sh = "echo \"1\n2\n3\""
+required = true

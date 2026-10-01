@@ -38,6 +38,7 @@ import com.omarea.common.ui.BlurTopBarLayout
 import com.omarea.common.ui.DialogHelper
 import com.omarea.common.ui.DialogItemChooser
 import com.omarea.common.ui.ProgressBarDialog
+import com.omarea.krscript.config.ActionShowMemory
 import com.omarea.krscript.TryOpenActivity
 import com.omarea.krscript.WebLauncher
 import com.omarea.krscript.config.IconPathAnalysis
@@ -943,7 +944,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         stopFabSpinIfPending()
         startDeferredLoadIfNeeded()
         if (autoShowTriggered) return
-        val toShow = currentPageConfig?.autoShowActions?.filter { it.show }.orEmpty()
+        val toShow = currentPageConfig?.autoShowActions?.filter { it.show && !ActionShowMemory.isConfirmed(this, it) }.orEmpty()
         if (toShow.isEmpty()) return
         autoShowTriggered = true
         val fragment = supportFragmentManager.findFragmentById(R.id.main_list) as? ActionListFragment ?: return
