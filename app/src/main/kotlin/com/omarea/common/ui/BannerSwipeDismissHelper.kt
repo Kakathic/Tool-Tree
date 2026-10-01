@@ -8,20 +8,6 @@ import android.view.ViewConfiguration
 import android.view.animation.DecelerateInterpolator
 import kotlin.math.abs
 
-/**
- * Cho phép vuốt ngang (trái HOẶC phải) [target] để "hủy" nó -- dùng cho banner
- * (BannerNotificationManager). Banner là 1 sub-window riêng add thẳng bằng WindowManager,
- * không nằm trong RecyclerView/ViewPager nào để dùng lại ItemTouchHelper/swipe có sẵn của
- * Android, nên cần tự bắt touch bằng tay.
- *
- * Cách dùng: gắn vào [target] (nên là View "thân" banner, KHÔNG phải các nút bấm bên trong --
- * ViewGroup sẽ tự ưu tiên cho các nút con clickable xử lý touch của riêng chúng trước, xem
- * comment trong [handleTouch]).
- *
- * Vuốt quá [COMMIT_DISTANCE_RATIO] chiều rộng [target] HOẶC đủ nhanh (fling, không cần vuốt xa)
- * theo 1 hướng -> [target] bay tiếp ra khỏi màn hình theo hướng đó rồi gọi [onDismiss]. Thả tay
- * chưa đủ 2 điều kiện trên -> tự bật lại vị trí gốc, KHÔNG gọi [onDismiss].
- */
 class BannerSwipeDismissHelper(
     context: Context,
     private val target: View,
@@ -43,8 +29,6 @@ class BannerSwipeDismissHelper(
     private var downY = 0f
     private var dragging = false
 
-    // true sau khi đã bay ra khỏi màn hình / gọi onDismiss -- chặn không xử lý touch thêm
-    // (vd trường hợp hiếm gặp thêm 1 ACTION_DOWN lọt vào đúng lúc view đang animate biến mất).
     private var dismissed = false
 
     init {
@@ -60,13 +44,6 @@ class BannerSwipeDismissHelper(
                 dragging = false
                 velocityTracker?.recycle()
                 velocityTracker = VelocityTracker.obtain().apply { addMovement(event) }
-                // Trả về true ở ACTION_DOWN để target được đăng ký làm touch target với
-                // ViewGroup cha -- nếu trả false thì Android sẽ KHÔNG chuyển tiếp
-                // MOVE/UP của cùng cử chỉ tới target nữa, khiến không thể vuốt được. Việc
-                // này KHÔNG ảnh hưởng tới các nút clickable bên trong (Xác nhận/Hủy bỏ):
-                // khi ngón tay đặt đúng lên chúng, ViewGroup luôn ưu tiên cho nút con tự
-                // xử lý trước qua vòng dispatch-tới-con, handleTouch() chỉ thực sự được
-                // gọi (fallback) khi điểm chạm KHÔNG rơi vào nút nào.
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
@@ -74,9 +51,6 @@ class BannerSwipeDismissHelper(
                 val dx = event.rawX - downX
                 val dy = event.rawY - downY
                 if (!dragging) {
-                    // Chỉ nhận là đang vuốt ngang khi di chuyển đủ xa (qua touchSlop) VÀ theo
-                    // chiều ngang rõ ràng hơn chiều dọc -- tránh nuốt mất thao tác cuộn dọc
-                    // (nếu sau này banner có nội dung dài cần cuộn).
                     if (abs(dx) > touchSlop && abs(dx) > abs(dy)) {
                         dragging = true
                         target.parent?.requestDisallowInterceptTouchEvent(true)
@@ -85,7 +59,6 @@ class BannerSwipeDismissHelper(
                     }
                 }
                 target.translationX = dx
-                // Mờ dần theo khoảng cách kéo, tối thiểu 30% để vẫn thấy còn đang kéo dở.
                 target.alpha = (1f - abs(dx) / target.width.coerceAtLeast(1)).coerceIn(0.3f, 1f)
                 return true
             }
@@ -118,8 +91,6 @@ class BannerSwipeDismissHelper(
 
     private fun flyOutAndDismiss(direction: Int) {
         dismissed = true
-        // Bay hẳn ra ngoài rìa màn hình (không chỉ hết chiều rộng target) để chắc chắn khuất
-        // hoàn toàn trước khi onDismiss() gỡ view, tránh giật hình 1 khung hình cuối.
         val distance = (target.width + screenWidthPx).toFloat()
         target.animate()
             .translationX(direction * distance)

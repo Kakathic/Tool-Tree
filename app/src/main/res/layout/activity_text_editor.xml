@@ -8,13 +8,11 @@
     android:fitsSystemWindows="false"
     android:orientation="vertical">
 
-    <!-- Toolbar trên cùng -->
     <include
         layout="@layout/app_bar_main"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <!-- Khu vực cuộn chính -->
     <ScrollView
         android:id="@+id/main_list_text"
         android:layout_width="match_parent"
@@ -34,7 +32,6 @@
             android:focusable="true"
             android:orientation="horizontal">
 
-            <!-- Cột số dòng -->
             <TextView
                 android:id="@+id/editor_line_numbers"
                 android:layout_width="wrap_content"
@@ -51,7 +48,6 @@
                 android:textSize="12sp"
                 android:typeface="monospace" />
 
-            <!-- Dải ngăn cách -->
             <View
                 android:id="@+id/editor_line_divider"
                 android:layout_width="1dp"
@@ -59,7 +55,6 @@
                 android:alpha="0.2"
                 android:background="?android:attr/textColorSecondary" />
 
-            <!-- Container khung nhập liệu -->
             <FrameLayout
                 android:id="@+id/editor_content_container"
                 android:layout_width="0dp"
@@ -94,7 +89,6 @@
 
     </ScrollView>
 
-    <!-- Thanh phím đặc biệt ở đáy -->
     <com.omarea.common.ui.BlurBottomBarLayout
         android:id="@+id/editor_special_chars_scroll"
         android:layout_width="match_parent"

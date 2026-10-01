@@ -6,22 +6,17 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Toolbar trên cùng -->
     <include
         layout="@layout/app_bar_main"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <!-- Container chứa danh sách file có hiệu ứng Blur -->
     <com.omarea.common.ui.BlurViewLinearLayout
         android:id="@+id/file_drawer_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- Hàng "Chọn tất cả" cố định ở đầu trang, chỉ hiện khi đang ở chế độ chọn nhiều (multiple).
-             Dùng đúng 1 CheckBox (layoutDirection rtl) để chữ dính sát ô vuông, và padding 6dp
-             giống hệt list_item_file/list_item_dir để ô vuông thẳng hàng với checkbox bên dưới. -->
         <RelativeLayout
             android:id="@+id/select_all_block"
             android:visibility="gone"

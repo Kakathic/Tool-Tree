@@ -9,10 +9,6 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 
-/**
- * 提供公共方法，向外置存储读写文件
- * Created by helloklf on 2016/8/27.
- */
 object FileWrite {
     val SDCardDir: String = Environment.getExternalStorageDirectory().absolutePath
 
@@ -109,7 +105,6 @@ object FileWrite {
             writedFile.setExecutable(true)
             writedFile.setReadable(true)
             return filePath
-            //getApplicationContext().getClassLoader().getResourceAsStream("");
         } catch (e: IOException) {
             Log.e("writePrivateFile", "" + e.message)
             e.printStackTrace()
@@ -133,7 +128,6 @@ object FileWrite {
             fileOutputStream.write(bytes, 0, bytes.size)
             fileOutputStream.close()
             File(filePath).setExecutable(true, false)
-            //getApplicationContext().getClassLoader().getResourceAsStream("");
             val writedFile = File(filePath)
             writedFile.setWritable(true)
             writedFile.setExecutable(true)
@@ -153,13 +147,11 @@ object FileWrite {
         return null
     }
 
-    //Dos转Unix，避免\r\n导致的脚本无法解析
     private fun parseText(context: Context, fileName: String): ByteArray {
         try {
             val assetManager = context.assets
             val inputStream = assetManager.open(fileName)
             val datas = ByteArray(inputStream.available())
-            //inputStream.available()
             var len = inputStream.read(datas)
             if (len < 0) {
                 len = 0

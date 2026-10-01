@@ -78,7 +78,6 @@ class ActionPageOnline : AppCompatActivity() {
     private val backNoLoadRunnable = Runnable { removeBackOverlay() }
     private val backSafetyRunnable = Runnable { removeBackOverlay() }
 
-    // Trạng thái tự ẩn/hiện toolbar khi cuộn (fraction: 0 = hiện, 1 = ẩn hoàn toàn)
     private var toolbarFraction = 0f
     private var toolbarHidden = false
     private var toolbarAnimator: ValueAnimator? = null
@@ -129,10 +128,8 @@ class ActionPageOnline : AppCompatActivity() {
             }
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            binding.krOnlineWebview.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
-                onWebScroll(scrollY, oldScrollY)
-            }
+        binding.krOnlineWebview.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
+            onWebScroll(scrollY, oldScrollY)
         }
 
         loadIntentData()
@@ -484,7 +481,6 @@ class ActionPageOnline : AppCompatActivity() {
         setSystemBarsHidden(false)
     }
 
-    // Cuộn xuống quá ngưỡng thì ẩn toolbar, cuộn ngược lên một đoạn hoặc về đầu trang thì hiện lại
     private fun onWebScroll(scrollY: Int, oldScrollY: Int) {
         if (SystemClock.uptimeMillis() < ignoreScrollUntil || !canAutoHideToolbar()) return
         if (scrollY <= 0) {
@@ -523,13 +519,11 @@ class ActionPageOnline : AppCompatActivity() {
                 ignoreScrollUntil = SystemClock.uptimeMillis() + TOOLBAR_SETTLE_MS
             }
         })
-        // Bỏ qua sự kiện cuộn do WebView đổi kích thước trong lúc/ngay sau animation (tránh nhấp nháy)
         ignoreScrollUntil = SystemClock.uptimeMillis() + TOOLBAR_ANIM_DURATION + TOOLBAR_SETTLE_MS
         toolbarAnimator = animator
         animator.start()
     }
 
-    // Trượt toolbar lên và kéo WebView lên theo; chừa lại vùng status bar phía trên WebView
     private fun applyToolbarFraction(fraction: Float) {
         toolbarFraction = fraction
         val bar = binding.webappbar.root
@@ -550,7 +544,6 @@ class ActionPageOnline : AppCompatActivity() {
         applyToolbarFraction(0f)
     }
 
-    // Đang có overlay của nút Back thì hoãn hiện toolbar đến khi overlay được gỡ
     private fun showToolbarOrDefer() {
         if (backOverlay != null) toolbarShowPending = true else setToolbarHidden(false)
     }
@@ -662,15 +655,11 @@ class ActionPageOnline : AppCompatActivity() {
     }
 
     private fun releaseBackOverlayWhenPainted(view: WebView) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            view.postVisualStateCallback(++backRequestId, object : WebView.VisualStateCallback() {
-                override fun onComplete(requestId: Long) {
-                    view.postOnAnimation { removeBackOverlay() }
-                }
-            })
-        } else {
-            backHandler.postDelayed({ removeBackOverlay() }, 100L)
-        }
+        view.postVisualStateCallback(++backRequestId, object : WebView.VisualStateCallback() {
+            override fun onComplete(requestId: Long) {
+                view.postOnAnimation { removeBackOverlay() }
+            }
+        })
     }
 
     private fun removeBackOverlay() {

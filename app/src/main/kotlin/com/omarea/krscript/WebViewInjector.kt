@@ -36,8 +36,6 @@ class WebViewInjector(
     private val context: Context = webView.context
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    // Dialog loading dùng chung layout dialog_loading.xml, có sẵn nút Hủy (dialog_cancel_button)
-    // để người dùng có thể hủy việc tải trang khi đang duyệt web.
     private var loadingDialog: ProgressBarDialog? = null
 
     @SuppressLint("JavascriptInterface", "SetJavaScriptEnabled")
@@ -46,13 +44,11 @@ class WebViewInjector(
 
         val webSettings: WebSettings = webView.settings
 
-        // --- TỐI ƯU HÓA WEBVIEW ---
         webSettings.javaScriptEnabled = true
-        webSettings.domStorageEnabled = true // Quan trọng để web chạy nhanh
+        webSettings.domStorageEnabled = true
         webSettings.databaseEnabled = true
-        webSettings.cacheMode = WebSettings.LOAD_DEFAULT // Sử dụng cache hệ thống
+        webSettings.cacheMode = WebSettings.LOAD_DEFAULT
 
-        // Tạm thời chặn ảnh để ưu tiên tải cấu trúc HTML và Script Shell
         webSettings.blockNetworkImage = false
 
         webSettings.allowFileAccess = credible
@@ -61,14 +57,12 @@ class WebViewInjector(
         webSettings.allowContentAccess = true
         webSettings.useWideViewPort = true
         webSettings.loadWithOverviewMode = true
-        // ---------------------------
 
         webView.addJavascriptInterface(
             KrScriptEngine(context),
             "KrScriptCore"
         )
 
-        // Xác nhận tải về bằng hộp thoại confirm có sẵn của app (không cho đóng ngoài nút).
         webView.setDownloadListener { url, _, contentDisposition, mimetype, contentLength ->
             DialogHelper.confirm(
                 context = activity,
@@ -86,11 +80,6 @@ class WebViewInjector(
         }
     }
 
-    /**
-     * Hiển thị dialog loading (layout dialog_loading.xml) kèm nút Hủy khi đang tải trang web.
-     * Bấm nút Hủy sẽ gọi webView.stopLoading() để dừng việc tải trang giữa chừng.
-     * Gọi hàm này trong WebViewClient.onPageStarted khi duyệt web.
-     */
     fun showLoading(message: String) {
         val dialog = loadingDialog ?: return
         dialog.showDialogWithCancel(message) {
@@ -103,10 +92,6 @@ class WebViewInjector(
         showLoading(context.getString(R.string.please_wait))
     }
 
-    /**
-     * Ẩn dialog loading. Gọi trong WebViewClient.onPageFinished (hoặc khi tải lỗi)
-     * khi duyệt web.
-     */
     fun hideLoading() {
         loadingDialog?.hideDialog()
     }
@@ -180,7 +165,6 @@ class WebViewInjector(
                 }
 
                 override fun onFileSelected(path: String?) {
-                    // Trả dữ liệu về UI thread để tránh crash khi gọi JS
                     mainHandler.post {
                         try {
                             val message = JSONObject()
@@ -197,7 +181,6 @@ class WebViewInjector(
             val inputStream: InputStream = process.inputStream
             val errorStream: InputStream = process.errorStream
 
-            // Thread đọc luồng Standard Output
             val reader = Thread {
                 try {
                     BufferedReader(InputStreamReader(inputStream, StandardCharsets.UTF_8)).use { br ->
@@ -211,7 +194,6 @@ class WebViewInjector(
                 }
             }
 
-            // Thread đọc luồng Error Output
             val readerError = Thread {
                 try {
                     BufferedReader(InputStreamReader(errorStream, StandardCharsets.UTF_8)).use { br ->
@@ -246,7 +228,6 @@ class WebViewInjector(
             waitExit.start()
         }
 
-        // Hàm hỗ trợ gửi log về WebView thông qua mainHandler để ổn định hiệu suất
         private fun sendJsLog(callback: String, type: Int, messageStr: String) {
             mainHandler.post {
                 try {

@@ -11,9 +11,6 @@ import java.io.InputStreamReader
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-/**
- * Created by Hello on 2018/01/23.
- */
 class KeepShellAsync(private var context: Context?, private var rootMode: Boolean = true) : ShellEvents() {
     companion object {
         private val keepShells = HashMap<String, KeepShellAsync>()
@@ -69,7 +66,6 @@ class KeepShellAsync(private var context: Context?, private var rootMode: Boolea
         }
     }
 
-    //尝试退出命令行程序
     fun tryExit() {
         mLock.withLock {
             try {
@@ -85,16 +81,11 @@ class KeepShellAsync(private var context: Context?, private var rootMode: Boolea
         }
     }
 
-    //获取ROOT超时时间
     private val GET_ROOT_TIMEOUT = 20000L
     private var threadStarted = false
     private var cmdsCache = StringBuilder()
 
     private fun getRuntimeShell(cmd: String?, error: Runnable?) {
-        // Kiểm tra + đặt cờ threadStarted phải là 1 thao tác nguyên tử (atomic),
-        // nếu không 2 thread gọi doCmd() gần như đồng thời có thể cùng vượt qua
-        // check "threadStarted == false" và cùng khởi động 1 luồng mở shell,
-        // dẫn tới 2 tiến trình su chồng nhau.
         val shouldStartThread = mLock.withLock {
             if (threadStarted) {
                 if (cmd != null) {
@@ -173,7 +164,6 @@ class KeepShellAsync(private var context: Context?, private var rootMode: Boolea
                         }
                     }
                 } else {
-                    // Không lấy được process (ví dụ bị từ chối quyền root)
                     reportError()
                 }
             } catch (e: Exception) {
@@ -204,13 +194,11 @@ class KeepShellAsync(private var context: Context?, private var rootMode: Boolea
         }, GET_ROOT_TIMEOUT)
     }
 
-    //执行脚本
     fun doCmd(cmd: String, isRedo: Boolean = false) {
         try {
             val needNewShell = mLock.withLock { p == null || isRedo || out == null }
             if (needNewShell) {
                 getRuntimeShell(cmd) {
-                    //重试一次 (thử lại 1 lần)
                     if (!isRedo)
                         doCmd(cmd, true)
                     else
@@ -224,7 +212,6 @@ class KeepShellAsync(private var context: Context?, private var rootMode: Boolea
                 }
             }
         } catch (e: IOException) {
-            //重试一次 (thử lại 1 lần)
             if (!isRedo)
                 doCmd(cmd, true)
             else

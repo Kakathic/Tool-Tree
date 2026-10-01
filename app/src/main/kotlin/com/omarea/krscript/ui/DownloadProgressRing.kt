@@ -10,13 +10,6 @@ import android.util.TypedValue
 import android.view.View
 import android.view.animation.LinearInterpolator
 
-// Vòng tròn tiến trình gọn nhẹ - dùng để THAY CHỖ icon (kr_widget, 35dp) của item [[download]]
-// trong lúc đang tải/đang chạy script, thay vì 1 thanh ngang riêng bên dưới desc (xem
-// ListItemDownload.markBusy()/updateDownloadProgress()/finishBusy()). Không vẽ chữ/% bên trong
-// (đã có desc cạnh bên đảm nhiệm phần đó) - chỉ 1 vòng nền mờ + 1 cung tiến trình.
-//  - setIndeterminate(true): chưa biết tổng dung lượng (hoặc đang chạy script) - 1 cung ngắn cố
-//    định tự xoay vòng liên tục, giống spinner.
-//  - setIndeterminate(false) + setProgress(percent): cung vẽ từ đỉnh (-90°), quét theo %.
 class DownloadProgressRing @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
@@ -28,7 +21,7 @@ class DownloadProgressRing @JvmOverloads constructor(
     }
     private val rect = RectF()
 
-    private var progressPercent = 0f // 0f..100f
+    private var progressPercent = 0f
     private var isIndeterminateMode = true
     private var spinAngle = 0f
     private var spinAnimator: ValueAnimator? = null
@@ -83,7 +76,6 @@ class DownloadProgressRing @JvmOverloads constructor(
 
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
         super.onVisibilityChanged(changedView, visibility)
-        // Chỉ tốn CPU quay animation khi thực sự đang hiển thị (item bận) - ẩn đi thì dừng luôn.
         if (visibility == VISIBLE && isIndeterminateMode) {
             startSpin()
         } else {

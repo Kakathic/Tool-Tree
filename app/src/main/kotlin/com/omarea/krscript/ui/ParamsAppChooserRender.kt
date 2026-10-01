@@ -21,8 +21,6 @@ import com.tool.tree.ThemeModeState
 class ParamsAppChooserRender(
     private var actionParamInfo: ActionParamInfo,
     private var context: FragmentActivity,
-    // Được gọi mỗi khi người dùng xác nhận thay đổi ứng dụng đã chọn trong dialog con,
-    // dùng để các param khác "depend-on" param này biết mà cập nhật ẩn/hiện.
     private val onValueChanged: (() -> Unit)? = null
 ) : DialogAppChooser.Callback {
 
@@ -31,7 +29,6 @@ class ParamsAppChooserRender(
     private lateinit var nameView: TextView
     private lateinit var packages: ArrayList<AdapterAppChooser.AppInfo>
 
-    // collator dùng chung cho toàn bộ quá trình sort
     private val collator: Collator = Collator.getInstance(Locale.getDefault())
 
     private val selectedValues: Set<String>
@@ -54,7 +51,6 @@ class ParamsAppChooserRender(
         valueView = layout.findViewById(R.id.kr_param_app_package)
         nameView = layout.findViewById(R.id.kr_param_app_name)
 
-        // giữ hành vi cũ: không load package ở đây
         setTextView()
         resolveCurrentAppName()
 
@@ -69,12 +65,7 @@ class ParamsAppChooserRender(
         return layout
     }
 
-    // =======================
-    // OPEN DIALOG
-    // =======================
     private fun openAppChooser() {
-        // 🔥 preload app đã chọn → có appName
-        // packages = preloadSelectedApps()
         packages = ArrayList()
     
         val dialog = DialogAppChooser(
@@ -87,13 +78,9 @@ class ParamsAppChooserRender(
         dialog.show(context.supportFragmentManager, "app-chooser")
         dialog.showLoading(true)
     
-        // load phần còn lại async
         loadPackagesAsync(dialog, actionParamInfo.type == "packages")
     }
 
-    // =======================
-    // SORTED INSERT
-    // =======================
     private fun insertSorted(
         list: MutableList<AdapterAppChooser.AppInfo>,
         item: AdapterAppChooser.AppInfo
@@ -102,7 +89,6 @@ class ParamsAppChooserRender(
             item.packageName != null &&
             selectedValues.contains(item.packageName)
     
-        // gán luôn trạng thái selected tại đây
         item.selected = isSelected
     
         var low = 0
@@ -118,11 +104,9 @@ class ParamsAppChooserRender(
                 selectedValues.contains(m.packageName)
     
             when {
-                // 1️⃣ Ưu tiên app đã chọn
                 mSelected != isSelected ->
                     if (isSelected) high = mid else low = mid + 1
     
-                // 2️⃣ Cùng trạng thái → sort A–Z
                 collator.compare(m.appName ?: "", name) < 0 ->
                     low = mid + 1
     
@@ -133,9 +117,6 @@ class ParamsAppChooserRender(
         list.add(low, item)
     }
 
-    // =======================
-    // LOAD PACKAGE ASYNC + SORT TRONG LÚC LOAD
-    // =======================
     private fun loadPackagesAsync(
         dialog: DialogAppChooser,
         includeMissing: Boolean
@@ -164,7 +145,6 @@ class ParamsAppChooserRender(
                     batch.add(info)
                 }
 
-                // đổ batch
                 if (batch.size == 20 || index == apps.lastIndex) {
                     val copy = ArrayList(batch)
                     batch.clear()
@@ -179,7 +159,6 @@ class ParamsAppChooserRender(
                 }
             }
 
-            // thêm app thiếu (giữ hành vi cũ)
             if (includeMissing && actionParamInfo.optionsFromShell != null) {
                 val missing = ArrayList<AdapterAppChooser.AppInfo>()
                 for (item in actionParamInfo.optionsFromShell!!) {
@@ -202,7 +181,6 @@ class ParamsAppChooserRender(
                 }
             }
 
-            // kết thúc load
             withContext(Dispatchers.Main) {
                 dialog.notifyDataChanged()
                 dialog.showLoading(false)
@@ -210,9 +188,6 @@ class ParamsAppChooserRender(
         }
     }
 
-    // =======================
-    // INIT UI VALUE (GIỮ NGUYÊN)
-    // =======================
     private fun setTextView() {
         if (actionParamInfo.multiple) {
             val values = ActionParamsLayoutRender
@@ -264,9 +239,6 @@ class ParamsAppChooserRender(
         }
     }
 
-    // =======================
-    // CALLBACK
-    // =======================
     override fun onConfirm(apps: List<AdapterAppChooser.AppInfo>) {
         if (actionParamInfo.multiple) {
             valueView.text =

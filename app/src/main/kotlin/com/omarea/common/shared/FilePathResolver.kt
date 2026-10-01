@@ -13,14 +13,9 @@ import java.io.FileOutputStream
 
 class FilePathResolver {
 
-    /**
-     * Trả về đường dẫn tuyệt đối của file từ Uri
-     */
     @SuppressLint("NewApi")
     fun getPath(context: Context, uri: Uri): String? {
-        // DocumentProvider
         if (DocumentsContract.isDocumentUri(context, uri)) {
-            // ExternalStorageProvider
             if (isExternalStorageDocument(uri)) {
                 val docId = DocumentsContract.getDocumentId(uri)
                 val split = docId.split(":").toTypedArray()
@@ -30,15 +25,12 @@ class FilePathResolver {
                     return if ("primary".equals(type, ignoreCase = true)) {
                         "${Environment.getExternalStorageDirectory()}/$relativePath"
                     } else {
-                        // Thẻ nhớ SD ngoài
                         "/storage/$type/$relativePath"
                     }
                 }
             } 
-            // DownloadsProvider
             else if (isDownloadsDocument(uri)) {
                 val id = DocumentsContract.getDocumentId(uri)
-                // Xử lý URI dạng raw path (ví dụ: raw:/storage/emulated/0/Download/...)
                 if (id.startsWith("raw:")) {
                     return id.replaceFirst("raw:", "")
                 }
@@ -49,7 +41,6 @@ class FilePathResolver {
                     )
                     getDataColumn(context, contentUri, null, null)
                 } else {
-                    // Copy file vào cache nếu không truy cập trực tiếp được đường dẫn
                     val fileName = getFileName(context, uri)
                     val cacheDir = getDocumentCacheDir(context)
                     val file = generateFileName(fileName, cacheDir)
@@ -59,7 +50,6 @@ class FilePathResolver {
                     } else null
                 }
             } 
-            // MediaProvider
             else if (isMediaDocument(uri)) {
                 val docId = DocumentsContract.getDocumentId(uri)
                 val split = docId.split(":").toTypedArray()
@@ -81,12 +71,10 @@ class FilePathResolver {
                 }
             }
         } 
-        // MediaStore (and general)
         else if ("content".equals(uri.scheme, ignoreCase = true)) {
             if (isGooglePhotosUri(uri)) return uri.lastPathSegment
             return getDataColumn(context, uri, null, null)
         } 
-        // File
         else if ("file".equals(uri.scheme, ignoreCase = true)) {
             return uri.path
         }
@@ -105,7 +93,6 @@ class FilePathResolver {
         val projection = arrayOf(column)
 
         try {
-            // Dùng .use để tự động đóng Cursor an toàn
             context.contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
                     val columnIndex = cursor.getColumnIndex(column)
@@ -139,7 +126,6 @@ class FilePathResolver {
             } catch (ignored: Exception) {}
         }
         
-        // Bỏ việc gọi getPath() ở đây để tránh lặp vô tận
         if (result == null) {
             result = uri.path
             val cut = result?.lastIndexOf('/') ?: -1
@@ -201,7 +187,6 @@ class FilePathResolver {
             try {
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     FileOutputStream(destinationPath).use { output ->
-                        // Dùng copyTo chuẩn của Kotlin: tự tạo buffer 8KB và ghi chính xác số byte đọc được
                         input.copyTo(output)
                     }
                 }

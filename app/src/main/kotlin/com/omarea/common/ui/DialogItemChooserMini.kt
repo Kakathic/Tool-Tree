@@ -76,7 +76,6 @@ class DialogItemChooserMini(
         view.findViewById<View>(R.id.btn_confirm).setOnClickListener {
             this.onConfirm(absListView)
         }
-        // 长列表才有搜索
         if (items.size > 5) {
             val clearBtn = view.findViewById<View>(R.id.search_box_clear)
             val searchBox = view.findViewById<EditText>(R.id.search_box).apply {

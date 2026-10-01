@@ -26,7 +26,6 @@ open class ListItemClickable(
 
     private val allowShortcutConfig = this.key.isNotEmpty() && config.allowShortcut != false
 
-    // Tái sử dụng 1 instance duy nhất để load tài nguyên (icon/photo/bg)
     private val analyzer = IconPathAnalysis()
 
     protected open fun allowLongClick(): Boolean = allowShortcutConfig
@@ -45,10 +44,6 @@ open class ListItemClickable(
         this.mOnClickListener?.onClick(this)
     }
 
-    // process = true: icon-sh/photo-sh/bg-sh chỉ có giá trị SAU KHI resolvePendingStates()
-    // chạy xong, mà item process=true lại được dựng view TRƯỚC đó (xem applyIconPhotoBg() gọi
-    // trong init) - nên phải load lại icon/photo/bg ở đây, đúng lúc ListItemGroup.triggerUpdate()
-    // chạy sau khi trang đã tải xong (finishProgressiveList()).
     override fun updateViewByShell() {
         super.updateViewByShell()
         applyIconPhotoBg()

@@ -5,28 +5,3 @@
     <corners android:radius="10dp" />
     <size android:width="20dp" android:height="20dp" />
 </shape>
-
-<!--<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_checked="true">
-        <shape>
-            <solid android:color="?android:colorAccent" />
-            <size android:width="14dp" android:height="14dp" />
-            <corners android:radius="7dp" />
-        </shape>
-    </item>
-    <item android:state_checked="false">
-        <shape>
-            <solid android:color="#88888888" />
-            <size android:width="14dp" android:height="14dp" />
-            <corners android:radius="7dp" />
-        </shape>
-    </item>
-    <item>
-        <shape>
-            <solid android:color="#88888888" />
-            <size android:width="14dp" android:height="14dp" />
-            <corners android:radius="7dp" />
-        </shape>
-    </item>
-</selector>
--->

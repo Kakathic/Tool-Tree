@@ -9,9 +9,6 @@ import com.omarea.krscript.model.ShellHandlerBase
 import java.io.DataOutputStream
 import java.util.Objects
 
-/**
- * Created by Hello on 2018/04/01.
- */
 class ShellExecutor {
     private var started = false
     private val sessionTag = "pio_" + System.currentTimeMillis()
@@ -22,12 +19,8 @@ class ShellExecutor {
             String.format("shell_progres='%s' killtree", sessionTag),
             null
         )
-        // KeepShellPublic.INSTANCE.doCmdSync(String.format("kill -s 1 `pgrep -f %s`", sessionTag));
     }
 
-    /**
-     * 执行脚本
-     */
     fun execute(
         context: Context,
         nodeInfo: RunnableNode?,
@@ -48,19 +41,6 @@ class ShellExecutor {
             val forceStopRunnable: Runnable? =
                 if (nodeInfo != null && (nodeInfo.interruptable || nodeInfo.shell == RunnableNode.shellModeBgTask)) {
                     Runnable {
-                        /*
-                        // 没啥用，这个pid和在shell创建的子进程不是父子关系，杀死此进程对shell里创建的进程毫无影响
-                        int pid = -1;
-                        if (process.getClass().getName().equals("java.lang.UNIXProcess")) {
-                            try {
-                                Class cl = process.getClass();
-                                Field field = cl.getDeclaredField("pid");
-                                field.setAccessible(true);
-                                Object pidObject = field.get(process);
-                                pid = (Integer) pidObject;
-                            } catch (Exception ignored) {}
-                        }
-                        */
                         killProcess(context)
 
                         try {
@@ -95,8 +75,6 @@ class ShellExecutor {
 
             val outputStream = process.outputStream
             val dataOutputStream = DataOutputStream(outputStream)
-            // Gắn stdin của process vào shellHandlerBase để ô nhập liệu trên UI (DialogLogFragment)
-            // có thể ghi trực tiếp dữ liệu người dùng gõ vào trong lúc script đang chạy.
             shellHandlerBase.bindStdin(dataOutputStream)
             try {
                 shellHandlerBase.sendMessage(shellHandlerBase.obtainMessage(ShellHandlerBase.EVENT_START, "shell@android:\n"))

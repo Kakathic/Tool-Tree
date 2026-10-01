@@ -17,14 +17,8 @@ class ListItemGroup(context: Context,
                 config) {
     protected var children = ArrayList<ListItemView>()
 
-    // load-after: số view thực tế đã có trong group này - dùng để ghi lại "vị trí đúng" của 1
-    // group con đang rỗng (xem PageLayoutRender.renderNode()/insertNode()).
     val childCount: Int get() = children.size
 
-    // process = true: các khung skeleton/placeholder đang hiện tạm trong lúc chờ item thật build
-    // xong - xem PageLayoutRender.addLoadingPlaceholders()/appendNode(). Animator gắn ở
-    // view.tag (do bên tạo view set) được huỷ khi placeholder bị gỡ, tránh chạy vô ích sau khi
-    // view đã rời layout.
     private val placeholderViews = ArrayList<View>()
 
     fun addPlaceholders(views: List<View>) {
@@ -35,14 +29,6 @@ class ListItemGroup(context: Context,
         }
     }
 
-    // Chèn 1 item THẬT vào ĐÚNG VỊ TRÍ ô loading đầu tiên (nếu còn) rồi gỡ luôn ô loading đó -
-    // xem PageLayoutRender.appendNode(). Mỗi item mới chỉ tiêu thụ (thay thế) đúng 1 khung
-    // skeleton của riêng nó; các khung skeleton còn lại (dành cho mục 2, mục 3...) vẫn đứng
-    // yên chờ tới lượt, không bị gỡ oan trước khi mục của nó load xong. Hết khung loading thì
-    // quay về hành vi thêm cuối như addView() thường. clearPlaceholders() chỉ còn dùng để gỡ
-    // nốt khung dư (trang có ít item thật hơn số khung đã hiện) khi build xong toàn bộ trang -
-    // xem ActionListFragment.finishProgressiveList(). KHÔNG bật LayoutTransition ở đây - item
-    // thật hiện ra ngay, không fade-in.
     fun addViewBeforePlaceholder(item: ListItemView): ListItemGroup {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         val placeholder = placeholderViews.firstOrNull()
@@ -59,8 +45,6 @@ class ListItemGroup(context: Context,
         return this
     }
 
-    // Gỡ hết placeholder còn dư (vd trang có ít item thật hơn số khung đã hiện sẵn) - gọi khi
-    // trang process = true đã build xong toàn bộ.
     fun clearPlaceholders() {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         for (view in placeholderViews) {
@@ -77,11 +61,6 @@ class ListItemGroup(context: Context,
         return this
     }
 
-    // load-after: chèn vào ĐÚNG vị trí atIndex thay vì thêm cuối - xem PageLayoutRender.insertNode().
-    // Overload này CHỈ được gọi từ luồng chèn load-after (không dùng lúc build trang lần đầu),
-    // nên bật LayoutTransition ngay tại đây: các item phía dưới tự động animate trượt xuống
-    // nhường chỗ, còn item mới thì tự fade-in (mặc định của LayoutTransition) - không ảnh hưởng
-    // gì tới addView() thường ở trên.
     fun addView(item: ListItemView, atIndex: Int): ListItemGroup {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         if (content.layoutTransition == null) {

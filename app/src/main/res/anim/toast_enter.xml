@@ -3,14 +3,12 @@
     android:shareInterpolator="false"
     android:zAdjustment="top">
 
-    <!-- Trượt nhẹ từ dưới lên (10%p -> 0%p) tạo cảm giác Toast nổi lên từ đáy -->
     <translate
         android:interpolator="@android:interpolator/linear_out_slow_in"
         android:duration="200"
         android:fromYDelta="10%p"
         android:toYDelta="0%p" />
 
-    <!-- Đồng bộ alpha hiện nhanh trong 200ms -->
     <alpha
         android:interpolator="@android:interpolator/decelerate_cubic"
         android:duration="200"

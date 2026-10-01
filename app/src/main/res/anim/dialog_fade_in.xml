@@ -3,8 +3,6 @@
     android:shareInterpolator="false"
     android:zAdjustment="top">
 
-    <!-- Giữ nguyên việc loại bỏ <scale> để bảo vệ lớp Blur full màn hình.
-         Tối ưu interpolator sang decelerate + rút ngắn thời gian để Dialog xuất hiện nhạy hơn. -->
     <alpha
         android:interpolator="@android:interpolator/decelerate_cubic"
         android:duration="200"

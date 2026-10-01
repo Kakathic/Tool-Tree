@@ -8,10 +8,6 @@ import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 
 object WebLauncher {
-    /**
-     * http/https -> Chrome Custom Tabs; scheme khác (market://, tel:, mailto:...) hoặc máy không có
-     * trình duyệt hỗ trợ Custom Tabs -> ACTION_VIEW như cũ. Ném exception nếu không mở được.
-     */
     fun open(context: Context, url: String) {
         val uri = Uri.parse(url.trim())
         val scheme = uri.scheme?.lowercase()

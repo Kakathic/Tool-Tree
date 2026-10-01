@@ -14,18 +14,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import java.util.concurrent.ConcurrentHashMap
 
-// Thông báo tiến trình tải file - dùng Service THƯỜNG (không startForeground), y hệt cách
-// NotiService.kt hiện thông báo: gọi notificationManager.notify() trực tiếp, hiện ngay lập tức,
-// KHÔNG bị ràng buộc thời hạn "phải gọi startForeground() kịp lúc" của foreground service (nguồn
-// gốc gây ForegroundServiceDidNotStartInTimeException trước đây khi bấm tải lại liên tiếp).
-//
-// - Thông báo TIẾN TRÌNH: chỉ 1 dòng (percent + kích thước/tốc độ), có progress bar thật
-//   (setProgress), KHÔNG có icon lớn tuỳ chỉnh, KHÔNG dùng MessagingStyle.
-// - Thông báo LỖI: vẫn dùng MessagingStyle (khung tin nhắn, dồn lịch sử các lần lỗi liên tiếp
-//   nếu bấm tải lại nhiều lần) + icon lớn tuỳ chỉnh từ config, giống bản cũ.
-//
-// Đánh đổi: vì không còn là foreground service, nếu app bị đưa xuống nền lâu, hệ thống có thể
-// dừng tiến trình tải giữa chừng (không còn được Android "bảo vệ" như trước).
 class DownloadService : Service() {
 
     companion object {
@@ -107,8 +95,6 @@ class DownloadService : Service() {
         return START_NOT_STICKY
     }
 
-    // Dồn các dòng lỗi liên tiếp (nếu bấm tải lại nhiều lần) thành khung MessagingStyle, giống
-    // bản cũ. Chỉ dùng cho thông báo LỖI - thông báo tiến trình không cần lịch sử nhiều dòng.
     private fun buildMessagingStyle(title: String, line: String, addAsNewMessage: Boolean): NotificationCompat.MessagingStyle {
         val rows = messageHistory.getOrPut(currentNotificationId) { java.util.Collections.synchronizedList(ArrayList()) }
         synchronized(rows) {
@@ -133,8 +119,6 @@ class DownloadService : Service() {
         return messagingStyle
     }
 
-    // 1 dòng duy nhất: "42% • 12 MB / 28 MB • 1.2 MB/s" (hoặc customText nếu có, vd trạng thái
-    // "đang tạm dừng"/"đang chạy script"...).
     private fun buildProgressText(percent: Int, downloadedBytes: Long, totalBytes: Long, speedBps: Double): String {
         val parts = ArrayList<String>(3)
         if (percent >= 0) parts.add("$percent%")
@@ -165,7 +149,6 @@ class DownloadService : Service() {
         return if (mbps >= 0.1) String.format("%.1f MB/s", mbps) else String.format("%.0f KB/s", speedBps / 1024.0)
     }
 
-    // Thông báo tiến trình: không còn icon lớn tuỳ chỉnh (chỉ dùng small icon mặc định).
     private fun createProgressBuilder(
         title: String,
         progress: Int,
@@ -203,7 +186,6 @@ class DownloadService : Service() {
         return builder
     }
 
-    // Chỉ còn dùng cho thông báo LỖI (icon lớn tuỳ chỉnh từ config).
     private fun resolveLargeIcon(intent: Intent): Bitmap {
         try {
             val fromIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

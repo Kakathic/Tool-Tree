@@ -15,10 +15,6 @@ import com.omarea.krscript.model.TextNode
 import com.tool.tree.ThemeModeState
 import java.nio.charset.StandardCharsets
 
-// Hiển thị 1 trang HTML (từ file cục bộ "html-file"/"html-path" hoặc link "html-url"/
-// "html-link") ngay trong item, dùng 1 WebView đặt trong "container" (view rỗng đặt sẵn trong
-// layout, xem kr_rows_html trong các layout item). Cùng giới hạn với "photo": mỗi item chỉ có 1
-// khung html - nếu nhiều row cùng khai báo thì ROW CUỐI CÙNG (duyệt theo thứ tự khai báo) thắng.
 object RowsHtmlRenderHelper {
     private const val DEFAULT_HEIGHT_DP = 260
 
@@ -46,9 +42,6 @@ object RowsHtmlRenderHelper {
         }
         container.visibility = View.VISIBLE
 
-        // Tránh nạp lại trang mỗi lần bind() (rows được vẽ lại khi bấm toggle, RecyclerView
-        // rebind, ...) nếu nội dung cần hiển thị không đổi - giữ nguyên trạng thái cuộn/JS
-        // đang chạy trong WebView thay vì load lại từ đầu.
         val cacheKey = "${row.htmlUrl}|${row.htmlFile}"
         if (webView.tag == cacheKey) {
             return
@@ -74,8 +67,6 @@ object RowsHtmlRenderHelper {
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
 
-        // Nền sáng/tối theo theme hiện tại của app (giống ActionPageOnline - trang duyệt web
-        // riêng của app) - chỉ áp dụng được trên thiết bị hỗ trợ FORCE_DARK.
         if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
             val isDark = ThemeModeState.isDarkMode()
             WebSettingsCompat.setForceDark(
@@ -84,16 +75,11 @@ object RowsHtmlRenderHelper {
             )
         }
 
-        // Nền trong suốt để khung html hoà theo nền của item (sáng/tối theo app) thay vì luôn
-        // trắng - chỉ có tác dụng với phần trang HTML KHÔNG tự đặt màu nền riêng qua CSS.
-        // LAYER_TYPE_SOFTWARE tránh WebView vẽ đè nền đen lên vùng trong suốt khi tăng tốc phần cứng.
         webView.setBackgroundColor(Color.TRANSPARENT)
         webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
         return webView
     }
 
-    // Đọc file html ở luồng nền (tránh chặn main thread khi dựng item), rồi nạp vào WebView trên
-    // main thread. Bỏ qua kết quả nếu WebView đã được bind sang nội dung khác (tag đổi).
     private fun loadLocalHtml(context: Context, webView: WebView, htmlFile: String, pageDir: String, cacheKey: String) {
         Thread {
             val pathAnalysis = PathAnalysis(context, pageDir)

@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bản gốc AOSP vector_drawable_progress_indeterminate_horizontal (Apache 2.0), chỉ đổi màu sang colorAccent.
-     Dùng cho các ProgressBar ngang cao 8dp trở lên. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="360dp"
     android:height="10dp"

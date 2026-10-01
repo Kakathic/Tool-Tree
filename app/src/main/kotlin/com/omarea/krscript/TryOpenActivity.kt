@@ -26,7 +26,6 @@ class TryOpenActivity(private val context:  Context, private val activity:String
     fun tryOpen(): Boolean {
         if (activity.startsWith("am ")) {
             return KeepShellPublic.doCmdSync(activity).contains("Start")
-            // am start -W -n com.miui.voiceassist/com.xiaomi.voiceassistant.AiSettings.AiShortcutActivity -a action.intent.action.VIEW
         } else {
             try {
                 context.startActivity(getIntent())

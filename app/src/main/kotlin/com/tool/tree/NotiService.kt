@@ -25,7 +25,6 @@ class NotiService : Service() {
     private val CHANNEL_ID = "notification_id_am"
     private val notificationManager by lazy { getSystemService(NotificationManager::class.java) }
 
-    // Xóa thông báo
     private fun deleteNotification(id: Int) {
         notificationManager?.cancel(id)
     }
@@ -37,13 +36,11 @@ class NotiService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val id = intent?.getIntExtra("id", 10) ?: 10
 
-        // Kiểm tra nếu muốn xóa thông báo
         if (intent?.getBooleanExtra("delete", false) == true) {
             deleteNotification(id)
             return START_NOT_STICKY
         }
 
-        // Người dùng vừa bấm nút "btn_execute" trên thông báo -> chạy shell đính kèm
         if (intent?.getBooleanExtra("execute", false) == true) {
             executeShell(intent, id)
             return START_NOT_STICKY
@@ -53,7 +50,6 @@ class NotiService : Service() {
         val rawTitle = intent?.getStringExtra("title")
 
         if (rawMessage != null) {
-            // Giải mã tiêu đề và nội dung thông qua StringResRef
             val title = if (rawTitle != null) {
                 StringResRef.resolve(this, rawTitle)
             } else {
@@ -68,7 +64,6 @@ class NotiService : Service() {
         return START_NOT_STICKY
     }
 
-    // Chạy shell đính kèm khi cờ "shell" được cấp, log tiến trình thông qua cơ chế thông báo của BgTaskThread
     private fun executeShell(intent: Intent, id: Int) {
         val shell = intent.getStringExtra("shell")
         if (shell.isNullOrEmpty()) {
@@ -82,7 +77,6 @@ class NotiService : Service() {
             getString(R.string.app_name)
         }
 
-        // Đóng thông báo gốc, tác vụ đang chạy sẽ có thông báo tiến trình riêng do BgTaskThread quản lý
         deleteNotification(id)
 
         val nodeInfo = RunnableNode("").apply {
@@ -98,7 +92,6 @@ class NotiService : Service() {
         )
     }
 
-    // Tạo PendingIntent cho nút "btn_execute", bấm vào sẽ gửi lại cờ "execute" cùng nội dung shell để chạy
     private fun buildExecutePendingIntent(id: Int, rawTitle: String?, shell: String): PendingIntent {
         val executeIntent = Intent(this, NotiService::class.java).apply {
             putExtra("execute", true)
@@ -111,13 +104,10 @@ class NotiService : Service() {
         } else {
             PendingIntent.FLAG_UPDATE_CURRENT
         }
-        // requestCode dùng id để tránh đè PendingIntent giữa các thông báo khác nhau
         return PendingIntent.getService(this, id, executeIntent, flags)
     }
 
-    // Hiển thị thông báo dạng tin nhắn
     private fun showNotification(id: Int, message: String, title: String, intent: Intent) {
-        // 1. Tạo Notification Channel nếu cần (Android O trở lên)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationChannel = NotificationChannel(
                 CHANNEL_ID,
@@ -132,7 +122,6 @@ class NotiService : Service() {
             notificationManager?.createNotificationChannel(notificationChannel)
         }
 
-        // 2. Tạo Intent để mở lại app khi nhấn vào thông báo
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
         }
@@ -146,25 +135,21 @@ class NotiService : Service() {
             PendingIntent.getActivity(this, 0, it, flags)
         }
 
-        // 3. Lấy ảnh lớn và ép kích thước về 200x200
         val avatarBitmap = getAvatarBitmap(intent)
         val iconCompat = IconCompat.createWithBitmap(avatarBitmap)
 
-        // 4. Tạo đối tượng Person đại diện cho người gửi
         val sender = Person.Builder()
             .setName(title)
             .setIcon(iconCompat)
             .build()
 
-        // 5. Cấu hình MessagingStyle
         val messagingStyle = NotificationCompat.MessagingStyle(sender)
             .addMessage(message, System.currentTimeMillis(), sender)
 
-        // 6. Xây dựng thông báo bằng NotificationCompat
         val builder = NotificationCompat.Builder(this, CHANNEL_ID).apply {
             setSmallIcon(R.drawable.tab_favorites)
             setStyle(messagingStyle)
-            setLargeIcon(avatarBitmap) // Gắn thêm largeIcon giúp hiển thị ảnh lớn rõ nét
+            setLargeIcon(avatarBitmap)
             setAutoCancel(true)
             setPriority(NotificationCompat.PRIORITY_HIGH)
 
@@ -173,26 +158,19 @@ class NotiService : Service() {
             }
         }
 
-        // Chỉ hiện nút xác nhận chạy shell (btn_execute) khi thông báo có cờ "shell"
         val shell = intent.getStringExtra("shell")
         if (!shell.isNullOrEmpty()) {
             val executePendingIntent = buildExecutePendingIntent(id, intent.getStringExtra("title"), shell)
             builder.addAction(R.drawable.kr_run, getString(R.string.btn_execute), executePendingIntent)
         }
 
-        // Hiển thị thông báo
         notificationManager?.notify(id, builder.build())
     }
 
-    /**
-     * Hàm xử lý lấy Bitmap từ Intent (Hỗ trợ cờ large_icon / icon),
-     * nếu không có sẽ lấy icon của App và ép về kích thước 200x200.
-     */
     private fun getAvatarBitmap(intent: Intent): Bitmap {
         val targetSize = 200
         var bitmap: Bitmap? = null
 
-        // 1. Lấy từ extra dạng Bitmap direct
         val bitmapExtra = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra("large_icon", Bitmap::class.java)
                 ?: intent.getParcelableExtra("icon", Bitmap::class.java)
@@ -205,14 +183,12 @@ class NotiService : Service() {
         if (bitmapExtra != null) {
             bitmap = bitmapExtra
         } else {
-            // 2. Lấy từ extra dạng ID Resource (Int)
             var resId = intent.getIntExtra("large_icon", 0)
             if (resId == 0) resId = intent.getIntExtra("icon", 0)
 
             if (resId != 0) {
                 bitmap = drawableToBitmap(ContextCompat.getDrawable(this, resId))
             } else {
-                // 3. Lấy từ extra dạng String (Đường dẫn File / Uri String)
                 val pathOrUri = intent.getStringExtra("large_icon") ?: intent.getStringExtra("icon")
                 if (!pathOrUri.isNullOrEmpty()) {
                     bitmap = loadBitmapFromString(pathOrUri)
@@ -220,13 +196,11 @@ class NotiService : Service() {
             }
         }
 
-        // 4. Mặc định: Nếu không lấy được ảnh nào -> Dùng Icon của App
         if (bitmap == null) {
             val appDrawable = packageManager.getApplicationIcon(applicationInfo)
             bitmap = drawableToBitmap(appDrawable)
         }
 
-        // 5. Luôn ép kích thước về 200x200
         return Bitmap.createScaledBitmap(bitmap, targetSize, targetSize, true)
     }
 
@@ -234,11 +208,9 @@ class NotiService : Service() {
 
     private fun loadBitmapFromString(source: String): Bitmap? {
         return try {
-            // Thử decode dưới dạng File path
             val fileBitmap = BitmapFactory.decodeFile(source)
             if (fileBitmap != null) return fileBitmap
 
-            // Thử decode dưới dạng Uri (ContentProvider hoặc file://)
             val uri = Uri.parse(source)
             contentResolver.openInputStream(uri)?.use { stream ->
                 BitmapFactory.decodeStream(stream)

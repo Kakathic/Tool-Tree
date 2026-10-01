@@ -15,48 +15,8 @@ import java.io.File
 import kotlin.math.max
 import kotlin.math.round
 
-/**
- * Tiện ích tạo ảnh nền mờ. Có 2 nguồn ảnh khác nhau nên KHÔNG dùng chung 1 pipeline:
- *
- *   1. VÀO TRANG MỚI (getPageBlurBackground): trang mới chưa có nội dung gì để chụp, nền
- *      mờ ở đây thực chất là ẢNH WALLPAPER đã được BlurController chụp/blur SẴN 1 lần khi
- *      app khởi động / đổi theme (xem BlurController.captureAndBlur, cache trong
- *      BlurEngine.blurBitmap). Chỉ cần scale bitmap cache đó lên full-screen + tint - CHỈ
- *      dùng cache, KHÔNG tự chụp/blur lại (chụp lại mỗi lần mở trang sẽ rất chậm + không
- *      đúng ý nghĩa "ảnh nền" tĩnh theo wallpaper).
- *
- *      Nếu cache chưa sẵn sàng (đang chụp async ở nơi khác) thì DialogHelper.setWindowBlurBg
- *      dùng tiếp getWallpaperBlurBackground() (lấy wallpaper + blur ngay tại chỗ) rồi tới
- *      getWallpaperRawBackground() (lấy wallpaper gốc, không blur) làm các tầng dự phòng,
- *      trước khi rơi xuống màu đặc.
- *
- *   2. MỞ DIALOG (getDialogBlurBackground): dialog che lên NỘI DUNG THẬT đang hiển thị của
- *      trang hiện tại (danh sách, text đang gõ dở, v.v...) - ảnh wallpaper cache ở trên
- *      không phản ánh đúng những gì đang thấy trên màn hình. Vì vậy dialog LUÔN chụp
- *      screenshot màn hình activity tại đúng thời điểm mở dialog rồi blur bằng RenderScript
- *      (BlurController) - KHÔNG dùng lại cache wallpaper, đảm bảo nền mờ phía sau dialog
- *      luôn khớp với nội dung thật đang hiển thị ngay trước đó. Chỉ dùng khi KHÔNG ở chế độ
- *      live wallpaper (xem DialogHelper.setWindowBlurBg).
- *
- * Tất cả đều dùng chung RenderScript pipeline của BlurController (GPU-accelerated, ổn định)
- * thay vì StackBlur CPU cũ, và cùng áp dụng contrast thích ứng dark/light mode qua tint.
- *
- * clearCache() phải được gọi khi đổi theme (dark/light hoặc đổi kiểu nền) - ảnh cache cũ đã
- * bake sẵn contrast/tint theo theme CŨ, dùng tiếp sẽ bị sai màu/độ tương phản cho tới khi
- * capture mới xong; xoá cache buộc trang mới phải chờ/for hiện bitmap mới thay vì thấy nhầm
- * ảnh cũ.
- */
 object FastBlurUtility {
 
-    /**
-     * Ảnh nền mờ cho TRANG MỚI (activity/fragment mới mở) - CHỈ lấy từ cache wallpaper đã
-     * blur sẵn (BlurEngine.blurBitmap), KHÔNG tự chụp/blur lại.
-     *
-     * @return bitmap full-screen đã blur + tint, hoặc null nếu cache chưa sẵn sàng (ví dụ
-     *         BlurController vẫn đang capture nền ở background thread - trang nên tạm hiện
-     *         nền trống rồi tự cập nhật khi BlurEngine.blurBitmap có giá trị, xem
-     *         BlurPreDrawListener). Caller phải recycle bitmap khi không còn dùng.
-     */
     @JvmStatic
     fun getPageBlurBackground(activity: Activity): Bitmap? {
         val screenWidth = activity.resources.displayMetrics.widthPixels
@@ -69,14 +29,6 @@ object FastBlurUtility {
         return scaleWithTint(cachedBlur, screenWidth, screenHeight)
     }
 
-    /**
-     * Ảnh nền mờ cho DIALOG - LUÔN chụp screenshot màn hình activity hiện tại rồi blur bằng
-     * RenderScript, KHÔNG dùng cache wallpaper (BlurEngine.blurBitmap), để nền mờ phía sau
-     * dialog khớp đúng nội dung thật đang hiển thị ngay trước khi dialog mở.
-     *
-     * @return bitmap full-screen đã blur + tint, hoặc null nếu chụp/blur thất bại.
-     *         Caller phải recycle bitmap khi không còn dùng.
-     */
     @JvmStatic
     fun getDialogBlurBackground(activity: Activity): Bitmap? {
         val screenWidth = activity.resources.displayMetrics.widthPixels
@@ -87,22 +39,12 @@ object FastBlurUtility {
         if (screenshot == null || screenshot.isRecycled) return null
 
         val result = blurViaController(activity, screenshot, screenWidth, screenHeight)
-        // Screenshot chỉ là nguồn trung gian, recycle sau khi đã dùng xong
         if (!screenshot.isRecycled) {
             screenshot.recycle()
         }
         return result
     }
 
-    /**
-     * Tầng dự phòng #2 khi ở chế độ wallpaper: cache (BlurEngine.blurBitmap) chưa sẵn sàng
-     * (đang chụp async ở BlurController) - lấy trực tiếp ảnh wallpaper (file tùy chỉnh hoặc
-     * hệ thống) rồi blur NGAY tại chỗ, đồng bộ. KHÔNG ghi vào BlurEngine.blurBitmap (tránh
-     * xung đột với luồng capture async đang chạy song song).
-     *
-     * @return bitmap full-screen đã blur + tint, hoặc null nếu lấy/blur thất bại.
-     *         Caller phải recycle bitmap khi không còn dùng.
-     */
     @JvmStatic
     fun getWallpaperBlurBackground(activity: Activity): Bitmap? {
         val screenWidth = activity.resources.displayMetrics.widthPixels
@@ -120,14 +62,6 @@ object FastBlurUtility {
         }
     }
 
-    /**
-     * Tầng dự phòng #3 khi ở chế độ wallpaper: cả getWallpaperBlurBackground() cũng thất bại
-     * (ví dụ RenderScript lỗi) - lấy ảnh wallpaper gốc, scale full-screen + tint nhưng KHÔNG
-     * blur, còn hơn phải dùng màu đặc.
-     *
-     * @return bitmap full-screen đã tint (không blur), hoặc null nếu lấy ảnh thất bại.
-     *         Caller phải recycle bitmap khi không còn dùng.
-     */
     @JvmStatic
     fun getWallpaperRawBackground(activity: Activity): Bitmap? {
         val screenWidth = activity.resources.displayMetrics.widthPixels
@@ -145,13 +79,6 @@ object FastBlurUtility {
         }
     }
 
-    /**
-     * Lấy nguồn ảnh wallpaper: file tùy chỉnh nếu có, không thì ảnh wallpaper hệ thống.
-     *
-     * @return cặp (bitmap, ownsSource) - ownsSource = true nếu bitmap do ta tự decode (phải
-     *         recycle sau khi dùng xong), false nếu là bitmap hệ thống (KHÔNG được recycle,
-     *         thuộc quyền quản lý của WallpaperManager). Null nếu không lấy được ảnh nào.
-     */
     private fun loadWallpaperSource(activity: Activity): Pair<Bitmap, Boolean>? {
         return try {
             val customWallpaperFile = File(activity.filesDir, "home/etc/wallpaper.jpg")
@@ -169,13 +96,6 @@ object FastBlurUtility {
         }
     }
 
-    /**
-     * Xoá cache blur wallpaper (BlurEngine.blurBitmap) - gọi khi đổi theme (dark/light,
-     * hoặc bật/tắt directbg) để tránh getPageBlurBackground() trả về ảnh đã bake contrast/
-     * tint theo theme CŨ trong lúc chờ BlurController capture xong bản mới.
-     *
-     * An toàn gọi nhiều lần / gọi khi cache đang null.
-     */
     @JvmStatic
     fun clearCache() {
         val cached = BlurEngine.blurBitmap
@@ -185,25 +105,12 @@ object FastBlurUtility {
         BlurEngine.blurBitmap = null
     }
 
-    /**
-     * Blur trực tiếp 1 bitmap đã chụp sẵn từ nơi khác (không tự chụp screenshot của activity).
-     *
-     * Dùng cho SwipeBackPreviewCache: bitmap "sharp" đã được chụp qua PixelCopy (giữ đúng bo
-     * góc/clip) - chỉ cần blur nó bằng pipeline RenderScript sẵn có, giữ nguyên kích thước gốc
-     * của bitmap đầu vào.
-     *
-     * @return bitmap đã blur + tint (cùng kích thước với sourceBitmap), hoặc null nếu lỗi.
-     *         Caller phải recycle bitmap khi không còn dùng.
-     */
     @JvmStatic
     fun blurBitmap(activity: Activity, sourceBitmap: Bitmap): Bitmap? {
         if (sourceBitmap.isRecycled) return null
         return blurViaController(activity, sourceBitmap, sourceBitmap.width, sourceBitmap.height)
     }
 
-    /**
-     * Chụp ảnh màn hình an toàn.
-     */
     private fun takeScreenShot(activity: Activity): Bitmap? {
         return try {
             val view: View = activity.window.decorView
@@ -218,15 +125,6 @@ object FastBlurUtility {
         }
     }
 
-    /**
-     * Scale bitmap blur (nhỏ, ~20% screen) lên full-screen và phủ tint.
-     *
-     * Dùng cho cả 2 trường hợp:
-     *   - Bitmap cache từ BlurEngine.blurBitmap
-     *   - Bitmap blur vừa tạo mới
-     *
-     * @return bitmap mới full-screen, hoặc null nếu lỗi. Caller phải recycle.
-     */
     private fun scaleWithTint(blurBitmap: Bitmap, targetW: Int, targetH: Int): Bitmap? {
         return try {
             val output = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
@@ -234,14 +132,9 @@ object FastBlurUtility {
 
             val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
 
-            // Áp dụng contrast + tint giống BlurController
             val isDark = com.tool.tree.ThemeModeState.isDarkMode()
-            // val contrastValue = if (isDark) 0.9f else 1.2f
-            // val dimValue = if (isDark) 0.8f else 0.7f
-            // val scale = contrastValue * dimValue
-            // val offset = (1f - scale) * 128f
             val scale = if (isDark) 0.8f else 1.1f
-            val offset = if (isDark) 0f else (1f - 1.1f) * 128f // -12.8f
+            val offset = if (isDark) 0f else (1f - 1.1f) * 128f
             val cm = ColorMatrix(
                 floatArrayOf(
                     scale, 0f, 0f, 0f, offset,
@@ -261,40 +154,23 @@ object FastBlurUtility {
         }
     }
 
-    /**
-     * Blur screenshot bằng RenderScript thông qua BlurController.
-     *
-     * Thay vì dùng StackBlur CPU (bản cũ, hay fail), gọi trực tiếp vào
-     * BlurController để tận dụng:
-     *   - RenderScript GPU-accelerated (nhanh + ổn định hơn)
-     *   - RS context/script đã cache (không tốn thời gian tạo lại)
-     *   - Scale 20% + radius 16f (chất lượng cao hơn bản cũ)
-     *
-     * @return bitmap full-screen đã blur + tint, hoặc null. Caller phải recycle.
-     */
     private fun blurViaController(activity: Activity, screenshot: Bitmap, screenWidth: Int, screenHeight: Int): Bitmap? {
         return try {
-            // Scale xuống 20% giống BlurController (nhanh + đủ chất lượng)
             val scale = 0.20f
             val width = max(round(screenshot.width * scale).toInt(), 1)
             val height = max(round(screenshot.height * scale).toInt(), 1)
             val scaled = Bitmap.createScaledBitmap(screenshot, width, height, true)
 
-            // Blur bằng RenderScript (BlurController.cacheBlurBitmap)
             val blurred = BlurEngine.controller.cacheBlurBitmap(activity.applicationContext, scaled, 16f)
 
-            // scaled đã dùng xong, recycle
             if (!scaled.isRecycled) {
                 scaled.recycle()
             }
 
             if (blurred == null || blurred.isRecycled) return null
 
-            // Scale lên full-screen + tint
             val result = scaleWithTint(blurred, screenWidth, screenHeight)
 
-            // blurred là bitmap trung gian, recycle (trừ khi nó được gán vào BlurEngine.blurBitmap bên trong controller)
-            // An toàn: chỉ recycle nếu không phải là bitmap đang được cache
             if (blurred !== BlurEngine.blurBitmap && !blurred.isRecycled) {
                 blurred.recycle()
             }

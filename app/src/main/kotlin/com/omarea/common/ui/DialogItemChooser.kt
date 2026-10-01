@@ -10,15 +10,10 @@ import com.tool.tree.R
 import com.omarea.common.model.SelectItem
 
 class DialogItemChooser(
-        // 是否深色模式
         darkMode: Boolean,
-        // 选择项以及选中状态
         private var items: ArrayList<SelectItem>,
-        // 是否可多选
         private val multiple: Boolean = false,
-        // 回调
         private var callback: Callback? = null,
-        // 是否永远显示为小窗口（而不是全屏）
         alwaysSmallDialog: Boolean? = null
 ) : DialogFullScreen(
         (if (items.size > 5 && alwaysSmallDialog != true) {
@@ -41,7 +36,6 @@ class DialogItemChooser(
             this.onConfirm(absListView)
         }
 
-        // 全选功能
         val selectAll = view.findViewById<CompoundButton?>(R.id.select_all)?.apply {
             text = "$text "
         }
@@ -65,7 +59,6 @@ class DialogItemChooser(
             }
         }
 
-        // 长列表才有搜索
         if (items.size > 5) {
             val clearBtn = view.findViewById<View>(R.id.search_box_clear)
             val searchBox = view.findViewById<EditText>(R.id.search_box).apply {

@@ -3,10 +3,6 @@ package com.omarea.common.shell
 import android.os.Handler
 import java.nio.charset.Charset
 
-/**
- * Created by helloklf on 2017/12/01.
- */
-
 class AsynSuShellUnit(var handler: Handler) {
     var process: Process? = null
 

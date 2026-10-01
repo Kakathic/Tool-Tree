@@ -24,7 +24,6 @@ class ListItemPicker(context: Context, private val config: PickerNode) : ListIte
         widgetView?.setImageDrawable(context.getDrawable(R.drawable.kr_picker))
         WidgetTintHelper.applyTint(context, widgetView, iconDrawable)
 
-        // Giống action.rows: hiển thị thêm các dòng rich-text (nếu có khai báo picker.rows)
         RowsRenderHelper.bind(context, rowsView, rowsPhotoView, config.rows, config, rowsHtmlView)
     }
 }

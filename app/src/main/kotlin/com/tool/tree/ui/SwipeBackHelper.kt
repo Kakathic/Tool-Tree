@@ -215,9 +215,6 @@ class SwipeBackHelper(
             addUpdateListener { applyProgress(it.animatedValue as Float) }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
-                    // Khôi phục theo đúng theme hiện tại, không ép về false vô điều kiện -
-                    // nếu không, ở theme 0/2 (không blur), blur bitmap cũ còn sót trong cache
-                    // sẽ hiện lại mỗi lần chuyển trang xong.
                     BlurEngine.isPaused = !ThemeModeState.isBlurActive()
                     val isStale = dragSessionId != sessionAtStart
                     if (target == 0f && !isStale) {

@@ -40,7 +40,6 @@ class ListItemSwitch(context: Context,
         checked = config.checked
         WidgetTintHelper.applyTint(context, switchView, iconDrawable)
 
-        // Giống action.rows: hiển thị thêm các dòng rich-text (nếu có khai báo switch.rows)
         RowsRenderHelper.bind(context, rowsView, rowsPhotoView, config.rows, config, rowsHtmlView)
     }
 }

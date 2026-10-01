@@ -16,28 +16,17 @@ import java.io.ByteArrayInputStream
 class PageConfigSh(private var activity: Activity, private var pageConfigSh: String, private var parentConfig: PageNode?) {
     private var handler = Handler(Looper.getMainLooper())
 
-    // Reader được dùng ở lần execute() gần nhất - dùng để lấy pageMenuOptions ([[menu]]/[[fab]])
-    // được gom trong lúc parse, GIỐNG hệt cách ActionPage lấy từ PageConfigReader ở nhánh
-    // pageConfigPath (file .toml tĩnh). execute() có thể không tạo reader nào (vd script lỗi/rỗng)
-    // nên luôn fallback về danh sách rỗng thay vì null.
     private var lastReader: PageConfigReader? = null
     val pageMenuOptions: ArrayList<PageMenuOption> get() = lastReader?.pageMenuOptions ?: ArrayList()
     val headerActions: ArrayList<ActionNode> get() = lastReader?.headerActions ?: ArrayList()
     val autoShowActions: ArrayList<ActionNode> get() = lastReader?.autoShowActions ?: ArrayList()
-    // Icon container-level của [[menu]]/[[fab]] (field "icon"/"icon-path" ở NGOÀI "items") - xem
-    // PageConfigReader.menuIcon/fabIcon.
     val menuIcon: ClickableNode? get() = lastReader?.menuIcon
     val fabIcon: ClickableNode? get() = lastReader?.fabIcon
 
-    // load-after: xem PageConfigReader.hasDeferredEntries/buildDeferredNodes().
     val hasDeferredEntries: Boolean get() = lastReader?.hasDeferredEntries ?: false
     fun buildDeferredNodes(): ArrayList<PageConfigReader.DeferredNodeResult> =
         lastReader?.buildDeferredNodes() ?: ArrayList()
 
-    // Nhận diện nội dung TOML inline khi dòng 1 hoặc dòng 2 (bỏ qua dòng trống) là
-    // header bắt đầu bằng "[[toml]]" (marker đánh dấu inline TOML, tuỳ chọn - dùng khi
-    // nội dung không mở đầu bằng [[group]], vd chỉ có [[action]]/[[page]] đứng lẻ) hoặc
-    // "[[group]]" như cũ (chỉ khớp đúng để tránh nhận nhầm output lỗi/không liên quan).
     private fun looksLikeInlineToml(result: String): Boolean {
         val firstLines = result.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.take(2).toList()
         return firstLines.any { it.startsWith("[[toml]]") || it.startsWith("[[group]]") }
@@ -68,8 +57,6 @@ class PageConfigSh(private var activity: Activity, private var pageConfigSh: Str
                     noReadPermission()
                 }
             } else if (looksLikeInlineToml(result)) {
-                // Nội dung TOML trả về trực tiếp (không phải đường dẫn file):
-                // nhận diện qua header [[toml]] hoặc [[group]] ở dòng 1 hoặc dòng 2.
                 val inputStream = ByteArrayInputStream(result.toByteArray())
                 val reader = PageConfigReader(activity, inputStream)
                 lastReader = reader

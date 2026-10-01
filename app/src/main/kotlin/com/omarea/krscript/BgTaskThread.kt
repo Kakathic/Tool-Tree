@@ -52,7 +52,6 @@ class BgTaskThread(private var process: Process) : Thread() {
         private var forceStop: Runnable? = null
         private var isFinished = false
 
-        // Handler quản lý Trì hoãn Notification (Rate Limiting)
         private val notificationHandler = Handler(Looper.getMainLooper())
         private var pendingNotificationUpdate = false
         private val updateNotificationRunnable = Runnable {
@@ -143,8 +142,6 @@ class BgTaskThread(private var process: Process) : Thread() {
                 val drawable = IconPathAnalysis().loadLogo(context, runnableNode, false)
                 drawableToIcon(drawable, 200)
             } else {
-                // Icon mặc định cũng vẽ qua Bitmap (drawableToIcon) thay vì dùng thẳng resource,
-                // tránh hiển thị vuông không đồng nhất với icon tùy chỉnh (iconPath/logoPath)
                 drawableToIcon(ContextCompat.getDrawable(context, R.drawable.kr_shortcut_logo), 200)
             }) ?: Icon.createWithResource(context, R.drawable.kr_shortcut_logo)
 
@@ -251,10 +248,8 @@ class BgTaskThread(private var process: Process) : Thread() {
                     notificationMessageRows.add("${context.getString(R.string.kr_shell_finish_error)}\n")
                 }
             }
-            // Bắt buộc đẩy dòng hoàn thành lên Notification ngay lập tức
             updateNotificationImmediately()
             
-            // Dọn dẹp BroadcastReceiver giải phóng bộ nhớ
             cleanupReceivers()
         }
 

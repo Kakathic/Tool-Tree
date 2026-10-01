@@ -24,13 +24,6 @@ class DownloaderReceiver : BroadcastReceiver() {
                         type = "*/*"
                     }
                     val uri = downloadManager.getUriForDownloadedFile(downloadId)
-                    /*
-                    if (uri != null) {
-                        Intent handlerIntent = new Intent(Intent.ACTION_VIEW);
-                        handlerIntent.setDataAndType(uri, type);
-                        context.startActivity(handlerIntent);
-                    }
-                    */
                     val path = FilePathResolver().getPath(context, uri)
                     if (!path.isNullOrEmpty()) {
                         Downloader(context, null).saveTaskCompleted(downloadId, path)

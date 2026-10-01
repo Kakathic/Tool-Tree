@@ -76,7 +76,6 @@ class DialogHelper {
     }
 
     companion object {
-        // 是否禁用模糊背景
         var disableBlurBg = false
 
         fun animDialog(dialog: AlertDialog?): DialogWrap? {
@@ -254,7 +253,6 @@ class DialogHelper {
                     dialog.dismiss()
                 }
             }
-
 
             val btnCancel = view.findViewById<TextView?>(R.id.btn_cancel)
             if (onCancel != null) {
@@ -457,26 +455,6 @@ class DialogHelper {
         
         fun setWindowBlurBg(window: Window, activity: Activity) {
             window.run {
-                // 2 khái niệm KHÁC NHAU, trước đây bị gộp chung vào 1 biến "wallpaperMode" nên
-                // đọc sai tín hiệu cho trường hợp ảnh nền TĨNH (file tùy chỉnh / wallpaper hệ
-                // thống tĩnh):
-                //
-                // 1. isLiveWallpaperSurface: có đúng là live wallpaper (hệ thống vẽ ở surface
-                //    riêng, ngoài cây View của activity) hay không - CHỈ dùng để quyết định có
-                //    bỏ qua bước chụp screenshot decorView hay không (screenshot sẽ không chứa
-                //    ảnh nền thật trong trường hợp này). Đọc từ FLAG_SHOW_WALLPAPER - cờ này
-                //    (xem ThemeModeState.applyWallpaperMode) CHỈ được bật khi thực sự là live
-                //    wallpaper, ảnh tĩnh sẽ luôn đọc ra false ở đây.
-                //
-                // 2. imageBgMode: có đang ở "chế độ ảnh nền" nói chung hay không (bao gồm CẢ
-                //    ảnh tĩnh lẫn live wallpaper, loại trừ directBg màu phẳng) - dùng để quyết
-                //    định có chạy 3 tầng dự phòng (cache/blur-tại-chỗ/ảnh gốc) trước khi rơi
-                //    xuống màu đặc hay không. Đọc từ ThemeModeState.isImageBackgroundMode()
-                //    (biến RIÊNG, không phải FLAG_SHOW_WALLPAPER) - trước đây dùng nhầm
-                //    "wallpaperMode" (= isLiveWallpaperSurface) cho việc này, khiến ảnh tĩnh
-                //    không bao giờ được vào 3 tầng dự phòng: hễ getDialogBlurBackground() (chụp
-                //    screenshot) fail (timing lúc chuyển trang, bitmap HARDWARE trên MIUI...) là
-                //    rơi thẳng xuống màu đặc dù đang dùng ảnh nền.
                 val isLiveWallpaperSurface = activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER != 0
                 val imageBgMode = ThemeModeState.isImageBackgroundMode()
 
@@ -494,23 +472,16 @@ class DialogHelper {
                             bg.toDrawable()
                         }
                         else -> {
-                            // Chế độ ảnh nền (imageBgMode, bao gồm cả ảnh tĩnh): 3 tầng dự
-                            // phòng theo thứ tự ưu tiên, trước khi rơi xuống màu đặc.
-                            // 1. Ảnh đã chụp + blur sẵn trong cache (nhanh nhất).
                             val pageBlur = if (!disableBlurBg && imageBgMode) {
                                 FastBlurUtility.getPageBlurBackground(activity)
                             } else null
-                            // 2. Cache chưa sẵn sàng (đang chụp async nơi khác) -> tự lấy ảnh
-                            // nền + blur ngay tại chỗ.
                             val freshBlur = pageBlur ?: if (!disableBlurBg && imageBgMode) {
                                 FastBlurUtility.getWallpaperBlurBackground(activity)
                             } else null
-                            // 3. Blur cũng lỗi -> dùng ảnh nền gốc (không blur), còn hơn màu đặc.
                             val finalBlur = freshBlur ?: if (!disableBlurBg && imageBgMode) {
                                 FastBlurUtility.getWallpaperRawBackground(activity)
                             } else null
                             finalBlur?.toDrawable(activity.resources) ?: run {
-                                // 4. Cuối cùng: màu đặc.
                                 val color = if (imageBgMode || isNightMode(context)) {
                                     Color.argb(255, 18, 18, 18)
                                 } else {

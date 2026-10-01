@@ -11,21 +11,16 @@ import java.nio.charset.Charset
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 
-
-/**
- * Created by Hello on 2018/01/23.
- */
 class KeepShell(private var rootMode: Boolean = true) : ShellSession {
     private var p: Process? = null
     private var out: OutputStream? = null
     private var reader: BufferedReader? = null
-    private var currentIsIdle = true // 是否处于闲置状态
+    private var currentIsIdle = true
     override val isIdle: Boolean
         get() {
             return currentIsIdle
         }
 
-    //尝试退出命令行程序
     override fun tryExit() {
         try {
             if (out != null)
@@ -45,7 +40,6 @@ class KeepShell(private var rootMode: Boolean = true) : ShellSession {
         currentIsIdle = true
     }
 
-    //获取ROOT超时时间
     private val mLock = ReentrantLock()
     private val LOCK_TIMEOUT = 10000L
     private var enterLockTime = 0L
@@ -90,14 +84,12 @@ class KeepShell(private var rootMode: Boolean = true) : ShellSession {
     private val startTagBytes = "\necho '$startTag'\n".toByteArray(Charset.defaultCharset())
     private val endTagBytes = "\necho '$endTag'\n".toByteArray(Charset.defaultCharset())
 
-    //执行脚本
     override fun doCmdSync(cmd: String): String {
         if (mLock.isLocked && enterLockTime > 0 && System.currentTimeMillis() - enterLockTime > LOCK_TIMEOUT) {
             tryExit()
             Log.e("doCmdSync-Lock", "Thread wait timeout ${System.currentTimeMillis()} - $enterLockTime > $LOCK_TIMEOUT")
         }
         getRuntimeShell()
-
 
         try {
             mLock.lockInterruptibly()
@@ -129,8 +121,6 @@ class KeepShell(private var rootMode: Boolean = true) : ShellSession {
                     shellOutputCache.append("\n")
                 }
             }
-            // Log.e("shell-unlock", cmd)
-            // Log.d("Shell", cmd.toString() + "\n" + "Result:"+results.toString().trim())
             return shellOutputCache.toString().trim()
         }
         catch (e: Exception) {
@@ -145,7 +135,6 @@ class KeepShell(private var rootMode: Boolean = true) : ShellSession {
         }
     }
 
-    // 执行脚本，并对结果进行ResourceID翻译
     override fun doCmdSync(shellCommand: String, shellTranslation: ShellTranslation): String {
         val rows = doCmdSync(shellCommand).split("\n")
         return if (rows.isNotEmpty()) {

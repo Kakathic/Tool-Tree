@@ -12,9 +12,6 @@ class ParamsFileChooserRender(
     private var actionParamInfo: ActionParamInfo,
     private var context: Context,
     private var fileChooser: FileChooserInterface?,
-    // Được gọi mỗi khi giá trị đường dẫn (file/folder) thay đổi - do chọn qua dialog hoặc
-    // gõ tay (khi editable="true"), dùng để các param khác "depend-on" param này biết mà
-    // cập nhật ẩn/hiện.
     private val onValueChanged: (() -> Unit)? = null) {
     interface FileChooserInterface {
         fun openFileChooser(fileSelectedInterface: FileSelectedInterface): Boolean
@@ -32,22 +29,16 @@ class ParamsFileChooserRender(
         fun mimeType():String?
         fun suffix():String?
         fun type(): Int
-        // Có cho phép chọn nhiều tệp tin/thư mục cùng lúc hay không (mặc định: không)
         fun multiple(): Boolean = false
-        // Dấu phân cách dùng để nối nhiều đường dẫn đã chọn thành 1 chuỗi giá trị (mặc định: xuống dòng)
         fun separator(): String = "\n"
-        // Thư mục sẽ được mở sẵn khi bắt đầu chọn (ví dụ "/sdcard/Android").
-        // Người dùng vẫn có thể quay lại thư mục cha (ví dụ /sdcard) như bình thường.
         fun pathHome(): String? = null
     }
 
-
     fun setEditTextReadOnly(view: TextView) {
-        // view.setTextColor(R.color.read_only_color) //设置只读时的文字颜色
         if (view is EditText) {
-            view.isCursorVisible = false //设置输入框中的光标不可见
-            view.setFocusable(false) //无焦点
-            view.isFocusableInTouchMode = false //触摸时也得不到焦点
+            view.isCursorVisible = false
+            view.setFocusable(false)
+            view.isFocusableInTouchMode = false
         }
     }
 

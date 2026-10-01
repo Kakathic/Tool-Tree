@@ -41,7 +41,6 @@ class DialogAppChooser(
             onConfirm(absListView)
         }
 
-        // ===== 全选 (Select All) =====
         selectAllCheckBox = view.findViewById<CompoundButton?>(R.id.select_all)?.apply {
             if (text != null && !text.endsWith(" ")) {
                 text = "$text "
@@ -79,7 +78,6 @@ class DialogAppChooser(
             }
         }
 
-        // ===== Search =====
         val clearBtn = view.findViewById<View>(R.id.search_box_clear)
         val searchBox = view.findViewById<EditText>(R.id.search_box).apply {
             addTextChangedListener(object : TextWatcher {

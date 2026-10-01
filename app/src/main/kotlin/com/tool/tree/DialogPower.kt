@@ -17,11 +17,9 @@ class DialogPower(private val activity: Activity) {
         val view = layoutInflater.inflate(R.layout.dialog_power_operation, null)
         val dialog = DialogHelper.customDialog(activity, view)
 
-        // Hàm helper để tránh lặp code
         fun runShellCommand(resId: Int) {
             dialog.dismiss()
             val cmd = activity.getString(resId)
-            // Chạy ngầm để tránh treo máy (ANR)
             GlobalScope.launch(Dispatchers.IO) {
                 KeepShellPublic.doCmdSync(cmd)
             }

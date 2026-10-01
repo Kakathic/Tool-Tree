@@ -15,18 +15,14 @@ import java.util.regex.Pattern
 
 object AnsiColorParser {
 
-    // CSI: ESC [ params intermediate finalByte   (SGR dùng finalByte = 'm', ngoài ra còn
-    // cursor move/clear line/hide cursor... với finalByte khác -> bị bỏ qua không render)
     private val CSI_PATTERN = Pattern.compile(
         "\\u001B\\[([0-9;:?]*)([ -/]*)([@-~])"
     )
 
-    // OSC: ESC ] body (BEL | ESC \)  — dùng cho hyperlink (8;;URL) và các OSC khác (vd 0;title)
     private val OSC_PATTERN = Pattern.compile(
         "\\u001B\\]([^\\u0007\\u001B]*)(?:\\u0007|\\u001B\\\\)"
     )
 
-    // Escape đơn dạng ESC + 1 ký tự không phải '[' hoặc ']' (vd chọn charset ESC(B, ESC)0...)
     private val SIMPLE_ESC_PATTERN = Pattern.compile(
         "\\u001B[()#][A-Za-z0-9]|\\u001B[=>]"
     )
@@ -34,7 +30,6 @@ object AnsiColorParser {
     private const val DEFAULT_FOREGROUND = Color.LTGRAY
     private const val DEFAULT_BACKGROUND = Color.TRANSPARENT
 
-    // Trạng thái định dạng hiện tại của luồng log (giữ nguyên xuyên suốt các lần parse)
     private var currentFgColor = DEFAULT_FOREGROUND
     private var currentBgColor = DEFAULT_BACKGROUND
     private var isBold = false
@@ -77,8 +72,6 @@ object AnsiColorParser {
 
         fun flushPlainBuffer() {
             if (plainBuffer.isNotEmpty()) {
-                // Chỉ tự động nhận diện URL trần (http://, https://) khi không đang nằm trong
-                // một hyperlink OSC 8 (tránh chồng lấn 2 lớp URLSpan trên cùng vùng text).
                 appendStyledText(builder, plainBuffer.toString(), autoLink = pendingLinkUrl == null)
                 plainBuffer.setLength(0)
             }
@@ -93,7 +86,6 @@ object AnsiColorParser {
                 continue
             }
 
-            // Gặp ESC -> flush phần text thường đã tích lũy trước khi xử lý escape
             flushPlainBuffer()
 
             val nextChar = if (i + 1 < len) text[i + 1] else '\u0000'
@@ -108,10 +100,9 @@ object AnsiColorParser {
                         if (finalByte == "m") {
                             parseAnsiParameters(params)
                         }
-                        // Các CSI khác (cursor move, clear line, hide cursor...) -> bỏ qua, không render
                         i = m.end()
                     } else {
-                        i++ // escape hỏng/không đầy đủ, bỏ qua 1 ký tự để tránh vòng lặp vô hạn
+                        i++
                     }
                 }
 
@@ -121,10 +112,8 @@ object AnsiColorParser {
                     if (m.lookingAt()) {
                         val body = m.group(1) ?: ""
                         if (body.startsWith("8;")) {
-                            // OSC 8 hyperlink: "8;params;URL"
                             val url = body.substringAfterLast(';', "")
                             if (url.isEmpty()) {
-                                // Thẻ đóng link
                                 if (pendingLinkUrl != null && pendingLinkStart in 0..builder.length) {
                                     builder.setSpan(
                                         URLSpan(pendingLinkUrl),
@@ -136,12 +125,10 @@ object AnsiColorParser {
                                 pendingLinkUrl = null
                                 pendingLinkStart = -1
                             } else {
-                                // Thẻ mở link
                                 pendingLinkUrl = url
                                 pendingLinkStart = builder.length
                             }
                         }
-                        // Các OSC khác (đặt title cửa sổ, v.v.) -> bỏ qua, không hiển thị ra text
                         i = m.end()
                     } else {
                         i++
@@ -152,9 +139,9 @@ object AnsiColorParser {
                     val m = SIMPLE_ESC_PATTERN.matcher(text)
                     m.region(i, len)
                     if (m.lookingAt()) {
-                        i = m.end() // bỏ qua, không có nội dung hiển thị
+                        i = m.end()
                     } else {
-                        i++ // ESC đơn lẻ không rõ dạng -> bỏ qua chính nó
+                        i++
                     }
                 }
             }
@@ -162,7 +149,6 @@ object AnsiColorParser {
 
         flushPlainBuffer()
 
-        // Nếu chuỗi kết thúc mà link vẫn chưa đóng (log bị cắt giữa chừng), vẫn áp span cho phần đã có
         if (pendingLinkUrl != null && pendingLinkStart in 0 until builder.length) {
             builder.setSpan(
                 URLSpan(pendingLinkUrl),
@@ -175,12 +161,6 @@ object AnsiColorParser {
         return builder
     }
 
-    /**
-     * Thêm chuỗi văn bản và áp dụng tất cả cấu hình span đang hoạt động
-     *
-     * @param autoLink nếu true, tự động dò các URL trần (http://, https://) trong [text]
-     *                 và gắn URLSpan để có thể ấn vào mở trình duyệt.
-     */
     private fun appendStyledText(builder: SpannableStringBuilder, text: String, autoLink: Boolean = true) {
         val spanStart = builder.length
         builder.append(text)
@@ -195,7 +175,6 @@ object AnsiColorParser {
         var fg = currentFgColor
         var bg = currentBgColor
 
-        // Reverse video: hoán đổi fg/bg khi hiển thị
         if (isReverse) {
             val realBg = if (bg == Color.TRANSPARENT) Color.BLACK else bg
             val tmp = fg
@@ -203,7 +182,6 @@ object AnsiColorParser {
             bg = tmp
         }
 
-        // Dim/faint: giảm độ chói của màu chữ
         if (isDim) {
             fg = Color.argb(
                 180,
@@ -262,13 +240,6 @@ object AnsiColorParser {
         }
     }
 
-    /**
-     * Dò tìm các URL trần (http://..., https://...) nằm trong [text] vừa được append vào [builder]
-     * (bắt đầu tại vị trí [offset] trong builder) và gắn URLSpan cho từng URL tìm được, kèm
-     * gạch chân để người dùng nhận biết đây là link có thể ấn vào.
-     *
-     * Không dùng cho các đoạn text đã nằm trong một hyperlink OSC 8 (đã có URLSpan riêng).
-     */
     private fun linkifyPlainUrls(builder: SpannableStringBuilder, text: String, offset: Int) {
         val matcher = Patterns.WEB_URL.matcher(text)
         while (matcher.find()) {
@@ -277,20 +248,12 @@ object AnsiColorParser {
 
             var url = text.substring(start, end)
 
-            // CHỈ coi là link khi văn bản THỰC SỰ bắt đầu bằng http:// hoặc https://.
-            // Patterns.WEB_URL của Android mặc định khớp CẢ domain trần không có scheme
-            // (vd "Kakathic.com", "example.com") -> nếu không lọc lại ở đây, những đoạn
-            // text bình thường như "echo "Kakathic.com"" cũng sẽ bị biến thành link, dù
-            // người dùng không hề gõ http(s)://. Bỏ qua (không gắn URLSpan) cho mọi match
-            // không có scheme http/https tường minh, và KHÔNG tự thêm "http://" vào nữa.
             if (!url.startsWith("http://", ignoreCase = true) &&
                 !url.startsWith("https://", ignoreCase = true)
             ) {
                 continue
             }
 
-            // Bỏ các dấu câu/ngoặc thường bị dính vào cuối URL do nằm trong câu văn
-            // (vd: "xem tại https://example.com." hoặc "(https://example.com)")
             while (end > start && url.isNotEmpty() && url.last() in ".,;:!?)]}\"'") {
                 end--
                 url = text.substring(start, end)
@@ -314,9 +277,6 @@ object AnsiColorParser {
         }
     }
 
-    /**
-     * Parse chuỗi tham số SGR để cập nhật trạng thái định dạng
-     */
     private fun parseAnsiParameters(paramsStr: String) {
         if (paramsStr.isEmpty() || paramsStr == "0") {
             resetToDefault()
@@ -338,7 +298,7 @@ object AnsiColorParser {
                 code == 7 -> isReverse = true
                 code == 9 -> isStrikethrough = true
 
-                code == 21 -> isBold = false // double underline / bold-off tùy terminal
+                code == 21 -> isBold = false
                 code == 22 -> { isBold = false; isDim = false }
                 code == 23 -> isItalic = false
                 code == 24 -> isUnderline = false
@@ -354,7 +314,6 @@ object AnsiColorParser {
                 code in 40..47 -> currentBgColor = ANSI_16_COLORS[code - 40]
                 code in 100..107 -> currentBgColor = ANSI_16_COLORS[code - 100 + 8]
 
-                // Màu chữ mở rộng: 38;5;ID hoặc 38;2;R;G;B
                 code == 38 -> {
                     if (i + 1 < tokens.size) {
                         val mode = tokens[i + 1].toIntOrNull() ?: 0
@@ -372,7 +331,6 @@ object AnsiColorParser {
                     }
                 }
 
-                // Màu nền mở rộng: 48;5;ID hoặc 48;2;R;G;B
                 code == 48 -> {
                     if (i + 1 < tokens.size) {
                         val mode = tokens[i + 1].toIntOrNull() ?: 0
@@ -427,11 +385,6 @@ object AnsiColorParser {
         resetToDefault()
     }
 
-    /**
-     * Lọc bỏ toàn bộ mã ANSI escape (mã màu, style, hyperlink OSC 8, các CSI khác...)
-     * khỏi chuỗi, chỉ giữ lại phần văn bản thuần. Dùng cho các nơi hiển thị không hỗ trợ
-     * Spannable (vd nội dung thông báo/Notification), tránh hiện ký tự điều khiển thừa.
-     */
     fun stripToPlainText(text: String?): String {
         if (text.isNullOrEmpty()) return text ?: ""
         var result = CSI_PATTERN.matcher(text).replaceAll("")

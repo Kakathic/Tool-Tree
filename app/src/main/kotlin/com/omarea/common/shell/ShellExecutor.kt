@@ -5,10 +5,8 @@ import java.io.IOException
 class ShellExecutor {
     companion object {
         private var extraEnvPath = ""
-        private var defaultEnvPath = "" // /sbin:/system/sbin:/system/bin:/system/xbin:/odm/bin:/vendor/bin:/vendor/xbin
+        private var defaultEnvPath = ""
 
-        // Thư mục tạm mà app CHẮC CHẮN có quyền ghi (khuyến nghị: context.getCacheDir().getAbsolutePath()).
-        // Dùng để ép TMPDIR trỏ vào đây thay vì giá trị mặc định của hệ thống.
         private var extraTmpDir = ""
 
         @JvmStatic
@@ -16,8 +14,6 @@ class ShellExecutor {
             Companion.extraEnvPath = extraEnvPath
         }
 
-        // Gọi 1 lần lúc khởi động app, ví dụ:
-        //   ShellExecutor.setTmpDir(context.getCacheDir().getAbsolutePath());
         @JvmStatic
         fun setTmpDir(tmpDir: String?) {
             extraTmpDir = tmpDir ?: ""
@@ -58,12 +54,6 @@ class ShellExecutor {
             return null
         }
 
-        // FIXED (trước đây là FIXME): ở chế độ non-root, biến TMPDIR mặc định của tiến trình
-        // (thường là /data/local/tmp) app KHÔNG có quyền ghi -> các script dùng lệnh `source`,
-        // `mktemp` hoặc bất kỳ thao tác nào cần ghi file tạm sẽ báo lỗi "Permission denied".
-        // Ép TMPDIR trỏ về thư mục cache riêng của app (do setTmpDir() cung cấp, luôn ghi được
-        // dù có root hay không) để tránh lỗi này. Nếu chưa gọi setTmpDir(), giữ nguyên hành vi
-        // cũ (không export TMPDIR, để hệ thống tự quyết định).
         private fun buildEnvExportScript(): String? {
             val script = StringBuilder()
 

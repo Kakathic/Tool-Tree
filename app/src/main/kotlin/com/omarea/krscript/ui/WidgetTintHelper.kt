@@ -18,7 +18,6 @@ object WidgetTintHelper {
         widgetView.imageTintList = ColorStateList.valueOf(resolveTintColor(context, iconDrawable))
     }
 
-    // Tô màu track của Switch theo màu trích xuất từ icon: chỉ áp khi bật, tắt thì bỏ tint để dùng màu mặc định
     fun applyTint(context: Context, switchView: Switch?, iconDrawable: Drawable?) {
         switchView ?: return
 

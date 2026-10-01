@@ -12,7 +12,6 @@ class ParamsCheckbox(private var actionParamInfo: ActionParamInfo, private var c
     fun render(): View {
         val layout = LayoutInflater.from(context).inflate(R.layout.kr_param_checkbox, null)
 
-
         layout.findViewById<CheckBox>(R.id.kr_param_checkbox).run {
             tag = actionParamInfo.name
             isChecked = getCheckState(actionParamInfo, false)
@@ -28,9 +27,6 @@ class ParamsCheckbox(private var actionParamInfo: ActionParamInfo, private var c
         return layout
     }
 
-    /**
-     * 获取选中状态
-     */
     private fun getCheckState(actionParamInfo: ActionParamInfo, defaultValue: Boolean): Boolean {
         if (actionParamInfo.valueFromShell != null) {
             return actionParamInfo.valueFromShell == "1" || actionParamInfo.valueFromShell!!.lowercase(

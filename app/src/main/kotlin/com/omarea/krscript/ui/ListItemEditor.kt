@@ -24,7 +24,6 @@ class ListItemEditor(context: Context, private val config: EditorNode) : ListIte
         widgetView?.setImageDrawable(context.getDrawable(R.drawable.icon_edit))
         WidgetTintHelper.applyTint(context, widgetView, iconDrawable)
 
-        // Giống action.rows: hiển thị thêm các dòng rich-text (nếu có khai báo editor.rows)
         RowsRenderHelper.bind(context, rowsView, rowsPhotoView, config.rows, config, rowsHtmlView)
     }
 }

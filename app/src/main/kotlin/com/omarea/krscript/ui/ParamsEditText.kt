@@ -41,7 +41,6 @@ class ParamsEditText(private var actionParamInfo: ActionParamInfo, private var c
 
             isEnabled = !actionParamInfo.readonly
 
-            // Xác định placeholder
             val placeholderText = when {
                 actionParamInfo.placeholder.isNotEmpty() -> actionParamInfo.placeholder
                 isNumber && (actionParamInfo.min != Int.MIN_VALUE || actionParamInfo.max != Int.MAX_VALUE) -> "${actionParamInfo.min} ~ ${actionParamInfo.max}"
@@ -87,7 +86,6 @@ class ParamsEditText(private var actionParamInfo: ActionParamInfo, private var c
                 ).apply {
                     setInputType(dialogInputType)
                     setFilters(arrayOf(paramFilter))
-                    // Truyền placeholder/hint lấy từ EditText gốc vào Dialog
                     setHint(editText.hint)
                 }.show(activity.supportFragmentManager, "params-text-editor")
             }

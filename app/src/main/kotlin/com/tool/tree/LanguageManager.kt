@@ -1,4 +1,3 @@
-// LanguageManager.kt
 package com.tool.tree
 
 import android.content.Context

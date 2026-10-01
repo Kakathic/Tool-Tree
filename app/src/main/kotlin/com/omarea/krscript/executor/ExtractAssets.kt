@@ -3,9 +3,6 @@ package com.omarea.krscript.executor
 import android.content.Context
 import com.omarea.common.shared.FileWrite
 
-/**
- * Created by Hello on 2018/04/03.
- */
 class ExtractAssets(private val context: Context) {
 
     private fun extractScript(fileNameArg: String?): String? {
@@ -101,7 +98,6 @@ class ExtractAssets(private val context: Context) {
     }
 
     companion object {
-        // 用于记录已经提取过的资源，avoid duplicate extraction
         private val extractHisotry = HashMap<String, String>()
     }
 }

@@ -21,18 +21,15 @@ class BlurEngine(private val targetView: View) {
     private var cachedBitmap: Bitmap? = null
     private var cachedCanvas: Canvas? = null
 
-    // Cache BitmapShader
     private var cachedShader: BitmapShader? = null
     private var cachedShaderBitmap: Bitmap? = null
 
-    // Cache tint color
     private var cachedTintColor: Int = 0
     private var cachedTintColorForDark: Boolean? = null
 
     private val shaderPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shaderMatrix = Matrix()
 
-    // ─── LƯU REFERENCE CÁC LISTENER ĐỂ CHỐNG LEAK ──────────────────
     private var preDrawListener: ViewTreeObserver.OnPreDrawListener? = null
     private var attachListener: View.OnAttachStateChangeListener? = null
 
@@ -45,19 +42,15 @@ class BlurEngine(private val targetView: View) {
             targetView.clipToOutline = false
         }
 
-        // 1. Gỡ PreDrawListener cũ nếu đã đăng ký trước đó
         removePreDrawListener()
 
-        // 2. Tạo listener mới
         val listener = BlurPreDrawListener(this, targetView)
         preDrawListener = listener
 
-        // Chỉ add nếu View đang attached vào Window
         if (targetView.isAttachedToWindow) {
             targetView.viewTreeObserver.addOnPreDrawListener(listener)
         }
 
-        // 3. Tự động lắng nghe trạng thái Attach/Detach để tháo/lắp listener
         if (attachListener == null) {
             attachListener = object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
@@ -129,7 +122,6 @@ class BlurEngine(private val targetView: View) {
             val canvas = cachedCanvas!!
             canvas.drawColor(0, PorterDuff.Mode.CLEAR)
 
-            // Kiểm tra an toàn trước khi gán Shader
             if (cachedShaderBitmap !== blurBitmap || cachedShader == null) {
                 if (blurBitmap.isRecycled) return null
                 cachedShader = BitmapShader(blurBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
@@ -162,16 +154,13 @@ class BlurEngine(private val targetView: View) {
     }
 
     fun destroy() {
-        // 1. Tháo PreDrawListener khỏi ViewTreeObserver
         removePreDrawListener()
 
-        // 2. Tháo OnAttachStateChangeListener
         attachListener?.let {
             targetView.removeOnAttachStateChangeListener(it)
             attachListener = null
         }
 
-        // 3. Giải phóng Bitmap cache & các đối tượng
         val cached = cachedBitmap
         if (cached != null && !cached.isRecycled) {
             cached.recycle()
@@ -205,16 +194,8 @@ class BlurEngine(private val targetView: View) {
 
         private var strokePaint: Paint? = null
 
-        // Hàng đợi callback cho runWhenBlurReady() - luôn được gọi/xử lý trên UI thread
-        // (từ BlurController qua act.runOnUiThread), nên không cần đồng bộ hoá riêng.
         private val readyListeners = mutableListOf<() -> Unit>()
 
-        /**
-         * Chạy [callback] ngay nếu blur đã sẵn sàng để hiển thị (đang tắt/không dùng blur,
-         * hoặc đã có blurBitmap hợp lệ) - nếu chưa, xếp vào hàng đợi tới khi
-         * BlurController báo capture xong (notifyBlurReady(), gọi cả khi capture lỗi để
-         * không kẹt hàng đợi mãi mãi).
-         */
         @JvmStatic
         fun runWhenBlurReady(callback: () -> Unit) {
             val bitmap = blurBitmap
@@ -225,7 +206,6 @@ class BlurEngine(private val targetView: View) {
             }
         }
 
-        /** BlurController gọi sau mỗi lần capture (thành công hay thất bại) trên UI thread. */
         @JvmStatic
         fun notifyBlurReady() {
             if (readyListeners.isEmpty()) return

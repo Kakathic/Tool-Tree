@@ -14,8 +14,6 @@ import com.tool.tree.ThemeModeState
 class ParamsMultipleSelect(
     private val actionParamInfo: ActionParamInfo,
     private val context: FragmentActivity,
-    // Được gọi mỗi khi người dùng xác nhận thay đổi lựa chọn trong dialog con,
-    // dùng để các param khác "depend-on" param này biết mà cập nhật ẩn/hiện.
     private val onValueChanged: (() -> Unit)? = null
 ) {
     private var options: ArrayList<SelectItem>? = null
@@ -24,12 +22,8 @@ class ParamsMultipleSelect(
     private var values: Array<String?> = arrayOf()
     private val darkMode: Boolean = ThemeModeState.isDarkMode()
 
-    // Thêm biến lưu mốc thời gian click mở để làm phương án dự phòng
     private var lastOpenTime: Long = 0
 
-    // Đọc giá trị hiện tại (các mục đang được chọn), nối bằng separator của param.
-    // Dùng cho cơ chế depend-on vì view trả về bởi render() là 1 layout tổng hợp,
-    // không phải 1 View đơn (Spinner/EditText/...) nên không tự đọc được bằng cách thông thường.
     fun getValue(): String {
         val result = ArrayList<String?>()
         for (index in status.indices) {
@@ -57,7 +51,6 @@ class ParamsMultipleSelect(
 
         setView(textView, valueView, countView)
 
-        // Kiểm tra xem danh sách có trống hay không để vô hiệu hóa (làm mờ và chặn bấm)
         val isEmptyOptions = options.isNullOrEmpty()
         val enabled = !actionParamInfo.readonly && !isEmptyOptions
 
@@ -95,16 +88,11 @@ class ParamsMultipleSelect(
         val resultValueStr = "" + resultValues.joinToString(actionParamInfo.separator)
         val resultLabelStr = if (resultLables.isNotEmpty()) "" + resultLables.joinToString("，") else ""
 
-        // Giữ nguyên tính năng cũ: Nếu có lựa chọn thì gán text, nếu không có thì hiện hint phù hợp
         if (resultLabelStr.isNotEmpty()) {
             textView.text = resultLabelStr
             textView.hint = null
         } else {
             textView.text = ""
-            // ========== SỬA LỖI: bỏ chọn hết không hiện "Vui lòng chọn" ==========
-            // Trước đây chỉ set hint khi options rỗng hoàn toàn (không có tùy chọn nào để
-            // chọn) -> trường hợp CÓ tùy chọn nhưng người dùng bỏ chọn hết bị bỏ sót, khiến
-            // ô hiển thị trống trắng, không rõ là "chưa chọn gì" hay đang lỗi.
             textView.hint = if (options.isNullOrEmpty()) {
                 context.getString(R.string.picker_not_item)
             } else {
@@ -119,12 +107,10 @@ class ParamsMultipleSelect(
     private fun openDialog(textView: TextView, valueView: TextView, countView: TextView) {
         val dialogTag = "params-multi-select"
 
-        // [CHẶN CHIẾN LƯỢC 1]: Kiểm tra nếu Dialog này đã hiển thị trên màn hình thì không làm gì cả
         if (context.supportFragmentManager.findFragmentByTag(dialogTag) != null) {
             return
         }
 
-        // [CHẶN CHIẾN LƯỢC 2]: Chặn click quá nhanh bằng thời gian hệ thống (phòng trường hợp FragmentManager chưa kịp cập nhật tag)
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastOpenTime < 800) {
             return
@@ -139,8 +125,6 @@ class ParamsMultipleSelect(
                     selected = status[i]
                 })
             }
-            // Dark/light mode đã được xử lý qua tham số `darkMode` truyền vào DialogItemChooser
-            // (rồi xuống DialogFullScreen) - không cần xử lý thêm ở đây.
             DialogItemChooser(darkMode, ArrayList(items), true, object : DialogItemChooser.Callback {
                 override fun onConfirm(selected: List<SelectItem>, result: BooleanArray) {
                     result.forEachIndexed { index, value ->

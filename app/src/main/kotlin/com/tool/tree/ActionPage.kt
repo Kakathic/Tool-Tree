@@ -58,12 +58,8 @@ import kotlinx.coroutines.yield
 
 class ActionPage : AppCompatActivity(), RowRunProgressHost {
     companion object {
-        // Icon fab đang xoay chờ tải trang - static để sống qua recreate().
-        // != null = đang xoay, reset về null khi xong/lỗi/đóng trang.
         private var pendingSpinIcon: android.graphics.drawable.Drawable? = null
-        // Xem scheduleCheckboxRefresh().
         private const val CHECKBOX_REFRESH_DEBOUNCE_MS = 1000L
-        // Trang process = false: số ô skeleton tối đa và độ trễ để skeleton kịp vẽ trước khi dựng item đầu tiên.
         private const val SKELETON_AFTER_DIALOG_MAX = 1
         private const val SKELETON_FIRST_FRAME_DELAY_MS = 48L
     }
@@ -79,7 +75,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
 
     private lateinit var swipeBackHelper: SwipeBackHelper
 
-    // Ảnh preview vuốt lùi - lưu field để onRetainCustomNonConfigurationInstance() giữ qua recreate().
     private var swipePreview: SwipeBackPreviewCache.Preview? = null
 
     private val justClickedItemIds = HashSet<Int>()
@@ -92,39 +87,19 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     private val ACTION_FILE_PATH_CHOOSER_INNER = 65300
 
     private var menuOptions: ArrayList<PageMenuOption>? = null
-    // [[group.action]] menu=true: icon riêng trên toolbar.
     private var headerActions: ArrayList<ActionNode>? = null
-    // Tránh lặp auto-show mỗi lần reload; chỉ reset khi mở trang mới.
     private var autoShowTriggered = false
     private var menuCheckboxRefreshing = false
     private var checkboxRefreshJob: Job? = null
     private var loadPageJob: Job? = null
-    // Gộp các yêu cầu loadPageConfig() gọi CHỒNG LẤN khi 1 lượt tải trang trước đó chưa xong
-    // (vd nhiều mục [[download]] cùng dùng reload=true, hoàn tất gần như đồng thời) thành ĐÚNG
-    // 1 lần tải lại sau khi job hiện tại xong - xem loadPageConfig().
     private var pendingReloadWhileLoading = false
     private var spinnerLoadJob: Job? = null
     private var lockCheckJob: Job? = null
-    // load-after: builder gọi PageConfigReader/PageConfigSh.buildDeferredNodes() của lượt tải
-    // GẦN NHẤT - null nếu trang không có mục nào bị hoãn. Tiêu thụ (set null) ngay khi bắt đầu
-    // chạy ở startDeferredLoadIfNeeded() để không chạy lặp lại nếu tryAutoShowActions() được
-    // gọi nhiều lần. Xem PageConfigReader.DeferredNodeResult.
     private var pendingDeferredBuilder: (() -> ArrayList<PageConfigReader.DeferredNodeResult>)? = null
 
-    // Dùng CHUNG 1 instance cho toàn bộ 1 lượt tải trang (kể cả phần load-after chạy sau) thay vì
-    // tạo mới mỗi node trong prewarmNodeImages() như trước - để cache path lỗi của IconPathAnalysis
-    // (sống theo instance) thật sự dedup được giữa các item cùng lượt tải, không chỉ trong 1 node.
-    // Tạo mới đầu mỗi loadPageConfig() (không phải companion) để icon lỗi được sửa thật thì lượt
-    // tải SAU vẫn dò lại bình thường, không bị "kẹt" cache lỗi qua lượt tải khác.
     private var pagePrewarmIconAnalysis = IconPathAnalysis()
-    // Tránh chạy lại checkPageLock khi onResume() gọi lại trong lúc vẫn đang đợi.
     private var lockCheckStarted = false
 
-    // Đóng băng WebView (html-file/html-url) theo 2 nhóm lý do tách biệt:
-    // - Tạm thời (cuộn, vuốt-lùi): đếm bằng webViewFreezeCount, pause WebView + pauseTimers().
-    // - Vòng đời activity (onPause/onResume): webViewLifecyclePaused, CHỈ pause WebView,
-    //   KHÔNG đụng pauseTimers() vì nó có hiệu lực toàn process - gọi ở đây sẽ làm trang html
-    //   (ActionPageOnline) hay trang con mở ngay sau đó không load được.
     private var webViewFreezeCount = 0
     private var webViewLifecyclePaused = false
     private var webViewsPaused = false
@@ -150,7 +125,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         binding = ActivityActionPageBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Lấy lại preview từ lần recreate trước (xoay màn hình), hoặc consume từ cache (mở trang mới).
         @Suppress("DEPRECATION")
         val retainedPreview = lastCustomNonConfigurationInstance as? SwipeBackPreviewCache.Preview
         swipePreview = retainedPreview ?: SwipeBackPreviewCache.consume()
@@ -169,7 +143,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                     binding.swipeBackPreviewSharp.visibility = visibility
                     if (!dragging) binding.swipeBackPreviewSharp.alpha = 0f
                 }
-                // Vuốt-lùi: đóng băng tạm thời; buông tay huỷ thì mở lại.
                 if (dragging) freezeWebViews() else unfreezeWebViews()
             },
             onDragProgress = { progress ->
@@ -185,7 +158,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         supportActionBar?.apply {
             setHomeButtonEnabled(true)
             setDisplayHomeAsUpEnabled(true)
-            // Phải set trực tiếp vì ActionBar từ Toolbar không đọc style homeAsUpIndicator.
             setHomeAsUpIndicator(R.drawable.ic_arrow_back)
         }
         toolbar.setNavigationOnClickListener { finish() }
@@ -275,7 +247,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         val config = currentPageConfig ?: return false
         if (menuOptions == null) {
-            // menu/fab đọc từ config.pageMenuOptions (gán sẵn lúc parse toml trang này).
             menuOptions = config.pageMenuOptions
         }
         if (headerActions == null) {
@@ -284,7 +255,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
 
         menu?.clear()
 
-        // [[group.action]] menu=true: icon riêng trên toolbar.
         headerActions?.forEach { action ->
             val uniqueItemId = ("header:" + action.key).hashCode()
             val menuItem = menu?.add(Menu.NONE, uniqueItemId, Menu.NONE, action.title)
@@ -292,13 +262,11 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             menuItem?.icon = ContextCompat.getDrawable(this, R.drawable.ic_menu)
         }
 
-        // ẩn fab trước, tránh sót fab cũ khi lần build mới không có fab.
         binding.actionPageFab.visibility = View.GONE
 
         val fabOptions = ArrayList<PageMenuOption>()
         val overflowOptions = ArrayList<PageMenuOption>()
         menuOptions?.forEach { option ->
-            // spinner luôn ở popup "⋮", không cho làm fab (FAB không hiện tiêu đề).
             if (option.isFab) {
                 fabOptions.add(option)
             } else {
@@ -308,7 +276,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         setupFab(fabOptions, config.fabIconNode)
         setupOverflowMenuButton(menu, overflowOptions, config.menuIconNode)
 
-        // Đang xoay chờ tải -> đè lên fab vừa set.
         if (pendingSpinIcon != null) {
             startFabSpin()
         }
@@ -318,18 +285,8 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         return true
     }
 
-    // Checkbox không còn là native MenuItem -> đọc trạng thái mỗi lần mở popup thay vì onPrepareOptionsMenu.
     private val refreshCheckboxRunnable = Runnable { refreshCheckboxMenuStates() }
 
-    // Trì hoãn refreshCheckboxMenuStates() thay vì gọi ngay - nếu trong lúc chờ có 1 thao tác
-    // menu/checkbox MỚI xảy ra (xem onMenuItemClick()), lệnh post trễ này bị huỷ TRƯỚC KHI kịp
-    // chiếm lock của phiên shell dùng chung (KeepShell.doCmdSync - 1 ReentrantLock duy nhất,
-    // không ngắt được giữa chừng theo coroutine cancel). Trước đây gọi thẳng ngay sau mỗi lần
-    // tải trang (kể cả trang vừa được recreate() từ 1 checkbox khác) nên khi bấm tiếp 1 checkbox
-    // NGAY SAU ĐÓ (chưa kịp rời/vào lại trang để job cũ có thời gian chạy xong), lệnh của lần
-    // bấm sau luôn phải xếp hàng chờ job refresh của lần trước nhả lock - đúng kịch bản "bật
-    // nhanh, tắt chậm" đã gặp. Debounce ở đây triệt tiêu tận gốc: job refresh chỉ THỰC SỰ chạy
-    // khi người dùng dừng thao tác đủ lâu.
     private fun scheduleCheckboxRefresh() {
         handler.removeCallbacks(refreshCheckboxRunnable)
         handler.postDelayed(refreshCheckboxRunnable, CHECKBOX_REFRESH_DEBOUNCE_MS)
@@ -384,15 +341,11 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    // fabIconNode: icon container-level khai báo TRỰC TIẾP trong [[fab]] (field "icon"/
-    // "icon-path", KHÔNG phải trong "items") - dùng làm fallback khi item không tự set icon
-    // riêng, xem resolveFabIcon().
     private fun setupFab(fabOptions: List<PageMenuOption>, fabIconNode: ClickableNode?) {
         when (fabOptions.size) {
             0 -> return
             1 -> addFab(fabOptions[0], fabIconNode)
             else -> {
-                // Nhiều item: 1 fab, bấm mở popup chọn.
                 binding.actionPageFab.apply {
                     visibility = View.VISIBLE
                     setOnClickListener { showFabChooser(fabOptions) }
@@ -410,8 +363,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    // Thứ tự ưu tiên: icon riêng của item (2+ item luôn bỏ qua, dùng chung 1 icon) -> icon
-    // container-level khai báo trong [[fab]] (fabIconNode) -> icon mặc định theo type/kr_fab.
     private fun resolveFabIcon(fabOptions: List<PageMenuOption>, fabIconNode: ClickableNode?): android.graphics.drawable.Drawable? {
         if (fabOptions.size == 1) {
             val option = fabOptions[0]
@@ -431,8 +382,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         return ContextCompat.getDrawable(this, iconRes)
     }
 
-    // menuIconNode: icon container-level khai báo TRỰC TIẾP trong [[menu]] (field "icon"/
-    // "icon-path", KHÔNG phải trong "items") - thay cho icon "⋮" mặc định nếu có.
     private fun setupOverflowMenuButton(menu: Menu?, overflowOptions: List<PageMenuOption>, menuIconNode: ClickableNode?) {
         if (overflowOptions.isEmpty()) return
 
@@ -444,8 +393,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         menuItem?.actionView = button
     }
 
-    // Màu tint dùng chung cho icon trên toolbar (đè lên icon custom từ icon-path, vì ảnh người
-    // dùng tự chọn thường không có sẵn tint như vector drawable mặc định) - xem PopupMenuListAdapter.
     private val toolbarIconTint: android.content.res.ColorStateList? by lazy {
         val ta = obtainStyledAttributes(intArrayOf(R.attr.toolbarIconTint))
         val tint = ta.getColorStateList(0)
@@ -453,10 +400,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         tint
     }
 
-    // Dựng nút "⋮" bằng code, giữ kích thước/padding/background như layout cũ. Nếu có icon
-    // riêng (menuIconNode, khai báo trong [[menu]]) thì dùng thay cho icon 3 chấm mặc định -
-    // LUÔN ép tint theo màu icon toolbar (icon người dùng tự chọn không đảm bảo hợp với theme
-    // sáng/tối như icon vector mặc định đã có sẵn android:tint).
     private fun buildOverflowMenuButton(menuIconNode: ClickableNode?): ImageButton {
         val density = resources.displayMetrics.density
         val sizePx = (48 * density).toInt()
@@ -484,12 +427,10 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    // Đọc lại row mỗi lần mở popup để phản ánh đúng trạng thái checkbox mới nhất.
     private fun showOverflowMenuPopup(anchor: View, overflowOptions: List<PageMenuOption>) {
         showListPopup(anchor, overflowOptions.map { buildPopupRow(it, anchor) })
     }
 
-    // Dùng chung cho popup menu "⋮" và popup chọn FAB nhiều item.
     private fun buildPopupRow(option: PageMenuOption, anchor: View?): PopupMenuRow {
         val opensInternalPage = option.pageConfigSh.isNotEmpty() || option.pageConfigPath.isNotEmpty()
         val opensLink = option.link.isNotEmpty() || option.activity.isNotEmpty() ||
@@ -545,7 +486,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // [[menu]] không còn là native MenuItem -> xử lý trong popup, chỉ header action đi qua đây.
         val headerAction = headerActions?.find { ("header:" + it.key).hashCode() == item.itemId }
         if (headerAction != null) {
             openHeaderActionDialog(headerAction)
@@ -554,12 +494,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         return super.onOptionsItemSelected(item)
     }
 
-    // anchor: neo cho popup spinner (null = toolbar). Từ FAB truyền actionPageFab vào.
     private fun onMenuItemClick(menuOption: PageMenuOption, anchor: View? = null) {
-        // Huỷ NGAY lệnh refresh trạng thái checkbox đang chờ trễ (nếu có) - xem
-        // scheduleCheckboxRefresh(). Phải huỷ ở đây, TRƯỚC KHI thao tác này kịp chạy script
-        // riêng của nó (cũng cần phiên shell dùng chung) - huỷ trễ hơn coi như vô tác dụng vì
-        // lúc đó job refresh có thể đã lỡ chiếm lock rồi.
         handler.removeCallbacks(refreshCheckboxRunnable)
 
         if (menuOption.link.isNotEmpty() || menuOption.activity.isNotEmpty() ||
@@ -599,7 +534,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         applyWebViewFreezeState()
     }
 
-    // Đóng băng tạm thời khi đang cuộn: đợi 200ms không còn sự kiện cuộn mới rồi mở lại.
     private fun setupWebViewScrollFreeze() {
         val listener = ViewTreeObserver.OnScrollChangedListener {
             if (scrollFreezeRunnable == null) {
@@ -638,10 +572,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         applyWebViewFreezeState()
     }
 
-    // Đưa WebView về đúng trạng thái mong muốn, chỉ gọi khi trạng thái thật sự đổi:
-    // - pause WebView: có lý do tạm thời HOẶC activity đang pause.
-    // - pauseTimers() (toàn process): chỉ khi có lý do tạm thời VÀ activity đang hiển thị,
-    //   nên activity pause/destroy luôn trả timers về trạng thái chạy cho trang khác.
     private fun applyWebViewFreezeState() {
         if (!::binding.isInitialized) {
             return
@@ -659,15 +589,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    // Lưu icon fab hiện tại rồi recreate() - instance mới sẽ tiếp tục xoay icon đó.
-    // Chặn bấm chồng: pendingSpinIcon != null nghĩa là 1 lượt refresh trước đó CHƯA XONG (còn
-    // đang xoay - reset về null khi tải xong/lỗi/đóng trang, xem stopFabSpinIfPending()/
-    // handleLoadError()/onDestroy()). Nếu bấm Refresh lần nữa lúc này mà vẫn recreate(), lượt
-    // tải cũ (PageConfigReader/PageConfigSh, các script -sh của từng row) bị bỏ rơi giữa chừng
-    // nhưng KHÔNG dừng lại (coroutine cancel chỉ mang tính hợp tác, không ngắt được các lệnh
-    // shell đồng bộ đang chờ), cứ chạy tiếp ngầm và tranh giành 2 phiên shell dùng chung
-    // (KeepShellPublic) với lượt tải mới -> lượt tải mới bị xếp hàng chờ, thanh tiến trình hiện
-    // lâu hơn hẳn lần đầu. Bỏ qua lần bấm thứ 2 ở đây triệt tiêu tận gốc kịch bản đó.
     private fun triggerPageRecreate() {
         if (pendingSpinIcon != null) {
             return
@@ -676,7 +597,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         recreate()
     }
 
-    // Ép fab hiện + xoay bằng pendingSpinIcon - đè lên trạng thái setupFab() vừa set.
     private fun startFabSpin() {
         val fab = binding.actionPageFab
         pendingSpinIcon?.let { fab.setImageDrawable(it) }
@@ -695,7 +615,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         fab.startAnimation(rotate)
     }
 
-    // Dừng xoay fab, cho phép bấm lại, rebuild menu/fab theo config.
     private fun stopFabSpinIfPending() {
         if (pendingSpinIcon == null) return
         pendingSpinIcon = null
@@ -735,13 +654,11 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    // params mặc định = hành vi cũ (state/menu_id = key). Spinner truyền state = giá trị vừa chọn.
     private fun menuItemExecuteSilent(
         menuOption: PageMenuOption,
         params: HashMap<String, String> = hashMapOf("state" to menuOption.key, "menu_id" to menuOption.key)
     ) {
         val config = currentPageConfig ?: return
-        // script đã được gán handler chung của nhóm [[menu]]/[[fab]] lúc parse.
         val script = menuOption.script
 
         lifecycleScope.launch(Dispatchers.IO) {
@@ -754,14 +671,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                 if (!output.isNullOrBlank()) {
                     SilentShellOutputHandler(this@ActionPage).processOutput(output)
                 }
-                // Các nhánh dưới đây đều thay/hủy Activity hiện tại (recreate/finish/kill/
-                // restart) -> refreshCheckboxMenuStates() sau đó (đọc trạng thái TẤT CẢ
-                // checkbox trên menu qua phiên shell dùng chung) là việc làm THỪA (kết quả bị
-                // bỏ hẳn khi Activity mất), đồng thời còn CHIẾM LOCK của phiên shell dùng
-                // chung (KeepShell.doCmdSync - 1 ReentrantLock duy nhất, không huỷ được theo
-                // coroutine cancel) khiến thao tác TIẾP THEO của người dùng (vd bấm tắt ngay
-                // checkbox vừa bật) phải xếp hàng chờ dù không liên quan gì tới nó. Chỉ refresh
-                // khi Activity còn tồn tại nguyên vẹn (không có hành động chấm dứt nào ở trên).
                 val activityReplaced = menuOption.autoFinish || menuOption.reloadPage || menuOption.autoKill || menuOption.autoRestart
                 when {
                     menuOption.autoFinish -> finish()
@@ -776,7 +685,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    // Kiểm tra khoá trang, rồi load nội dung. Hiện dialog loading trong lúc chờ lockShell.
     private fun checkPageLockThenLoad() {
         if (lockCheckStarted) return
         lockCheckStarted = true
@@ -816,7 +724,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     private fun loadPageConfig(showLoading: Boolean = true) {
         val config = currentPageConfig ?: return
 
-        // Job tải cũ còn chạy (kể cả lúc đang dựng dần item sau dialog): chỉ đánh dấu tải lại sau.
         if (loadPageJob?.isActive == true) {
             pendingReloadWhileLoading = true
             return
@@ -912,7 +819,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                 ScriptEnvironmen.executeResultRoot(this@ActionPage, config.afterRead, config)
             }
 
-            // Giải mã ảnh icon/logo ngay ở luồng IO (dialog còn hiện) để lúc dựng item trên main thread nhẹ hơn.
             if (showLoading && !useProgressiveLoad) {
                 items?.forEach { node -> try { prewarmNodeImages(node) } catch (_: Exception) {} }
             }
@@ -933,9 +839,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                         if (!hasDeferredLoad) hideLoadProgress()
                         tryAutoShowActions()
                     } else if (showLoading) {
-                        // Dialog vừa tắt: hiện skeleton rồi dựng dần từng item (mỗi item 1 lượt main thread)
-                        // để skeleton kịp vẽ/chuyển động thay vì dựng một lượt làm đứng trang.
-                        // Dựng lại toolbar/fab ngay để không phải đợi dựng xong toàn bộ item.
                         rebuildMenuAfterLoad()
                         loadProgressBar.apply {
                             isIndeterminate = true
@@ -969,7 +872,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                 pendingReloadWhileLoading = false
                 withContext(Dispatchers.Main) {
                     if (!isFinishing && !isDestroyed) {
-                        // Coi job hiện tại đã xong để guard ở đầu hàm cho phép lượt tải mới chạy thật.
                         loadPageJob = null
                         loadPageConfig(true)
                     }
@@ -990,8 +892,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         when (node) {
             is TextNode -> {
                 node.rows.forEach { row ->
-                    // Prewarm chỉ cache bản TĨNH (row.photo) - photo-sh (nếu có) được resolve
-                    // lúc render thật (RowsRenderHelper.bind()), không chạy lại shell ở đây.
                     try { iconPathAnalysis.loadtextPhoto(this, row.photo, row, node.pageConfigDir) } catch (_: Exception) {}
                 }
             }
@@ -1007,7 +907,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    // [[group.action]] show=true: tự mở dialog 1 lần khi vào trang (không lặp khi reload).
     private fun tryAutoShowActions() {
         stopFabSpinIfPending()
         startDeferredLoadIfNeeded()
@@ -1019,12 +918,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         toShow.forEach { fragment.onActionClick(it, Runnable {}, true) }
     }
 
-    // load-after: đây là mốc "trang đã tải xong thật sự" (giống tryAutoShowActions ở trên) -
-    // build các mục bị hoãn ở 1 coroutine IO riêng (không chặn UI đã hiện), xong thì chèn vào
-    // đúng vị trí trong danh sách/group đang hiển thị. Tự tiêu thụ (set null) NGAY để không
-    // chạy lặp nếu hàm này được gọi lại. Có load-after thì thanh tiến trình (loadProgressBar)
-    // CHƯA bị ẩn ở khối withContext(Main) phía trên (xem hasDeferredLoad) - nên hàm này chịu
-    // trách nhiệm ẩn nó ở đây, SAU KHI load-after đã tải và chèn xong hết mục.
     private fun startDeferredLoadIfNeeded() {
         val builder = pendingDeferredBuilder ?: return
         pendingDeferredBuilder = null
@@ -1067,9 +960,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         loadProgressBar.visibility = View.GONE
     }
 
-    // Số script (script/"run" của rows) đang chạy nền cùng lúc - dùng đếm thay vì set thẳng
-    // visibility để tránh row A chạy xong ẩn mất thanh tiến trình trong khi row B (bấm gần như
-    // đồng thời) vẫn còn đang chạy. Xem RowRunProgressHost/RowsRenderHelper.
     private var rowRunProgressCount = 0
 
     override fun showRowRunProgress() {
@@ -1128,9 +1018,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
 
     private fun menuItemExecute(menuOption: PageMenuOption, params: HashMap<String, String>) {
         val onDismiss = Runnable {
-            // Xem giải thích activityReplaced ở menuItemExecuteSilent() - cùng lý do: các
-            // nhánh dưới đây thay/hủy Activity nên refresh trạng thái checkbox sau đó là thừa
-            // và chỉ chiếm lock của phiên shell dùng chung, làm chậm thao tác tiếp theo.
             val activityReplaced = menuOption.autoFinish || menuOption.reloadPage || menuOption.autoKill || menuOption.autoRestart
             when {
                 menuOption.autoFinish -> finish()
@@ -1143,7 +1030,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             }
         }
 
-        // script đã được gán handler chung của nhóm [[menu]]/[[fab]] lúc parse.
         val script = menuOption.script
         val dialog = DialogLogFragment.create(
             menuOption,
@@ -1187,7 +1073,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         })
     }
 
-    // Tải danh sách spinner (tĩnh + động) rồi mở dropdown tại vị trí vừa bấm.
     private fun menuItemSpinner(menuOption: PageMenuOption, anchor: View? = null) {
         val config = currentPageConfig ?: return
         val resolvedAnchor = anchor ?: findViewById<View>(R.id.toolbar) ?: binding.root
@@ -1227,7 +1112,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    // Giống ActionListFragment.parseOptionsResult(): "value|title" hoặc chỉ "value".
     private fun parseSpinnerOptions(menuOption: PageMenuOption, shellResult: String?): ArrayList<SelectItem>? {
         val result = shellResult ?: ""
         if (result == "error" || result == "null" || result.isEmpty()) {
@@ -1248,9 +1132,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         return options
     }
 
-    // Dropdown spinner neo góc phải, chọn xong chạy script với tham số state.
-    // Quá 6 mục thì mở dialog toàn màn hình (giống ParamsSingleSelect) thay vì popup nhỏ,
-    // để danh sách dài không bị tràn/khó cuộn trong popup.
     private fun showSpinnerPopup(
         anchor: View,
         menuOption: PageMenuOption,
@@ -1277,7 +1158,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             val selected = options.getOrNull(position) ?: return@setOnItemClickListener
             val value = selected.value ?: selected.title ?: ""
             val params = hashMapOf("state" to value, "menu_id" to menuOption.key)
-            // silent = true -> chạy ẩn ở nền, không mở dialog log.
             if (menuOption.silent) {
                 menuItemExecuteSilent(menuOption, params)
             } else {
@@ -1285,7 +1165,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             }
         }
 
-        // FAB cần chừa khoảng hở phía trên, toolbar thì không.
         val extraTopGapPx = if (anchor === binding.actionPageFab) fabPopupGap() else 0
         val itemViews = options.map { option ->
             layoutInflater.inflate(R.layout.kr_spinner_dropdown, anchor.parent as? android.view.ViewGroup, false).apply {
@@ -1305,7 +1184,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    // Dialog toàn màn hình cho spinner có nhiều hơn 6 mục.
     private fun showSpinnerDialog(
         menuOption: PageMenuOption,
         options: ArrayList<SelectItem>,
@@ -1323,7 +1201,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                 val option = options.getOrNull(confirmedIndex) ?: return
                 val value = option.value ?: option.title ?: ""
                 val params = hashMapOf("state" to value, "menu_id" to menuOption.key)
-                // silent = true -> chạy ẩn ở nền, không mở dialog log.
                 if (menuOption.silent) {
                     menuItemExecuteSilent(menuOption, params)
                 } else {
@@ -1333,11 +1210,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }).show(supportFragmentManager, "action-page-spinner")
     }
 
-    // Đặt bề rộng popup theo nội dung, neo sát mép phải màn hình.
-    // extraTopGapPx > 0 cho FAB: đẩy popup lên cao hơn để chừa khoảng hở.
-    // (xem SpinnerPopupHelper.applyWidthAndPosition - dùng chung với showListPopup bên dưới)
-
-    // Popup List Item - dùng chung cho menu "⋮" và FAB nhiều item.
     private fun showListPopup(anchor: View, rows: List<PopupMenuRow>, extraTopGapPx: Int = 0) {
         if (rows.isEmpty()) return
 
@@ -1366,14 +1238,12 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         SpinnerPopupHelper.applyRoundedClip(popup, resources.getDimension(R.dimen.kr_spinner_popup_radius))
     }
 
-    // Popup chọn khi FAB có nhiều item - neo tại FAB, chọn xong chạy như bấm thẳng.
     private fun showFabChooser(fabOptions: List<PageMenuOption>) {
         val anchor = binding.actionPageFab
         val rows = fabOptions.map { buildPopupRow(it, anchor) }
         showListPopup(anchor, rows, fabPopupGap())
     }
 
-    // ~8dp khoảng hở giữa popup và FAB.
     private fun fabPopupGap(): Int = (8 * resources.displayMetrics.density).toInt()
 
     private fun chooseFilePath(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean {
@@ -1463,12 +1333,10 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         OpenPageHelper(this).openPage(pageNode)
     }
 
-    // Giữ preview sống qua recreate() của cùng activity.
     @Suppress("DEPRECATION")
     override fun onRetainCustomNonConfigurationInstance(): Any? = swipePreview
 
     override fun onDestroy() {
-        // Đóng hẳn (không phải recreate) -> dọn static để không ảnh hưởng trang khác.
         if (isFinishing) {
             pendingSpinIcon = null
         }
@@ -1483,7 +1351,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             applyWebViewFreezeState()
         }
         if (::swipeBackHelper.isInitialized) swipeBackHelper.release()
-        // Chỉ recycle bitmap khi đóng hẳn, không recycle khi recreate (xoay/reload).
         if (isFinishing && ::binding.isInitialized) {
             recycleImageViewBitmap(binding.swipeBackPreviewBlur)
             recycleImageViewBitmap(binding.swipeBackPreviewSharp)

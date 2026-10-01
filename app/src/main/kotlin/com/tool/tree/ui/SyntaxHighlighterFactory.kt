@@ -14,14 +14,6 @@ import java.io.File
 import java.lang.ref.WeakReference
 import java.util.Locale
 
-/**
- * Lightweight syntax highlighter for plain EditText.
- *
- * Features:
- * - Debounced highlighting
- * - Support for temporary suspend/resume during bulk edits
- * - Works with shell / xml / toml / properties / python
- */
 object SyntaxHighlighterFactory {
     fun create(extension: String?, editText: EditText): SyntaxHighlighter? {
         val ext = extension.orEmpty().lowercase(Locale.ROOT)
@@ -46,15 +38,8 @@ interface SyntaxHighlighter {
     fun detach()
     fun highlight()
 
-    /**
-     * Temporarily stop reacting to text changes.
-     * Call [resumeHighlighting] after a batch edit.
-     */
     fun suspendHighlighting()
 
-    /**
-     * Resume highlighting after [suspendHighlighting].
-     */
     fun resumeHighlighting()
 }
 
@@ -215,20 +200,10 @@ class ShellSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
         "true", "false", "type", "command", "eval", "let"
     )
 
-    // "#" chỉ được coi là bắt đầu comment khi đứng đầu dòng hoặc có khoảng trắng
-    // ngay bên trái (vd: "  # note", "cmd # note"). Nếu dính liền ký tự khác
-    // (vd: "$#", "a#b", "$#1") thì không phải comment, không tô màu xám.
     private val shellRegex = Regex(
         "(?<COMMENT>(?m)(?:^|(?<=\\s))#.*\$)" +
             "|(?<STRING>\"(?:\\\\.|[^\"\\\\])*\"|'(?:[^']*)'|`(?:\\\\.|[^`\\\\])*`)" +
-            // Dùng possessive quantifier (*+) thay vì (?:[^()]*|\([^()]*\))* để tránh
-            // catastrophic backtracking (ReDoS) khiến app bị đơ/ANR khi gõ dở "$(..."
-            // mà chưa đóng ngoặc ")". Với quantifier thường, mỗi ký tự thêm vào làm số
-            // cách backtrack tăng theo cấp số mũ (2^n); possessive quantifier không
-            // backtrack nên thời gian khớp luôn tuyến tính.
             "|(?<COMMAND>\\$\\((?:[^()]*+|\\([^()]*+\\))*+\\))" +
-            // Possessive quantifier để tránh backtracking bậc hai (quadratic) khi gõ
-            // dở "${..." dài mà chưa đóng dấu "}"
             "|(?<VARIABLE>\\$\\{[A-Za-z_][A-Za-z0-9_]*+[^}]*+\\}|\\$[A-Za-z_][A-Za-z0-9_]*)" +
             "|(?<NUMBER>(?<![A-Za-z0-9_])(?:0x[0-9A-Fa-f]+|[0-9]+)(?![A-Za-z0-9_]))" +
             "|(?<WORD>(?<![A-Za-z0-9_])[A-Za-z_][A-Za-z0-9_]*(?![A-Za-z0-9_]))" +
@@ -314,35 +289,20 @@ class XmlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     }
 }
 
-/**
- * TOML syntax highlighter.
- *
- * Supports:
- * - Comments (#...)
- * - Table headers: [table] và [[array of tables]]
- * - Key = Value (bare key, "quoted key", 'literal key')
- * - Strings: "basic", 'literal', """multi-line basic""", '''multi-line literal'''
- * - Numbers: int, float, hex/oct/bin, +/-inf, nan
- * - Booleans: true / false
- * - Dates/times (RFC 3339)
- * - Punctuation: = , . [ ] { }
- */
 class TomlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     editText = editText,
-    // Catppuccin Mocha
-    keywordColor = 0xFFF9E2AF.toInt(),     // Vàng kem: Table
-    builtinColor = 0xFF89B4FA.toInt(),     // Xanh lam pastel: Key
-    stringColor = 0xFFA6E3A1.toInt(),      // Xanh lá dịu: String
-    commentColor = 0xFF6C7086.toInt(),     // Xám xịn: Comment
-    numberColor = 0xFFFAB387.toInt(),      // Cam đào: Number & DateTime
-    punctuationColor = 0xFFBAC2DE.toInt(), // Xám xanh sáng: Punctuation
+    keywordColor = 0xFFF9E2AF.toInt(),
+    builtinColor = 0xFF89B4FA.toInt(),
+    stringColor = 0xFFA6E3A1.toInt(),
+    commentColor = 0xFF6C7086.toInt(),
+    numberColor = 0xFFFAB387.toInt(),
+    punctuationColor = 0xFFBAC2DE.toInt(),
 ) {
-    private val booleanColor = 0xFFF5C2E7.toInt() // Hồng phớt: Boolean
+    private val booleanColor = 0xFFF5C2E7.toInt()
 
     private val bareKey = "[A-Za-z0-9_-]+"
     private val quotedKey = "\"(?:\\\\.|[^\"\\\\])*\"|'[^']*'"
     private val keyPart = "(?:$bareKey|$quotedKey)"
-    // key có thể là dotted key: a.b."c d".e
     private val dottedKey = "$keyPart(?:\\s*\\.\\s*$keyPart)*"
 
     private val tomlRegex = Regex(
@@ -430,9 +390,6 @@ class PropSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     }
 }
 
-/**
- * Python syntax highlighter optimized with named-group regex.
- */
 class PythonSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     editText = editText,
     keywordColor = 0xFF3D8BFF.toInt(),
@@ -455,9 +412,6 @@ class PythonSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
         "zip", "isinstance", "map", "filter", "any", "all", "dir", "id", "help"
     )
 
-    // "#" chỉ được coi là bắt đầu comment khi đứng đầu dòng hoặc có khoảng trắng
-    // ngay bên trái. Nếu dính liền ký tự khác thì không phải comment (tránh tô
-    // nhầm màu xám cho những trường hợp như "a#b" hay các toán tử ghép "#").
     private val pythonRegex = Regex(
         "(?<COMMENT>(?m)(?:^|(?<=\\s))#.*\$)" +
             "|(?<STRING>\"{3}(?s).*?\"{3}|'{3}(?s).*?'{3}|\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*')" +

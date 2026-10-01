@@ -3,14 +3,12 @@
     android:shareInterpolator="false"
     android:zAdjustment="top">
 
-    <!-- Trượt nhẹ từ dưới lên (2%p -> 0%p) tạo cảm giác nảy lên tự nhiên -->
     <translate
         android:interpolator="@android:interpolator/fast_out_slow_in"
         android:duration="200"
         android:fromYDelta="2%p"
         android:toYDelta="0%p" />
 
-    <!-- Phóng to nhẹ từ tâm -->
     <scale
         android:interpolator="@android:interpolator/fast_out_slow_in"
         android:duration="200"
@@ -21,7 +19,6 @@
         android:fromYScale="0.92"
         android:toYScale="1.0" />
 
-    <!-- Đồng bộ alpha xuất hiện nhanh trong 200ms -->
     <alpha
         android:interpolator="@android:interpolator/decelerate_cubic"
         android:duration="200"

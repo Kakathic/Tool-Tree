@@ -59,8 +59,6 @@ class ActivityFileSelector : AppCompatActivity() {
         intent.extras?.run {
             if (containsKey("extension")) {
                 extension = "" + intent.extras?.getString("extension")
-                // Không còn nối "(.ext)" vào title nữa - đã chuyển sang báo bằng toast lúc vào
-                // trang (xem onResume()), giống cách chế độ chọn thư mục vẫn đang báo bằng toast.
             }
             if (containsKey("mode")) {
                 mode = getInt("mode")
@@ -78,11 +76,6 @@ class ActivityFileSelector : AppCompatActivity() {
 
         invalidateOptionsMenu()
 
-        // Tiêu đề toolbar hiện đường dẫn thư mục hiện tại (xem updatePathTitle()) - ép 1 dòng,
-        // cắt bớt và hiện "..." Ở ĐẦU khi quá dài, giữ lại phần cuối path (thường quan trọng
-        // hơn phần đầu). Toolbar tự tạo TextView tiêu đề khi layout, nên phải chờ tới lúc đó
-        // mới chỉnh được; chỉnh 1 lần là đủ vì Toolbar tái dùng cùng 1 TextView cho các lần
-        // đổi title sau (updatePathTitle chỉ setText, không tạo lại view).
         toolbar.post {
             for (i in 0 until toolbar.childCount) {
                 val child = toolbar.getChildAt(i)
@@ -101,14 +94,8 @@ class ActivityFileSelector : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        // Chọn nhiều (file/thư mục) đã có nút xác nhận từ trước. Chọn 1 thư mục (không
-        // multiple) giờ cũng cần nút này vì checkbox không tự đóng màn hình như nhấn giữ.
         if (multiple || mode == MODE_FOLDER) {
             menuInflater.inflate(R.menu.menu_file_selector, menu)
-            // Nút "Xong" dùng actionLayout riêng (action_confirm_selection.xml - có gạch
-            // ngăn cách + vùng ripple rộng hơn khung chữ mặc định) thay vì action item text
-            // thường, nên phải tự wire onClick ở đây - actionLayout không tự đi qua
-            // onOptionsItemSelected() như action item mặc định.
             menu?.findItem(R.id.action_confirm_selection)?.actionView
                 ?.findViewById<TextView>(R.id.action_confirm_text)
                 ?.setOnClickListener { onConfirmSelectionClicked() }
@@ -132,9 +119,6 @@ class ActivityFileSelector : AppCompatActivity() {
         }
     }
 
-    // Xác nhận thư mục đã chọn qua checkbox "1 lựa chọn" (chế độ chọn thư mục, không
-    // multiple) - trả về đúng extra "file" (không phải "files") để khớp với cách long-press
-    // chọn ngay vẫn đang trả về, giữ tương thích với nơi gọi màn hình này.
     private fun finishWithSingleFolderSelection() {
         val selected = adapterFileSelector?.getSelectedFiles()?.firstOrNull()
         if (selected == null) {
@@ -200,9 +184,6 @@ class ActivityFileSelector : AppCompatActivity() {
                 AdapterFileSelector.FileChooser(startDir, onSelected, ProgressBarDialog(this), extension, multiple)
             }
 
-            // Set ngay path khởi đầu (không đợi listener, vì loadDir() đầu tiên chạy nền và
-            // có thể đã hoàn tất trước khi listener kịp gắn ở dòng dưới), rồi mỗi lần đổi
-            // thư mục sau đó (mở thư mục con / bấm "..") sẽ tự cập nhật qua listener.
             updatePathTitle(startDir)
             adapterFileSelector?.setDirChangedListener(object : AdapterFileSelector.OnDirChangedListener {
                 override fun onDirChanged(dir: File) {
@@ -218,7 +199,6 @@ class ActivityFileSelector : AppCompatActivity() {
                 }
             })
 
-            // Hàng "Chọn tất cả" chỉ hiện khi đang ở chế độ chọn nhiều (multiple)
             if (multiple) {
                 binding.selectAllBlock.visibility = View.VISIBLE
 

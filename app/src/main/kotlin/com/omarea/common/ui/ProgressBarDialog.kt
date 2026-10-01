@@ -88,11 +88,6 @@ open class ProgressBarDialog(private var context: Activity, private var uniqueId
         }
     }
 
-    /**
-     * Đặt callback hủy cho dialog đang hiển thị.
-     * Nếu dialog chưa mở thì callback được lưu lại và áp dụng khi [showDialog] được gọi.
-     * Gọi với null để ẩn nút Hủy.
-     */
     fun setCancelCallback(onCancel: (() -> Unit)?) {
         cancelCallback = onCancel
         val btn = cancelButton ?: return
@@ -108,10 +103,6 @@ open class ProgressBarDialog(private var context: Activity, private var uniqueId
         }
     }
 
-    /**
-     * Hiển thị dialog loading kèm nút Hủy ngay từ đầu.
-     * Các lần gọi [showDialog] sau đó chỉ cập nhật text, nút Hủy vẫn được giữ nguyên.
-     */
     fun showDialogWithCancel(text: String, onCancel: () -> Unit): ProgressBarDialog {
         cancelCallback = onCancel
         showDialog(text)
@@ -120,10 +111,8 @@ open class ProgressBarDialog(private var context: Activity, private var uniqueId
 
     fun showDialog(text: String = "Loading, please wait..."): ProgressBarDialog {
         if (textView != null && alert?.isShowing == true) {
-            // Dialog đang mở — chỉ cập nhật text, giữ nguyên nút Hủy
             textView?.text = text
         } else {
-            // Tạo mới dialog
             val layoutInflater = LayoutInflater.from(context)
             val dialog = layoutInflater.inflate(R.layout.dialog_loading, null)
 

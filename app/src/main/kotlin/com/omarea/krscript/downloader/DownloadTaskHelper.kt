@@ -71,11 +71,6 @@ object DownloadTaskHelper {
 
     fun getSession(url: String): Session? = sessions[url]
 
-    // Tra session cho 1 DownloadNode khi dựng lại trang (PageLayoutRender.createDownloadItem).
-    // Ưu tiên tra theo "url" như getSession(); nếu rỗng (mục dùng "url-sh" và trang vừa được
-    // parse lại thành instance DownloadNode MỚI - url đã resolve trước đó chỉ nằm trên instance
-    // cũ, không còn giữ được) thì tra theo "urlSh" (chuỗi shell không đổi giữa các lần parse
-    // config) để tìm lại đúng session đang chạy ngầm.
     fun findSessionForNode(node: DownloadNode): Session? {
         if (node.url.isNotBlank()) return sessions[node.url]
         if (node.urlSh.isNotBlank()) {
@@ -267,9 +262,6 @@ object DownloadTaskHelper {
                                 v.updateDownloadProgress(downloaded, total, session.speedBytesPerSecond)
                             }
                         }
-                        // Throttle service starts: onProgress fires every 32KB and each
-                        // updateNotification() restarts the foreground service, which
-                        // floods the main thread on fast connections.
                         if (now - session.lastNotifyTimestampMs >= NOTIFY_MIN_INTERVAL_MS) {
                             session.lastNotifyTimestampMs = now
                             updateNotification(session)
@@ -458,10 +450,6 @@ object DownloadTaskHelper {
         ShellExecutor().execute(context, item, script, null, hashMapOf("state" to session.destFile.absolutePath), handler)
     }
 
-    // success=false ở đây LUÔN là lỗi SCRIPT (chạy sau khi tải xong), khác với lỗi TẢI (network,
-    // xử lý riêng trong runDownload() -> updateNotificationError()). Theo yêu cầu: lỗi script chỉ
-    // hiện ở UI item (desc) trong trang, KHÔNG đẩy ra thông báo hệ thống - notification chỉ dành
-    // cho lỗi tải.
     private fun completeSession(context: Context, session: Session, success: Boolean, errorText: String? = null) {
         if (success) {
             session.status = Status.COMPLETED
@@ -487,7 +475,6 @@ object DownloadTaskHelper {
                     v.showStatusLabel(v.context.getString(R.string.kr_download_execute_fail) + ": " + session.error, spin = false)
                 }
             }
-            // Không gọi updateNotificationError() ở đây - lỗi script chỉ hiện trong UI item.
             dismissNotification(session)
         }
     }
@@ -517,12 +504,6 @@ object DownloadTaskHelper {
         return bitmap
     }
 
-    // DownloadService giờ chỉ là Service thường (giống NotiService), gọi notify() trực tiếp,
-    // không còn startForeground - nên phải dùng startService(), KHÔNG được dùng
-    // startForegroundService() (nếu dùng startForegroundService() mà Service không gọi
-    // startForeground() trong onStartCommand() thì Android sẽ crash app với
-    // ForegroundServiceDidNotStartInTimeException). Đổi lại: tải file khi app bị đưa xuống nền
-    // có thể bị hệ thống dừng giữa chừng (không còn được bảo vệ như foreground service).
     private fun startNotification(session: Session) {
         val ctx = session.appContext
         val intent = Intent(ctx, DownloadService::class.java).apply {

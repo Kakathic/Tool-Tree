@@ -56,14 +56,12 @@ class TabIconHelper(
         applyBadges(tabLayout)
     }
 
-    // Đang chạm vào thanh tab (ACTION_DOWN..UP): badge giữ hình tròn, thả tay mới mở rộng
     fun setTabTouching(tabLayout: TabLayout, touching: Boolean) {
         if (tabTouching == touching) return
         tabTouching = touching
         applyBadges(tabLayout)
     }
 
-    // Đang kéo SwipePager bằng tay: badge giữ hình tròn, thả tay mới mở rộng
     fun setPagerDragging(tabLayout: TabLayout, dragging: Boolean) {
         if (pagerDragging == dragging) return
         pagerDragging = dragging
@@ -88,8 +86,6 @@ class TabIconHelper(
 
 private enum class BadgeState { HIDDEN, CIRCLE, EXPANDED }
 
-// Nền badge tự vẽ: hình tròn (đường kính = chiều cao) nở dần ngang thành hình viên thuốc
-// đúng kích thước khung IconBadge. Chỉ invalidate, không gây relayout.
 private class TabBadgeDrawable(color: Int) : Drawable() {
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }

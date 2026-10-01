@@ -2,18 +2,9 @@ package com.omarea.common.model
 
 import java.io.Serializable
 
-/*
-示例1： 用于Spinner
-ArrayAdapter(context, R.layout.kr_spinner_default, R.id.text, options).apply {
-    setDropDownViewResource(R.layout.kr_spinner_dropdown)
-}
-*/
-
 class SelectItem : Serializable {
     var title: String? = null
-    // Kịch bản shell sinh title động cho 1 lựa chọn tĩnh
     var titleSh: String? = null
-    // var desc: String = ""
     var value: String? = null
     var selected: Boolean = false
 
@@ -23,7 +14,7 @@ class SelectItem : Serializable {
         } else if (!value.isNullOrEmpty()) {
             value!!
         } else {
-            "" // super.toString()
+            ""
         }
     }
 }

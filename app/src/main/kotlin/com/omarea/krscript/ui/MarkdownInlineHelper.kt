@@ -1,11 +1,5 @@
 package com.omarea.krscript.ui
 
-// Parser Markdown inline đơn giản cho nội dung 1 dòng (text.rows) - KHÔNG hỗ trợ block-level
-// (heading, list, blockquote, ...) vì rows vốn đã được cấu hình theo dòng riêng qua TOML.
-// Hỗ trợ: **bold**/__bold__, *italic*/_italic_, ~~strikethrough~~, `code`, [text](url),
-// {text}(color) - color là tên màu (red, green...) hoặc mã hex (#RRGGBB/#AARRGGBB),
-// escape bằng dấu \ (vd: \* hiển thị dấu * thường). Cho phép lồng nhau 1 cấp (vd:
-// **bold *italic* bold**) nhờ đệ quy vào phần nội dung bên trong mỗi cặp dấu (trừ code).
 object MarkdownInlineHelper {
 
     enum class MarkdownSpanType { BOLD, ITALIC, STRIKETHROUGH, CODE, LINK, COLOR }
@@ -19,8 +13,6 @@ object MarkdownInlineHelper {
 
     private const val ESCAPABLE = "\\`*_{}[]()#+-.!~"
 
-    // Trả về (text thuần đã bỏ hết ký hiệu markdown, danh sách span cần áp - toạ độ tính theo
-    // text thuần trả về).
     fun parse(raw: String): Pair<String, List<MarkdownSpanInfo>> {
         val output = StringBuilder()
         val spans = ArrayList<MarkdownSpanInfo>()
@@ -34,15 +26,12 @@ object MarkdownInlineHelper {
         while (i < n) {
             val c = raw[i]
 
-            // Escape: \x -> hiển thị x, không diễn giải markdown
             if (c == '\\' && i + 1 < n && ESCAPABLE.indexOf(raw[i + 1]) >= 0) {
                 output.append(raw[i + 1])
                 i += 2
                 continue
             }
 
-            // Code literal: ```...``` hoặc ```...|R``` - giữ NGUYÊN literal bên trong (không đệ quy),
-            // dùng khi cần hiện đúng ký tự markdown (vd ```test*```). Phải kiểm tra trước nhánh 1 dấu `.
             if (c == '`' && i + 2 < n && raw[i + 1] == '`' && raw[i + 2] == '`') {
                 val end = raw.indexOf("```", i + 3)
                 if (end > i) {
@@ -63,8 +52,6 @@ object MarkdownInlineHelper {
                 }
             }
 
-            // Code: `...` hoặc `...|R` (R = bán kính bo góc dp riêng, vd `text|16`) - đệ quy vào
-            // bên trong để lồng được với BOLD/COLOR/LINK... (href mang giá trị R nếu có)
             if (c == '`') {
                 val end = raw.indexOf('`', i + 1)
                 if (end > i) {
@@ -85,7 +72,6 @@ object MarkdownInlineHelper {
                 }
             }
 
-            // Bold: **...** hoặc __...__
             if ((c == '*' || c == '_') && i + 1 < n && raw[i + 1] == c) {
                 val marker = raw.substring(i, i + 2)
                 val end = raw.indexOf(marker, i + 2)
@@ -101,7 +87,6 @@ object MarkdownInlineHelper {
                 }
             }
 
-            // Strikethrough: ~~...~~
             if (c == '~' && i + 1 < n && raw[i + 1] == '~') {
                 val end = raw.indexOf("~~", i + 2)
                 if (end > i) {
@@ -116,7 +101,6 @@ object MarkdownInlineHelper {
                 }
             }
 
-            // Italic: *...* hoặc _..._ (1 dấu)
             if (c == '*' || c == '_') {
                 val end = raw.indexOf(c, i + 1)
                 if (end > i + 1) {
@@ -131,7 +115,6 @@ object MarkdownInlineHelper {
                 }
             }
 
-            // Link: [text](url)
             if (c == '[') {
                 val closeBracket = raw.indexOf(']', i + 1)
                 if (closeBracket > i && closeBracket + 1 < n && raw[closeBracket + 1] == '(') {
@@ -150,7 +133,6 @@ object MarkdownInlineHelper {
                 }
             }
 
-            // Color: {text}(red hoặc #RRGGBB) - cùng pattern với LINK, đổi ngoặc vuông thành ngoặc nhọn
             if (c == '{') {
                 val closeBrace = raw.indexOf('}', i + 1)
                 if (closeBrace > i && closeBrace + 1 < n && raw[closeBrace + 1] == '(') {

@@ -5,12 +5,6 @@ import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.omarea.krscript.ui.ActionListFragment
 
-/**
- * Quản lý các trang (Fragment) cho SwipePager - thay thế FragmentStateAdapter cũ của
- * ViewPager2. Vì chỉ có 4 tab cố định và luôn giữ tất cả cùng lúc (không recycle), mỗi
- * trang được gắn (add) vào FragmentManager đúng một lần; khi cần đổi nội dung một trang
- * đã có, dùng replace() lên đúng container đó.
- */
 class MainPagerAdapter(private val activity: AppCompatActivity) {
 
     private val fragmentList = ArrayList<ActionListFragment?>()

@@ -22,17 +22,9 @@ object ThemeModeState {
 
     private var themeMode: ThemeMode = ThemeMode()
 
-    // Phản ánh đúng "theme hiện tại có nên hiện blur hay không" (level >= 3 và blur
-    // không bị tắt qua file dissblur) - dùng để các nơi khác (vd SwipeBackHelper) khôi
-    // phục lại BlurEngine.isPaused đúng theo theme hiện tại, thay vì hardcode false.
     @Volatile
     private var blurActive: Boolean = false
 
-    // Đánh dấu "đang ở chế độ ảnh nền" (level 3/4/5, KHÔNG bật directBg) - bao gồm CẢ ảnh
-    // tĩnh (file tùy chỉnh / wallpaper hệ thống tĩnh) LẪN live wallpaper. Khác với cờ hệ
-    // thống FLAG_SHOW_WALLPAPER (chỉ được set khi là live wallpaper, xem
-    // applyWallpaperMode) - DialogHelper.setWindowBlurBg cần biến RIÊNG này để biết có nên
-    // chạy 3 tầng dự phòng ảnh nền hay không, thay vì đọc nhầm FLAG_SHOW_WALLPAPER.
     @Volatile
     private var imageBackgroundMode: Boolean = false
 
@@ -74,11 +66,6 @@ object ThemeModeState {
     fun switchTheme(activity: Activity, themeLevel: Int? = null): ThemeMode {
         val level = themeLevel ?: ThemeConfig(activity).getThemeMode()
 
-        // Lưu lại trạng thái TRƯỚC khi tính toán lại, để bên dưới biết theme có thực sự
-        // đổi hay không - switchTheme() được gọi ở onCreate() của HẦU HẾT mọi Activity
-        // (mở trang mới bình thường, theme không đổi), không chỉ khi người dùng đổi theme
-        // trong Settings - clearCache() chỉ nên chạy đúng lúc theme đổi thật, không phải
-        // mỗi lần vào trang mới.
         val previousIsDarkMode = themeMode.isDarkMode
         val previousIsDirectBgMode = BlurEngine.isDirectBgMode
 
@@ -133,13 +120,6 @@ object ThemeModeState {
         if (level >= 3 && !blurDisabled) {
             BlurEngine.isPaused = false
 
-            // Chỉ xoá cache khi theme THỰC SỰ đổi (dark/light hoặc bật/tắt directBg) - bitmap
-            // cache cũ đã bake sẵn contrast/tint theo theme CŨ (xem
-            // BlurController.adjustContrast - contrastValue phụ thuộc
-            // ThemeModeState.isDarkMode() tại thời điểm capture), giữ lại dùng tiếp sau khi
-            // đổi theme sẽ sai màu/độ tương phản cho tới khi capture mới xong. Các lần
-            // switchTheme() còn lại (mở trang mới bình thường, theme không đổi) giữ nguyên
-            // cache để trang mới hiện ảnh nền mờ ngay, không bị chớp (trong suốt → mờ).
             val themeActuallyChanged = themeMode.isDarkMode != previousIsDarkMode ||
                     BlurEngine.isDirectBgMode != previousIsDirectBgMode
             if (themeActuallyChanged) {
@@ -151,7 +131,6 @@ object ThemeModeState {
                 val wallpaperManager = WallpaperManager.getInstance(activity)
                 val isLiveWallpaper = (wallpaperManager.wallpaperInfo != null) && !customWallpaperFile.exists()
 
-                // Nếu bật directBg HOẶC là Live Wallpaper (decorView bị trong suốt không chụp được)
                 if (BlurEngine.isDirectBgMode || isLiveWallpaper) {
                     BlurEngine.directBgColor = ContextCompat.getColor(
                         activity,
@@ -159,7 +138,6 @@ object ThemeModeState {
                     )
                     BlurEngine.controller.captureBackground(activity)
                 } else {
-                    // Hình nền tĩnh / Custom Wallpaper: decorView đã có Drawable nên chụp bình thường
                     BlurEngine.controller.captureAndBlur(activity)
                 }
             }
@@ -175,8 +153,6 @@ object ThemeModeState {
         activity.setTheme(if (isNight) R.style.AppThemeWallpaper else R.style.AppThemeWallpaperLight)
         val window = activity.window
 
-        // directBg = true -> nền màu phẳng (ColorDrawable), không phải ảnh -> không tính là
-        // "chế độ ảnh nền". Ngược lại (kể cả ảnh tĩnh lẫn live wallpaper) đều tính là ảnh nền.
         imageBackgroundMode = !directBg
 
         window.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
@@ -193,11 +169,9 @@ object ThemeModeState {
                     val drawable = Drawable.createFromPath(customWallpaperFile.absolutePath)
                     window.setBackgroundDrawable(drawable)
                 } else if (wallpaper.wallpaperInfo != null) {
-                    // Live wallpaper: Bật cờ hiện wallpaper hệ thống
                     window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
                     window.setBackgroundDrawable(null)
                 } else {
-                    // Tĩnh: Set thẳng drawable vào window để decorView có màu/ảnh chụp
                     val sysDrawable = wallpaper.drawable
                     if (sysDrawable != null) {
                         window.setBackgroundDrawable(sysDrawable)
@@ -225,7 +199,6 @@ object ThemeModeState {
             activity.findViewById<View>(R.id.blur_top_container)?.setPadding(0, systemBars.top, 0, 0)
             activity.findViewById<View>(R.id.main_list)?.setPadding(0, systemBars.top, 0, 0)
             activity.findViewById<View>(R.id.blur_bottom_container)?.setPadding(0, 0, 0, systemBars.bottom)
-            // activity.findViewById<View>(R.id.kr_online_webview)?.setPadding(0, systemBars.top, 0, 0)
             
             insets
         }

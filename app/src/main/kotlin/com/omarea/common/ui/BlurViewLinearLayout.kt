@@ -13,17 +13,15 @@ open class BlurViewLinearLayout(context: Context, attrs: AttributeSet?) : Linear
     private val srcRect = Rect()
     private val dstRect = Rect()
 
-    // MẶC ĐỊNH BẬT VẼ VIỀN CHO TẤT CẢ CÁC MÀN HÌNH
     private var drawStrokeEnabled = true
 
     init {
         setWillNotDraw(false)
     }
 
-    // Hàm cho phép bật/tắt vẽ viền từ Code
     fun setDrawStrokeEnabled(enabled: Boolean) {
         this.drawStrokeEnabled = enabled
-        invalidate() // Vẽ lại giao diện khi thay đổi
+        invalidate()
     }
 
     fun isDrawStrokeEnabled(): Boolean {
@@ -36,7 +34,6 @@ open class BlurViewLinearLayout(context: Context, attrs: AttributeSet?) : Linear
     }
 
     override fun onDraw(canvas: Canvas) {
-        // 1. Vẽ lớp kính mờ (Blur)
         if (!BlurEngine.isPaused) {
             val blurFragment = engine.getUpdatedBlurBitmap()
 
@@ -47,10 +44,8 @@ open class BlurViewLinearLayout(context: Context, attrs: AttributeSet?) : Linear
             }
         }
 
-        // 2. Vẽ nội dung giao diện con đè lên
         super.onDraw(canvas)
 
-        // 3. CHỈ VẼ VIỀN NẾU ĐƯỢC CHO PHÉP (IF CHECK)
         if (drawStrokeEnabled) {
             drawStroke(canvas)
         }

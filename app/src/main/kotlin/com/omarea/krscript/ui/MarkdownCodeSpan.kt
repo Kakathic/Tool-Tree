@@ -9,19 +9,12 @@ import android.text.TextPaint
 import android.text.style.CharacterStyle
 import android.text.style.ReplacementSpan
 
-// Span cho `code` inline trong Markdown - tự vẽ nền bo góc ôm sát chữ.
-// Vì là ReplacementSpan nên Android giao toàn quyền vẽ đoạn text này cho draw() bên dưới,
-// bỏ qua mọi CharacterStyle khác (màu {..}(color), link [..](url), bold/italic/gạch ngang...)
-// nằm lồng bên trong cùng phạm vi ký tự - nếu vẽ phẳng 1 màu như trước thì các span lồng bên
-// trong (do MarkdownInlineHelper tạo ra khi nesting, vd `{OK}(green)` hay `[text](url)`) sẽ
-// không hiển thị. Vì vậy draw() bên dưới tự đọc lại các CharacterStyle lồng trong [start, end)
-// từ chính Spanned rồi vẽ theo từng đoạn con đúng theo span của đoạn đó, thay vì vẽ 1 màu duy nhất.
 class MarkdownCodeSpan(
     context: Context,
     private val backgroundColor: Int = 0x44808080,
     cornerRadiusDp: Float = 6f,
     paddingHorizontalDp: Float = 4f,
-    private val paddingVerticalDp: Float = 2f // Padding dọc để ôm sát chữ vừa vặn
+    private val paddingVerticalDp: Float = 2f
 ) : ReplacementSpan() {
 
     private val density = context.resources.displayMetrics.density
@@ -30,7 +23,6 @@ class MarkdownCodeSpan(
     private val paddingVerticalPx = paddingVerticalDp * density
 
     override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
-        // Cập nhật FontMetrics để TextView tự động chừa khoảng trống dọc, tránh bị cắt (clip)
         if (fm != null) {
             val fontMetrics = paint.fontMetricsInt
             fm.ascent = fontMetrics.ascent - paddingVerticalPx.toInt()
@@ -45,7 +37,6 @@ class MarkdownCodeSpan(
         val textWidth = paint.measureText(text, start, end)
         val fontMetrics = paint.fontMetricsInt
 
-        // Tính toán tọa độ vẽ nền ôm sát chữ dựa trên baseline (y)
         val rectTop = y.toFloat() + fontMetrics.ascent - paddingVerticalPx
         val rectBottom = y.toFloat() + fontMetrics.descent + paddingVerticalPx
 
@@ -55,7 +46,6 @@ class MarkdownCodeSpan(
         paint.style = Paint.Style.FILL
         paint.color = backgroundColor
 
-        // Vẽ hình chữ nhật bo góc ôm gọn lấy chữ
         canvas.drawRoundRect(
             RectF(x, rectTop, x + textWidth + paddingHorizontalPx * 2, rectBottom),
             cornerRadiusPx, cornerRadiusPx, paint
@@ -67,9 +57,6 @@ class MarkdownCodeSpan(
         drawInnerText(canvas, text, start, end, x + paddingHorizontalPx, y.toFloat(), paint)
     }
 
-    // Vẽ chữ bên trong code, chia thành từng đoạn con theo ranh giới của các CharacterStyle
-    // lồng bên trong [start, end) (màu, link, bold/italic, gạch ngang...) rồi áp span tương ứng
-    // cho từng đoạn qua updateDrawState() - thay vì vẽ nguyên khối bằng 1 màu như bản cũ.
     private fun drawInnerText(canvas: Canvas, text: CharSequence, start: Int, end: Int, startX: Float, baselineY: Float, basePaint: Paint) {
         val spanned = text as? Spanned
         if (spanned == null) {

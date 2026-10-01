@@ -18,7 +18,6 @@ import com.omarea.krscript.model.PageNode
 class ActionShortcutManager(private val context: Context) {
 
     fun addShortcut(intent: Intent, drawable: Drawable, config: NodeInfoBase): Boolean {
-        // 1. Xử lý PageNode (Lưu trữ vào bộ nhớ cục bộ thay vì truyền trực tiếp qua Intent)
         if (intent.hasExtra("page")) {
             val pageNode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getSerializableExtra("page", PageNode::class.java)
@@ -33,14 +32,12 @@ class ActionShortcutManager(private val context: Context) {
             }
         }
 
-        // 2. Chuẩn bị Intent để thực thi khi bấm vào Shortcut
         val shortcutIntent = Intent(Intent.ACTION_MAIN).apply {
             setClassName(context.packageName, intent.component!!.className)
             putExtras(intent)
             flags = Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
         }
 
-        // 3. Tạo ShortcutInfoCompat (Dùng được cho mọi SDK từ 23 trở lên)
         val bitmap = drawableToBitmap(drawable)
         val shortcutId = "addin_${config.index}"
         
@@ -50,14 +47,8 @@ class ActionShortcutManager(private val context: Context) {
             .setIntent(shortcutIntent)
             .build()
 
-        // 4. Đăng ký Shortcut với hệ thống
         if (ShortcutManagerCompat.isRequestPinShortcutSupported(context)) {
-            // Cấu hình PendingIntent (Bắt buộc IMMUTABLE cho Android 12+)
-            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            } else {
-                PendingIntent.FLAG_UPDATE_CURRENT
-            }
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             
             val successCallback = PendingIntent.getBroadcast(
                 context, 0, Intent(context, ActionShortcutManager::class.java), flags

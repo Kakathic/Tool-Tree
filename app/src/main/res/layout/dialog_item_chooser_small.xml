@@ -70,7 +70,6 @@
             android:layout_height="wrap_content" />
     </FrameLayout>
 
-    <!-- Khung chứa chung mang background krscript_item_ripple_kon -->
     <LinearLayout
         android:background="@drawable/krscript_item_ripple_kon"
         android:orientation="vertical"
@@ -89,7 +88,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
-        <!-- Đường kẻ phân cách -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"

@@ -27,20 +27,14 @@ class AdapterAppChooser(
         var selected: Boolean = false
     }
 
-    // ================= Coroutine scope (THAY GlobalScope) =================
-
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.Main + job)
-
-    // ======================================================================
 
     private var selectStateListener: SelectStateListener? = null
     private var filter: Filter? = null
 
     internal var filterApps: ArrayList<AppInfo> = apps
     private val mLock = Any()
-
-    // ================= Filter =================
 
     private class ArrayFilter(private val adapter: AdapterAppChooser) : Filter() {
         override fun performFiltering(constraint: CharSequence?): FilterResults {
@@ -91,11 +85,7 @@ class AdapterAppChooser(
         return filter!!
     }
 
-    // ================= Icon cache =================
-
     private val iconCaches = LruCache<String, Drawable>(100)
-
-    // ================= Adapter basic =================
 
     override fun getCount(): Int = filterApps.size
 
@@ -114,8 +104,6 @@ class AdapterAppChooser(
         updateRow(position, convertView)
         return convertView
     }
-
-    // ================= Icon loading =================
 
     private fun loadIcon(app: AppInfo): Deferred<Drawable?> {
         return scope.async(Dispatchers.IO) {
@@ -138,8 +126,6 @@ class AdapterAppChooser(
             null
         }
     }
-
-    // ================= Row binding =================
 
     fun updateRow(position: Int, convertView: View) {
         val item = getItem(position)
@@ -174,8 +160,6 @@ class AdapterAppChooser(
         }
     }
 
-    // ================= Selection =================
-
     fun setSelectAllState(allSelected: Boolean) {
         filterApps.forEach { it.selected = allSelected }
         notifyDataSetChanged()
@@ -189,15 +173,11 @@ class AdapterAppChooser(
         this.selectStateListener = listener
     }
 
-    // ================= Release (QUAN TRỌNG) =================
-
     fun release() {
-        job.cancel()              // hủy toàn bộ coroutine
-        iconCaches.evictAll()      // clear cache icon
+        job.cancel()
+        iconCaches.evictAll()
         selectStateListener = null
     }
-
-    // ================= ViewHolder =================
 
     class ViewHolder(view: View) {
         val itemTitle: TextView = view.findViewById(R.id.ItemTitle)

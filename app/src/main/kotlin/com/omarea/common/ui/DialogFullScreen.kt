@@ -2,14 +2,12 @@ package com.omarea.common.ui
 
 import android.app.Activity
 import android.app.Dialog
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import com.tool.tree.R
-
 
 open class DialogFullScreen(private val layout: Int, private val darkMode: Boolean) : androidx.fragment.app.DialogFragment() {
     class SwipeToDismissBinding internal constructor(
@@ -47,11 +45,7 @@ open class DialogFullScreen(private val layout: Int, private val darkMode: Boole
     private var swipeToDismissBinding: SwipeToDismissBinding? = null
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Dialog(activity!!, if (themeResId != 0) themeResId else R.style.dialog_full_screen_light)
-        } else {
-            Dialog(activity!!, -1)
-        }
+        return Dialog(activity!!, if (themeResId != 0) themeResId else R.style.dialog_full_screen_light)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -61,18 +55,10 @@ open class DialogFullScreen(private val layout: Int, private val darkMode: Boole
         val d = dialog
         if (activity != null && d != null) {
             d.window?.run {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                    setWindowAnimations(android.R.style.Animation_Translucent)
-                }
                 DialogHelper.applyEdgeToEdge(this, darkMode, view)
             }
 
             if (swipeToDismissEnabled && isCancelable) {
-                // Trước đây dùng view.post{} - chạy SAU khi frame đầu tiên (chữ, chưa có lớp mờ
-                // nền) đã hiện ra màn hình, vì DialogSwipeBackBlurWrapper.wrap() bên trong
-                // bindSwipeToDismiss() chỉ chạy lúc đó -> gây hiệu ứng "chữ hiện trước, mờ hiện
-                // sau". runBeforeFirstDraw() chạy TRƯỚC khi frame đầu tiên được vẽ (nội dung đã
-                // attach xong nên wrap() vẫn lấy được view con), nên mờ + chữ cùng hiện 1 lượt.
                 runBeforeFirstDraw(view) {
                     if (d.window == null) return@runBeforeFirstDraw
                     swipeToDismissBinding = bindSwipeToDismiss(activity, d) { closeView() }
@@ -93,24 +79,10 @@ open class DialogFullScreen(private val layout: Int, private val darkMode: Boole
         super.onDestroyView()
     }
 
-    // isCancelable chỉ được đọc 1 LẦN lúc bindSwipeToDismiss() ở onViewCreated() - đổi
-    // isCancelable sau đó (lúc dialog đang chạy) không tự tắt vuốt-lùi đã bind sẵn, nên dialog
-    // con cần chủ động gọi hàm này để tắt/bật vuốt-lùi đúng lúc (vd: khi bắt đầu/kết thúc tải).
-    // Tên hàm KHÔNG được trùng "setSwipeToDismissEnabled" vì property var swipeToDismissEnabled
-    // ở trên đã tự sinh sẵn setter cùng chữ ký JVM đó, gây lỗi "Platform declaration clash".
     protected fun setSwipeBackRuntimeEnabled(enabled: Boolean) {
         swipeToDismissBinding?.setEnabled(enabled)
     }
 
-    /**
-     * Chạy [action] NGAY TRƯỚC khi frame đầu tiên của [view] được vẽ ra màn hình (khác
-     * view.post{} - chạy SAU khi frame đầu tiên đã hiện). Nội dung đã attach xong vào lúc này
-     * nên DialogSwipeBackBlurWrapper.wrap() (gọi bên trong bindSwipeToDismiss()) vẫn lấy được
-     * view con của android.R.id.content như bình thường.
-     * Tự gỡ listener sau đúng 1 lần gọi. Xử lý cả trường hợp [view] CHƯA attach vào window lúc
-     * gọi hàm này (viewTreeObserver lấy lúc chưa attach không phải observer thật của cây view -
-     * phải đợi onViewAttachedToWindow rồi mới addOnPreDrawListener lên observer thật).
-     */
     private fun runBeforeFirstDraw(view: View, action: () -> Unit) {
         fun attachPreDraw() {
             val observer = view.viewTreeObserver

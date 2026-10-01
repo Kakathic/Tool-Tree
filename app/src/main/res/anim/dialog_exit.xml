@@ -3,14 +3,12 @@
     android:shareInterpolator="false"
     android:zAdjustment="top">
 
-    <!-- Trượt nhẹ xuống dưới (0%p -> 2%p) thu gọn về lại hướng xuất hiện -->
     <translate
         android:interpolator="@android:interpolator/accelerate_cubic"
         android:duration="160"
         android:fromYDelta="0%p"
         android:toYDelta="2%p" />
 
-    <!-- Thu nhỏ nhẹ về tâm -->
     <scale
         android:interpolator="@android:interpolator/accelerate_cubic"
         android:duration="160"
@@ -21,7 +19,6 @@
         android:fromYScale="1.0"
         android:toYScale="0.92" />
 
-    <!-- Mờ dần dứt khoát trong 160ms -->
     <alpha
         android:interpolator="@android:interpolator/accelerate_cubic"
         android:duration="160"

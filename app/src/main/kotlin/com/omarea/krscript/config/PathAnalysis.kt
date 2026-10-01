@@ -71,7 +71,6 @@ class PathAnalysis(private var context: Context, private var parentDir: String =
     private fun pathConcat(parent: String, target: String): String {
         return try {
             val isAssets = parent.startsWith(ASSETS_FILE)
-            // parent luôn là thư mục: thêm "/" cuối để URI.resolve không coi đoạn cuối là tên file
             val dir = if (parent.endsWith("/")) parent else "$parent/"
             val base = if (isAssets) dir else "file://$dir"
             val uri = URI(base).resolve(target).normalize()

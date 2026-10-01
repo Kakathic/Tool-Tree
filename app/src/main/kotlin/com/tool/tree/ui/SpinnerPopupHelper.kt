@@ -10,21 +10,10 @@ import android.view.ViewOutlineProvider
 import android.widget.LinearLayout
 import android.widget.ListPopupWindow
 
-/**
- * Tiện ích dùng chung cho các popup dạng Spinner bo góc (ListPopupWindow + nền bo góc
- * kr_spinner_popup_bg) trong toàn app:
- *   - Clip nội dung popup (listView) theo đúng outline bo góc, để hiệu ứng ripple khi bấm
- *     item KHÔNG tràn ra ngoài phần bo góc.
- *   - Ẩn thanh cuộn dọc của popup.
- *   - Tính độ rộng + chiều cao chuẩn + vị trí popup không dính sát mép màn hình.
- */
 object SpinnerPopupHelper {
 
     private const val EDGE_INSET_DP = 16f
 
-    /**
-     * Gọi SAU popup.show() - ListPopupWindow chỉ tạo ra listView thật sự sau khi show().
-     */
     @JvmStatic
     fun applyRoundedClip(popup: ListPopupWindow, radiusPx: Float) {
         val listView = popup.listView ?: return
@@ -70,7 +59,6 @@ object SpinnerPopupHelper {
         val desiredWidth = contentWidth.coerceAtLeast(minWidthPx).coerceAtMost(maxWidth)
         popup.width = desiredWidth
 
-        // Đo lại chiều cao từng dòng ĐÚNG theo độ rộng thật sự sẽ hiển thị
         val rowWidthPx = View.MeasureSpec.makeMeasureSpec(
             (desiredWidth - bgPadding.left - bgPadding.right).coerceAtLeast(0),
             View.MeasureSpec.EXACTLY

@@ -10,12 +10,8 @@ import android.widget.ListPopupWindow
 import androidx.core.content.ContextCompat
 import com.tool.tree.R
 
-// Nút "⋮" + popup List Item bo góc dùng chung ngoài ActionPage.kt (icon/kích thước/vị trí trên
-// toolbar giữ nguyên như overflow mặc định, chỉ khác nền/giao diện popup dùng kr_spinner_popup_bg +
-// PopupMenuListAdapter giống ActionPage.showListPopup() để đồng bộ giao diện toàn app).
 object OverflowMenuPopup {
 
-    // Dựng nút "⋮" - cùng icon/kích thước/vị trí như ActionPage.buildOverflowMenuButton().
     @JvmStatic
     fun buildButton(activity: Activity): ImageButton {
         val density = activity.resources.displayMetrics.density
@@ -37,7 +33,6 @@ object OverflowMenuPopup {
         }
     }
 
-    // Hiện popup List Item bo góc tại anchor - cùng cơ chế với ActionPage.showListPopup().
     @JvmStatic
     fun show(activity: Activity, anchor: View, rows: List<PopupMenuRow>) {
         if (rows.isEmpty()) return

@@ -20,9 +20,6 @@ class SwipePager @JvmOverloads constructor(
     interface OnPageChangeListener {
         fun onPageSelected(position: Int) {}
         fun onPageScrolled(position: Int, offset: Float) {}
-        // THÊM MỚI: trạng thái cuộn hiện tại - dùng số nguyên giống ViewPager2 (SCROLL_STATE_*)
-        // để ai quen ViewPager2 vẫn dùng được ngay. Hữu ích cho các thành phần khác cần biết
-        // "đang yên" hay "đang cuộn" (ví dụ: tạm dừng tính lại nội dung nặng khi đang cuộn).
         fun onPageScrollStateChanged(state: Int) {}
     }
 
@@ -31,14 +28,11 @@ class SwipePager @JvmOverloads constructor(
         const val SCROLL_STATE_DRAGGING = 1
         const val SCROLL_STATE_SETTLING = 2
 
-        // Thời gian settle tối thiểu/tối đa (ms) - xem computeSettleDuration()
         private const val SETTLE_DURATION_MIN_MS = 150
         private const val SETTLE_DURATION_MAX_MS = 320
         private const val SETTLE_DURATION_DEFAULT_MS = 300
 
-        // Giới hạn tối đa được kéo giãn ra ngoài 2 biên (rubber-band), tính theo % chiều rộng 1 trang
         private const val MAX_OVERSCROLL_RATIO = 0.40f
-        // Lực cản tối thiểu khi đã kéo gần chạm giới hạn - không để về 0 tuyệt đối (cảm giác "khựng cứng")
         private const val MIN_OVERSCROLL_RESISTANCE = 0.15f
     }
 
@@ -164,8 +158,6 @@ class SwipePager @JvmOverloads constructor(
             }
             scroller.startScroll(scrollX, 0, targetX - scrollX, 0, durationMs)
             postInvalidateOnAnimation()
-            // Chú ý: Không gọi onPageSelected ở đây nữa.
-            // Hàm computeScroll() sẽ tự động phát sự kiện khi trang thực sự dừng lại.
         } else {
             scrollTo(targetX, 0)
             if (currentItem != target) {
@@ -175,12 +167,6 @@ class SwipePager @JvmOverloads constructor(
         }
     }
 
-    // Ước lượng thời gian settle (ms) dựa theo khoảng cách còn lại VÀ vận tốc thả tay, giống
-    // cách ViewPager gốc của Google làm - thay vì luôn cố định 300ms bất kể vuốt nhanh hay chậm:
-    //   - Vuốt/flick càng nhanh -> settle càng ngắn (cảm giác bắt kịp động lượng ngón tay)
-    //   - Khoảng cách còn lại càng ngắn -> settle càng ngắn (không lê thê cho 1 đoạn nhỏ)
-    // Luôn giới hạn trong [SETTLE_DURATION_MIN_MS, SETTLE_DURATION_MAX_MS] để không quá giật
-    // (quá nhanh) hay quá ì (quá chậm).
     private fun computeSettleDuration(distancePx: Int, velocityPxPerSec: Float): Int {
         val distance = abs(distancePx)
         if (distance == 0) return SETTLE_DURATION_MIN_MS
@@ -215,8 +201,6 @@ class SwipePager @JvmOverloads constructor(
         applyPageTransform()
     }
 
-    // Gộp logic xử lý ACTION_DOWN dùng chung cho cả onInterceptTouchEvent lẫn onTouchEvent
-    // (trước đây 2 nơi tự lặp lại y hệt nhau, dễ lệch khi sửa 1 chỗ quên chỗ kia).
     private fun handleActionDown(ev: MotionEvent) {
         initialX = ev.x
         initialY = ev.y
@@ -285,9 +269,6 @@ class SwipePager @JvmOverloads constructor(
                     val maxScroll = max(0, (pages.size - 1) * width).toFloat()
                     val maxOverscroll = width * MAX_OVERSCROLL_RATIO
 
-                    // Lực cản TĂNG DẦN theo mức đã kéo giãn ra ngoài biên (giống hiệu ứng bounce
-                    // của iOS), thay vì hệ số cố định - càng kéo xa càng "nặng tay", và không
-                    // bao giờ vượt quá maxOverscroll dù kéo bao xa đi nữa.
                     if (scrollX < 0 && dx < 0) {
                         val overscroll = -scrollX
                         val resistance = (1f - overscroll / maxOverscroll).coerceIn(MIN_OVERSCROLL_RESISTANCE, 1f)
@@ -339,7 +320,6 @@ class SwipePager @JvmOverloads constructor(
         val current = scrollX / page
         val fraction = (scrollX % page).toFloat() / page
 
-        // Chỉ nhảy tối đa 1 trang mỗi lần fling (tránh animation quá nhanh gây glitch)
         val target = when {
             abs(velocityX) > minFlingVelocity -> if (velocityX < 0) current + 1 else current
             fraction > 0.5f -> current + 1
@@ -373,7 +353,6 @@ class SwipePager @JvmOverloads constructor(
                     currentItem = settled
                     listener?.onPageSelected(settled)
                 }
-                // Cuộn (kể cả settle sau khi thả tay) đã dừng hẳn và không còn đang kéo -> IDLE.
                 setScrollState(SCROLL_STATE_IDLE)
             }
         }

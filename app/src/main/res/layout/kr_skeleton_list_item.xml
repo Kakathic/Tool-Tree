@@ -1,17 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bọc trong LinearLayout ngoài + paddingTop 16dp để tạo khoảng cách với khung/thẻ phía trên,
-     giống hệt outer wrapper của kr_group_list_item.xml - vậy các khung skeleton xếp chồng nhau
-     sẽ có khoảng cách đúng như các thẻ item thật. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:paddingTop="16dp">
 
-    <!-- FrameLayout mang background bo góc "krscript_item_ripple_inactive" (radius 10dp, màu
-         cardBg) - CÙNG background với @android:id/content của kr_group_list_item.xml - để khung
-         skeleton trông giống 1 thẻ (card) như item thật. clipToOutline=true để dải sáng shimmer
-         (view phủ bên dưới) bị cắt theo đúng góc bo của background, không tràn ra ngoài. -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -55,9 +48,6 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Dải sáng shimmer - phủ TOÀN BỘ thẻ (match_parent), ban đầu đứng yên; được
-             PageLayoutRender.createSkeletonView() animate translationX liên tục để quét ngang
-             qua thẻ, xem kr_skeleton_shimmer_gradient.xml. -->
         <View
             android:id="@+id/kr_skeleton_shimmer"
             android:layout_width="match_parent"

@@ -38,10 +38,6 @@ class DialogAppUpdate(
         isCancelable = true
     }
 
-    // Ép animation fade thuần (windowAnim2 - giống dialog_about) thay cho hiệu ứng đẩy ngang
-    // mặc định của DialogFullScreen (dialog_full_screen_light/dark). Chỉ ghi đè riêng ở
-    // DialogAppUpdate, không sửa DialogFullScreen.kt vì file đó dùng chung cho các dialog
-    // full-screen khác (DialogLogFragment, DialogPower...).
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.window?.setWindowAnimations(R.style.windowAnim2)
@@ -57,8 +53,6 @@ class DialogAppUpdate(
 
     private var activeDownload: DownloadState? = null
     private var readyToInstall = false
-    // Text gốc của btnConfirm TRƯỚC khi tải (vd "Cập nhật") - lưu lại để trả về đúng chữ này khi
-    // ấn hủy hoặc tải lỗi, vì lúc đang tải text bị thay bằng "%" tiến trình (xem bên dưới).
     private var textBeforeDownload: CharSequence? = null
     private lateinit var destFile: File
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -80,8 +74,6 @@ class DialogAppUpdate(
 
         destFile = File(activity.cacheDir, fileName)
 
-        // Changelog đã được AppUpdateChecker tải sẵn từ lúc SplashActivity kiểm tra cập nhật -
-        // ở đây chỉ hiển thị lại, không tự tải mạng nữa khi mở dialog.
         contentText.text = if (changelogText != null) {
             HtmlCompat.fromHtml(markdownToHtml(changelogText), HtmlCompat.FROM_HTML_MODE_LEGACY)
         } else {
@@ -102,13 +94,8 @@ class DialogAppUpdate(
             }
 
             isCancelable = false
-            // isCancelable chỉ chặn back/chạm ngoài; vuốt lùi đã bind sẵn từ lúc mở dialog nên
-            // phải tắt riêng bằng setSwipeBackRuntimeEnabled để không vuốt đóng được khi đang tải.
             setSwipeBackRuntimeEnabled(false)
 
-            // Không ẩn nút xác nhận khi tải - giữ hiện, chỉ đổi TEXT của nó thành "%" tiến trình
-            // (xem onProgress bên dưới) thay cho thanh ProgressBar riêng đã bỏ. Trước khi có %
-            // đầu tiên (đang mở kết nối/chưa biết total size) hiện tạm "..." để biết là đang tải.
             textBeforeDownload = btnConfirm.text
             btnConfirm.text = "....."
 
@@ -223,25 +210,13 @@ class DialogAppUpdate(
         return sb.toString()
     }
 
-    // Có quyền root: cài thẳng qua "pm install -r" ở nền, không cần mở OpenFileActivity (màn
-    // hình cài đặt hệ thống). Không root (hoặc lệnh root thất bại) mới fallback về cách cũ.
     private fun openApk(activity: android.app.Activity, file: File) {
         Thread {
             val installed = installApkWithRoot(file)
             mainHandler.post {
                 if (installed) {
-                    // Cài bằng root xong app sẽ tự khởi động lại/thoát do đang tự cập nhật
-                    // chính nó, nên không cần (và không kịp) đóng dialog hay hiện toast báo
-                    // thành công - lúc này app coi như đã thoát rồi.
                 } else {
                     closingToInstall = true
-                    // isAdded chỉ xác nhận fragment còn gắn vào FragmentManager, KHÔNG đảm bảo
-                    // state chưa bị lưu (activity có thể đã qua onSaveInstanceState trong lúc
-                    // chờ lệnh root chạy nền - vd người dùng đưa app xuống nền). dismiss() thường
-                    // sẽ ném IllegalStateException "Can not perform this action after
-                    // onSaveInstanceState" trong tình huống đó -> dùng dismissAllowingStateLoss()
-                    // (đã là quy ước sẵn có trong dự án, xem DialogLogFragment.closeView()),
-                    // bọc thêm runCatching cho chắc vì đây là callback bất đồng bộ từ thread nền.
                     if (isAdded) runCatching { dismissAllowingStateLoss() }
                     openApkViaSystemInstaller(activity, file)
                 }

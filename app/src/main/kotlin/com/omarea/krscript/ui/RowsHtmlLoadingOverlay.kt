@@ -12,15 +12,10 @@ import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import com.tool.tree.R
 
-// Lớp phủ skeleton (khối xám + shimmer) đặt đè lên WebView trong khung html của item, tự mờ đi khi
-// WebView nạp xong (progress = 100) hoặc sau MAX_WAIT_MS. Chỉ dùng WebChromeClient.onProgressChanged
-// để không đổi cách WebView xử lý điều hướng link.
 object RowsHtmlLoadingOverlay {
     private const val MAX_WAIT_MS = 30000L
     private const val FADE_MS = 150L
 
-    // Gọi TRƯỚC khi loadUrl/loadDataWithBaseURL. Overlay luôn nằm sau WebView (index 1) để
-    // container.getChildAt(0) vẫn là WebView như RowsHtmlRenderHelper.bind() đang giả định.
     fun show(container: FrameLayout, webView: WebView) {
         var found: Overlay? = null
         for (i in 0 until container.childCount) {

@@ -9,7 +9,6 @@ class ParamInfoFilter(private val paramInfo: ActionParamInfo) : InputFilter {
         if (paramInfo.maxLength >= 0) {
             val keep = paramInfo.maxLength - (dest.length - (dend - dstart))
             if (keep <= 0) {
-                // 如果超出字数限制，就返回“”
                 return ""
             }
         }

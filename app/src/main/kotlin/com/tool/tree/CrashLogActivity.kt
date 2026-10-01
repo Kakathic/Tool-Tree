@@ -24,7 +24,6 @@ import java.util.Locale
 
 class CrashLogActivity : AppCompatActivity() {
 
-    // Giữ log gốc đầy đủ (không bị cắt) để dùng cho Copy / Share
     private var fullLog = "No log data available."
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,18 +32,11 @@ class CrashLogActivity : AppCompatActivity() {
         try {
             buildUi()
         } catch (t: Throwable) {
-            // Bắt cả Throwable (bao gồm OutOfMemoryError) vì đây là activity hiển thị
-            // crash log - tuyệt đối không được để chính nó crash tiếp.
             Log.e(TAG, "buildUi() failed, falling back to minimal UI", t)
             showFallbackUi(t)
         }
     }
 
-    /**
-     * Dựng giao diện đầy đủ (title, nút Copy/Share, nội dung log có thể scroll).
-     * Có thể ném lỗi nếu log quá lớn hoặc thiết bị hạn chế tài nguyên; lỗi sẽ được
-     * onCreate() bắt lại và chuyển sang showFallbackUi().
-     */
     private fun buildUi() {
         var temp: String? = null
         try {
@@ -54,20 +46,16 @@ class CrashLogActivity : AppCompatActivity() {
         }
         fullLog = if (!temp.isNullOrEmpty()) temp else "No log data available."
 
-        // Chuỗi dùng để hiển thị lên màn hình - có thể bị cắt bớt nếu quá dài,
-        // nhưng fullLog vẫn giữ nguyên vẹn cho Copy/Share.
         val truncated = fullLog.length > MAX_DISPLAY_LENGTH
         val displayLog = if (truncated)
             fullLog.substring(0, MAX_DISPLAY_LENGTH) + "\n\n... (The log is too long, I've trimmed the display portion - use Share to get the full log.)"
         else
             fullLog
 
-        // ===== ROOT LAYOUT =====
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
         root.setPadding(24, 24, 24, 24)
 
-        // ===== TITLE =====
         val title = TextView(this)
         title.text = "Tool Tree Crash"
         title.textSize = 25f
@@ -75,7 +63,6 @@ class CrashLogActivity : AppCompatActivity() {
         title.setPadding(14, 0, 0, 16)
         root.addView(title)
 
-        // ===== BUTTON ROW =====
         val buttonRow = LinearLayout(this)
         buttonRow.orientation = LinearLayout.HORIZONTAL
         buttonRow.layoutParams = LinearLayout.LayoutParams(
@@ -98,13 +85,6 @@ class CrashLogActivity : AppCompatActivity() {
         buttonRow.addView(copyBtn)
         buttonRow.addView(shareBtn)
 
-        // ===== SCROLL VIEW =====
-        // HorizontalScrollView BỌC NGOÀI (chiếm trọn phần còn lại của màn hình, kể cả vùng
-        // trống dưới chữ khi log ngắn) để vuốt ngang được ở BẤT KỲ đâu trong vùng này, không
-        // chỉ ở chỗ có chữ. ScrollView (dọc) nằm BÊN TRONG để cuộn dọc khi log dài.
-        // (Nếu để ScrollView bọc ngoài như cũ, chiều cao HorizontalScrollView sẽ tự co lại
-        // vừa đúng bằng chiều cao nội dung chữ -> vùng trống bên dưới nằm ngoài vùng chạm của
-        // nó, vuốt ngang ở đó không có tác dụng.)
         val horizontalScroll = HorizontalScrollView(this)
         horizontalScroll.layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
@@ -137,7 +117,6 @@ class CrashLogActivity : AppCompatActivity() {
 
         setContentView(root)
 
-        // ===== COPY LOGIC =====
         copyBtn.setOnClickListener {
             try {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -154,7 +133,6 @@ class CrashLogActivity : AppCompatActivity() {
             }
         }
 
-        // ===== SHARE LOGIC =====
         shareBtn.setOnClickListener {
             var fos: FileOutputStream? = null
             try {
@@ -184,13 +162,11 @@ class CrashLogActivity : AppCompatActivity() {
                     try {
                         fos.close()
                     } catch (ignored: Throwable) {
-                        // đã lỗi ở trên rồi, bỏ qua lỗi khi đóng stream
                     }
                 }
             }
         }
 
-        // ===== BACK PRESS LOGIC =====
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 try {
@@ -208,10 +184,6 @@ class CrashLogActivity : AppCompatActivity() {
         })
     }
 
-    /**
-     * Giao diện tối giản, gần như không thể ném lỗi, dùng khi buildUi() thất bại.
-     * Mục tiêu duy nhất: hiển thị được điều gì đó và không crash lần nữa.
-     */
     private fun showFallbackUi(original: Throwable) {
         try {
             val scroll = ScrollView(this)
@@ -220,7 +192,6 @@ class CrashLogActivity : AppCompatActivity() {
             text.setTextIsSelectable(true)
 
             var safeLog = fullLog
-            // Cắt rất ngắn ở fallback vì đây là chế độ "cứu hộ" cuối cùng
             if (safeLog.length > 20_000) {
                 safeLog = safeLog.substring(0, 20_000) + "\n\n... (amputatedt)"
             }
@@ -231,8 +202,6 @@ class CrashLogActivity : AppCompatActivity() {
             scroll.addView(text)
             setContentView(scroll)
         } catch (t2: Throwable) {
-            // Ngay cả fallback cũng lỗi -> không cố hiển thị gì thêm, chỉ đóng activity
-            // để tránh vòng lặp crash liên tục.
             Log.e(TAG, "Fallback UI also failed, finishing activity", t2)
             Toast.makeText(applicationContext, "Crash log unavailable.", Toast.LENGTH_LONG).show()
             finish()
@@ -242,9 +211,6 @@ class CrashLogActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "CrashLogActivity"
 
-        // Giới hạn số ký tự hiển thị trực tiếp trên màn hình để tránh TextView/Canvas
-        // ném RuntimeException ("Canvas: trying to draw too large bitmap") hoặc OOM
-        // khi log quá dài (vd stacktrace lặp vô hạn). Log đầy đủ vẫn được giữ để Copy/Share.
         private const val MAX_DISPLAY_LENGTH = 200_000
     }
 }

@@ -3,13 +3,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Ảnh chụp nhanh màn hình trước đó (do OpenPageHelper... chụp lại ngay trước khi mở
-         trang này) - đứng yên, chỉ lộ ra khi swipe_foreground bên dưới được kéo dịch sang
-         phải trong lúc vuốt để trở lại. Không có ảnh (ví dụ mở từ launcher/shortcut) thì cứ
-         để trống, sẽ lộ ra màu nền cửa sổ như trước đây.
-
-         2 lớp xếp chồng: bản mờ luôn hiện (alpha cố định) khi đang kéo, bản nét chồng lên
-         trên với alpha tăng dần theo tiến độ vuốt -> càng vuốt sang càng thấy rõ/nét hơn. -->
     <ImageView
         android:id="@+id/swipe_back_preview_blur"
         android:layout_width="match_parent"

@@ -17,14 +17,10 @@ import org.tomlj.Toml
 import org.tomlj.TomlArray
 import org.tomlj.TomlTable
 
-/**
- * Created by Hello on 2018/04/01.
- */
 class PageConfigReader {
     private var context: Context
     private var pageConfig: String = ""
 
-    // 读取pageConfig时自动获得
     private var pageConfigAbsPath: String = ""
     private var pageConfigStream: InputStream? = null
     private var parentDir: String = ""
@@ -92,13 +88,6 @@ class PageConfigReader {
         return ScriptEnvironmen.executeResultRoot(context, scriptIn, vitualRootNode)
     }
 
-    // Nạp file ngôn ngữ dạng key="value" và thay thế @key trong toàn bộ text TOML
-    // trước khi parse. Dòng "load-key"/"load-key-sh" bị loại khỏi text sau khi xử lý.
-    // Dùng "@key" thay vì "$key" để tránh xung đột với biến shell ($PATH, $HOME, $1...)
-    // trong nội dung script/run. Lưu ý: không nên đặt tên key trong file load-key là
-    // "string" vì sẽ trùng tiền tố "@string:"/"@string/" của StringResRef (resolve string
-    // resource Android) - ưu tiên StringResRef xử lý trước (StringResRef.resolve() được gọi
-    // ở bước tomlGet sau applyLoadKey), nhưng khi đó "@string" đã bị applyLoadKey thay mất.
     private val loadKeyDirectiveRegex = Regex("""(?m)^[ \t]*load-key(-sh)?[ \t]*=[ \t]*"([^"]*)"[ \t]*\r?\n?""")
     private val langLineRegex = Regex("""(?m)^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*"((?:[^"\\]|\\.)*)"[ \t]*$""")
     private val escapeSeqRegex = Regex("""\\(.)""")
@@ -121,8 +110,6 @@ class PageConfigReader {
                 }
             }
         } else {
-            // {LANG} (thử lần lượt lang-country -> lang -> default) nay đã xử lý bên trong
-            // PathAnalysis.parsePath(), gọi thẳng 1 lần là đủ.
             val path = rawPath.trim()
             if (path.isNotEmpty()) {
                 stream = try {
@@ -155,12 +142,6 @@ class PageConfigReader {
     private val pendingPickerStates = ArrayList<Pair<PickerNode, String>>()
     private val pendingRowCheckedStates = ArrayList<Pair<TextNode.TextRow, String>>()
     private val pendingRowVisibleStates = ArrayList<Triple<ArrayList<TextNode.TextRow>, TextNode.TextRow, String>>()
-    // Checkbox trong [[menu]]/[[fab]]: giống pendingSwitchStates, đọc "get" NGAY LÚC PARSE (đồng
-    // bộ, gộp chung 1 lượt shell với switch/picker/... trong resolvePendingStates()) thay vì để
-    // option.checked mặc định false rồi đợi ActionPage.refreshCheckboxMenuStates() (bất đồng bộ,
-    // chạy SAU khi trang đã hiện) mới sửa lại. Trước đây nếu item có "reload = true" (recreate()
-    // sau khi bấm) thì đúng lúc trang tạo lại, mọi checkbox KHÁC (không phải mục vừa bấm) sẽ hiện
-    // sai (tắt) tạm thời nếu người dùng mở lại menu trước khi refresh bất đồng bộ kịp chạy xong.
     private val pendingCheckboxStates = ArrayList<Pair<PageMenuOption, String>>()
 
     private val pendingDynamicStrings = ArrayList<Triple<Any, String, String>>()
@@ -208,7 +189,6 @@ class PageConfigReader {
                 triple.first.remove(triple.second)
             }
         }
-        // Áp dụng kết quả dynamic strings cho từng target
         pendingDynamicStrings.forEachIndexed { index, triple ->
             val shellResult = results["dynstr:$index"] ?: ""
             if (shellResult != "error") {
@@ -232,7 +212,6 @@ class PageConfigReader {
                 }
             }
         }
-        // Áp dụng kết quả bool shells
         pendingBoolShells.forEachIndexed { index, triple ->
             val shellResult = results["boolsh:$index"] ?: ""
             val result = shellResult.trim() == "1"
@@ -241,7 +220,6 @@ class PageConfigReader {
                 if (!result) (target as GroupNode).supported = false
             }
         }
-        // Checkbox [[menu]]/[[fab]]: cùng cách xử lý với pendingSwitchStates ở trên.
         pendingCheckboxStates.forEachIndexed { index, pair ->
             val shellResult = results["checkbox:$index"] ?: ""
             pair.first.checked = shellResult != "error" && (shellResult == "1" || shellResult.lowercase(getDefault()) == "true")
@@ -256,61 +234,30 @@ class PageConfigReader {
         pendingCheckboxStates.clear()
     }
 
-    // "group" vẫn là container như cũ. Từ bản bỏ dot-notation: tất cả loại con
-    // (text/switch/.../fab) đều là mảng PHẲNG ở gốc tài liệu, không còn lồng kiểu [[group.action]] -
-    // được gán vào [[group]] gần nhất phía trước theo thứ tự dòng, xem tomlChildren().
-    // ("[[toml]]" chỉ là marker nhận diện inline TOML ở PageConfigSh.kt, không phải type ở đây -
-    // nếu xuất hiện trong tài liệu, parser bỏ qua vô hại vì không nằm trong danh sách dưới.)
     private val tomlNodeTypeOrder = listOf("group", "text", "switch", "picker", "action", "page", "download", "editor", "resource", "menu", "fab")
 
     private val collectedMenuOptions = ArrayList<PageMenuOption>()
 
-    /** Danh sách menu 3 chấm + fab gom được sau khi readConfigXml()/readConfigToml() chạy xong. */
     val pageMenuOptions: ArrayList<PageMenuOption> get() = collectedMenuOptions
 
-    // Theo dõi key TỰ SINH (không khai "key"/"index"/"id" trong TOML) đã dùng trong TOÀN TRANG
-    // (cả [[menu]] lẫn [[fab]], vì cả 2 dùng chung collectedMenuOptions + cùng 1 cơ chế
-    // state/menu_id = option.key lúc click - xem ActionPage.menuItemExecuteSilent()). Dùng để
-    // phát hiện 2 item vô tình trùng key (thường do trùng title, hoặc cùng để trống) rồi tự thêm
-    // hậu tố phân biệt - xem assignUniqueMenuOptionKey(). Key khai TƯỜNG MINH trong TOML không bị
-    // đụng vào dù trùng, vì đó có thể là chủ đích của người viết config.
     private val usedMenuOptionKeys = HashMap<String, Int>()
 
-    // "action" bên dưới và ActionPage.onCreateOptionsMenu().
     private val collectedHeaderActions = ArrayList<ActionNode>()
-    /** Danh sách group.action có menu = true, gom được sau khi đọc xong toàn bộ trang. */
     val headerActions: ArrayList<ActionNode> get() = collectedHeaderActions
 
     private val collectedAutoShowActions = ArrayList<ActionNode>()
-    /** Danh sách group.action có show = true, gom được sau khi đọc xong toàn bộ trang. */
     val autoShowActions: ArrayList<ActionNode> get() = collectedAutoShowActions
 
-    // Icon khai báo TRỰC TIẾP ở cấp container [[menu]]/[[fab]] (field "icon"/"icon-path", KHÔNG
-    // phải trong "items") - dùng làm icon mặc định cho nút "⋮"/FAB khi không muốn/không cần set
-    // icon riêng cho từng item. Bọc trong ClickableNode chỉ để giữ đúng "pageConfigDir" (thư mục
-    // của CHÍNH trang đang đọc) phục vụ IconPathAnalysis resolve đường dẫn tương đối - giống hệt
-    // cách pageMenuOptionToml() làm với icon của từng item. Trang có thể khai [[menu]]/[[fab]]
-    // nhiều lần (gộp chung) nên chỉ giữ giá trị KHAI BÁO ĐẦU TIÊN, tránh lần khai báo sau (không
-    // set icon) vô tình xoá icon đã có.
     private var collectedMenuIcon: ClickableNode? = null
     private var collectedFabIcon: ClickableNode? = null
     val menuIcon: ClickableNode? get() = collectedMenuIcon
     val fabIcon: ClickableNode? get() = collectedFabIcon
 
-    // ========== load-after: hoãn build 1 số mục tới SAU KHI trang đã tải xong ==========
-    // Ghi lại đủ thông tin để build lại ĐÚNG NHƯ LÚC PARSE bình thường ở buildDeferredNodes():
-    // loại node, bảng TOML gốc, group cha (null = ở gốc trang), và "insertIndex" = vị trí ĐÚNG
-    // như trong file cấu hình gốc (tính bằng số mục ĐÃ build thành công của cùng container tại
-    // thời điểm gặp entry này - xem tomlChildren()).
     private class DeferredEntry(val type: String, val table: TomlTable, val group: GroupNode?, val insertIndex: Int)
     private val deferredEntries = ArrayList<DeferredEntry>()
 
-    /** true nếu trang có ít nhất 1 mục load-after=true - dùng để biết có cần chạy buildDeferredNodes() không. */
     val hasDeferredEntries: Boolean get() = deferredEntries.isNotEmpty()
 
-    /** Kết quả build 1 mục hoãn: group cha (null = gốc trang), node đã build xong, và "index" là
-     * vị trí CHÈN THỰC TẾ đã bù trừ theo thứ tự các mục hoãn khác cùng container (xem buildDeferredNodes()) -
-     * bên gọi cần chèn các kết quả này ĐÚNG THEO THỨ TỰ TRẢ VỀ để index không bị lệch. */
     class DeferredNodeResult(val group: GroupNode?, val node: NodeInfoBase, val index: Int)
 
     private fun isLoadAfter(table: TomlTable): Boolean = tomlTruthy(tomlGet(table, "load-after"))
@@ -333,10 +280,6 @@ class PageConfigReader {
             }
             option.isFab = isFab
             assignUniqueMenuOptionKey(option, isFab)
-            // Đọc "get" NGAY LÚC PARSE (đồng bộ, gộp cùng resolvePendingStates()) để option.checked
-            // đúng ngay từ đầu, không phụ thuộc ActionPage.refreshCheckboxMenuStates() (bất đồng bộ,
-            // chạy sau khi trang đã hiện) - quan trọng với item có "reload = true" vì lúc đó TOÀN
-            // BỘ trang (kể cả checkbox khác không liên quan) bị parse lại từ đầu.
             if (option.type == "checkbox" && option.checkedSh.isNotEmpty()) {
                 pendingCheckboxStates.add(option to option.checkedSh)
             }
@@ -345,19 +288,10 @@ class PageConfigReader {
         return result
     }
 
-    // Đảm bảo option.key không trùng với item nào KHÁC trong toàn trang khi TOML không tự khai
-    // "key"/"index"/"id" (option.key còn trống lúc vào đây - xem pageMenuOptionToml()). 2 item
-    // trùng key sẽ dùng chung state/menu_id lúc click (ActionPage.menuItemExecuteSilent) và có
-    // thể ảnh hưởng lẫn nhau dù là checkbox độc lập trên UI. Item đầu tiên gặp 1 title (hoặc rỗng
-    // title) vẫn giữ nguyên key cũ (title, hoặc "menu"/"fab" nếu không có title) để không phá vỡ
-    // config đang chạy đúng; chỉ item TRÙNG kế tiếp mới bị thêm hậu tố "#menu2"/"#fab2"...
     private fun assignUniqueMenuOptionKey(option: PageMenuOption, isFab: Boolean) {
         if (option.key.isNotEmpty()) return
         val prefix = if (isFab) "fab" else "menu"
         val baseKey = option.title.ifEmpty { prefix }
-        // Dùng "?: 0" thay vì Map.getOrDefault() - getOrDefault() là default method của
-        // java.util.Map (API 24+), gọi trực tiếp trên HashMap có thể NoSuchMethodError ở máy
-        // Android cũ nếu app chưa bật core library desugaring.
         val seen = usedMenuOptionKeys[baseKey] ?: 0
         usedMenuOptionKeys[baseKey] = seen + 1
         option.key = if (seen == 0) baseKey else "$baseKey#$prefix${seen + 1}"
@@ -373,19 +307,16 @@ class PageConfigReader {
         return null
     }
 
-    //                       lock = false / "0" → không đổi gì
     private fun parseLockAttr(raw: String?, node: ClickableNode) {
         if (raw == null) return
         val v = raw.trim()
         val pipeIndex = v.indexOf('|')
         if (pipeIndex >= 0) {
-            // Format mới: "state|message"
             val state = v.substring(0, pipeIndex).trim()
             val message = v.substring(pipeIndex + 1).trim()
             node.locked = (state == "1")
             node.lockMessage = StringResRef.resolve(context, message)
         } else {
-            // Hỗ trợ cũ: boolean hoặc từ khoá
             node.locked = tomlTruthy(v, "locked")
             node.lockMessage = ""
         }
@@ -458,8 +389,6 @@ class PageConfigReader {
         }
     }
 
-    // mục và không cần field `order`. Kể từ bản bỏ dot-notation, hàm này chỉ gọi 1 LẦN DUY NHẤT
-    // ở gốc tài liệu (không còn đệ quy theo group như trước) - xem vòng lặp gán currentGroup bên dưới.
     private fun tomlChildren(parent: TomlTable, onNodeReady: ((NodeInfoBase?, Int, Int) -> Unit)? = null): ArrayList<NodeInfoBase> {
         class Entry(val line: Int, val seq: Int, val type: String, val table: TomlTable)
 
@@ -477,18 +406,9 @@ class PageConfigReader {
         val total = sortedEntries.size
         var done = 0
         val result = ArrayList<NodeInfoBase>()
-        // [[group]] gần nhất đã gặp theo thứ tự dòng - các loại con (action/text/...) phía sau,
-        // trước [[group]] kế tiếp, được gán làm con của group này thay vì dot-notation lồng nhau.
-        // Mục nằm trước [[group]] đầu tiên (nếu có) được thêm thẳng vào kết quả (không group).
         var currentGroup: GroupNode? = null
-        // true khi đang ở trong 1 [[group]] có support=false -> bỏ hết các mục con của nó
         var groupHidden = false
 
-        // Chỉ báo group qua onNodeReady SAU KHI đã gom xong children (ngay trước khi sang
-        // [[group]] kế tiếp hoặc hết danh sách) - xem closeCurrentGroup(). Con thuộc group không
-        // còn báo riêng (chỉ báo tiến độ, node=null) - trước đây báo group rỗng NGAY LÚC TẠO rồi
-        // báo thêm từng con riêng khiến trang process=true (progressive) vẽ trùng: con vừa hiện
-        // rời vừa hiện bọc trong group. Mục KHÔNG thuộc group nào vẫn báo như cũ.
         fun closeCurrentGroup(doneNow: Int) {
             currentGroup?.let { onNodeReady?.invoke(it, doneNow, total) }
         }
@@ -516,7 +436,6 @@ class PageConfigReader {
                 continue
             }
             if (isLoadAfter(entry.table)) {
-                // Chưa build ngay - ghi nhớ container + vị trí gốc, build sau ở buildDeferredNodes().
                 val targetList = currentGroup?.children ?: result
                 deferredEntries.add(DeferredEntry(entry.type, entry.table, currentGroup, targetList.size))
                 onNodeReady?.invoke(null, done, total)
@@ -535,14 +454,6 @@ class PageConfigReader {
         return result
     }
 
-    /**
-     * Build các mục bị hoãn (load-after=true) - gọi SAU KHI trang đã hiển thị xong (xem
-     * ActionPage.startDeferredLoadIfNeeded()). Build lại ĐÚNG NHƯ tomlBuildNode() bình thường
-     * (support-sh/title-sh/switch-picker state/...), rồi resolvePendingStates() riêng 1 lượt
-     * cho các mục này (KHÔNG ảnh hưởng lượt resolve đã chạy xong lúc tải trang ban đầu).
-     * "index" trong kết quả trả về đã bù trừ đúng theo thứ tự gốc trong file cấu hình - bên
-     * gọi cần chèn tuần tự ĐÚNG THEO THỨ TỰ trả về (không đảo thứ tự) để vị trí chính xác.
-     */
     fun buildDeferredNodes(): ArrayList<DeferredNodeResult> {
         val builtResults = ArrayList<DeferredNodeResult>()
         val insertedCountPerContainer = HashMap<GroupNode?, Int>()
@@ -735,8 +646,6 @@ class PageConfigReader {
         tomlGet(table, "lock", "lock-state")?.let { parseLockAttr(it, page) }
         tomlGet(table, "lock-sh")?.let { page.lockShell = it.trim() }
 
-        // bên dưới.
-
         for (rowTable in tomlEntries(table, "rows")) {
             textRowToml(page.rows, rowTable)
         }
@@ -797,10 +706,6 @@ class PageConfigReader {
         if (option.title.isEmpty()) {
             tomlGet(table, "title", "text")?.let { option.title = StringResRef.resolve(context, it) }
         }
-        // Không tự gán option.key = title ở đây nữa - nếu TOML không khai "key"/"index"/"id",
-        // option.key còn TRỐNG khi trả về, để menuGroupOptionsToml() gọi
-        // assignUniqueMenuOptionKey() sinh key đảm bảo không trùng trong toàn trang (xem khai báo
-        // usedMenuOptionKeys).
         return option
     }
 
@@ -812,7 +717,6 @@ class PageConfigReader {
         tomlGet(table, "lock-sh")?.let { switchNode.lockShell = it.trim() }
         resourceNodeToml(table)
 
-        // readConfigToml() qua resolvePendingStates().
         switchNode.checked = false
         if (switchNode.getState.isNotEmpty()) {
             pendingSwitchStates.add(switchNode to switchNode.getState)
@@ -897,7 +801,6 @@ class PageConfigReader {
         tomlGet(table, "lock", "lock-state")?.let { parseLockAttr(it, node) }
         tomlGet(table, "lock-sh")?.let { node.lockShell = it.trim() }
         if (node.setState == null) node.setState = ""
-        // Cần ít nhất 1 trong 2: url tĩnh hoặc url-sh (chạy shell lúc bấm tải).
         if (node.url.isEmpty() && node.urlSh.isEmpty()) return null
 
         for (rowTable in tomlEntries(table, "rows")) {
@@ -952,9 +855,6 @@ class PageConfigReader {
         tomlGet(table, "desc-on", "on-desc", "desc-checked")?.let { p.descOn = StringResRef.resolve(context, it) }
         tomlGet(table, "desc-on-sh", "on-desc-sh", "desc-checked-sh")?.let { p.descOnSh = it }
         tomlGet(table, "separator")?.let { p.separator = it }
-        // FIX: getArray() ném exception nếu "value" tồn tại nhưng không phải kiểu array
-        // (ví dụ value = "abc" - cách dùng gốc, chiếm đa số cấu hình cũ) → phải kiểm tra
-        // isArray trước, giống cách tomlEntries() đang làm ở trên, rồi mới gọi getArray.
         if (table.isArray("value")) {
             val valueArray = table.getArray("value")
             if (valueArray != null) {
@@ -1055,7 +955,6 @@ class PageConfigReader {
 
     private fun textRowToml(rows: ArrayList<TextNode.TextRow>, table: TomlTable) {
         val row = TextNode.TextRow()
-        // khỏi danh sách sau khi resolve xong.
         var visibleShellScript: String? = null
         tomlGet(table, "support", "visible")?.let {
             val v = it.trim()
@@ -1139,7 +1038,6 @@ class PageConfigReader {
         tomlGet(table, "html-file", "html-path")?.let { row.htmlFile = it.trim() }
         tomlGet(table, "html-url", "html-link")?.let { row.htmlUrl = it.trim() }
         tomlGet(table, "html-height")?.let { row.htmlHeight = it.trim().toIntOrNull() ?: row.htmlHeight }
-        // Toggle nhỏ (checkbox / switch) lồng trong dòng text
         tomlGet(table, "toggle", "toggle-type")?.let {
             val t = it.trim().lowercase(getDefault())
             if (t == "checkbox" || t == "switch") row.toggle = t

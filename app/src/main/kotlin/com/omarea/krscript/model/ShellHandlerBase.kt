@@ -20,20 +20,10 @@ import java.util.ArrayList
 import java.util.Locale
 import java.util.regex.Pattern
 
-/**
- * Created by Hello on 2018/04/01.
- * Optimized for performance, regex flexbility, and safety without breaking the base context.
- */
 abstract class ShellHandlerBase(
-    // GIỮ NGUYÊN GỐC: Context truyền thống để tránh lỗi biên dịch của các lớp con bên ngoài
     protected var context: Context
 ) : Handler() {
 
-    // Tham chiếu tới luồng ghi (stdin) của tiến trình shell đang chạy. Đây là tham chiếu MẠNH
-    // (không dùng WeakReference) vì ShellExecutor không giữ biến này ở nơi nào khác — nếu dùng
-    // weak reference, DataOutputStream sẽ có thể bị GC gần như ngay sau khi execute() trả về,
-    // khiến ô nhập liệu mất tác dụng. Việc giải phóng được thực hiện chủ động qua unbindStdin()
-    // (gọi từ release() khi dialog bị huỷ) để không giữ rác sau khi không cần nữa.
     private var stdin: DataOutputStream? = null
 
     protected abstract fun onProgress(current: Int, total: Int)
@@ -42,10 +32,6 @@ abstract class ShellHandlerBase(
     protected abstract fun onExit(msg: Any?)
     protected abstract fun updateLog(msg: SpannableString)
 
-    /**
-     * Gắn luồng stdin của process shell hiện tại, để UI (ô nhập liệu) có thể ghi dữ liệu
-     * người dùng gõ vào ngay trong lúc script đang chạy (phục vụ lệnh `read` trong script).
-     */
     fun bindStdin(stdin: DataOutputStream) {
         this.stdin = stdin
     }
@@ -54,11 +40,6 @@ abstract class ShellHandlerBase(
         this.stdin = null
     }
 
-    /**
-     * Ghi một dòng văn bản do người dùng nhập vào stdin của shell (kèm ký tự xuống dòng để
-     * lệnh `read` trong script coi đây là một dòng nhập hoàn chỉnh).
-     * Dùng UTF-8 thay vì writeBytes() (chỉ ghi byte thấp) để hỗ trợ đúng tiếng Việt có dấu.
-     */
     fun writeInput(text: String?): Boolean {
         val stdin = this.stdin
         if (stdin == null || text == null) {
@@ -70,56 +51,22 @@ abstract class ShellHandlerBase(
             stdin.flush()
             true
         } catch (e: IOException) {
-            // Stream đã đóng (script đã kết thúc / bị huỷ) -> tự huỷ tham chiếu để tránh gọi lại vô ích
             this.stdin = null
             false
         }
     }
 
-    /**
-     * Được gọi khi script chủ động báo hiệu cần người dùng nhập liệu, thông qua cú pháp
-     * "input:[gợi ý hiển thị]" trong output (tương tự am:[...] / progress:[...]).
-     * Mặc định không làm gì; lớp con (ví dụ DialogLogFragment.MyShellHandler) override để
-     * hiện ô nhập kèm gợi ý (prompt).
-     */
     protected open fun onInputRequest(prompt: String) {
     }
 
-    /**
-     * Một phương án lựa chọn: [value] là dữ liệu sẽ được ghi vào stdin khi người dùng chọn
-     * (tương ứng phần trước dấu '|'), [label] là nhãn hiển thị trên nút bấm (phần sau dấu '|').
-     */
     class ChoiceOption(@JvmField val value: String, @JvmField val label: String)
 
-    /**
-     * Được gọi khi script yêu cầu người dùng chọn 1 trong nhiều phương án, thông qua cú pháp:
-     *   echo "choose:[1|A,2|B,3|C,4|D]"
-     *   read answer
-     * Khi người dùng ấn vào 1 phương án, giá trị tương ứng (vd "1") sẽ được ghi vào stdin
-     * (kèm xuống dòng) y hệt như đang gõ tay rồi nhấn Enter, để lệnh `read` nhận được kết quả.
-     * Mặc định không làm gì; lớp con override để hiển thị các nút bấm tương ứng.
-     */
     protected open fun onChooseRequest(options: List<ChoiceOption>) {
     }
 
-    /**
-     * Được gọi khi script yêu cầu hiển thị các đáp án dưới dạng LINK ngay trong log, KHÔNG có
-     * nút bấm riêng (khác với onChooseRequest ở trên), thông qua cú pháp:
-     *   echo "pick:[1|Yes,2|No]"    -> mặc định xếp DỌC
-     *   echo "pickv:[1|Yes,2|No]"   -> xếp DỌC, mỗi đáp án 1 dòng dạng "1. Nhãn"
-     *   echo "pickh:[1|Yes,2|No]"   -> xếp NGANG, các đáp án dạng "[ Nhãn ]" nối cạnh nhau
-     * Nội dung phương án cùng định dạng "giá_trị|nhãn" như choose:[...]. Khi người dùng ấn vào
-     * 1 đáp án, giá trị tương ứng được ghi vào stdin (kèm xuống dòng) y hệt onChooseRequest.
-     * Mặc định không làm gì; lớp con override để hiển thị.
-     */
     protected open fun onPickRequest(options: List<ChoiceOption>, vertical: Boolean) {
     }
 
-    /**
-     * Parse nội dung bên trong "choose:[...]" thành danh sách phương án.
-     * Định dạng mỗi phương án: "giá_trị|nhãn", các phương án cách nhau bởi dấu phẩy.
-     * Nếu 1 phương án không có dấu '|' (chỉ có giá trị), nhãn sẽ dùng luôn giá trị đó.
-     */
     private fun parseChooseOptions(content: String?): List<ChoiceOption> {
         val options = ArrayList<ChoiceOption>()
         if (content == null || content.trim().isEmpty()) return options
@@ -142,10 +89,6 @@ abstract class ShellHandlerBase(
         return options
     }
 
-    /**
-     * Được gọi ngay trước khi tiến trình app bị kill (do "exit:[kill]" hoặc "exit:[restart]"),
-     * để lớp con có cơ hội dọn dẹp UI (đóng dialog, finish activity...). Mặc định không làm gì.
-     */
     protected open fun onKillRequest() {
     }
 
@@ -166,7 +109,6 @@ abstract class ShellHandlerBase(
         val log = msg.toString()
         val cleanLog = ANSI_ESCAPE_PATTERN.matcher(log).replaceAll("").trim()
 
-        // === XỬ LÝ LỆNH THOÁT APP: exit:[kill] / exit:[restart] ===
         val exitMatcher = EXIT_PATTERN.matcher(cleanLog)
         if (exitMatcher.find()) {
             val args = exitMatcher.group(1)!!.trim().lowercase(Locale.US)
@@ -178,7 +120,6 @@ abstract class ShellHandlerBase(
             return
         }
 
-        // === PHÁT HIỆN YÊU CẦU CHỌN PHƯƠNG ÁN: choose:[1|A,2|B,...] ===
         val chooseMatcher = CHOOSE_PATTERN.matcher(cleanLog)
         if (chooseMatcher.find()) {
             val options = parseChooseOptions(chooseMatcher.group(1)!!.trim())
@@ -188,19 +129,16 @@ abstract class ShellHandlerBase(
             }
         }
 
-        // === PHÁT HIỆN YÊU CẦU CHỌN ĐÁP ÁN DẠNG LINK TRONG LOG (KHÔNG CÓ NÚT RIÊNG):
-        //     pick:[...] / pickv:[...] (dọc, mặc định) / pickh:[...] (ngang) ===
         val pickMatcher = PICK_PATTERN.matcher(cleanLog)
         if (pickMatcher.find()) {
             val options = parseChooseOptions(pickMatcher.group(2)!!.trim())
             if (options.isNotEmpty()) {
-                val vertical = "h" != pickMatcher.group(1) // mặc định dọc, trừ khi "pickh:"
+                val vertical = "h" != pickMatcher.group(1)
                 onPickRequest(options, vertical)
                 return
             }
         }
 
-        // Parser cũ giữ nguyên
         val amMatcher = AM_PATTERN.matcher(cleanLog)
         if (amMatcher.find()) {
             val args = amMatcher.group(1)!!.trim()
@@ -251,20 +189,10 @@ abstract class ShellHandlerBase(
         updateLog(msg, "#ff0000")
     }
 
-    /**
-     * Kill toàn bộ tiến trình app hiện tại (bao gồm mọi thread/service nền đang chạy trong
-     * cùng process), phục vụ cú pháp "exit:[kill]" (restart=false) và "exit:[restart]"
-     * (restart=true, sẽ khởi động lại app ngay trước khi kill process cũ).
-     *
-     * Lưu ý: killProcess() chỉ dừng process hiện tại. Nếu app có khai báo service ở process
-     * riêng (android:process=":other" trong Manifest), process đó KHÔNG bị ảnh hưởng bởi lệnh
-     * này — cần killBackgroundProcesses() riêng nếu muốn dọn luôn.
-     */
     private fun killApp(restart: Boolean) {
         try {
             onKillRequest()
         } catch (ignored: Exception) {
-            // Không để lỗi dọn dẹp UI cản trở việc kill
         } finally {
             if (restart) {
                 try {
@@ -274,7 +202,6 @@ abstract class ShellHandlerBase(
                         context.startActivity(launch)
                     }
                 } catch (ignored: Exception) {
-                    // Không để lỗi khởi động lại cản trở việc kill process cũ
                 }
             }
             android.os.Process.killProcess(android.os.Process.myPid())
@@ -530,30 +457,18 @@ abstract class ShellHandlerBase(
 
     companion object {
         const val EVENT_START = 0
-        const val EVENT_REDE = 2 // Giữ nguyên typo cũ của gốc để tránh break-change
+        const val EVENT_REDE = 2
         const val EVENT_READ_ERROR = 4
         const val EVENT_WRITE = 6
         const val EVENT_EXIT = -2
 
-        // Compile sẵn các Pattern tĩnh giúp tăng tốc độ xử lý luồng log liên tục
         private val ANSI_ESCAPE_PATTERN: Pattern = Pattern.compile("\\x1B\\[[0-9;]*[a-zA-Z]")
         private val AM_PATTERN: Pattern = Pattern.compile("am:\\[(.*?)\\]")
         private val PROGRESS_PATTERN: Pattern = Pattern.compile("progress:\\[(.*?)\\]")
         private val INPUT_PATTERN: Pattern = Pattern.compile("input:\\[(.*?)\\]")
 
-        // Lưu ý: dùng ".*" (tham lam / greedy) thay vì ".*?" (không tham lam) như các pattern khác
-        // ở trên. Vì nhãn hiển thị (label) có thể tự chứa dấu ngoặc vuông trang trí, ví dụ
-        // "choose:[1|[A],2|[B]]" — nếu dùng ".*?" thì regex sẽ dừng ngay ở dấu ']' đầu tiên
-        // (của "[A]"), cắt cụt nội dung và làm mất các phương án phía sau. Dùng ".*" sẽ khớp tới
-        // dấu ']' CUỐI CÙNG trên dòng, đảm bảo lấy đủ toàn bộ danh sách phương án.
-        // Đánh đổi: nếu sau "choose:[...]" trên cùng 1 dòng còn có thêm text chứa dấu ']' khác
-        // (hiếm gặp trong thực tế vì choose thường chiếm trọn 1 dòng echo riêng), phần đó sẽ bị
-        // gộp nhầm vào bên trong. Chấp nhận đánh đổi này để ưu tiên đúng cho trường hợp phổ biến.
         private val CHOOSE_PATTERN: Pattern = Pattern.compile("choose:\\[(.*)\\]")
 
-        // "pick:[...]" / "pickv:[...]" / "pickh:[...]" - giống choose:[...] nhưng KHÔNG hiện nút
-        // bấm riêng, chỉ hiện đáp án dạng link ngay trong log. Nhóm 1 là "v"/"h"/null (hướng xếp),
-        // nhóm 2 là nội dung phương án (định dạng giống hệt choose:[...]).
         private val PICK_PATTERN: Pattern = Pattern.compile("pick(v|h)?:\\[(.*)\\]")
         private val EXIT_PATTERN: Pattern = Pattern.compile("exit:\\[(.*?)\\]")
     }

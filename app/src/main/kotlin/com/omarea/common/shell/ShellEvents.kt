@@ -2,10 +2,6 @@ package com.omarea.common.shell
 
 import android.os.Handler
 
-/**
- * Created by Hello on 2018/06/30.
- */
-
 open class ShellEvents {
     protected var processHandler: Handler? = null
     var PROCESS_EVENT_STAR = 0

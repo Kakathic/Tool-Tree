@@ -63,14 +63,12 @@ class AdapterItemChooser2(
                     if (selected.contains(value)) {
                         newValues.add(value)
                     } else {
-                        // First match against the whole, non-splitted value
                         if (valueText.contains(prefixString)) {
                             newValues.add(value)
                         } else {
                             val words = valueText.split(" ".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()
                             val wordCount = words.size
 
-                            // Start at index 0, in case valueText starts with space(s)
                             for (k in 0 until wordCount) {
                                 if (words[k].contains(prefixString)) {
                                     newValues.add(value)

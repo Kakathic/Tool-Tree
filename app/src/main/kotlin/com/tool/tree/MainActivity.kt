@@ -55,7 +55,6 @@ class MainActivity : AppCompatActivity() {
     private var isFavoritesTab = false
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
     
-    // Lưu thông tin bản cập nhật mới nhất (từ SplashActivity) để điều khiển ẩn/hiện icon cập nhật trên menu
     private var pendingUpdateInfo: AppUpdateInfo? = null
     private lateinit var toolbar: Toolbar
 
@@ -99,9 +98,6 @@ class MainActivity : AppCompatActivity() {
         handleResumeNotificationIntent(intent)
     }
 
-    /**
-     * Mở lại dialog log tương ứng nếu Activity được mở từ thông báo tiến trình đã ẩn.
-     */
     private fun handleResumeNotificationIntent(intent: Intent?) {
         val notificationId = intent?.getIntExtra(DialogLogFragment.EXTRA_RESUME_NOTIFICATION_ID, -1) ?: -1
         if (notificationId == -1) return
@@ -109,9 +105,6 @@ class MainActivity : AppCompatActivity() {
         DialogLogFragment.resume(notificationId)?.show(supportFragmentManager, "")
     }
 
-    /**
-     * Hiển thị dialog cập nhật ngay khi nền blur sẵn sàng nếu có bản cập nhật mới từ SplashActivity.
-     */
     private fun showPendingUpdateIfAny() {
         @Suppress("DEPRECATION")
         val updateInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)

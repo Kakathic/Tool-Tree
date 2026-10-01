@@ -65,7 +65,6 @@ class AdapterItemChooser(private val context: Context, private var items: ArrayL
                             getDefault()
                         )
 
-                        // First match against the whole, non-splitted value
                         if (valueText.contains(prefixString)) {
                             newValues.add(value)
                         } else {
@@ -73,7 +72,6 @@ class AdapterItemChooser(private val context: Context, private var items: ArrayL
                                 .toTypedArray()
                             val wordCount = words.size
 
-                            // Start at index 0, in case valueText starts with space(s)
                             for (k in 0 until wordCount) {
                                 if (words[k].contains(prefixString)) {
                                     newValues.add(value)

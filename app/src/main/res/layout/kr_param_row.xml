@@ -42,7 +42,6 @@
         android:minHeight="48dp"
         android:orientation="horizontal">
 
-        <!-- android:maxWidth="150dp" -->
         <TextView
             android:id="@+id/kr_param_label"
             style="@style/textTitle"

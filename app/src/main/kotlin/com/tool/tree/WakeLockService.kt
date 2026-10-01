@@ -35,7 +35,6 @@ class WakeLockService : Service() {
             ACTION_END_WAKELOCK -> endWakeLock()
             ACTION_STOP_SERVICE -> stopWakeLockAndService()
         }
-        // Trả về START_NOT_STICKY để không tự khôi phục lại service sau khi người dùng xóa Task
         return START_NOT_STICKY
     }
 
@@ -142,18 +141,12 @@ class WakeLockService : Service() {
             PendingIntent.getActivity(this, 0, it, flags)
         }
 
-        // Tạo đối tượng Person kèm avatar là icon của app
-        // Lấy icon qua PackageManager để được hệ thống áp mask hình dạng (bo tròn/bo góc) giống NotiService,
-        // thay vì dùng thẳng R.mipmap.ic_launcher (ảnh gốc vuông, không được mask)
         val appIconBitmap = drawableToBitmap(packageManager.getApplicationIcon(applicationInfo))
         val sender = Person.Builder()
             .setName(getString(R.string.app_name))
             .setIcon(IconCompat.createWithBitmap(appIconBitmap))
             .build()
 
-        // Định nghĩa nội dung tin nhắn dạng MessagingStyle
-        // Chỉ hiện "wakelock_service_running" khi WakeLock đang thực sự được bật,
-        // ngược lại hiện "service_active_with_wakelock" (service đang chạy nền, chưa giữ wakelock)
         val messageText =
             if (isWakeLockActive) getString(R.string.wakelock_service_running)
             else getString(R.string.service_active_with_wakelock)
@@ -205,7 +198,6 @@ class WakeLockService : Service() {
         super.onDestroy()
     }
 
-    // Xử lý khi swipe khỏi Recents
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         releaseWakeLockSafely()
@@ -222,11 +214,7 @@ class WakeLockService : Service() {
     }
 
     private fun stopForegroundInternal() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            stopForeground(true)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

@@ -46,9 +46,6 @@ object ScriptEnvironmen {
     @JvmStatic
     fun isInited(): Boolean = inited
 
-    // Trạng thái root đã cache (tính 1 lần lúc init(), cùng nguồn dữ liệu với ROOT_NUMBER/
-    // ROOT_PERMISSION ở getEnvironment()) - để nơi khác (vd PageConfigReader xử lý {ROT})
-    // dùng lại, tránh chạy lại lệnh shell "id -u" mỗi lần cần biết trạng thái root.
     @JvmStatic
     fun isRooted(): Boolean = rooted
 
@@ -437,8 +434,6 @@ object ScriptEnvironmen {
             }
         }
     
-        // Không root: đọc thẳng /sys/fs/selinux/enforce. Không dùng SELinux.isSELinuxEnforced() vì
-        // hàm đó trả false cả khi không đọc được file (bị hiểu nhầm thành Permissive).
         return try {
             val value = FileInputStream("/sys/fs/selinux/enforce").use { input ->
                 val buffer = ByteArray(8)

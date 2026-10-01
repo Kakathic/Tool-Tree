@@ -96,9 +96,6 @@ class SplashActivity : AppCompatActivity() {
         )
     }
 
-    // Android 11+ (API 30+): READ/WRITE_EXTERNAL_STORAGE không còn cấp quyền ghi file chung,
-    // phải dùng quyền "Quản lý tất cả các tệp" (MANAGE_EXTERNAL_STORAGE). Android 10 trở xuống
-    // giữ nguyên cách xin quyền cũ.
     private fun useAllFilesAccess(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
     private fun hasRequiredPermissions(): Boolean {
@@ -124,8 +121,6 @@ class SplashActivity : AppCompatActivity() {
         ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_PERMISSIONS)
     }
 
-    // Mở trang cài đặt quyền: ưu tiên trang riêng của app, ROM không hỗ trợ (vd MIUI) thì lùi
-    // dần về danh sách chung, rồi trang thông tin ứng dụng.
     private fun requestAllFilesAccess() {
         val packageUri = Uri.parse("package:$packageName")
         val candidates = listOf(

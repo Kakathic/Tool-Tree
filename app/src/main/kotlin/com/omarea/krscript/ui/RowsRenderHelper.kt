@@ -43,8 +43,6 @@ import java.util.WeakHashMap
 
 object RowsRenderHelper {
 
-    // Khớp paddingLeft/paddingRight của android:id/content trong kr_group_list_root.xml - xem
-    // comment trong estimateAvailableWidth(). Đổi giá trị ở đây nếu XML đó đổi padding.
     private const val ROOT_CONTENT_PADDING_DP = 16
 
     @Volatile
@@ -142,15 +140,6 @@ object RowsRenderHelper {
         return DynamicResults(textMap, iconMap, photoMap, progressMap)
     }
 
-    // renderRows() (build lần đầu, gọi từ ListItem*.init{}) LUÔN chạy TRƯỚC KHI rowsView (và
-    // cả card cha của nó) được addView() vào rootGroup (xem PageLayoutRender.renderNode(): tạo
-    // xong ListItem* - kéo theo chạy hết init{} - RỒI MỚI parent.addView()) - nên rowsView.width
-    // luôn = 0 lúc này, không phải do chưa kịp layout. Ước lượng thay vì đợi 1 layout pass thật
-    // (post{} + build lại lần 2 như bản cũ): lấy bề rộng MÀN HÌNH THẬT (luôn có sẵn, không phụ
-    // thuộc trạng thái attach) rồi trừ dần padding/margin của từng lớp cha giữa rowsView và gốc
-    // card (layout riêng của item), CỘNG THÊM phần padding cố định của content container
-    // (rootGroup) mà lúc này chưa addView() nên vòng lặp không tự thấy được - xem 2 đoạn comment
-    // bên trong.
     private fun estimateAvailableWidth(rowsView: TextView): Int {
         val measured = rowsView.width
         if (measured > 0) {
@@ -163,25 +152,12 @@ object RowsRenderHelper {
             val parent = node.parent as? ViewGroup ?: break
             width -= parent.paddingLeft + parent.paddingRight
             (node.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
-                // marginStart/marginEnd (nếu XML khai bằng marginStart/End thay vì marginLeft/
-                // Right) chỉ được Android resolve thành leftMargin/rightMargin sau 1 lượt
-                // layout pass thật (resolveLayoutDirection()) - mà lúc ước lượng này view còn
-                // detached hoàn toàn, chưa từng qua layout pass nào, nên leftMargin/rightMargin
-                // vẫn đang là 0. Đọc thẳng marginStart/marginEnd (luôn có giá trị đúng ngay từ
-                // lúc inflate) để tránh ước lượng thừa ra đúng phần margin start/end này.
                 val marginLeft = if (it.marginStart != Int.MIN_VALUE) it.marginStart else it.leftMargin
                 val marginRight = if (it.marginEnd != Int.MIN_VALUE) it.marginEnd else it.rightMargin
                 width -= marginLeft + marginRight
             }
             node = parent
         }
-        // Card (layout riêng của item) LUÔN kết thúc bên trong content (android:id/content) của
-        // rootGroup (dù có lồng qua sub-group hay không - kr_group_list_item.xml không cộng
-        // thêm padding trái/phải nào) - mà content này chỉ addView() card vào SAU KHI bind() đã
-        // chạy xong (xem PageLayoutRender.renderNode()), nên vòng lặp parent-chain ở trên không
-        // bao giờ thấy được padding trái/phải 16dp của nó (kr_group_list_root.xml) - phải trừ
-        // thủ công tại đây, nếu không availableWidth vẫn bị ước lượng thừa ra đúng phần padding
-        // này dù margin của rowsView đã tính đúng.
         width -= dpToPx(rowsView.context, ROOT_CONTENT_PADDING_DP * 2)
         return width.coerceAtLeast(0)
     }
@@ -209,16 +185,6 @@ object RowsRenderHelper {
         rowsView.setTextIsSelectable(allowCopy)
         rowsView.movementMethod = BoundedLinkMovementMethod.instance
 
-        // KHÔNG set isClickable / setOnClickListener cho rowsView nữa. Lý do:
-        // - Các ClickableSpan (toggle, link, activity, onClickScript/reset) vốn đã được
-        //   BoundedLinkMovementMethod.onTouchEvent() điều phối: ACTION_DOWN/UP bên trong
-        //   getLineLeft()..getLineRight() (chữ/icon thật) mới được xử lý, ngoài vùng đó
-        //   trả false ngay → không kích hoạt span nào.
-        // - Nếu set isClickable=true + setOnClickListener{} (bản cũ), TextView sẽ sinh
-        //   hiệu ứng "đã nhấn" (ripple/selectableItemBackground mặc định) cho BẤT KỲ điểm
-        //   chạm nào trên view, kể cả khoảng trống ngoài text/icon → hiện tượng "ấn vào
-        //   chỗ trống cũng báo đã nhấn" mà user đang gặp. Bỏ 2 dòng đó đi thì chỉ còn đúng
-        //   phần chữ/icon (nơi có ClickableSpan) mới phản hồi - khớp kỳ vọng user.
         if (allowCopy) {
             rowsView.isHapticFeedbackEnabled = true
             rowsView.setOnLongClickListener(null)
@@ -296,9 +262,6 @@ object RowsRenderHelper {
                 val availableWidth = estimateAvailableWidth(rowsView)
 
                 if (availableWidth <= 0) {
-                    // Phòng hờ (thực tế gần như không xảy ra nhờ estimateAvailableWidth() luôn
-                    // ước lượng được 1 số dương ngay cả lúc rowsView chưa gắn vào cây view thật)
-                    // - không center/canh phải được thì vẫn hiện tạm nối liên tiếp còn hơn crash.
                     appendZone(leftBuilt)
                     if (centerBuilt.isNotEmpty()) {
                         rowsView.append(" ")
@@ -369,9 +332,6 @@ object RowsRenderHelper {
         rows.forEachIndexed { idx, r -> if (r.refreshInterval > 0) lastRefreshTimes[idx] = now }
         rowsView.tag = RowsRenderState(animatedRowIcons, rowRanges, zoneGroupRows, lastRefreshTimes = lastRefreshTimes, refreshIntervalMs = refreshIntervalMs)
 
-        // estimateAvailableWidth() đã cho canh zone đúng ngay từ lần dựng đầu tiên (không cần
-        // đợi 1 layout pass thật + build lại lần 2 như bản cũ) nên không còn cần ẩn/rebuild gì
-        // thêm ở đây nữa - hiện luôn.
         rowsView.visibility = View.VISIBLE
 
         if (minRefreshInterval != null) {
@@ -479,11 +439,6 @@ object RowsRenderHelper {
         }
     }
 
-    // process = true: gọi thay cho bind() ở updateViewByShell() của ListItemAction/Page/
-    // Download/Text sau khi trang đã tải xong (resolvePendingStates() đã chạy, row.checked
-    // trong model đã đúng) - CHỈ vẽ lại đúng icon on/off của toggle (checkbox/switch) tại chỗ,
-    // không build lại cả row nên không chạy lại text-sh/icon-sh/photo-sh/progress-sh của row
-    // đó lần thứ 2 (khác bind() cũ, luôn rebuild toàn bộ row kéo theo chạy lại hết các sh này).
     fun refreshToggleStates(context: Context, rowsView: TextView?, rows: List<TextNode.TextRow>) {
         if (rowsView == null) return
         val state = rowsView.tag as? RowsRenderState ?: return
@@ -638,11 +593,6 @@ object RowsRenderHelper {
                     runRowAction(context, row.confirm) {
                         row.checked = !row.checked
                         if (row.onChangeSh.isNotEmpty()) {
-                            // Cùng cơ chế với onClickScript bên dưới: chạy script trên thread nền
-                            // (tránh chặn main thread) rồi trả kết quả về lại main thread để hiện
-                            // toast/dialog tuỳ theo row.toastResult. Áp dụng cho cả kết quả của
-                            // "set"/onChangeSh (toggle) lẫn "script"/"run" - không còn phân biệt
-                            // như bản cũ (trước đây toastResult chỉ tác động lên onClickScript).
                             val progressHost = context as? RowRunProgressHost
                             progressHost?.showRowRunProgress()
                             val stateValue = if (row.checked) "1" else "0"
@@ -672,15 +622,6 @@ object RowsRenderHelper {
                 override fun updateDrawState(ds: TextPaint) {
                     ds.isUnderlineText = false
                 }
-                // Phạm vi ClickableSpan CHỈ phủ phần "label + space + en-space chứa toggle icon"
-                // (0 .. toggleIconIndex+1) - KHÔNG bao gồm khoảng trắng đuôi của textBase
-                // ("$label \u2002 ") và cũng không đè lên vùng progress (\u2002 ở cuối nếu có).
-                // Lý do: LinkMovementMethod khi ACTION_DOWN trong vùng span sẽ gọi
-                // Selection.setSelection(buffer, spanStart, spanEnd) - highlight (nền) toàn
-                // bộ phạm vi span. Nếu span kéo dài tới hết length (kể cả khoảng trắng đuôi),
-                // người dùng bấm vào khoảng trắng đuôi vẫn thấy highlight cả row → hiện tượng
-                // "ấn vào chỗ trống cũng báo đã nhấn" mà user đang gặp. Thu hẹp span lại thì
-                // bấm đúng chữ hoặc đúng ô checkbox/switch mới được highlight - khớp kỳ vọng.
             }, 0, toggleIconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         } else if (row.link.isNotEmpty()) {
             spannableString.setSpan(object : ClickableSpan() {
@@ -727,12 +668,6 @@ object RowsRenderHelper {
                             }
                         }
                         if (row.onClickScript.isNotEmpty()) {
-                            // Chạy script ở thread nền - executeResultRoot() vốn chạy đồng bộ
-                            // (chặn hẳn thread gọi tới lúc script xong), nếu gọi thẳng trên main
-                            // thread như trước thì thanh tiến trình (showRowRunProgress()) sẽ
-                            // không kịp vẽ lên màn hình trước khi bị chặn. rowsView.post{} đưa
-                            // phần cập nhật UI (ẩn thanh tiến trình + toast/dialog + resetTarget)
-                            // về lại main thread sau khi script chạy xong.
                             val progressHost = context as? RowRunProgressHost
                             progressHost?.showRowRunProgress()
                             Thread {
@@ -833,7 +768,7 @@ object RowsRenderHelper {
         }
 
         if (markdownSpans.isNotEmpty()) {
-            val codeExtraPx = dpToPx(context, 8) // paddingHorizontalDp(4dp) * 2 - khớp MarkdownCodeSpan.getSize()
+            val codeExtraPx = dpToPx(context, 8)
             for (info in markdownSpans) {
                 val start = (info.start + markdownOffset).coerceIn(0, length)
                 val end = (info.end + markdownOffset).coerceIn(start, length)
@@ -991,18 +926,6 @@ object RowsRenderHelper {
                     if (x < layout.getLineLeft(line) || x > layout.getLineRight(line)) {
                         return false
                     }
-                    // Không thể dừng ở check trên: khoảng trống canh trái/giữa/phải giữa các
-                    // "zone" trong 1 dòng được tạo bằng 1 ký tự SpacerSpan (xem appendSpacer())
-                    // chiếm hẳn 1 khoảng rộng pixel thật - vẫn nằm trong [getLineLeft,
-                    // getLineRight] nên check trên không loại được. super.onTouchEvent() (từ
-                    // LinkMovementMethod gốc) dùng layout.getOffsetForHorizontal(line, x) để
-                    // tìm ký tự - hàm này LÀM TRÒN VỀ KÝ TỰ GẦN NHẤT, nên nửa bên phải của
-                    // khoảng trống (SpacerSpan) bị làm tròn sang đúng ký tự đầu tiên của
-                    // ClickableSpan kế tiếp (checkbox/switch) - kích hoạt nhầm dù đang bấm vào
-                    // chỗ trống. Dò lại chính xác: x có thật sự nằm trong vùng pixel của ký tự
-                    // mà getOffsetForHorizontal() trả về (hoặc ký tự liền kề, phòng trường hợp
-                    // offset là điểm chèn giữa 2 ký tự) hay không, và ký tự đó có mang
-                    // ClickableSpan hay không - không thì coi như bấm vào chỗ trống, bỏ qua.
                     val lineStart = layout.getLineStart(line)
                     val lineEnd = layout.getLineEnd(line)
                     if (lineEnd > lineStart) {
@@ -1026,9 +949,6 @@ object RowsRenderHelper {
         }
     }
 
-    // Đánh dấu riêng span icon của toggle (checkbox/switch trong row) để refreshToggleStates()
-    // tìm lại đúng vị trí của nó trong editable mà không cần build lại cả row - xem
-    // refreshToggleStates().
     private class ToggleIconSpan(drawable: Drawable) : VerticalCenterImageSpan(drawable)
 
     private open class VerticalCenterImageSpan(drawable: Drawable) : ImageSpan(drawable) {
@@ -1045,7 +965,6 @@ object RowsRenderHelper {
             canvas.restore()
         }
     }
-
 
     private fun measurePaintForRow(basePaint: TextPaint, row: TextNode.TextRow): TextPaint {
         if (!row.bold && !row.italic && !row.monospace && row.size == -1 && row.letterSpacing == 0f) {
@@ -1071,7 +990,6 @@ object RowsRenderHelper {
         }
         return paint
     }
-
 
     private fun applyMarkdownSpans(
         context: Context,

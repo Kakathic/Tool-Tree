@@ -31,20 +31,15 @@ class AdapterFileSelector private constructor(
     private var selectedFile: File? = null
     private val handler = Handler(Looper.getMainLooper())
 
-    // Danh sách đuôi file được phép (đã có dấu chấm ở đầu, chữ thường), null/rỗng = không giới hạn
     private var extensions: Array<String>? = null
-    private var hasParent = false // 是否还有父级
-    var folderChooserMode = false // 是否是目录选择模式（目录选择模式下不显示文件，长按目录选中）
+    private var hasParent = false
+    var folderChooserMode = false
         private set
 
-    // Chế độ chọn nhiều mục (nhiều file, hoặc nhiều thư mục)
     private var multipleMode = false
 
-    // Giữ thứ tự đã chọn
     private val selectedFiles = LinkedHashSet<File>()
 
-    // Thông tin (isDirectory/size) lấy được qua root cho các mục mà java.io.File không tự
-    // stat được (thư mục ngoài sdcard) - khoá theo absolutePath, ghi đè lên File API thường.
     private val rootInfoMap = HashMap<String, RootFileInfo>()
 
     private fun isDir(file: File): Boolean {
@@ -55,22 +50,16 @@ class AdapterFileSelector private constructor(
         return rootInfoMap[file.absolutePath]?.length() ?: file.length()
     }
 
-    // file.exists() luôn trả về false với đường dẫn ngoài sdcard mà java.io không stat
-    // được, dù mục đó vừa được liệt kê qua root - nên coi các mục có trong rootInfoMap
-    // là đang tồn tại, không dò lại bằng File API thường.
     private fun existsSafe(file: File): Boolean {
         return rootInfoMap.containsKey(file.absolutePath) || file.exists()
     }
 
-    // Được gọi mỗi khi danh sách đã chọn thay đổi (để activity cập nhật nút "Xong"/số lượng đã chọn)
     private var selectionChangedListener: SelectionChangedListener? = null
 
     interface SelectionChangedListener {
         fun onSelectionChanged(selectedCount: Int)
     }
 
-    // Báo riêng khi 1 thư mục không đọc được (thiếu quyền) - khác với thư mục đọc được
-    // nhưng thực sự rỗng (no_files_in_directory), để người dùng biết vì sao danh sách trống
     private var accessDeniedListener: AccessDeniedListener? = null
 
     interface AccessDeniedListener {
@@ -81,8 +70,6 @@ class AdapterFileSelector private constructor(
         this.accessDeniedListener = listener
     }
 
-    // Báo mỗi khi thư mục hiện tại thay đổi (mở thư mục con / quay lại thư mục cha) -
-    // dùng để activity cập nhật đường dẫn hiện tại lên tiêu đề toolbar.
     private var dirChangedListener: OnDirChangedListener? = null
 
     interface OnDirChangedListener {
@@ -100,7 +87,6 @@ class AdapterFileSelector private constructor(
     private fun init(rootDir: File, fileSelected: Runnable, progressBarDialog: ProgressBarDialog, extension: String?) {
         this.fileSelected = fileSelected
         this.progressBarDialog = progressBarDialog
-        // Hỗ trợ nhiều đuôi file, phân cách bằng dấu phẩy, ví dụ: "zip,apk,7z"
         if (!extension.isNullOrEmpty() && extension.trim().isNotEmpty()) {
             val parts = extension.split(",")
             val list = ArrayList<String>()
@@ -135,9 +121,6 @@ class AdapterFileSelector private constructor(
         return false
     }
 
-    // Sắp xếp: thư mục trước, rồi theo tên (không phân biệt hoa/thường). isDirOf cho phép
-    // dùng thông tin isDirectory lấy qua root thay vì file.isDirectory (không sửa được field
-    // dùng chung nếu gọi từ background thread trước khi notifyDataSetChanged).
     private fun sortFiles(files: Array<File>, isDirOf: (File) -> Boolean) {
         for (i in files.indices) {
             for (j in i + 1 until files.size) {
@@ -180,10 +163,6 @@ class AdapterFileSelector private constructor(
                 accessDenied = true
             }
 
-            // java.io.File bị chặn (thường gặp ngoài sdcard, vd /data, /system) - thử lại qua
-            // shell (root nếu có, tự rơi về sh nếu không). Chỉ coi là thành công khi shell
-            // xác nhận thư mục thực sự tồn tại - nếu không (kể cả khi thiết bị không root),
-            // giữ nguyên accessDenied để báo đúng như trước, tránh hiện nhầm "thư mục rỗng".
             if (accessDenied && RootFile.dirExists(dir.absolutePath)) {
                 val entries = ArrayList<File>()
                 for (info in RootFile.list(dir.absolutePath)) {
@@ -278,9 +257,6 @@ class AdapterFileSelector private constructor(
         selectionChangedListener?.onSelectionChanged(selectedFiles.size)
     }
 
-    // Chọn 1 thư mục duy nhất kiểu radio (chọn mục mới tự bỏ chọn mục trước đó, không tự
-    // đóng màn hình) - dùng cho chế độ chọn thư mục KHÔNG multiple. Bấm lại đúng mục đang
-    // chọn thì bỏ chọn. Tái dùng chung tập selectedFiles với chế độ multiple.
     private fun setSingleChecked(file: File) {
         if (selectedFiles.contains(file)) {
             selectedFiles.remove(file)
@@ -292,14 +268,10 @@ class AdapterFileSelector private constructor(
         selectionChangedListener?.onSelectionChanged(selectedFiles.size)
     }
 
-    // Một tệp/thư mục có phải là đối tượng "có thể chọn" (hiện checkbox) trong danh sách hiện tại không.
-    // Ở chế độ chọn thư mục: mọi mục trong fileArray đều là thư mục -> có thể chọn.
-    // Ở chế độ chọn tệp: chỉ tệp mới có thể chọn, thư mục chỉ dùng để điều hướng.
     private fun isSelectable(file: File): Boolean {
         return folderChooserMode || !isDir(file)
     }
 
-    // Thư mục hiện tại đã được chọn hết (mọi mục có thể chọn) hay chưa - dùng để đồng bộ checkbox "Chọn tất cả".
     fun isAllCurrentDirSelected(): Boolean {
         val array = fileArray
         if (array == null || array.isEmpty()) {
@@ -317,7 +289,6 @@ class AdapterFileSelector private constructor(
         return hasSelectable
     }
 
-    // Chọn/bỏ chọn tất cả các mục có thể chọn trong thư mục đang hiển thị.
     fun setSelectAllState(selectAll: Boolean) {
         val array = fileArray ?: return
         for (file in array) {
@@ -355,10 +326,6 @@ class AdapterFileSelector private constructor(
                         Toast.makeText(view.context, "The selected file has been deleted. Please select again!", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
-                    // Luôn vào thẳng loadDir() (chạy nền, tự xử lý rỗng/bị từ chối) - không
-                    // dò listFiles() trước trên UI thread nữa, vì với thư mục ngoài sdcard nó
-                    // rất dễ trả null (bị từ chối tạm thời) và chặn đứng việc đi sâu hơn dù
-                    // thư mục thực ra đọc được.
                     loadDir(file)
                 }
                 if (folderChooserMode) {
@@ -377,7 +344,6 @@ class AdapterFileSelector private constructor(
                                 toggleSelection(file)
                             }
                         }
-                        // Nhấn giữ vẫn dùng để chọn nhanh 1 thư mục (giữ hành vi cũ, thêm vào danh sách đã chọn)
                         view.setOnLongClickListener {
                             if (!existsSafe(file)) {
                                 Toast.makeText(view.context, "The selected directory has been deleted. Please select another one!", Toast.LENGTH_SHORT).show()
@@ -387,11 +353,6 @@ class AdapterFileSelector private constructor(
                             true
                         }
                     } else {
-                        // Chế độ chọn 1 thư mục (không multiple): giữ nguyên nhấn giữ để chọn
-                        // ngay + đóng màn hình (hành vi cũ), đồng thời thêm RadioButton thật
-                        // (theo đúng theme app, không phải drawable android cũ) - chọn thư mục
-                        // nào thì tự bỏ chọn thư mục khác, KHÔNG tự đóng, phải bấm nút xác
-                        // nhận riêng ở toolbar.
                         if (checkBox != null) {
                             checkBox.visibility = View.GONE
                         }

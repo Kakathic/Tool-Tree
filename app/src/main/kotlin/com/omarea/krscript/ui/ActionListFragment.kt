@@ -34,12 +34,6 @@ import kotlinx.coroutines.*
 
 class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.OnItemClickListener {
     companion object {
-        // process = true: số khung skeleton hiện sẵn ngay từ đầu trong lúc chờ item thật build
-        // xong - xem setupProgressiveRoot()/appendProgressiveItem(). Mỗi khung tự ẩn ngay khi
-        // ĐÚNG mục của nó load xong (xem ListItemGroup.addViewBeforePlaceholder()), khung nào
-        // chưa tới lượt vẫn đứng yên chờ, không bị gỡ oan theo mục khác. Giá trị mặc định khi
-        // trang không tự đặt qua toml "placeholder-count" (xem PageConfigReader.pageNodeToml(),
-        // PageNode.placeholderCount, createProgressive()).
         private const val PROGRESSIVE_PLACEHOLDER_COUNT_DEFAULT = 1
 
         fun create(
@@ -47,23 +41,12 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                 krScriptActionHandler: KrScriptActionHandler? = null,
                 autoRunTask: AutoRunTask? = null,
                 themeMode: ThemeMode? = null,
-                // Gọi khi renderInterface() dựng xong TOÀN BỘ view (kể cả decode ảnh icon/logo
-                // - việc này chạy đồng bộ trên main thread trong PageLayoutRender, có thể mất
-                // khá lâu với trang nhiều ảnh). Bên gọi (ActionPage) dùng để biết lúc nào tắt
-                // thanh tiến trình hiện tạm trong lúc dựng - xem ActionPage.updateActionList.
                 onRendered: (() -> Unit)? = null): ActionListFragment {
             val fragment = ActionListFragment()
             fragment.setListData(actionInfos, krScriptActionHandler, autoRunTask, themeMode, onRendered)
             return fragment
         }
 
-        // Dùng cho trang có process = true: tạo fragment với danh sách RỖNG ban đầu, các
-        // mục sẽ được thêm dần từng cái một qua appendProgressiveItem() ngay khi ActionPage
-        // build xong từng mục (xem ActionPage.loadPageConfig), thay vì đợi build xong toàn
-        // bộ trang mới hiện danh sách như create() ở trên.
-        // placeholderCount: số khung skeleton hiện sẵn ban đầu - bên gọi (ActionPage) truyền
-        // xuống từ config.placeholderCount (đọc từ toml trang, xem PageNode.placeholderCount);
-        // không truyền thì dùng PROGRESSIVE_PLACEHOLDER_COUNT_DEFAULT.
         fun createProgressive(
                 krScriptActionHandler: KrScriptActionHandler? = null,
                 autoRunTask: AutoRunTask? = null,
@@ -85,24 +68,14 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
     private var themeMode: ThemeMode? = null
     private var pageLayoutRender: PageLayoutRender? = null
     private lateinit var rootGroup: ListItemGroup
-    // Xem create()/updateData() - báo cho bên gọi biết renderInterface() đã dựng xong.
     private var onRendered: (() -> Unit)? = null
 
-    // process = true: xem createProgressive()/appendProgressiveItem()/finishProgressiveList()
     private var progressiveMode = false
-    // Số khung skeleton hiện sẵn ban đầu cho progressiveMode - xem createProgressive().
     private var placeholderCount = PROGRESSIVE_PLACEHOLDER_COUNT_DEFAULT
-    // Mục đến TRƯỚC khi onViewCreated() dựng xong rootGroup thì xếp hàng ở đây, tránh mất
-    // mục do race giữa fragment transaction và các lệnh handler.post() thêm mục từ ActionPage.
     private val pendingProgressiveItems = ArrayList<NodeInfoBase>()
 
-    // Biến lưu mốc thời gian của cú click cuối cùng (mili-giây)
     private var lastClickTime: Long = 0
 
-    /**
-     * Hàm kiểm tra khoảng cách thời gian giữa 2 lần click liên tiếp.
-     * @return true nếu khoảng cách lớn hơn 600ms (hợp lệ), false nếu quá nhanh (bị chặn).
-     */
     private fun checkAndLockClick(): Boolean {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastClickTime < 800) {
@@ -149,15 +122,9 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         rootView?.removeAllViews()
         rootView?.addView(layout)
         triggerAction(autoRunTask)
-        // Tới đây PageLayoutRender (kể cả decode ảnh icon/logo đồng bộ bên trong) đã
-        // chạy xong ở trên rồi, nên gọi callback ngay là chính xác thời điểm dựng xong.
         onRendered?.invoke()
     }
 
-    // Dựng rootGroup RỖNG (chưa có mục nào) cho chế độ process = true, hiện sẵn vài khung
-    // skeleton cho đỡ trống trang rồi mới bơm ngay các mục đã lỡ đến trước đó
-    // (pendingProgressiveItems) nếu có - mỗi mục sẽ thế chỗ 1 khung skeleton (xem
-    // PageLayoutRender.appendNode()).
     private fun setupProgressiveRoot() {
         val context = context ?: return
         val currentActionInfos = actionInfos ?: ArrayList()
@@ -177,8 +144,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         }
     }
 
-    // Thêm 1 mục mới vào danh sách ngay lập tức (không dựng lại các mục đã có). Gọi được từ
-    // ActionPage bất kể rootGroup đã dựng xong hay chưa (nếu chưa, mục sẽ được xếp hàng).
     fun appendProgressiveItem(item: NodeInfoBase) {
         val render = pageLayoutRender
         if (render != null) {
@@ -188,13 +153,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         }
     }
 
-    // Gọi khi ActionPage đã build xong TOÀN BỘ trang (mọi mục đã appendProgressiveItem).
-    // resolvePendingStates() ở PageConfigReader lúc này cũng đã chạy xong nên trạng thái
-    // thật của switch/picker đã có sẵn trên model - làm mới hiển thị (không dựng lại view)
-    // rồi mới chạy autoRunTask như luồng tải trang bình thường. clearLoadingPlaceholders() ở
-    // đây gỡ nốt khung skeleton còn dư (trang có ít item thật hơn số khung đã hiện sẵn ban
-    // đầu) - các khung đã khớp đúng 1 item thật thì tự gỡ từ trước rồi (xem
-    // ListItemGroup.addViewBeforePlaceholder()).
     fun finishProgressiveList() {
         if (::rootGroup.isInitialized) {
             pageLayoutRender?.clearLoadingPlaceholders()
@@ -203,9 +161,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         triggerAction(autoRunTask)
     }
 
-    // Trang process = false dựng dần item sau dialog: item đã build và resolve trạng thái đủ từ
-    // trước nên KHÔNG gọi triggerUpdate() (tránh chạy lại title-sh/desc-sh/get lần 2 trên main
-    // thread) - chỉ gỡ skeleton dư rồi chạy autoRunTask, giống đuôi của renderInterface().
     fun finishPrebuiltList() {
         if (::rootGroup.isInitialized) {
             pageLayoutRender?.clearLoadingPlaceholders()
@@ -213,10 +168,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         }
     }
 
-    // load-after: chèn 1 mục bị hoãn (đã build xong) vào ĐÚNG vị trí sau khi trang đã tải xong -
-    // xem ActionPage.startDeferredLoadIfNeeded()/PageConfigReader.buildDeferredNodes(). Gọi này
-    // luôn diễn ra SAU tryAutoShowActions() nên renderInterface()/pageLayoutRender chắc chắn đã
-    // dựng xong (không cần hàng đợi như appendProgressiveItem).
     fun appendLateItem(group: GroupNode?, node: NodeInfoBase, index: Int) {
         pageLayoutRender?.insertNode(group, node, index)
     }
@@ -247,9 +198,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         }
     }
 
-    // Kiểm tra tương thích SDK - đồng bộ, không cần chạy shell nên không cần đợi/hiện dialog
-    // gì cả. Tách riêng khỏi nodeUnlockedAsync() để onPageClick() có thể gọi thẳng cho trường
-    // hợp mở trang con (không qua nodeUnlockedAsync nữa - xem onPageClick()).
     private fun checkSdkCompatibility(clickableNode: ClickableNode): Boolean {
         val currentSDK = Build.VERSION.SDK_INT
         if (clickableNode.targetSdkVersion > 0 && currentSDK != clickableNode.targetSdkVersion) {
@@ -265,19 +213,11 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         return true
     }
 
-    // Kiểm tra khoá TRƯỚC khi cho thực hiện 1 mục (dùng cho switch/action/picker/editor, và
-    // cho page loại link/activity - page loại mở ActionPage con thì KHÔNG còn qua đây nữa, xem
-    // onPageClick()). Nếu có lockShell (lệnh shell kiểm tra khoá), chạy BẤT ĐỒNG BỘ trên luồng
-    // IO, đồng thời hiện thanh tiến trình ngay trên trang (page_load_progress) trong lúc chờ
-    // kết quả. Kiểm tra xong (dù khoá hay mở) mới ẩn thanh và gọi onUnlocked() nếu thật sự đã
-    // mở khoá.
     private fun nodeUnlockedAsync(clickableNode: ClickableNode, onUnlocked: () -> Unit) {
         if (!checkSdkCompatibility(clickableNode)) return
 
         if (clickableNode.lockShell.isEmpty()) {
-            // Không cần chạy shell - kiểm tra local tức thời.
             if (clickableNode.locked) {
-                // lock = "1|message" → khoá, hiện Toast
                 val msg = clickableNode.lockMessage.ifEmpty { getString(R.string.kr_lock_message) }
                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             } else {
@@ -330,8 +270,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
     }
 
     override fun onPageClick(item: PageNode, onCompleted: Runnable) {
-        // link/activity: mở thẳng ra ngoài (trình duyệt/activity khác), không có "trang" riêng
-        // nào để tự kiểm tra khoá SAU khi mở - vẫn phải kiểm tra khoá ở đây TRƯỚC khi mở như cũ.
+        if (!checkAndLockClick()) return
         if (context != null && item.link.isNotEmpty()) {
             nodeUnlockedAsync(item) {
                 try {
@@ -345,11 +284,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                 TryOpenActivity(requireContext(), item.activity).tryOpen()
             }
         } else {
-            // Trang con (ActionPage): vào trang NGAY, không đợi kiểm tra khoá ở đây nữa - nếu
-            // trang có lockShell/locked, CHÍNH trang đó sẽ tự hiện dialog loading rồi kiểm tra
-            // sau khi đã mở, và báo lỗi bằng dialog (thay vì toast) nếu khoá - xem
-            // ActionPage.checkPageLockThenLoad(). Vẫn giữ kiểm tra SDK ở đây vì nó đồng bộ,
-            // không cần đợi gì cả.
             if (!checkSdkCompatibility(item)) return
             krScriptActionHandler?.onSubPageClick(item)
         }
@@ -415,9 +349,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         progressBarDialog.showDialog(getString(R.string.kr_param_options_load) + " ");
 
         activeLoadJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            // ========== TỐI ƯU: GỘP getState + optionsSh thành 1 lần gọi shell ==========
-            // Trước đây 2 script này được gọi riêng (2 round-trip qua shell root dùng
-            // chung, có khóa -> luôn chạy tuần tự). Gộp lại còn 1 round-trip duy nhất.
             val scripts = LinkedHashMap<String, String>()
             if (!item.getState.isNullOrEmpty()) {
                 scripts["state"] = item.getState!!
@@ -470,24 +401,17 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         actionExecute(pickerNode, script, onExit, hashMapOf("state" to toValue))
     }
 
-    // [[download]]: tải file với hỗ trợ tạm dừng / tiếp tục (HTTP Range), thông báo notification,
-    // thử lại khi đổi mạng, không bị gián đoạn khi rời trang.
-    // Bấm lại: đang tải → tạm dừng; đang tạm dừng → tiếp tục; lỗi → tải lại từ đầu.
     override fun onDownloadClick(item: DownloadNode, listItemView: ListItemDownload, onCompleted: Runnable) {
         if (item.urlSh.isNotEmpty() && !item.urlResolved) {
             resolveDownloadUrlThenClick(item, listItemView, onCompleted)
             return
         }
 
-        // Chỉ tra session theo url khi KHÔNG rỗng - tránh đụng nhầm session của mục khác (xem
-        // PageLayoutRender.createDownloadItem() - cùng nguyên nhân: url = "" mặc định khi
-        // url-sh chưa resolve xong).
         val session = if (item.url.isNotBlank()) DownloadTaskHelper.getSession(item.url) else null
         if (session != null) {
-            // Đã có session – xử lý theo trạng thái
             when (session.status) {
                 DownloadTaskHelper.Status.DOWNLOADING -> {
-                    listItemView.cancelIfDownloading() // → sẽ gọi pause
+                    listItemView.cancelIfDownloading()
                     return
                 }
                 DownloadTaskHelper.Status.PAUSED -> {
@@ -495,20 +419,15 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                     return
                 }
                 DownloadTaskHelper.Status.ERROR -> {
-                    // Tải lại: xoá session cũ rồi bắt đầu mới
                     DownloadTaskHelper.cancel(session)
-                    // fall through để tạo session mới
                 }
                 DownloadTaskHelper.Status.COMPLETING -> {
-                    // Đang chạy script, không làm gì
                     return
                 }
                 DownloadTaskHelper.Status.COMPLETED -> {
-                    // Đã xong, reset để có thể tải lại
                     DownloadTaskHelper.cancel(session)
                 }
                 DownloadTaskHelper.Status.IDLE -> {
-                    // Fall through
                 }
             }
         }
@@ -529,11 +448,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         }
     }
 
-    // Chạy "url-sh" cho mỗi lần bấm CHO TỚI KHI thành công (xem urlResolved) - cache kết quả
-    // vào item.url rồi gọi lại onDownloadClick() bình thường - các lần bấm sau khi ĐÃ resolve
-    // thành công (pause/resume/tải lại) dùng thẳng item.url đã cache, không chạy lại shell.
-    // Nếu script thất bại (trả rỗng), KHÔNG đánh dấu urlResolved - để người dùng bấm lại thử tiếp
-    // (vd do lỗi mạng/quyền root tạm thời), tránh mục tải bị "kẹt" vĩnh viễn.
     private fun resolveDownloadUrlThenClick(item: DownloadNode, listItemView: ListItemDownload, onCompleted: Runnable) {
         val progressBar = activity?.findViewById<android.widget.ProgressBar>(R.id.page_load_progress)
         progressBar?.apply {
@@ -564,12 +478,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         }
     }
 
-    // isAutoShow = true: dialog được tự động mở khi vừa vào trang ([[group.action]] show=true,
-    // ActionPage.tryAutoShowActions). Trong trường hợp này:
-    //  - Không cho phép ấn ra ngoài dialog để đóng (cancelable = false).
-    //  - Ấn "Hủy" sẽ thoát khỏi trang luôn thay vì chỉ đóng dialog.
-    // Khi action được kích hoạt theo cách thông thường (bấm trong danh sách, hoặc bấm icon đã
-    // chuyển ra toolbar/menu) thì isAutoShow = false và giữ nguyên hành vi mặc định.
     override fun onActionClick(item: ActionNode, onCompleted: Runnable, isAutoShow: Boolean) {
         if (!checkAndLockClick()) return
         nodeUnlockedAsync(item) {
@@ -599,17 +507,12 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
             progressBarDialog.showDialog(getString(R.string.onloading))
 
             activeLoadJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-                // Gộp valueShell + optionsSh + ... của mọi param thành 1 lần gọi shell duy nhất
-                // (thay vì mỗi param tự gọi riêng, chạy tuần tự qua shell root dùng chung khóa).
                 withContext(Dispatchers.Main) {
                     progressBarDialog.showDialog(getString(R.string.kr_param_options_load) + " ");
                 }
 
                 val scripts = LinkedHashMap<String, String>()
                 for (param in actionParamInfos) {
-                    // action.params được parse 1 lần và tái sử dụng nguyên object ở mọi lần mở
-                    // dialog trong cùng phiên trang -> phải reset valueFromShell về null trước,
-                    // nếu không điều kiện remember bên dưới chỉ đúng ở lần mở đầu tiên.
                     param.valueFromShell = null
 
                     val name = param.name ?: continue
@@ -655,8 +558,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                     shellResults["desc-on:$name"]?.let { param.descOn = it }
                     shellResults["placeholder:$name"]?.let { param.placeholder = it }
                     shellResults["readonly:$name"]?.let { param.readonly = it.trim() == "1" }
-                    // Không có value-sh (valueFromShell còn null) -> ưu tiên nạp giá trị đã
-                    // nhớ (remember) làm giá trị mặc định; load() tự bỏ qua nếu remember=false.
                     if (param.valueFromShell == null) {
                         ActionParamMemory.load(requireContext(), action, param)?.let { param.valueFromShell = it }
                     }
@@ -689,8 +590,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                         center.removeAllViews()
                         center.addView(linearLayout)
 
-                        // isAutoShow = true (dialog tự mở khi vào trang): không cho ấn ra ngoài
-                        // để đóng, và ấn "Hủy" phải thoát khỏi trang thay vì chỉ đóng dialog.
                         val cancelable = !isAutoShow
 
                         val darkMode = themeMode?.isDarkMode ?: false
@@ -702,29 +601,16 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                     window?.let { DialogHelper.applyEdgeToEdge(it, darkMode, dialogView) }
                                 }
                         } else {
-                            // Nhánh <=4 mục dùng chung DialogHelper.customDialog() - nền blur (+
-                            // vuốt lùi khi cancelable) đã được xử lý sẵn bên trong đó (xem
-                            // DialogHelper.customDialog()). KHÔNG gọi applyEdgeToEdge() ở đây:
-                            // hàm đó cộng thêm padding = kích thước status/navigation bar vào
-                            // dialogView, chỉ đúng cho dialog TOÀN MÀN HÌNH (root match_parent) -
-                            // còn root của kr_dialog_params_small.xml là wrap_content (card nổi
-                            // giữa màn hình, không chạm mép nào) nên bị phình to/lệch vị trí nếu
-                            // cộng thêm padding này (đúng kiểu lỗi bố cục đã gặp trước đây).
                             DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
                         }
                         if (isLongList) {
                             if (cancelable) {
-                                // Vuốt lùi để đóng - dùng chung 1 hàm với DialogFullScreen (xem
-                                // DialogFullScreen.bindSwipeToDismiss()) thay vì lặp lại logic
-                                // bọc blur + bind DialogSwipeBackHelper ở đây.
                                 val binding = DialogFullScreen.bindSwipeToDismiss(requireActivity(), dialog) { dialog.dismiss() }
                                 dialog.setOnDismissListener { binding?.release(dialog) }
                             } else {
-                                // Không cancelable -> không vuốt lùi, giữ nguyên nền blur tĩnh cố định.
                                 dialog.window?.let { DialogHelper.setWindowBlurBg(it, requireActivity()) }
                             }
                         }
-
 
                         dialogView.findViewById<TextView>(R.id.title).text = action.title
                         dialogView.findViewById<TextView>(R.id.desc).apply { if (action.desc.isEmpty()) visibility = View.GONE else text = action.desc }
@@ -734,8 +620,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             dialogView.findViewById<TextView>(R.id.warn).text = action.warning
                         }
 
-                        // Cho phép action.rows (text/photo/icon/toggle, giống rows ở item trong list)
-                        // hiện thêm ngay trên form nhập tham số của dialog params.
                         RowsRenderHelper.bind(
                             requireContext(),
                             dialogView.findViewById<TextView>(R.id.kr_rows),
@@ -768,11 +652,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         actionExecute(action, script, onExit, null)
     }
 
-    // ========== TỐI ƯU: TÁCH RIÊNG PHẦN PARSE, KHÔNG TỰ GỌI SHELL NỮA ==========
-    // Trước đây hàm này (getParamOptions) tự gọi executeScriptGetResult() bên trong, nghĩa
-    // là mỗi param một round-trip shell riêng. Giờ shellResult đã được lấy từ TRƯỚC (gộp
-    // chung 1 lần gọi cho mọi param qua ScriptEnvironmen.executeMultipleResultRoot), hàm
-    // này chỉ còn nhiệm vụ parse chuỗi kết quả thành danh sách SelectItem như cũ.
     private fun parseOptionsResult(actionParamInfo: ActionParamInfo, shellResult: String?): ArrayList<SelectItem>? {
         val options = ArrayList<SelectItem>()
         val result = shellResult ?: ""

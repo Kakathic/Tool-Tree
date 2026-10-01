@@ -3,7 +3,6 @@ package com.omarea.common.shell
 import android.content.Context
 import com.omarea.krscript.config.StringResRef
 
-// Từ Resource解析字符串，实现输出内容多语言
 class ShellTranslation(private val context: Context) {
 
     fun resolveRow(originRow: String): String {

@@ -21,7 +21,6 @@
             style="@style/dialogTitle"
             android:text="@string/confirm_title" />
 
-        <!-- Khu vực cuộn chứa message + custom view -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -50,7 +49,6 @@
             </LinearLayout>
         </ScrollView>
 
-        <!-- Đường kẻ phân cách -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"

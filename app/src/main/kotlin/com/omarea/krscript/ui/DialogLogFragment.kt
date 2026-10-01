@@ -81,17 +81,11 @@ class DialogLogFragment : DialogFragment() {
     private var onDismissRunnable: Runnable? = null
     private var currentHandler: MyShellHandler? = null
 
-    // Khi dialog được mở lại từ thông báo (sau khi bấm "Ẩn"), handler của tiến trình đang
-    // chạy đã tồn tại từ trước (được lấy ra từ HiddenTaskRegistry) — trường hợp này ta chỉ
-    // gắn lại UI vào handler cũ (reattachExecutor) thay vì khởi chạy lại script từ đầu.
     private var resumeHandler: MyShellHandler? = null
 
     private var wrapEnabled = true
     private var noWrapContainer: HorizontalScrollView? = null
 
-    // Window đã push vào TopWindowHolder (xem onStart/onDestroyView) -- lưu lại tham chiếu
-    // riêng để pop đúng window lúc đóng, không dựa vào dialog?.window (có thể đã null lúc
-    // onDestroyView chạy).
     private var attachedWindow: android.view.Window? = null
 
     override fun onCreateView(
@@ -142,12 +136,6 @@ class DialogLogFragment : DialogFragment() {
         } ?: dismissAllowingStateLoss()
     }
 
-    /**
-     * Gắn lại giao diện dialog vào một MyShellHandler đang chạy sẵn (được lấy ra từ
-     * HiddenTaskRegistry khi người dùng bấm vào thông báo tiến trình đã ẩn), thay vì chạy
-     * lại script từ đầu. Log cũ được phát lại toàn bộ vào ô hiển thị, và trạng thái các nút
-     * (Hủy/Thoát/tiến trình) được khôi phục theo trạng thái hiện tại của tiến trình.
-     */
     private fun reattachExecutor(nodeInfo: RunnableNode, handler: MyShellHandler) {
         canceled = false
         uiVisible = true
@@ -215,8 +203,6 @@ class DialogLogFragment : DialogFragment() {
             binding.btnDivider.visibility = View.GONE
         }
 
-        // onStart()/onCompleted() của tiến trình đã được gọi từ trước (trong lúc dialog đang
-        // ẩn), nên cần tự khôi phục lại trạng thái giao diện hiện tại thay vì chờ callback.
         if (handler.isFinished) {
             binding.btnHide.visibility = View.GONE
             binding.btnDivider.visibility = View.GONE
@@ -498,8 +484,6 @@ class DialogLogFragment : DialogFragment() {
         chooseOptionsContainer: LinearLayout? = null
     ) : ShellHandlerBase(context) {
 
-        // var thay vì val: khi dialog được mở lại từ thông báo (reattach), các view này cần
-        // được trỏ sang bộ view mới (của dialog vừa được tạo lại) thay vì bộ view cũ đã hủy.
         private var logViewRef = WeakReference(logView)
         private var progressRef = WeakReference(shellProgress)
         private var inputRowRef = WeakReference(inputRow)
@@ -522,8 +506,6 @@ class DialogLogFragment : DialogFragment() {
         private var lineStart = 0
         private var pendingOverwrite = false
 
-        // Dòng trạng thái kết thúc (thành công/lỗi) được tự thêm vào logBuffer trong onExit().
-        // Lưu độ dài của nó để copyLogToClipboard có thể loại trừ khi cần.
         private var hasFinishLine = false
         private var finishLineLength = 0
 
@@ -547,16 +529,11 @@ class DialogLogFragment : DialogFragment() {
         private var notificationProgressTotal = 0
         private var forceStopRunnable: Runnable? = null
 
-        // true kể từ khi tiến trình kết thúc (dù dialog có đang hiển thị hay không) — dùng để
-        // khôi phục đúng trạng thái giao diện (nút Thoát/Hủy...) khi dialog được mở lại từ
-        // thông báo sau khi tiến trình đã hoàn tất trong lúc bị ẩn.
         private var hasExited = false
         val isFinished: Boolean get() = hasExited
 
         fun getForceStop(): Runnable? = forceStopRunnable
 
-        // Chỉ khác null khi đang ở chế độ thông báo (đã bấm "Ẩn") — dùng để đăng ký vào
-        // HiddenTaskRegistry ngay sau khi enableNotificationMode() được gọi.
         val notificationIdOrNull: Int? get() = if (notificationMode) notificationId else null
 
         private var stopActionName: String? = null
@@ -567,7 +544,6 @@ class DialogLogFragment : DialogFragment() {
         private var dismissReceiver: BroadcastReceiver? = null
         private var dismissPendingIntent: PendingIntent? = null
 
-        // Debounce Notification Rate Limit
         private val notificationHandler = Handler(Looper.getMainLooper())
         private var pendingNotificationUpdate = false
         private val updateNotificationRunnable = Runnable {
@@ -686,8 +662,6 @@ class DialogLogFragment : DialogFragment() {
                 val drawable = IconPathAnalysis().loadLogo(context, tempNode, false)
                 drawableToIcon(drawable, 200)
             } else {
-                // Icon mặc định cũng vẽ qua Bitmap (drawableToIcon) thay vì dùng thẳng resource,
-                // tránh hiển thị vuông không đồng nhất với icon tùy chỉnh (iconPath/logoPath)
                 drawableToIcon(ContextCompat.getDrawable(context, R.drawable.kr_shortcut_logo), 200)
             }) ?: Icon.createWithResource(context, R.drawable.kr_shortcut_logo)
 
@@ -771,9 +745,6 @@ class DialogLogFragment : DialogFragment() {
         }
 
         private fun buildContentPendingIntent(): PendingIntent? {
-            // Đi thẳng vào MainActivity kèm ID thông báo thay vì dùng launch intent mặc định
-            // của app (mở SplashActivity rồi chuyển tiếp mà không giữ lại extra nào) — nhờ đó
-            // MainActivity biết cần mở lại dialog log nào từ HiddenTaskRegistry.
             val resumeIntent = Intent(context, com.tool.tree.MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                 putExtra(DialogLogFragment.EXTRA_RESUME_NOTIFICATION_ID, notificationId)
@@ -822,10 +793,6 @@ class DialogLogFragment : DialogFragment() {
             return (dp * context.resources.displayMetrics.density).toInt()
         }
 
-        /**
-         * Lấy nội dung log hiện tại. Nếu [excludeFinishLine] = true và log đã kết thúc (đã có
-         * dòng trạng thái thành công/lỗi tự thêm ở onExit), dòng đó sẽ được loại bỏ khỏi kết quả.
-         */
         fun getLogText(excludeFinishLine: Boolean): String {
             synchronized(logBuffer) {
                 val full = logBuffer.toString()
@@ -849,12 +816,6 @@ class DialogLogFragment : DialogFragment() {
             actionEventHandler = null
         }
 
-        /**
-         * Gắn lại handler đang chạy (được lấy từ HiddenTaskRegistry) vào bộ view của một
-         * DialogLogFragment vừa được tạo lại (khi người dùng bấm vào thông báo để mở lại
-         * dialog đã ẩn). Toàn bộ log đã ghi nhận trước đó (logBuffer) được phát lại vào
-         * logView mới, và thông báo hệ thống tương ứng được hủy vì dialog đã hiển thị trở lại.
-         */
         fun reattach(
             logView: TextView?,
             shellProgress: ProgressBar?,
@@ -877,9 +838,6 @@ class DialogLogFragment : DialogFragment() {
                     uiAppliedLength = 0
                     uiInvalidFrom = Int.MAX_VALUE
                 }
-                // Đảm bảo cờ này không bị "kẹt" ở true (ví dụ nếu có 1 lần flush đang chờ xử lý
-                // đúng lúc dialog bị ẩn) — nếu không, các log mới phát sinh sau khi mở lại có
-                // thể không bao giờ được đẩy lên UI vì compareAndSet(false, true) luôn thất bại.
                 pendingUiUpdate.set(false)
                 logView.post {
                     logView.setText("", TextView.BufferType.EDITABLE)
@@ -905,7 +863,6 @@ class DialogLogFragment : DialogFragment() {
                 }
             }
 
-            // Dialog đã hiển thị trở lại, không cần thông báo (và các receiver liên quan) nữa.
             if (notificationMode) {
                 notificationManager?.cancel(notificationId)
                 cleanupNotificationReceivers()
@@ -1239,11 +1196,6 @@ class DialogLogFragment : DialogFragment() {
         }
 
         private fun dispatchLogUpdate(formattedText: CharSequence) {
-            // QUAN TRỌNG: không được return sớm khi chưa có logView (ví dụ lúc dialog đang ẩn,
-            // hiển thị dưới dạng thông báo) — logBuffer vẫn phải được ghi nhận đầy đủ để khi
-            // mở lại dialog (reattach) có thể phát lại toàn bộ log, kể cả những dòng phát sinh
-            // trong lúc ẩn. Trước đây return sớm ở đây khiến log mới trong lúc ẩn bị mất hẳn,
-            // dẫn đến khi mở lại chỉ thấy log cũ (tính đến thời điểm bấm "Ẩn").
             synchronized(logBuffer) {
                 var i = 0
                 val len = formattedText.length
@@ -1312,8 +1264,6 @@ class DialogLogFragment : DialogFragment() {
                 }
             }
 
-            // Chỉ cần cập nhật UI nếu đang có view gắn vào (dialog đang hiển thị). Khi ẩn,
-            // logBuffer vẫn được cập nhật ở trên để dùng cho việc phát lại log lúc mở lại sau.
             val logView = logViewRef.get() ?: return
             if (pendingUiUpdate.compareAndSet(false, true)) {
                 logView.post {
@@ -1375,11 +1325,6 @@ class DialogLogFragment : DialogFragment() {
 
     override fun onStart() {
         super.onStart()
-        // Dialog này dùng theme windowIsFloating=false (full-screen) nên tự tách thành 1 lớp
-        // cửa sổ riêng, nằm TRÊN cửa sổ gốc của Activity. Banner (BannerNotificationManager)
-        // vốn chỉ biết gắn vào token cửa sổ Activity (CurrentActivityHolder) nên bị dialog
-        // full-screen này che mất. Đăng ký window hiện tại vào TopWindowHolder để banner biết
-        // cần gắn vào token nào mới thực sự nổi lên trên cùng.
         dialog?.window?.let { window ->
             attachedWindow = window
             com.omarea.common.ui.TopWindowHolder.push(window)
@@ -1426,15 +1371,8 @@ class DialogLogFragment : DialogFragment() {
         private const val WRAP_STATE_RELATIVE_PATH = "home/usr/log/scroll_ngang"
         private val IO_EXECUTOR = Executors.newSingleThreadExecutor()
 
-        // Extra key gửi kèm PendingIntent của thông báo tiến trình, dùng để MainActivity biết
-        // cần mở lại dialog log nào (tra trong HiddenTaskRegistry) khi người dùng bấm vào.
         const val EXTRA_RESUME_NOTIFICATION_ID = "kr_script_resume_notification_id"
 
-        /**
-         * Được gọi từ MainActivity khi Activity nhận intent mở lại dialog log đã ẩn (từ
-         * thông báo). Trả về null nếu tác vụ tương ứng không còn tồn tại (ví dụ tiến trình
-         * app đã bị hệ thống hủy hoàn toàn, hoặc thông báo đã được mở/hủy trước đó).
-         */
         fun resume(notificationId: Int): DialogLogFragment? {
             val entry = HiddenTaskRegistry.take(notificationId) ?: return null
             return DialogLogFragment().apply {
@@ -1467,10 +1405,6 @@ class DialogLogFragment : DialogFragment() {
     }
 }
 
-/**
- * Thông tin cần thiết để mở lại dialog log của một tác vụ đang chạy ẩn (đã bấm "Ẩn" và
- * đang hiển thị dưới dạng thông báo).
- */
 data class HiddenTaskEntry(
     val nodeInfo: RunnableNode,
     val handler: DialogLogFragment.MyShellHandler,
@@ -1479,11 +1413,6 @@ data class HiddenTaskEntry(
     val darkMode: Boolean
 )
 
-/**
- * Registry (còn sống trong suốt vòng đời tiến trình app) lưu các tác vụ đang chạy ẩn, được
- * đánh index theo ID thông báo. Khi người dùng bấm vào thông báo, MainActivity tra registry
- * này để lấy lại handler đang chạy và mở lại dialog log, thay vì chạy lại script từ đầu.
- */
 object HiddenTaskRegistry {
     private val tasks = java.util.concurrent.ConcurrentHashMap<Int, HiddenTaskEntry>()
 
@@ -1495,6 +1424,5 @@ object HiddenTaskRegistry {
         tasks.remove(notificationId)
     }
 
-    /** Lấy ra và xóa khỏi registry (dialog sẽ hiển thị lại nên không còn "ẩn" nữa). */
     fun take(notificationId: Int): HiddenTaskEntry? = tasks.remove(notificationId)
 }

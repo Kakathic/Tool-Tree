@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Nút +/- bị khóa (readonly) thì đổi sang màu xám mờ thay vì màu accent -->
     <item android:state_enabled="false">
         <shape>
             <corners android:radius="10dp" />

@@ -15,34 +15,21 @@ import com.omarea.krscript.model.TextNode
 import java.nio.ByteBuffer
 
 class IconPathAnalysis {
-    // Ảnh đã decode + mtime của file nguồn lúc decode - dùng để phát hiện file bị thay nội
-    // dung dù giữ nguyên path (xem decodeBitmap()).
     private class CachedImage(val bitmap: Bitmap, val lastModified: Long)
 
     companion object {
-        // Cache Bitmap đã giải mã dùng chung cho toàn app (theo dung lượng, ~12MB).
-        // Giúp tránh decode lại ảnh mỗi lần list re-render (đỡ giật/lag, đỡ tốn CPU).
         private const val CACHE_SIZE_BYTES = 12 * 1024 * 1024
         private val bitmapCache = object : LruCache<String, CachedImage>(CACHE_SIZE_BYTES) {
             override fun sizeOf(key: String, value: CachedImage): Int = value.bitmap.byteCount
         }
     }
 
-    // Cache path đã xác nhận KHÔNG tồn tại/không đọc được, chỉ sống trong đúng 1 instance (tức
-    // đúng 1 lượt tải trang - xem ActionPage.prewarmNodeImages() dùng chung 1 instance cho cả
-    // lượt tải). Mục đích: 1 icon lỗi bị nhiều nơi tra cùng path (loadIcon() + loadLogo() fallback
-    // cùng đọc iconPath, hoặc nhiều item dùng chung 1 path lỗi) sẽ chỉ tốn đúng 1 lần dò qua root
-    // (PathAnalysis -> RootFile.fileExists chạy shell thật khi file không tồn tại cục bộ), các lần
-    // tra lại trong CÙNG lượt tải trả về ngay. KHÔNG dùng companion (không sống qua lượt tải khác)
-    // để nếu path lỗi được sửa thật (file được tạo đúng chỗ) thì lần tải sau vẫn dò lại bình thường.
     private val failedPaths = HashSet<String>()
 
-    // 获取快捷方式的图标
     fun loadLogo(context: Context, clickableNode: ClickableNode): Drawable {
         return loadLogo(context, clickableNode, true)!!
     }
 
-    // 获取快捷方式的图标
     fun loadLogo(context: Context, clickableNode: ClickableNode, useDefault: Boolean): Drawable? {
         if (!clickableNode.logoPath.isEmpty()) {
             decodeBitmap(context, clickableNode.pageConfigDir, clickableNode.logoPath)?.let {
@@ -65,7 +52,6 @@ class IconPathAnalysis {
             decodeRealGif(context, clickableNode.pageConfigDir, paths[0])?.let { return it }
         }
         if (paths.size > 1) {
-            // Danh sách nhiều đường dẫn tường minh (vd: "a.png|b.png") -> luôn ưu tiên coi là hoạt ảnh
             loadAnimatedFromPaths(context, clickableNode.pageConfigDir, paths, clickableNode.iconGifTime)?.let { return it }
         } else if (clickableNode.iconGifNum > 0) {
             loadAnimatedFrames(context, clickableNode.pageConfigDir, paths[0], clickableNode.iconGifNum, clickableNode.iconGifTime)?.let { return it }
@@ -103,8 +89,6 @@ class IconPathAnalysis {
         return null
     }
 
-    // photoPath truyền tường minh (thay vì đọc row.photo trực tiếp) để hỗ trợ cả photo tĩnh và
-    // photo-sh động - row vẫn cần để đọc photoGifNum/photoGifTime (không đổi theo -sh).
     fun loadtextPhoto(context: Context, photoPath: String, row: TextNode.TextRow, pageDir: String): Drawable? {
         if (photoPath.isEmpty()) return null
         val paths = splitMultiPaths(photoPath)
@@ -123,11 +107,6 @@ class IconPathAnalysis {
         return null
     }
 
-    // Nạp ảnh nhỏ inline (field "icon" của row) - ghép cố định cạnh chữ qua ImageSpan. Hỗ trợ hoạt
-    // ảnh giống loadIcon(): danh sách nhiều path tường minh ("a.png|b.png") HOẶC icon-gif-num (frames
-    // đặt tên icon_1.png, icon_2.png...). Việc CHẠY animation (start/stop, callback invalidate) do
-    // bên gọi tự lo (xem GifPlaybackHelper.bindToTextView() trong RowsRenderHelper) vì AnimationDrawable
-    // gắn trong ImageSpan không tự chạy như khi gắn vào ImageView.
     fun loadRowIcon(context: Context, iconPath: String, pageDir: String, gifNum: Int = 0, gifTime: Int = 300, realGif: Boolean = false): Drawable? {
         if (iconPath.isEmpty()) return null
         val paths = splitMultiPaths(iconPath)
@@ -146,10 +125,6 @@ class IconPathAnalysis {
         return null
     }
 
-    // Đọc 1 file .gif THẬT (animated) thành Drawable tự chạy animation qua AnimatedImageDrawable.
-    // Chỉ hoạt động từ Android 9 (API 28) trở lên - dưới mức đó luôn trả về null để bên gọi tự rớt
-    // về nhánh cũ (khung tĩnh / chuỗi khung hình icon-gif-num). Không cache (khác decodeBitmap ở dưới)
-    // vì đây là Drawable có state animation riêng, không nên dùng chung giữa nhiều view.
     private fun decodeRealGif(context: Context, pageDir: String, path: String): Drawable? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
         if (path.isEmpty()) return null
@@ -164,18 +139,12 @@ class IconPathAnalysis {
         }
     }
 
-    // Tách chuỗi cấu hình đường dẫn thành danh sách các đường dẫn riêng lẻ.
-    // Hỗ trợ phân tách bằng dấu "|" trên 1 dòng, hoặc xuống dòng (chuỗi TOML nhiều dòng), hoặc cả hai.
-    // Ví dụ: "path.png|test.png"  hoặc  "path.png\ntest.png"
     private fun splitMultiPaths(raw: String): List<String> {
         return raw.split('|', '\n', '\r')
             .map { it.trim() }
             .filter { it.isNotEmpty() }
     }
 
-    // Nạp danh sách đường dẫn tường minh (mỗi phần tử là 1 khung hình) thành hoạt ảnh kiểu GIF,
-    // dùng chung thời gian mỗi khung (gif-time). Lặp vô hạn (do người gọi quyết định khi start/stop).
-    // Khung lỗi sẽ bị bỏ qua.
     private fun loadAnimatedFromPaths(context: Context, pageDir: String, paths: List<String>, frameTimeMs: Int): AnimationDrawable? {
         if (paths.size <= 1) return null
         val duration = if (frameTimeMs > 0) frameTimeMs else 300
@@ -191,8 +160,6 @@ class IconPathAnalysis {
         return if (loadedCount > 0) anim else null
     }
 
-    // Tách phần tên (không có đuôi) và phần đuôi mở rộng của đường dẫn
-    // "path/photo.png" -> ("path/photo", ".png")
     private fun splitExt(path: String): Pair<String, String> {
         val lastDot = path.lastIndexOf('.')
         val lastSlash = path.lastIndexOf('/')
@@ -203,9 +170,6 @@ class IconPathAnalysis {
         }
     }
 
-    // Nạp chuỗi ảnh dạng "path/photo_1.png" .. "path/photo_N.png" (N = frameCount)
-    // và ghép thành hoạt ảnh kiểu GIF (AnimationDrawable).
-    // Khung hình nào không đọc được sẽ bị bỏ qua (không làm hỏng cả hoạt ảnh).
     private fun loadAnimatedFrames(context: Context, pageDir: String, basePath: String, frameCount: Int, frameTimeMs: Int): AnimationDrawable? {
         if (basePath.isEmpty() || frameCount <= 0) return null
         val (baseNoExt, ext) = splitExt(basePath)
@@ -223,11 +187,6 @@ class IconPathAnalysis {
         return if (loadedCount > 0) anim else null
     }
 
-    // Đọc + giải mã 1 ảnh từ đường dẫn (icon/photo/bg/...), có:
-    //  - Cache theo (thư mục cấu hình + đường dẫn) để không decode lại nhiều lần cho cùng 1 ảnh.
-    //  - Giới hạn kích thước giải mã (inSampleSize) theo độ phân giải màn hình để tránh OOM
-    //    với ảnh gốc quá lớn (ảnh sẽ không được giải mã to hơn mức có thể hiển thị được).
-    // Trả về null nếu không đọc được / không giải mã được.
     private fun decodeBitmap(context: Context, pageDir: String, path: String): Bitmap? {
         if (path.isEmpty()) return null
         val cacheKey = "$pageDir|$path"
@@ -241,8 +200,6 @@ class IconPathAnalysis {
                 return null
             }
 
-            // mtime = 0 (asset hoặc file phải mở qua root - xem PathAnalysis.getCurrentLastModified())
-            // nghĩa là không xác định được thay đổi -> coi cache còn hợp lệ mãi, giữ đúng hành vi cũ.
             val currentModified = pathAnalysis.getCurrentLastModified()
             bitmapCache.get(cacheKey)?.let { cached ->
                 if (currentModified == 0L || cached.lastModified == currentModified) {
@@ -273,8 +230,6 @@ class IconPathAnalysis {
         }
     }
 
-    // Tính hệ số giảm mẫu (luỹ thừa của 2) sao cho ảnh giải mã ra không vượt quá maxDimension
-    // ở cả 2 chiều, tránh tốn bộ nhớ giải mã ảnh to hơn mức màn hình có thể hiển thị.
     private fun calculateInSampleSize(width: Int, height: Int, maxDimension: Int): Int {
         var inSampleSize = 1
         if (maxDimension > 0 && (width > maxDimension || height > maxDimension)) {
@@ -287,7 +242,6 @@ class IconPathAnalysis {
         return inSampleSize
     }
 
-    // Bitmap转换成Drawable
     fun bitmap2Drawable(bitmap: Bitmap): Drawable {
         return BitmapDrawable(bitmap)
     }

@@ -50,9 +50,6 @@ class ParamsSingleSelect(
         }
     }
 
-    // Khi allowNoSelection = true, chèn thêm 1 dòng "Không chọn" ở đầu danh sách hiển thị
-    // (không đụng vào `options`/optionsFromShell gốc vì đây là list dùng chung).
-    // indexOffset dùng để quy đổi vị trí trong danh sách hiển thị <-> selectedIndex thực (-1 = chưa chọn).
     private val indexOffset: Int
         get() = if (actionParamInfo.allowNoSelection) 1 else 0
 

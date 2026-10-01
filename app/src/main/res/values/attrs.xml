@@ -1,39 +1,31 @@
 <resources>
-    <!-- Styles cho ButtonBar -->
     <declare-styleable name="ButtonBarContainerTheme">
         <attr name="metaButtonBarStyle" format="reference" />
         <attr name="metaButtonBarButtonStyle" format="reference" />
     </declare-styleable>
 
-    <!-- Thông tin RAM -->
     <declare-styleable name="RamInfo">
         <attr name="totalram" format="integer" />
         <attr name="free" format="integer" />
     </declare-styleable>
 
-    <!-- Thuộc tính chung -->
     <attr name="cardBg" format="color"/>
     <attr name="logPanelBg" format="color" />
     <attr name="colorParse" format="color" />
     <attr name="colorPirm" format="color" />
     
-    <!-- Trạng thái tiến trình -->
     <declare-styleable name="ProgressState">
         <attr name="total" format="integer" />
         <attr name="current" format="integer" />
     </declare-styleable>
 
-    <!-- Enum hiển thị -->
     <attr name="showHints" format="enum">
         <enum name="visible" value="0" />
         <enum name="invisible" value="1" />
         <enum name="gone" value="2" />
     </attr>
 
-    <!-- Kiểu tham chiếu cho RadioButton -->
     <attr name="radioButtonStyle" format="reference"/>
 
-    <!-- Màu icon toolbar (dùng cho ic_more_vert...) - luôn là màu đặc (opaque), khác
-         colorControlNormal mặc định của Material vốn có alpha khiến icon bị mờ. -->
     <attr name="toolbarIconTint" format="color" />
 </resources>

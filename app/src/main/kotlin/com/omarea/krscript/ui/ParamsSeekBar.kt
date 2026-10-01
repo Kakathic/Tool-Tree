@@ -12,8 +12,6 @@ import com.omarea.krscript.model.ActionParamInfo
 class ParamsSeekBar(
     private var actionParamInfo: ActionParamInfo,
     private var context: Context,
-    // Được gọi mỗi khi giá trị seekbar thay đổi (kéo tay hoặc bấm +/-), dùng để các param khác
-    // "depend-on" param này biết mà cập nhật ẩn/hiện.
     private val onValueChanged: (() -> Unit)? = null
 ) {
     fun render(): View {

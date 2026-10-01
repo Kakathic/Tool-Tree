@@ -5,19 +5,6 @@ import java.io.OutputStream
 import java.nio.charset.Charset
 import java.util.concurrent.locks.ReentrantLock
 
-/**
- * User Service của Shizuku: chạy trong 1 tiến trình RIÊNG, mang danh tính (UID) root hoặc shell
- * tùy theo Shizuku đang chạy bằng root hay adb - xem Shizuku.getUid(). Vì tiến trình này đã sẵn
- * quyền cao, chỉ cần "sh" bình thường, không cần "su".
- *
- * Bắt buộc có constructor không tham số (tương thích Shizuku bản cũ hơn v13, bản v13+ ưu tiên
- * constructor có Context nhưng sẽ fallback về constructor này nếu không thấy).
- *
- * Nhận lệnh qua execCommand() (gọi từ app qua Binder), thực thi trên 1 tiến trình "sh" duy nhất
- * được giữ sống xuyên suốt (giống cơ chế marker của KeepShell ở phía app, nhưng chạy ngay bên
- * trong tiến trình đặc quyền này), trả về toàn bộ output. destroy() được Shizuku gọi khi app
- * unbind - dọn dẹp tiến trình con rồi thoát hẳn tiến trình service này.
- */
 class ShellUserService : IShellUserService.Stub() {
     private var process: Process? = null
     private var out: OutputStream? = null

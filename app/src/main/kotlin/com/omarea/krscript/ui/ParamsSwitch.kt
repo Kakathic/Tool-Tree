@@ -12,7 +12,6 @@ class ParamsSwitch(private var actionParamInfo: ActionParamInfo, private var con
     fun render(): View {
         val layout = LayoutInflater.from(context).inflate(R.layout.kr_param_switch, null)
 
-
         layout.findViewById<CompoundButton>(R.id.kr_param_switch).run {
             tag = actionParamInfo.name
             isChecked = getCheckState(actionParamInfo, false)
@@ -28,9 +27,6 @@ class ParamsSwitch(private var actionParamInfo: ActionParamInfo, private var con
         return layout
     }
 
-    /**
-     * 获取选中状态
-     */
     private fun getCheckState(actionParamInfo: ActionParamInfo, defaultValue: Boolean): Boolean {
         if (actionParamInfo.valueFromShell != null) {
             return actionParamInfo.valueFromShell == "1" || actionParamInfo.valueFromShell!!.lowercase(

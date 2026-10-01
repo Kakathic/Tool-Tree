@@ -42,7 +42,6 @@
                 android:paddingStart="9dp" />
         </LinearLayout>
 
-        <!-- Khu vực cuộn chứa 3 mục -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -86,7 +85,6 @@
             </LinearLayout>
         </ScrollView>
 
-        <!-- Đường kẻ phân cách -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"

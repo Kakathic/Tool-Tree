@@ -15,8 +15,6 @@
         android:layout_height="wrap_content"
         android:breakStrategy="simple" />
 
-    <!-- Chiếm hết phần chiều cao còn lại mà hệ thống cho phép (thu gọn hay mở rộng), căn
-         trên để không bị dồn xuống giữa vùng thừa -->
     <TextView
         android:paddingStart="6dp"
         android:paddingEnd="6dp"

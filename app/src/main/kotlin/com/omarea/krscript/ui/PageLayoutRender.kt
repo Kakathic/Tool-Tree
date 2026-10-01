@@ -86,8 +86,6 @@ class PageLayoutRender(private val mContext: Context,
     private val onItemLongClickListener = object : ListItemClickable.OnLongClickListener {
         override fun onLongClick(listItemView: ListItemClickable) {
             val item = findItemByDynamicIndex(listItemView.index, itemConfigList)
-            // Nhấn giữ khi mục tải đang bận (đang tải / tạm dừng / đang chạy script) → hiện
-            // dialog xác nhận hủy, thay vì luồng "thêm shortcut" mặc định bên dưới.
             if (item is DownloadNode && listItemView is ListItemDownload && listItemView.isBusy) {
                 DialogHelper.confirm(
                     mContext,
@@ -103,12 +101,6 @@ class PageLayoutRender(private val mContext: Context,
         }
     }
 
-    // load-after: GroupNode -> view group tương ứng, điền cho MỌI group kể cả group rỗng ban
-    // đầu (có thể toàn bộ con đều bị hoãn) - dùng để chèn thêm mục vào group SAU KHI trang đã
-    // render xong (xem insertNode()). groupParentMap/attachedGroups dùng để tự add view group
-    // con vào đúng chỗ nếu group đó đang rỗng (chưa từng addView vào parent lúc build ban đầu).
-    // groupInsertIndexMap: vị trí THỰC (số view đã có trong parent) tại đúng lúc gặp group rỗng
-    // đó - dùng để attach group vào ĐÚNG chỗ thay vì luôn nối cuối parent.
     private val groupViewMap = HashMap<GroupNode, ListItemGroup>()
     private val groupParentMap = HashMap<GroupNode, ListItemGroup>()
     private val groupInsertIndexMap = HashMap<GroupNode, Int>()
@@ -120,10 +112,6 @@ class PageLayoutRender(private val mContext: Context,
         }
     }
 
-    // atIndex >= 0: chèn view vào ĐÚNG vị trí đó thay vì thêm cuối - dùng cho tính năng
-    // load-after (xem insertNode()). Mặc định (-1) giữ nguyên hành vi thêm cuối như cũ.
-    // replacePlaceholder: dùng cho process = true (xem appendNode()) - item build xong sẽ chèn
-    // vào ngay TRƯỚC ô loading (không xoá ô loading), ô loading tự bị đẩy xuống dưới cùng.
     private fun renderNode(parent: ListItemGroup, it: NodeInfoBase, atIndex: Int = -1, replacePlaceholder: Boolean = false) {
         try {
             var uiRender: ListItemView? = null
@@ -150,8 +138,6 @@ class PageLayoutRender(private val mContext: Context,
                     attachedGroups.add(it)
                     mapConfigList(subGroup, it.children)
                 } else {
-                    // load-after: group đang rỗng (toàn bộ con chờ load-after) - ghi lại đúng vị
-                    // trí hiện tại của parent để insertNode() attach group này vào ĐÚNG CHỖ.
                     groupInsertIndexMap[it] = parent.childCount
                 }
             }
@@ -174,29 +160,16 @@ class PageLayoutRender(private val mContext: Context,
         }
     }
 
-    // process = true: hiện sẵn "count" khung skeleton/placeholder ngay từ đầu cho trang đỡ trống -
-    // gọi lúc mới dựng rootGroup, TRƯỚC KHI có item thật nào (xem ActionListFragment.setupProgressiveRoot()).
-    // Mỗi khung có 1 dải sáng (shimmer) quét ngang liên tục để báo hiệu đang tải.
     fun addLoadingPlaceholders(count: Int) {
         if (count <= 0) return
         val views = (0 until count).map { createSkeletonView() }
         rootGroup.addPlaceholders(views)
     }
 
-    // Gỡ hết khung skeleton còn dư (trang có ít item thật hơn số khung đã hiện sẵn ban đầu) -
-    // gọi khi trang process = true đã build xong toàn bộ (xem
-    // ActionListFragment.finishProgressiveList()). Mỗi khung khớp với 1 item thật thì đã tự bị
-    // gỡ ngay lúc item đó load xong (xem ListItemGroup.addViewBeforePlaceholder()), nên hàm
-    // này thường chỉ còn phải gỡ khung dư, không phải khung nào cũng còn tồn tại tới lúc này.
     fun clearLoadingPlaceholders() {
         rootGroup.clearPlaceholders()
     }
 
-    // Shimmer: kr_skeleton_shimmer là 1 View phủ toàn bộ thẻ, nền là gradient trong suốt-sáng-
-    // trong suốt (kr_skeleton_shimmer_gradient.xml). Animator dịch nó từ -width (ngoài mép trái,
-    // ẩn hoàn toàn) sang +width (ngoài mép phải) liên tục - FrameLayout cha (clipToOutline=true)
-    // tự cắt phần tràn ra ngoài thẻ, tạo cảm giác dải sáng lướt qua card. Phải đợi layout xong
-    // mới biết width thật của thẻ nên dùng post{} thay vì tạo animator ngay lúc inflate.
     private fun createSkeletonView(): View {
         val view = LayoutInflater.from(mContext).inflate(R.layout.kr_skeleton_list_item, null, false)
         val shimmer = view.findViewById<View>(R.id.kr_skeleton_shimmer)
@@ -216,20 +189,11 @@ class PageLayoutRender(private val mContext: Context,
         return view
     }
 
-    // Dùng cho chế độ process = true: thêm NGAY 1 mục mới vào rootGroup mà không dựng lại các
-    // mục đã hiện trước đó - xem ActionListFragment.appendProgressiveItem. Item mới thay đúng
-    // vào chỗ khung skeleton của riêng nó (nếu còn) và khung đó bị gỡ ngay lập tức - xem
-    // ListItemGroup.addViewBeforePlaceholder(). Các khung skeleton còn lại (dành cho mục sau)
-    // không bị đụng tới, chỉ mất khi tới lượt hoặc khi trang build xong hẳn (xem
-    // ActionListFragment.finishProgressiveList()).
     fun appendNode(node: NodeInfoBase) {
         itemConfigList.add(node)
         renderNode(rootGroup, node, replacePlaceholder = true)
     }
 
-    // load-after: quy đổi "index" trong itemConfigList (model, gồm cả group rỗng chưa từng
-    // hiện view) sang vị trí view THẬT trong rootGroup - group rỗng nào chưa có trong
-    // attachedGroups (chưa từng addView) thì không được tính vào vị trí thật.
     private fun realRootViewIndex(modelIndex: Int): Int {
         var realIndex = 0
         for (i in 0 until modelIndex) {
@@ -240,9 +204,6 @@ class PageLayoutRender(private val mContext: Context,
         return realIndex
     }
 
-    // load-after: chèn 1 mục ĐÃ BUILD XONG vào ĐÚNG vị trí "index" - group = null nghĩa là
-    // chèn vào danh sách gốc trang, ngược lại chèn vào đúng group đó (tự add group vào parent
-    // nếu group đang rỗng/chưa từng hiện) - xem ActionListFragment.appendLateItem().
     fun insertNode(group: GroupNode?, node: NodeInfoBase, index: Int) {
         if (group == null) {
             val at = index.coerceIn(0, itemConfigList.size)
@@ -255,9 +216,6 @@ class PageLayoutRender(private val mContext: Context,
         val at = index.coerceIn(0, group.children.size)
         group.children.add(at, node)
         if (!attachedGroups.contains(group)) {
-            // load-after: group này ban đầu HOÀN TOÀN RỖNG (mọi con đều load-after) nên chưa
-            // từng add vào parent lúc render đầu - attach vào ĐÚNG vị trí gốc đã ghi lại ở
-            // groupInsertIndexMap (xem renderNode()), không còn luôn nối cuối parent nữa.
             val parentView = groupParentMap[group] ?: return
             val atGroupIndex = groupInsertIndexMap[group] ?: parentView.childCount
             parentView.addView(subGroup, atGroupIndex)
@@ -296,15 +254,8 @@ class PageLayoutRender(private val mContext: Context,
 
     private fun createDownloadItem(node: DownloadNode): ListItemView {
         val view = ListItemDownload(mContext, node)
-        // Re-bind view nếu có session đang hoạt động (trả lại trang không đóng tải). Dùng
-        // findSessionForNode() thay vì tra thẳng theo node.url: mục "url-sh" khi trang được
-        // parse lại sẽ tạo ra instance DownloadNode MỚI với url = "" (giá trị đã resolve chỉ
-        // nằm trên instance cũ), nên phải có phương án tra theo "urlSh" (ổn định giữa các lần
-        // parse) mới tìm lại được session đang chạy ngầm - xem DownloadTaskHelper.findSessionForNode().
         DownloadTaskHelper.findSessionForNode(node)?.let { session ->
             if (node.url.isBlank() && session.url.isNotBlank()) {
-                // Khôi phục url đã resolve vào instance mới để các thao tác tiếp theo (tạm
-                // dừng/tiếp tục) dùng thẳng, không chạy lại "url-sh".
                 node.url = session.url
                 node.urlResolved = true
             }

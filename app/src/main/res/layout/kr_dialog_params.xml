@@ -6,7 +6,6 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- 1. Thanh tiêu đề cố định ở ĐỈNH -->
     <LinearLayout
         android:id="@+id/top_bar"
         android:layout_width="match_parent"
@@ -43,7 +42,6 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- 2. Thanh nút bấm cố định ở ĐÁY (Tự dâng lên khi mở bàn phím) -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -70,7 +68,6 @@
                 android:text="@string/btn_confirm" />
         </LinearLayout>
 
-        <!-- 3. Khu vực cuộn nằm GIỮA top_bar và bottom_actions -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"

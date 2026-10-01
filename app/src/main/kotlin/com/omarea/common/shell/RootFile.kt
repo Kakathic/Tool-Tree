@@ -4,16 +4,10 @@ import com.omarea.common.shared.RootFileInfo
 import java.io.File
 
 object RootFile {
-    // Dùng "test" qua shell root thay vì java.io.File, vì File API chạy dưới quyền app
-    // vẫn bị Android/SELinux chặn ở các đường dẫn ngoài sandbox (vd: /data, /system) dù
-    // thiết bị đã root - trong khi lệnh shell chạy trong phiên su thì không bị chặn.
     private fun shellTest(flag: String, path: String): Boolean {
         return KeepShellPublic.doCmdSync("test $flag \"$path\" && echo 1 || echo 0").trim() == "1"
     }
 
-    // Ưu tiên java.io.File (tức thì, không cần root) - chỉ gọi qua shell khi Java báo
-    // "không có" (có thể do thật sự không tồn tại, hoặc do bị chặn quyền ngoài sandbox),
-    // để không phát sinh tiến trình su cho các đường dẫn bình thường app vẫn đọc được.
     fun itemExists(path: String): Boolean {
         return File(path).exists() || shellTest("-e", path)
     }
@@ -42,14 +36,11 @@ object RootFile {
             val size = columns[0]
             file.fileSize = size.toLong() * 1024
 
-            //  8 /data/adb/modules/scene_systemless/ => /data/adb/modules/scene_systemless/
             val fileName = row.substring(row.indexOf(size) + size.length + 1)
 
             if (fileName == "./" || fileName == "../") {
                 return null
             }
-
-            // -F  append /dir *exe @sym |FIFO
 
             if (fileName.endsWith("/")) {
                 file.filePath = fileName.dropLast(1)
@@ -68,9 +59,6 @@ object RootFile {
         }
     }
 
-    // Cắt dấu "/" cuối chuỗi để chuẩn hoá đường dẫn (vd "/sdcard/" -> "/sdcard") - trừ khi
-    // path chính là thư mục gốc filesystem "/" (dài 1 ký tự), vì cắt nốt sẽ biến nó thành
-    // chuỗi rỗng và mọi lệnh test/ls chạy trên đường dẫn rỗng sẽ luôn ra kết quả trống.
     private fun normalizePath(path: String): String {
         return if (path.length > 1 && path.endsWith("/")) path.dropLast(1) else path
     }
@@ -91,10 +79,6 @@ object RootFile {
             }
         }
 
-        // Android (qua FUSE) thường giấu nội dung "/storage/emulated" khỏi lệnh liệt kê thư
-        // mục, kể cả chạy qua root - dù từng thư mục người dùng con (vd /storage/emulated/0)
-        // vẫn truy cập trực tiếp được bình thường. Dò thêm các id người dùng thường gặp bằng
-        // cách kiểm tra tồn tại trực tiếp, để không mất các mục này khỏi danh sách.
         if (absPath == "/storage/emulated") {
             val known = files.map { it.fileName }.toHashSet()
             for (userId in 0..9) {
@@ -121,8 +105,6 @@ object RootFile {
                 val file = shellFileInfoRow(row, absPath)
                 if (file != null) {
                     if (absPath == "/") {
-                        // "/" không có thư mục cha và tên của nó chính là "/", không thể
-                        // tách bằng lastIndexOf("/") như đường dẫn thường (sẽ ra chuỗi rỗng).
                         file.filePath = "/"
                         file.parentDir = ""
                     } else {

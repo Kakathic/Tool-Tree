@@ -24,10 +24,6 @@ class ListItemDownload(context: Context, private val config: DownloadNode) :
 
     private var cancelAction: (() -> Unit)? = null
 
-    // process = true: sau khi resolvePendingStates() (get shell của rows) chạy xong, phải cập
-    // nhật lại icon on/off của checkbox/switch trong rows cho đúng trạng thái - chỉ refresh
-    // riêng toggle (không rebuild cả rows), tránh chạy lại text-sh/icon-sh/photo-sh/progress-sh
-    // của rows lần thứ 2. Xem RowsRenderHelper.refreshToggleStates().
     override fun updateViewByShell() {
         super.updateViewByShell()
         RowsRenderHelper.refreshToggleStates(context, rowsView, config.rows)

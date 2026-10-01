@@ -83,7 +83,6 @@
 
     </LinearLayout>
 
-    <!-- 1. Thêm android:fillViewport="true" vào ScrollView -->
     <ScrollView
         android:id="@+id/log_scroll_view"
         android:layout_width="match_parent"
@@ -97,7 +96,6 @@
         android:requiresFadingEdge="vertical"
         android:scrollbarSize="2dp">
 
-        <!-- 2. Đổi layout_height của TextView thành match_parent -->
         <TextView
             android:id="@+id/shell_output"
             android:layout_width="match_parent"
@@ -110,10 +108,6 @@
 
     </ScrollView>
 
-    <!-- Hàng các nút lựa chọn, hiển thị khi script yêu cầu chọn phương án qua cú pháp
-         "choose:[gia_tri_1|nhan_1,gia_tri_2|nhan_2,...]". Ẩn mặc định, chỉ hiện khi có yêu cầu.
-         Đặt layout_above="@id/input_row" để khi GONE không chiếm chỗ (giống cách input_row
-         đang hoạt động), và khi hiện lên sẽ đẩy log_scroll_view thu nhỏ lại tương ứng. -->
     <HorizontalScrollView
         android:id="@+id/choose_row"
         android:layout_width="match_parent"

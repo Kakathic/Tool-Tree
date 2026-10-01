@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Dựa trên vector_drawable_progress_indeterminate_horizontal của AOSP (Apache 2.0).
-     Chỉ đổi chiều cao: viewport 360x2 để thanh vừa khít ProgressBar cao 2dp. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="360dp"
     android:height="2dp"
