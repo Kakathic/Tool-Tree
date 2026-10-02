@@ -183,6 +183,7 @@ main {
 .param-more > summary:hover, .dep-more > summary:hover { background:var(--accent); color:#fff; }
 .param-cell-check label { display:flex; align-items:flex-start; gap:6px; margin:0; font-weight:500; line-height:1.4; cursor:pointer; }
 .param-cell-check input { width:auto !important; flex:0 0 auto; margin-top:1px; accent-color:var(--accent); }
+.param-more-checks { grid-column:1 / -1; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px 8px; margin-top:1px; padding-top:7px; border-top:1px solid var(--border); }
 .dep-warn { flex:1 0 100%; font-family:var(--mono); font-size:10px; color:var(--red); line-height:1.45; }
 .dep-warn:empty { display:none; }
 .param-dep-row .param-grid { flex:1 0 100%; }
@@ -737,10 +738,8 @@ function paramExtraLines(p) {
   const has = f => on[f] && (sh[f]||'').trim();
   const t = p.type;
   let s = '';
-  if (t === 'text' || t === 'int' || t === 'number') {
-    if (has('placeholder')) s += `\nplaceholder-sh = "${tomlEsc(sh.placeholder.trim())}"`;
+  if (has('placeholder')) { s += `\nplaceholder-sh = "${tomlEsc(sh.placeholder.trim())}"`; }
     else if ((x.placeholder||'').trim()) s += `\nplaceholder = "${tomlEsc(x.placeholder.trim())}"`;
-  }
   if (t === 'text' && !isNaN(parseInt(x.maxlength, 10))) s += `\nmaxlength = ${parseInt(x.maxlength, 10)}`;
   if (t === 'switch' || t === 'bool' || t === 'checkbox') {
     if (has('descOn')) s += `\ndesc-on-sh = "${tomlEsc(sh.descOn.trim())}"`;
@@ -749,7 +748,7 @@ function paramExtraLines(p) {
   if (t === 'file' && (x.mime||'').trim()) s += `\nmime = "${tomlEsc(x.mime.trim())}"`;
   if (t === 'file' && (x.pathHome||'').trim()) s += `\npath-home = "${tomlEsc(x.pathHome.trim())}"`;
   if ((t === 'file' || t === 'folder') && x.multiple) s += `\nmultiple = true`;
-  if ((t === 'file' || t === 'folder') && x.editable) s += `\neditable = true`;
+  if ((t === 'file' || t === 'folder' || t === 'spinner' || t === 'single-select') && x.editable) s += `\neditable = true`;
   if (isMultiParam(p) && (x.separator||'') !== '') s += `\nseparator = "${tomlEsc(String(x.separator).replace(/\\n/g, '\n'))}"`;
   if (x.required) s += `\nrequired = true`;
   const ro = (x.readonly||'').trim();
@@ -771,7 +770,20 @@ function paramToToml(p) {
     : (staticVal ? `\nvalue = "${tomlEsc(staticVal)}"` : '');
   let fields = '';
   let optBlocks = '';
+  const rawValue = String(p.value || '').trim();
+  const valueLine = () => {
+    if (has('value')) return `\nvalue-sh = "${tomlEsc(sh.value.trim())}"`;
+    if (!rawValue) return '';
+    if (t === 'multi-select' && /^\s*\[.*\]\s*$/.test(rawValue)) {
+      try {
+        const arr = JSON.parse(rawValue);
+        if (Array.isArray(arr)) return `\nvalue = [${arr.map(v => `"${tomlEsc(String(v))}"`).join(', ')}]`;
+      } catch (_) {}
+    }
+    return `\nvalue = "${tomlEsc(rawValue)}"`;
+  };
   if (OPT_TYPES.includes(t)) {
+    fields += valueLine();
     if (t==='multi-select') fields += `\nmultiple = true`;
     const omode = p.optMode || (p.optionsShOn ? 'sh' : 'tables');
     if (omode === 'sh' && (p.optionsSh||'').trim()) {
@@ -794,14 +806,18 @@ function paramToToml(p) {
   } else if (t === 'switch' || t === 'bool' || t === 'checkbox') {
     fields += valLine(p.value);
   } else if (t === 'file') {
+    fields += valueLine();
     if (p.extra) fields += `\nsuffix = "${tomlEsc(p.extra.trim())}"`;
   } else if (t === 'folder') {
+    fields += valueLine();
     if (p.extra) fields += `\npath-home = "${tomlEsc(p.extra.trim())}"`;
   } else if (t === 'app' || t === 'packages') {
+    fields += valueLine();
     if ((p.extra || '').trim() === 'multi') fields += `\nmultiple = true`;
   } else if (t === 'color') {
     const def = (p.value || '').trim();
-    if (def) fields += valLine(def.startsWith('#') ? def : '#' + def);
+    if (has('value')) fields += `\nvalue-sh = "${tomlEsc(sh.value.trim())}"`;
+    else if (def) fields += `\nvalue = "${tomlEsc(def.startsWith('#') ? def : '#' + def)}"`;
   } else {
     fields += valLine(p.value);
   }
@@ -1026,7 +1042,7 @@ function rcSerializeAll(str) { return rcRows(str).map(rcSerialize).join('\n'); }
 // --- menu/fab item helpers (authored on the group tab) -----------------------
 const MF_TYPES = ['action','checkbox','spinner','file','folder','link','activity','html','config','refresh','reload','restart','finish','exit','close','killapp'];
 function mfNew(style) {
-  return { title:'', id:'', style:style==='fab'?'fab':'menu', type:'action', preview:'', optSh:'', optMode:'options', options:[], items:[], link:'', activity:'', html:'', config:'', configSh:'', suffix:'', mime:'', multiple:false, pathHome:'', get:'', set:'', script:'', silent:false, icon:'' };
+  return { title:'', id:'', style:style==='fab'?'fab':'menu', type:'action', preview:'', optSh:'', optMode:'options', options:[], items:[], link:'', activity:'', html:'', config:'', configSh:'', suffix:'', mime:'', multiple:false, pathHome:'', get:'', set:'', script:'', silent:false, icon:'', desc:'', summary:'', support:'', lock:'', minSdk:'', maxSdk:'', targetSdk:'', allowShortcut:'auto', confirm:false, warn:'', autoOff:false, autoFinish:false, autoKill:false, autoRestart:false, interruptible:false, needInput:false, bgTask:false, reload:false, reloadPage:false, reloadList:'', shell:'default' };
 }
 function mfNorm(r) {
   const d = mfNew((r||{}).style);
@@ -1056,6 +1072,23 @@ function mfItemBlock(container, r) {
   const t = r.type;
   const idLine = (r.id||'').trim() ? `\nkey = "${tomlEsc(r.id.trim())}"` : '';
   const iconLine = (r.icon||'').trim() ? `\nicon = "${tomlEsc(r.icon.trim())}"` : '';
+  const common = ((r.desc||'').trim()?`\ndesc = "${tomlEsc(r.desc.trim())}"`: '')
+    + ((r.summary||'').trim()?`\nsummary = "${tomlEsc(r.summary.trim())}"`: '')
+    + ((r.support||'').trim()?`\nsupport = "${tomlEsc(r.support.trim())}"`: '')
+    + ((r.lock||'').trim()?`\nlock = "${tomlEsc(r.lock.trim())}"`: '')
+    + ((r.minSdk||'').trim()?`\nmin-sdk = ${parseInt(r.minSdk,10)}`: '')
+    + ((r.maxSdk||'').trim()?`\nmax-sdk = ${parseInt(r.maxSdk,10)}`: '')
+    + ((r.targetSdk||'').trim()?`\ntarget-sdk = ${parseInt(r.targetSdk,10)}`: '')
+    + (r.allowShortcut && r.allowShortcut !== 'auto' ? `\nallow-shortcut = ${r.allowShortcut}` : '')
+    + (r.confirm ? `\nconfirm = true` : '')
+    + ((r.warn||'').trim() && r.confirm ? `\nwarn = "${tomlEsc(r.warn.trim())}"` : '')
+    + (r.autoOff ? `\nauto-off = true` : '') + (r.autoFinish ? `\nauto-finish = true` : '')
+    + (r.autoKill ? `\nauto-kill = true` : '') + (r.autoRestart ? `\nauto-restart = true` : '')
+    + (r.interruptible ? `\ninterruptible = true` : '') + (r.needInput ? `\nneed-input = true` : '')
+    + (r.bgTask ? `\nbg-task = true` : '') + (r.reloadPage ? `\nreload-page = true` : '')
+    + ((r.reloadList||'').trim()?`\nreload = "${tomlEsc(r.reloadList.trim())}"`: '')
+    + (r.reload && !(r.reloadList||'').trim() ? `\nreload = true` : '')
+    + (r.shell && r.shell !== 'default' ? `\nshell = "${tomlEsc(r.shell)}"` : '');
   const silentLine = r.silent ? `\nsilent = true` : '';
   if (t === 'checkbox') extra = ((r.get||'').trim() ? `\nget = "${tomlEsc(r.get.trim())}"` : `\nget = "test -f /data/flag && echo 1"`) + mfRunLine(r, 'touch /data/flag');
   else if (t === 'spinner') {
@@ -1090,7 +1123,7 @@ function mfItemBlock(container, r) {
   }
   else if (!MF_NO_EXTRA.includes(t)) extra = mfRunLine(r, 'echo $menu_id');
   else extra = mfRunLine(r);
-  return `\n\n[[${container}.items]]\ntitle = "${tomlEsc(r.title)}"${idLine}\ntype = "${tomlEsc(t)}"${iconLine}${silentLine}${extra}${tail}`;
+  return `\n\n[[${container}.items]]\ntitle = "${tomlEsc(r.title)}"${idLine}\ntype = "${tomlEsc(t)}"${iconLine}${silentLine}${common}${extra}${tail}`;
 }
 
 // --- advanced field definitions (shared pools) -------------------------------
@@ -1103,12 +1136,12 @@ const A_PHOTO      = { key:'advPhoto',     label:'photo', type:'text', ph:'{ICON
 const A_PHOTO_REAL = { key:'advPhotoRealSize', label:'photo-real-size', type:'checkbox', hint:'Show the photo at its real size without stretching.' };
 const A_PHOTO_GIF_NUM = { key:'advPhotoGifNum', label:'photo-gif-num', type:'text', ph:'12', hint:'Frames (>0): photo_1.png, photo_2.png, ...' };
 const A_PHOTO_GIF_TIME = { key:'advPhotoGifTime', label:'photo-gif-time', type:'text', ph:'300', hint:'Photo GIF frame time (ms).' };
-const A_PHOTO_GIF_AUTOPLAY = { key:'advPhotoGifAutoplay', label:'photo-gif-autoplay', type:'checkbox', hint:'Auto-play the simulated photo GIF.' };
+const A_PHOTO_GIF_AUTOPLAY = { key:'advPhotoGifAutoplay', label:'photo-gif-autoplay', type:'select', options:['none','true','false'], default:'none', hint:'none = omit from output; true/false = emit the selected value.' };
 const A_PHOTO_GIF_LOOP = { key:'advPhotoGifLoop', label:'photo-gif-loop', type:'text', ph:'0', hint:'Loop count; 0 = infinite.' };
 const A_PHOTO_REAL_GIF = { key:'advPhotoRealGif', label:'photo-real-gif', type:'checkbox', hint:'Treat photo as a real .gif file (Android 9 / API 28+). Older devices fall back to the first frame.' };
 const A_ICON_GIF_NUM = { key:'advIconGifNum', label:'icon-gif-num', type:'text', ph:'4', hint:'Frames (>0): icon_1.png, icon_2.png, ...' };
 const A_ICON_GIF_TIME = { key:'advIconGifTime', label:'icon-gif-time', type:'text', ph:'300', hint:'Icon GIF frame time (ms).' };
-const A_ICON_GIF_AUTOPLAY = { key:'advIconGifAutoplay', label:'icon-gif-autoplay', type:'checkbox', hint:'Auto-play the icon animation.' };
+const A_ICON_GIF_AUTOPLAY = { key:'advIconGifAutoplay', label:'icon-gif-autoplay', type:'select', options:['none','true','false'], default:'none', hint:'none = omit from output; true/false = emit the selected value.' };
 const A_ICON_GIF_LOOP = { key:'advIconGifLoop', label:'icon-gif-loop', type:'text', ph:'0', hint:'Loop count; 0 = infinite.' };
 const A_ICON_REAL_GIF = { key:'advIconRealGif', label:'icon-real-gif', type:'checkbox', hint:'Use icon as real .gif (Android 9 / API 28+).' };
 const A_BG         = { key:'advBg',        label:'bg', type:'text', ph:'{ICON}/background.png', sh:true, hint:'Background image for the item/dialog — file path.' };
@@ -1178,12 +1211,12 @@ function mediaLines(f) {
   if (f.advPhotoRealSize) s += '\nphoto-real-size = true';
   s += line('advPhotoGifNum', 'photo-gif-num', true);
   s += line('advPhotoGifTime', 'photo-gif-time', true);
-  if (f.advPhotoGifAutoplay) s += '\nphoto-gif-autoplay = true';
+  if (f.advPhotoGifAutoplay === 'true' || f.advPhotoGifAutoplay === 'false') s += `\nphoto-gif-autoplay = ${f.advPhotoGifAutoplay}`;
   s += line('advPhotoGifLoop', 'photo-gif-loop', true);
   if (f.advPhotoRealGif) s += '\nphoto-real-gif = true';
   s += line('advIconGifNum', 'icon-gif-num', true);
   s += line('advIconGifTime', 'icon-gif-time', true);
-  if (f.advIconGifAutoplay) s += '\nicon-gif-autoplay = true';
+  if (f.advIconGifAutoplay === 'true' || f.advIconGifAutoplay === 'false') s += `\nicon-gif-autoplay = ${f.advIconGifAutoplay}`;
   s += line('advIconGifLoop', 'icon-gif-loop', true);
   if (f.advIconRealGif) s += '\nicon-real-gif = true';
   return s;
@@ -1337,52 +1370,71 @@ function paramCardHtml(p, idx, list) {
     return `<div class="param-cell">${labelRow}<input type="text" class="${active?'sh-active':''}" data-pidx="${idx}" data-pfield="${active ? 'sh:'+shField : storeKey}" value="${esc(cur)}" placeholder="${esc(ph||'')}"></div>`;
   };
   const cells = [];
+  const x = p.x || {};
   cells.push(cell('<b>name</b> — the $env_var', 'name', null, p.name, paramNameFrom(paramTitle(p)) + ' (blank = from title)'));
   cells.push(cell('title — main label', 'title', 'title', p.title, 'Param title'));
   cells.push(cell('label — second label', 'label', 'label', p.label, 'extra label by the input'));
   cells.push(`<div class="param-cell"><label>type</label><select data-pidx="${idx}" data-pfield="type">${PARAM_TYPES.map(x=>`<option ${x===t?'selected':''}>${x}</option>`).join('')}</select></div>`);
-  if (t==='int' || t==='number' || t==='seekbar') {
-    cells.push(cell('min — lower bound', 'min', null, p.min, '0'));
-    cells.push(cell('max — upper bound', 'max', null, p.max, '60'));
-    cells.push(cell('value — default', 'value', 'value', p.value, 'default'));
-  } else if (t==='switch' || t==='bool' || t==='checkbox') {
+  if (t==='switch' || t==='bool' || t==='checkbox') {
     cells.push(cell('value — initial (0/1)', 'value', 'value', p.value, '0 or 1'));
   } else if (t==='color') {
     cells.push(cell('value — default color', 'value', 'value', p.value, '#RRGGBB'));
-  } else if (t==='file') {
+  } else if (isOpts) {
+    cells.push(cell('value — default selection(s)', 'value', 'value', p.value, t==='multi-select' ? '["a", "b"]' : 'default value'));
+  } else {
+    cells.push(cell('value — default', 'value', 'value', p.value, 'default value'));
+  }
+  cells.push(cell('placeholder — hint when empty', 'x:placeholder', 'placeholder', x.placeholder, 'shown while empty'));
+  if (t==='file') {
     cells.push(`<div class="param-cell"><label>suffix — extension filter</label><input type="text" data-pidx="${idx}" data-pfield="extra" value="${esc(p.extra||'')}" placeholder="log,txt"></div>`);
   } else if (t==='folder') {
     cells.push(`<div class="param-cell"><label>path-home — starting dir</label><input type="text" data-pidx="${idx}" data-pfield="extra" value="${esc(p.extra||'')}" placeholder="/sdcard"></div>`);
   } else if (t==='app' || t==='packages') {
     cells.push(`<div class="param-cell"><label>extra</label><input type="text" data-pidx="${idx}" data-pfield="extra" value="${esc(p.extra||'')}" placeholder='"multi" for multiple'></div>`);
-  } else if (!isOpts) {
-    cells.push(cell('value — default', 'value', 'value', p.value, 'default value'));
   }
   cells.push(cell('desc — hint line', 'desc', 'desc', p.desc, 'description under the label'));
-  cells.push(cell('support — "true"/"false"/shell', 'support', 'support', p.support, 'true'));
   // ---- "more fields": every remaining [[action.params]] key the parser reads ----
-  const x = p.x || {};
   const xt = (label, key, ph) => `<div class="param-cell"><label>${label}</label><input type="text" data-pidx="${idx}" data-pfield="x:${key}" value="${esc(x[key]||'')}" placeholder="${esc(ph||'')}"></div>`;
   const xc = (label, key) => `<div class="param-cell param-cell-check"><label><input type="checkbox" data-pidx="${idx}" data-pfield="x:${key}"${x[key]?' checked':''}> ${label}</label></div>`;
   const more = [];
+  more.push(cell('support — "true"/"false"/shell', 'support', 'support', p.support, 'true'));
   more.push(xc('required — input must not be empty', 'required'));
   more.push(xt('readonly — true / false / shell ("1" = read-only)', 'readonly', 'true'));
   more.push(xc('sort — read-only params to the bottom (needs readonly)', 'sort'));
   more.push(xc('remember = false — do not restore the last value', 'noRemember'));
-  if (t==='text' || t==='int' || t==='number') more.push(cell('placeholder — hint when empty', 'x:placeholder', 'placeholder', x.placeholder, 'shown while empty'));
+  if (t==='int' || t==='number' || t==='seekbar') {
+    more.push(cell('min — lower bound', 'min', null, p.min, '0'));
+    more.push(cell('max — upper bound', 'max', null, p.max, '60'));
+  }
   if (t==='text') more.push(xt('maxlength — max characters', 'maxlength', '32'));
   if (t==='switch' || t==='bool' || t==='checkbox') more.push(cell('desc-on — note shown when ON', 'x:descOn', 'descOn', x.descOn, 'Enabled: …'));
   if (t==='file') { more.push(xt('mime — MIME filter', 'mime', 'text/plain')); more.push(xt('path-home — starting dir', 'pathHome', '/sdcard')); }
   if (t==='file' || t==='folder') { more.push(xc('multiple — pick several paths', 'multiple')); more.push(xc('editable — allow typing the path', 'editable')); }
+  if (t==='spinner' || t==='single-select') more.push(xc('editable — allow typing the value', 'editable'));
   if (isMultiParam(p)) more.push(xt('separator — joins the selected values ("\\n" = newline)', 'separator', '\\n'));
   if (isOpts && t !== 'multi-select') more.push(xc('allow-no-selection — spinner may stay empty', 'noSel'));
-  const moreOpen = Object.values(x).some(v => v) || on.placeholder || on.descOn;
-  const moreHtml = `<details class="param-more"${moreOpen?' open':''}><summary>more fields · ${esc(t)}</summary><div class="param-grid">${more.join('')}</div></details>`;
+  const moreOpen = false;
+  const moreText = [], moreChecks = [];
+  more.forEach(item => {
+    if (item.includes('param-cell-check')) moreChecks.push(item);
+    else moreText.push(item);
+  });
+  const moreBody = `${moreText.join('')}${moreChecks.length ? `<div class="param-more-checks">${moreChecks.join('')}</div>` : ''}`;
+  const moreHtml = `<details class="param-more"${moreOpen?' open':''}><summary>more fields · ${esc(t)}</summary><div class="param-grid">${moreBody}</div></details>`;
   const dsel = (key, opts, labels) => `<select data-pdep="${key}" data-pidx="${idx}">${opts.map((o,i)=>`<option value="${o}"${(dep[key]||'')===o?' selected':''}>${esc(labels[i])}</option>`).join('')}</select>`;
   const dtxt = (label, key, ph) => `<div class="param-cell"><label>${label}</label><input type="text" data-pdep="${key}" data-pidx="${idx}" value="${esc(dep[key]||'')}" placeholder="${esc(ph||'')}"></div>`;
   const dchk = (label, key) => `<div class="param-cell param-cell-check"><label><input type="checkbox" data-pdep="${key}" data-pidx="${idx}"${dep[key]?' checked':''}> ${label}</label></div>`;
-  const depAdv = `<details class="dep-more"${(dep.logic&&dep.logic!=='and')||dep.def||dep.initial||dep.negate||dep.noCascade||dep.noHidden||dep.onchange||dep.modeList||dep.threshold?' open':''}><summary>advanced depend-*</summary><div class="param-grid">
-      <div class="param-cell"><label>depend-logic — how several parents combine</label>${dsel('logic',['and','priority','priority-rtl','xor','nand'],['and (all must match)','priority (left → right)','priority-rtl (right → left)','xor (exactly one)','nand (not all)'])}</div>
+  const depAdv = `<details class="dep-more"><summary>ADVANCED DEPEND-MODE</summary><div class="param-grid">
+      <div class="param-cell"><label>depend-on — parent NAME(s)</label><input type="text" data-pdep="on" data-pidx="${idx}" value="${esc(dep.on||'')}" placeholder="a|b (empty = off)"></div>
+      <div class="param-cell"><label>depend-value — any of</label><input type="text" data-pdep="value" data-pidx="${idx}" value="${esc(dep.value||'')}" placeholder="a,b = any of · a|b,c = per parent"></div>
+      <div class="param-cell dep-cell-mode"><label>depend-mode</label>
+        <select data-pdep="mode" data-pidx="${idx}">
+          <option value="none"${(dep.mode||'none')==='none'?' selected':''}>show when matched</option>
+          <option value="hide"${dep.mode==='hide'?' selected':''}>hide when matched</option>
+          <option value="dim"${dep.mode==='dim'?' selected':''}>dim + lock until matched</option>
+        </select>
+      </div>
+      <div class="param-cell"><label>depend-logic — how several parents combine</label>${dsel('logic',['and','priority','priority-ltr','priority-rtl','or','or-ltr','or-rtl','xor','nand'],['and (all must match)','priority (left → right)','priority-ltr (left → right)','priority-rtl (right → left)','or (any match)','or-ltr (left → right)','or-rtl (right → left)','xor (exactly one)','nand (not all)'])}</div>
       <div class="param-cell"><label>depend-default — when nothing matches</label>${dsel('def',['','show','hide'],['(default: show)','show','hide'])}</div>
       <div class="param-cell"><label>depend-initial — state before evaluation</label>${dsel('initial',['','auto','show','hide'],['(default: auto)','auto','show','hide'])}</div>
       ${dtxt('depend-mode per parent — e.g. show|hide (overrides behavior)', 'modeList', 'show|hide')}
@@ -1408,18 +1460,6 @@ function paramCardHtml(p, idx, list) {
     ${moreHtml}
     ${isOpts ? paramOptionsHtml(p, idx) : ''}
     <div class="param-dep-row">
-      <span class="sh-name">depend</span>
-      <div class="param-grid">
-        <div class="param-cell"><label>depend-on — parent NAME(s)</label><input type="text" data-pdep="on" data-pidx="${idx}" value="${esc(dep.on||'')}" placeholder="a|b (empty = off)"></div>
-        <div class="param-cell"><label>depend-value — any of</label><input type="text" data-pdep="value" data-pidx="${idx}" value="${esc(dep.value||'')}" placeholder="a,b = any of · a|b,c = per parent"></div>
-        <div class="param-cell dep-cell-mode"><label>depend-mode</label>
-          <select data-pdep="mode" data-pidx="${idx}">
-            <option value="none"${(dep.mode||'none')==='none'?' selected':''}>show when matched</option>
-            <option value="hide"${dep.mode==='hide'?' selected':''}>hide when matched</option>
-            <option value="dim"${dep.mode==='dim'?' selected':''}>dim + lock until matched</option>
-          </select>
-        </div>
-      </div>
       ${depAdv}
       <div class="dep-warn">${depWarnHtml(list, p)}</div>
       <div class="hint">depend-on takes the parent param's <b>name</b> (the $env_var), not its title. "show when matched" is the parser default; "hide when matched" emits depend-mode = "hide"; "dim + lock" emits depend-readonly = true. Re-evaluated live on every dialog change.</div>
@@ -1479,6 +1519,27 @@ function mfCardHtml(r, idx) {
   cells.push(`<div class="param-cell"><label>style — toolbar or floating</label><select data-mfidx="${idx}" data-mffield="style">${['menu','fab'].map(x=>`<option ${x===r.style?'selected':''}>${x}</option>`).join('')}</select></div>`);
   cells.push(`<div class="param-cell"><label>type</label><select data-mfidx="${idx}" data-mffield="type">${MF_TYPES.map(x=>`<option ${x===t?'selected':''}>${x}</option>`).join('')}</select></div>`);
   const MF_SCRIPT_PH = { checkbox:'touch /data/flag', spinner:'echo $state', file:'echo $file', folder:'echo $folder', action:'echo $menu_id' };
+  cells.push(cell('desc', 'desc', r.desc, 'Item description'));
+  cells.push(cell('summary', 'summary', r.summary, 'Secondary summary'));
+  cells.push(cell('support', 'support', r.support, 'true / false / shell'));
+  cells.push(cell('lock', 'lock', r.lock, '1|Message'));
+  cells.push(cell('min-sdk', 'minSdk', r.minSdk, '26'));
+  cells.push(cell('max-sdk', 'maxSdk', r.maxSdk, '35'));
+  cells.push(cell('target-sdk', 'targetSdk', r.targetSdk, '35'));
+  cells.push(`<div class="param-cell"><label>allow-shortcut</label><select data-mfidx="${idx}" data-mffield="allowShortcut">${['auto','true','false'].map(x=>`<option ${x===r.allowShortcut?'selected':''}>${x}</option>`).join('')}</select></div>`);
+  cells.push(chk('confirm — ask before run', 'confirm', r.confirm));
+  cells.push(cell('warn — confirmation text', 'warn', r.warn, 'Are you sure?'));
+  cells.push(chk('auto-off', 'autoOff', r.autoOff));
+  cells.push(chk('auto-finish', 'autoFinish', r.autoFinish));
+  cells.push(chk('auto-kill', 'autoKill', r.autoKill));
+  cells.push(chk('auto-restart', 'autoRestart', r.autoRestart));
+  cells.push(chk('interruptible', 'interruptible', r.interruptible));
+  cells.push(chk('need-input', 'needInput', r.needInput));
+  cells.push(chk('bg-task', 'bgTask', r.bgTask));
+  cells.push(chk('reload-page', 'reloadPage', r.reloadPage));
+  cells.push(chk('reload', 'reload', r.reload));
+  cells.push(cell('reload key list', 'reloadList', r.reloadList, 'key1,key2'));
+  cells.push(`<div class="param-cell"><label>shell</label><select data-mfidx="${idx}" data-mffield="shell">${['default','bg-task','hidden'].map(x=>`<option ${x===r.shell?'selected':''}>${x}</option>`).join('')}</select></div>`);
   if (t === 'spinner') {
     cells.push(cell('preview — value beside the arrow', 'preview', r.preview, 'performance'));
     cells.push(cell('get — shell returning the current value (empty = sample)', 'get', r.get, 'cat /data/choice'));

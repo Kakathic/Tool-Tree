@@ -21,3 +21,4 @@ label = "Jdjej"
 type = "single-select"
 options-sh = "echo \"1\n2\n3\""
 required = true
+editable = true
