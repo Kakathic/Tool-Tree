@@ -11,17 +11,16 @@
 ```
 file.add
 └── (in file.add)
-    ├── download.prop        # link to download add-on
-    ├── addon.prop           # add-on information
+    ├── download.bash        # link to download add-on
+    ├── Add-on.bash           # add-on information
     ├── icon.png (200x200)   # is the icon of the add-on
-    ├── menu.sh              # 3-dot menu button
-    ├── index.sh|index.xml   # After entering the page, all content will be displayed.
-    ├── early_start.sh       # The first time the application starts, it will run the shell.
-    ├── install.sh           # When the add-on is unzipped, it will run the shell.
-    └── uninstall.sh         # remove add-on it will run shell
+    ├── index.bash|index.toml   # After entering the page, all content will be displayed.
+    ├── early_start.bash       # The first time the application starts, it will run the shell.
+    ├── install.bash           # When the add-on is unzipped, it will run the shell.
+    └── uninstall.bash         # remove add-on it will run shell
 ```
 
-**Contents of addon.prop file**
+**Contents of Add-on.bash file**
 
 ```
 # is a shell script file
@@ -31,6 +30,7 @@ author=Kakathic
 description=Short description
 version=1.0
 versionCode=100
+
 # if set to "true" root is required for add-on to work
 root=false
 ```
