@@ -183,9 +183,14 @@ main {
 .param-more > summary:hover, .dep-more > summary:hover { background:var(--accent); color:#fff; }
 .param-cell-check label { display:flex; align-items:flex-start; gap:6px; margin:0; font-weight:500; line-height:1.4; cursor:pointer; }
 .param-cell-check input { width:auto !important; flex:0 0 auto; margin-top:1px; accent-color:var(--accent); }
-.param-more-checks { grid-column:1 / -1; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px 8px; margin-top:1px; padding-top:7px; border-top:1px solid var(--border); }
+.param-more-checks { grid-column:1 / -1; display:grid; grid-template-columns:1fr; gap:0; margin-top:1px; padding-top:7px; border-top:1px solid var(--border); }
 .dep-warn { flex:1 0 100%; font-family:var(--mono); font-size:10px; color:var(--red); line-height:1.45; }
 .dep-warn:empty { display:none; }
+.param-more-description { margin-top:6px; }
+.param-more-type-desc { margin-top:6px; color:var(--fg-muted); font-size:10px; line-height:1.45; }
+.param-more-depend { grid-column:1 / -1; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px 8px; margin-top:2px; padding-top:7px; border-top:1px solid var(--border); }
+.param-more-depend > .param-cell { min-width:0; }
+@media (max-width:520px) { .param-more-depend { grid-template-columns:1fr; } }
 .param-dep-row .param-grid { flex:1 0 100%; }
 .param-dep-row .param-cell { min-width:0; }
 .param-dep-row .param-cell input, .param-dep-row .param-cell select { width:100%; }
@@ -1413,18 +1418,10 @@ function paramCardHtml(p, idx, list) {
   if (t==='spinner' || t==='single-select') more.push(xc('editable — allow typing the value', 'editable'));
   if (isMultiParam(p)) more.push(xt('separator — joins the selected values ("\\n" = newline)', 'separator', '\\n'));
   if (isOpts && t !== 'multi-select') more.push(xc('allow-no-selection — spinner may stay empty', 'noSel'));
-  const moreOpen = false;
-  const moreText = [], moreChecks = [];
-  more.forEach(item => {
-    if (item.includes('param-cell-check')) moreChecks.push(item);
-    else moreText.push(item);
-  });
-  const moreBody = `${moreText.join('')}${moreChecks.length ? `<div class="param-more-checks">${moreChecks.join('')}</div>` : ''}`;
-  const moreHtml = `<details class="param-more"${moreOpen?' open':''}><summary>more fields · ${esc(t)}</summary><div class="param-grid">${moreBody}</div></details>`;
   const dsel = (key, opts, labels) => `<select data-pdep="${key}" data-pidx="${idx}">${opts.map((o,i)=>`<option value="${o}"${(dep[key]||'')===o?' selected':''}>${esc(labels[i])}</option>`).join('')}</select>`;
   const dtxt = (label, key, ph) => `<div class="param-cell"><label>${label}</label><input type="text" data-pdep="${key}" data-pidx="${idx}" value="${esc(dep[key]||'')}" placeholder="${esc(ph||'')}"></div>`;
   const dchk = (label, key) => `<div class="param-cell param-cell-check"><label><input type="checkbox" data-pdep="${key}" data-pidx="${idx}"${dep[key]?' checked':''}> ${label}</label></div>`;
-  const depAdv = `<details class="dep-more"><summary>ADVANCED DEPEND-MODE</summary><div class="param-grid">
+  const depAdvBody = `
       <div class="param-cell"><label>depend-on — parent NAME(s)</label><input type="text" data-pdep="on" data-pidx="${idx}" value="${esc(dep.on||'')}" placeholder="a|b (empty = off)"></div>
       <div class="param-cell"><label>depend-value — any of</label><input type="text" data-pdep="value" data-pidx="${idx}" value="${esc(dep.value||'')}" placeholder="a,b = any of · a|b,c = per parent"></div>
       <div class="param-cell dep-cell-mode"><label>depend-mode</label>
@@ -1444,7 +1441,33 @@ function paramCardHtml(p, idx, list) {
       ${dchk('depend-cascade = false — only visible parents count', 'noCascade')}
       ${dchk('depend-include-hidden = false — skip hidden param in result', 'noHidden')}
       ${dep.mode==='dim' ? dchk('depend-sort — move locked params to the bottom', 'sort') : ''}
-    </div></details>`;
+    `;
+  const typeDesc = ({
+    text:'Advanced text options: character limits and additional input controls.',
+    int:'Advanced int options: value limits and additional input controls.',
+    number:'Advanced number options: value limits and additional input controls.',
+    seekbar:'Advanced seekbar options: min/max limits and value persistence.',
+    switch:'Advanced switch options: required state, read-only state, and value persistence.',
+    bool:'Advanced bool options: required state, read-only state, and value persistence.',
+    checkbox:'Advanced checkbox options: required state, read-only state, and value persistence.',
+    color:'Advanced color options: input behavior and picker state.',
+    spinner:'Advanced spinner options: input state, selection behavior, and list display.',
+    'single-select':'Advanced single-select options: input and selection behavior.',
+    'multi-select':'Advanced multi-select options: multiple values, separator, and input behavior.',
+    file:'Advanced file options: MIME filters, multiple selection, and typed paths.',
+    folder:'Advanced folder options: starting directory, multiple selection, and typed paths.',
+    app:'Advanced app options: application selection and multiple-selection behavior.',
+    packages:'Advanced packages options: package selection and multiple-selection behavior.'
+  })[t] || 'Advanced options for this param.';
+  const moreOpen = false;
+  const moreText = [], moreChecks = [];
+  more.forEach(item => {
+    if (item.includes('param-cell-check')) moreChecks.push(item);
+    else moreText.push(item);
+  });
+  const moreBody = `${moreText.join('')}${moreChecks.length ? `<div class="param-more-checks">${moreChecks.join('')}</div>` : ''}`;
+  const moreHtml = `<details class="param-more"${moreOpen?' open':''}><summary>more fields · ${esc(t)}</summary><div class="param-grid">${moreBody}</div></details>`;
+  const depHtml = `<details class="dep-more"><summary>ADVANCED DEPEND-MODE</summary><div class="param-grid">${depAdvBody}</div></details>`;
   return `<div class="param-card">
     <div class="param-card-head">
       <span class="param-num">#${idx+1}</span>
@@ -1458,12 +1481,13 @@ function paramCardHtml(p, idx, list) {
     </div>
     <div class="param-grid">${cells.join('')}</div>
     ${moreHtml}
-    ${isOpts ? paramOptionsHtml(p, idx) : ''}
+    <div class="hint param-more-type-desc">${esc(typeDesc)}</div>
     <div class="param-dep-row">
-      ${depAdv}
+      ${depHtml}
       <div class="dep-warn">${depWarnHtml(list, p)}</div>
-      <div class="hint">depend-on takes the parent param's <b>name</b> (the $env_var), not its title. "show when matched" is the parser default; "hide when matched" emits depend-mode = "hide"; "dim + lock" emits depend-readonly = true. Re-evaluated live on every dialog change.</div>
     </div>
+    <div class="hint param-more-description">depend-on takes the parent param's <b>name</b> (the $env_var), not its title. "show when matched" is the parser default; "hide when matched" emits depend-mode = "hide"; "dim + lock" emits depend-readonly = true. Re-evaluated live on every dialog change.</div>
+    ${isOpts ? paramOptionsHtml(p, idx) : ''}
   </div>`;
 }
 // menu/fab spinner options — the same 3-mode editor as action.params options
