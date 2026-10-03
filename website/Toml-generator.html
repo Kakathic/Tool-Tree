@@ -183,6 +183,7 @@ main {
 .param-more > summary:hover, .dep-more > summary:hover { background:var(--accent); color:#fff; }
 .param-cell-check label { display:flex; align-items:flex-start; gap:6px; margin:0; font-weight:500; line-height:1.4; cursor:pointer; }
 .param-cell-check input { width:auto !important; flex:0 0 auto; margin-top:1px; accent-color:var(--accent); }
+.mf-check-desc { color:var(--fg-muted); font-weight:400; }
 .param-more-checks { grid-column:1 / -1; display:grid; grid-template-columns:1fr; gap:0; margin-top:1px; padding-top:7px; border-top:1px solid var(--border); }
 .dep-warn { flex:1 0 100%; font-family:var(--mono); font-size:10px; color:var(--red); line-height:1.45; }
 .dep-warn:empty { display:none; }
@@ -295,6 +296,14 @@ main {
 .titlebar-btn:hover { border-color:var(--accent); color:var(--accent); }
 .titlebar-btn.copied { color:var(--green); border-color:var(--green); }
 .titlebar-btn.on { color:var(--accent); border-color:var(--accent); }
+.validation-status { flex:0 0 auto; font-family:var(--mono); font-size:10px; color:var(--green); white-space:nowrap; }
+.validation-status.warn { color:var(--orange); }
+.validation-status.error { color:var(--red); }
+.validation-box { padding:8px 10px; border:1px solid var(--border); border-top:0; background:var(--bg-soft); font-family:var(--mono); font-size:10px; line-height:1.45; }
+.validation-box:empty { display:none; }
+.validation-item { margin:2px 0; }
+.validation-item.warn { color:var(--orange); }
+.validation-item.error { color:var(--red); }
 
 .demo-frame {
   background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius-lg); padding:0;
@@ -546,7 +555,7 @@ small, .hint, .field-hint, .muted { line-height: 1.4; }
 <header>
   <div class="brand-line"><span class="brand-dot"></span><span class="brand-tag">tool-tree</span><span>· config generator + guide</span></div>
   <h1>TOML Template Generator</h1>
-  <p>Choose a node, fill its fields, preview it, then copy the TOML. Empty fields are omitted; -sh switches a value to shell form.</p>
+  <p>Choose a node, fill its fields, preview it, then copy the TOML. Empty fields are omitted; shell-capable fields can switch to a shell form. Your current draft is saved locally in this browser.</p>
 </header>
 
 <main>
@@ -590,11 +599,12 @@ small, .hint, .field-hint, .muted { line-height: 1.4; }
         <div class="code-wrap">
           <div class="code-titlebar">
             <span class="code-dots"><i></i><i></i><i></i></span>
-            <span class="code-filename">output.toml</span>
+            <span id="validationStatus" class="validation-status">✓ checks passed</span>
             <span class="code-spacer"></span>
             <button type="button" class="titlebar-btn" id="wrapBtn" title="Toggle soft wrap for long lines">wrap: off</button>
             <button type="button" class="titlebar-btn" id="copyBtn" title="Copy the generated TOML">Copy</button>
           </div>
+          <div class="validation-box" id="validationBox" aria-live="polite"></div>
           <pre id="codeOut"></pre>
         </div>
       </div>
@@ -657,10 +667,33 @@ function shUnwrap(val) {
 function paramNameFrom(label) {
   return ((label||'param').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'param');
 }
+function resolvedParamNames(list) {
+  const used = new Set();
+  // Reserve every explicit name first, so an auto-derived name can never collide
+  // with a later explicit parameter name.
+  (list||[]).forEach(p => {
+    const raw = (p.name||'').trim();
+    if (raw) used.add(paramNameFrom(raw));
+  });
+  const assigned = new Set();
+  return (list||[]).map(p => {
+    const raw = (p.name||'').trim();
+    const base = paramNameFrom(raw || paramTitle(p));
+    if (raw) {
+      assigned.add(base);
+      return base;
+    }
+    let name = base, n = 2;
+    while (used.has(name) || assigned.has(name)) name = `${base}_${n++}`;
+    assigned.add(name);
+    return name;
+  });
+}
 // displayed title: p.title (falls back to the separate p.label in very old states)
 function paramTitle(p) { return ((p.title||'').trim() ? p.title : (p.label||'')); }
-function paramVar(p) {
-  return '$' + ((p.name||'').trim() || paramNameFrom(paramTitle(p)));
+function paramVar(p, list, index) {
+  const name = list && Number.isInteger(index) ? (resolvedParamNames(list)[index] || paramNameFrom(paramTitle(p))) : ((p.name||'').trim() || paramNameFrom(paramTitle(p)));
+  return '$' + name;
 }
 function paramOptionsList(p) {
   const mode = p.optMode || (p.optionsShOn ? 'sh' : 'tables');
@@ -712,16 +745,41 @@ function paramDepLines(p) {
   return s;
 }
 // soft validation: parents must be other params of the same action (by name)
-function paramNames(list) { return (list||[]).map(q => paramNameFrom((q.name||'').trim() || paramTitle(q))); }
+function paramNames(list) { return resolvedParamNames(list); }
 function depWarnings(list, p) {
   const dep = p.dep || {}, on = (dep.on||'').trim();
   if (!on) return [];
-  const names = paramNames(list), me = paramNameFrom((p.name||'').trim() || paramTitle(p));
+  const names = paramNames(list);
+  const me = (p.name||'').trim() || paramNameFrom(paramTitle(p));
   const out = [];
-  on.split('|').map(x=>x.trim()).filter(Boolean).forEach(n => {
+  const parents = on.split('|').map(x=>x.trim()).filter(Boolean);
+  const values = String(dep.value||'').split('|').map(x=>x.trim());
+  const modes = String(dep.modeList||'').split('|').map(x=>x.trim()).filter(Boolean);
+  const logic = (dep.logic||'and').trim() || 'and';
+  const allowedLogic = ['and','priority','priority-rtl','xor','nand'];
+
+  parents.forEach(n => {
     if (n === me) out.push(`"${n}" is this param itself — a param cannot depend on itself`);
     else if (!names.includes(n)) out.push(`no param named "${n}" in this action — depend-on uses the param name, not its title`);
   });
+  if (values.length > 1 && values.length !== parents.length && values.some(Boolean)) {
+    out.push(`depend-value has ${values.length} pipe-separated groups for ${parents.length} parent(s)`);
+  }
+  if (modes.length && modes.length !== parents.length) {
+    out.push(`depend-mode has ${modes.length} per-parent value(s) for ${parents.length} parent(s)`);
+  }
+  if (!allowedLogic.includes(logic)) out.push(`unknown depend-logic "${logic}" — use and, priority, priority-rtl, xor or nand`);
+  const rawTh = (dep.threshold||'').toString().trim();
+  if (rawTh) {
+    if (!isIntText(rawTh)) out.push('depend-threshold must be an integer from 0 to 100');
+    else if (+rawTh < 0 || +rawTh > 100) out.push('depend-threshold must be between 0 and 100');
+    else if (logic !== 'and') out.push('depend-threshold is only emitted with depend-logic = "and"');
+  }
+  if (dep.sort && dep.mode !== 'dim') out.push('depend-sort only has an effect with dim + depend-readonly');
+  const initial = (dep.initial||'').trim();
+  if (initial && !['auto','show','hide'].includes(initial)) out.push(`invalid depend-initial "${initial}" — use auto, show or hide`);
+  const def = (dep.def||'').trim();
+  if (def && !['show','hide'].includes(def)) out.push(`invalid depend-default "${def}" — use show or hide`);
   return out;
 }
 // param support: -sh pill wins; "true"/"1"/empty → omitted; "false"/"0" → false; else shell
@@ -745,7 +803,7 @@ function paramExtraLines(p) {
   let s = '';
   if (has('placeholder')) { s += `\nplaceholder-sh = "${tomlEsc(sh.placeholder.trim())}"`; }
     else if ((x.placeholder||'').trim()) s += `\nplaceholder = "${tomlEsc(x.placeholder.trim())}"`;
-  if (t === 'text' && !isNaN(parseInt(x.maxlength, 10))) s += `\nmaxlength = ${parseInt(x.maxlength, 10)}`;
+  if ((x.maxlength || '').trim()) s += paramNumberLine('maxlength', x.maxlength, 'int');
   if (t === 'switch' || t === 'bool' || t === 'checkbox') {
     if (has('descOn')) s += `\ndesc-on-sh = "${tomlEsc(sh.descOn.trim())}"`;
     else if ((x.descOn||'').trim()) s += `\ndesc-on = "${tomlEsc(x.descOn.trim())}"`;
@@ -766,7 +824,7 @@ function paramExtraLines(p) {
   if (OPT_TYPES.includes(t) && t !== 'multi-select' && x.noSel) s += `\nallow-no-selection = true`;
   return s;
 }
-function paramToToml(p) {
+function paramToToml(p, outputName) {
   const t = p.type;
   const sh = p.sh || {}, on = p.shOn || {};
   const has = f => on[f] && (sh[f]||'').trim();
@@ -805,8 +863,8 @@ function paramToToml(p) {
     }
   } else if (t === 'int' || t === 'number' || t === 'seekbar') {
     const mn = (p.min || '').trim(), mx = (p.max || '').trim();
-    if (mn) fields += `\nmin = ${mn}`;
-    if (mx) fields += `\nmax = ${mx}`;
+    if (mn) fields += paramNumberLine('min', mn, t);
+    if (mx) fields += paramNumberLine('max', mx, t);
     fields += valLine(p.value);
   } else if (t === 'switch' || t === 'bool' || t === 'checkbox') {
     fields += valLine(p.value);
@@ -828,7 +886,7 @@ function paramToToml(p) {
   }
   // name names the $env_var (always emitted); the title cell's -sh pill swaps
   // title ↔ title-sh (one-variant, like every other field).
-  let out = `\n\n[[action.params]]\nname = "${tomlEsc(paramNameFrom((p.name||'').trim() || paramTitle(p)))}"`;
+  let out = `\n\n[[action.params]]\nname = "${tomlEsc(outputName || paramNameFrom((p.name||'').trim() || paramTitle(p)))}"`;
   out += has('title') ? `\ntitle-sh = "${tomlEsc(sh.title.trim())}"` : (((p.title||'').trim()) ? `\ntitle = "${tomlEsc(p.title.trim())}"` : '');
   out += has('label') ? `\nlabel-sh = "${tomlEsc(sh.label.trim())}"` : (((p.label||'').trim()) ? `\nlabel = "${tomlEsc(p.label.trim())}"` : '');
   out += `\ntype = "${tomlEsc(t)}"${fields}`;
@@ -939,7 +997,7 @@ function rowExtras(parts, from) {
 function rowKvToml(kv, skip) {
   return kv.filter(([k]) => !(skip||[]).includes(k)).map(([k, v]) => {
     if (ROW_BOOL_KEYS.includes(k)) return `\n${k} = ${/^(false|0|no)$/i.test(v) ? 'false' : 'true'}`;
-    if (ROW_NUM_KEYS.includes(k) && v !== '' && !isNaN(Number(v))) return `\n${k} = ${Number(v)}`;
+    if (ROW_NUM_KEYS.includes(k)) return numberLine(k, v);
     return `\n${k} = "${tomlEsc(v)}"`;
   }).join('');
 }
@@ -951,15 +1009,15 @@ function rowToToml(tableName, line, suffix) {
   if (style === 'progress') {
     const label = parts[1] || '';
     const { kv, pos } = rowExtras(parts, 2);
-    const pct = parseInt(pos[0], 10) || 0;
+    const pct = (pos[0] || '').trim();
+    const progress = numberLine('progress', pct);
     const hasMax = kv.some(([k]) => k === 'progress-max');
-    return `${H}\ntext = "${tomlEsc(label)}"\nprogress = ${pct}${hasMax ? '' : '\nprogress-max = 100'}${rowKvToml(kv, ['progress','text'])}`;
+    return `${H}\ntext = "${tomlEsc(label)}"${progress}${hasMax ? '' : '\nprogress-max = 100'}${rowKvToml(kv, ['progress','text'])}`;
   }
   if (style === 'toggle') {
     const label = parts[1] || '';
     const { kv } = rowExtras(parts, 2);
-    const has = k => kv.some(([x]) => x === k);
-    return `${H}\ntext = "${tomlEsc(label)}"\ntoggle = "switch"${has('get') ? '' : '\nget = "test -e {HOME}/flag && echo 1"'}${has('set') ? '' : '\nset = "echo $state > {HOME}/flag"'}${rowKvToml(kv, ['toggle','text'])}`;
+    return `${H}\ntext = "${tomlEsc(label)}"\ntoggle = "switch"${rowKvToml(kv, ['toggle','text'])}`;
   }
   const text = parts[1];
   const t = tomlEsc(text !== undefined ? text : style);
@@ -967,7 +1025,9 @@ function rowToToml(tableName, line, suffix) {
   const fieldMap = { bold: 'bold', italic: 'italic', mono: 'monospace', underline: 'underline', strike: 'strikethrough', copy: 'copy', markdown: 'markdown' };
   let extra = '';
   if (style === 'center' || style === 'right') extra = `\nalign = "${style}"`;
-  else if (style === 'link') extra = `\nlink = "${tomlEsc(pos[0] || 'https://example.com')}"`;
+  else if (style === 'link') {
+    if (pos[0]) extra = `\nlink = \"${tomlEsc(pos[0])}\"`;
+  }
   else if (style === 'html') extra = pos[0] ? (/^https?:/i.test(pos[0]) ? `\nhtml-url = "${tomlEsc(pos[0])}"` : `\nhtml-file = "${tomlEsc(pos[0])}"`) : '';
   else if (fieldMap[style]) extra = `\n${fieldMap[style]} = true`;
   return `${H}\ntext = "${t}"${extra}${rowKvToml(kv, ['text'])}`;
@@ -1007,7 +1067,7 @@ function rowsBlockDemoHtml(rowsStr) {
   return (rowsStr || '').split('\n').map(l => l.trim()).filter(Boolean).map(rowToDemoHtml).join('');
 }
 function rowsField() {
-  return { key: 'rows', label: 'rows', type: 'rowcards', default: '', hint: 'Optional: one card per [[<type>.rows]] rich-text line below the item. Each card is one [[<type>.rows]] table; style picks the row kind; toggle exposes get/set, link/html/progress expose their value; color/size plus the "more keys" cell (icon, script, support, copy, …) cover the rest. ↑ ↓ ✕ reorder / remove.' };
+  return { key: 'rows', label: 'rows', type: 'rowcards', default: '', hint: 'Optional: one card per [[<type>.rows]] rich-text line below the item. Each card is one [[<type>.rows]] table; style picks the row kind; toggle exposes optional get/set, link/html/progress expose their value; color/size plus the "more keys" cell (icon, script, support, copy, …) cover the rest. Blank optional fields are omitted. ↑ ↓ ✕ reorder / remove.' };
 }
 
 // --- text.rows card editor (pipe line <-> card round-trip) -------------------
@@ -1046,8 +1106,26 @@ function rcSerializeAll(str) { return rcRows(str).map(rcSerialize).join('\n'); }
 
 // --- menu/fab item helpers (authored on the group tab) -----------------------
 const MF_TYPES = ['action','checkbox','spinner','file','folder','link','activity','html','config','refresh','reload','restart','finish','exit','close','killapp'];
+const MF_TARGET_TYPES = ['link','activity','html','config'];
+const MF_NONRUN_TYPES = ['refresh','reload','restart','finish','exit','close','killapp'];
+const MF_RUN_TYPES = MF_TYPES.filter(t => !MF_TARGET_TYPES.includes(t) && !MF_NONRUN_TYPES.includes(t));
 function mfNew(style) {
-  return { title:'', id:'', style:style==='fab'?'fab':'menu', type:'action', preview:'', optSh:'', optMode:'options', options:[], items:[], link:'', activity:'', html:'', config:'', configSh:'', suffix:'', mime:'', multiple:false, pathHome:'', get:'', set:'', script:'', silent:false, icon:'', desc:'', summary:'', support:'', lock:'', minSdk:'', maxSdk:'', targetSdk:'', allowShortcut:'auto', confirm:false, warn:'', autoOff:false, autoFinish:false, autoKill:false, autoRestart:false, interruptible:false, needInput:false, bgTask:false, reload:false, reloadPage:false, reloadList:'', shell:'default' };
+  return { title:'', titleSh:'', titleShOn:false,
+    id:'', style:style==='fab'?'fab':'menu', type:'action', preview:'', optSh:'', optMode:'options', options:[], items:[],
+    link:'', activity:'', html:'', config:'', configSh:'', suffix:'', mime:'', multiple:false, pathHome:'', get:'', set:'', script:'',
+    silent:false, icon:'', iconSh:'', iconShOn:false, support:'',
+    autoOff:false, autoFinish:false, autoKill:false, autoRestart:false, interruptible:false, needInput:false,
+    reload:false, reloadPage:false };
+}
+function addMfItem(style) {
+  if (!state[cur]) state[cur] = initState(cur);
+  const rows = Array.isArray(state[cur].mfItems) ? state[cur].mfItems : [];
+  rows.push(mfNew(style));
+  state[cur].mfItems = rows;
+  renderForm();
+  safe(renderDemo);
+  safe(renderHint);
+  safe(renderCode);
 }
 function mfNorm(r) {
   const d = mfNew((r||{}).style);
@@ -1058,77 +1136,94 @@ function mfNorm(r) {
   out.options = out.options.filter(o => o && typeof o === 'object').map(o => ({ value:(o.value||'')+'', title:(o.title||'')+'' }));
   out.items = out.items.map(x => (x||'')+'');
   out.multiple = !!out.multiple; out.silent = !!out.silent;
+  out.titleShOn = !!out.titleShOn; out.descShOn = !!out.descShOn; out.summaryShOn = !!out.summaryShOn; out.iconShOn = !!out.iconShOn;
   return out;
 }
 function parseMfItems(src) {
   const rows = Array.isArray(src) ? src.map(mfNorm) : [];
   return { menu: rows.filter(r=>r.style!=='fab'), fab: rows.filter(r=>r.style==='fab') };
 }
-const MF_NO_EXTRA = ['refresh','reload','restart','finish','exit','close','killapp','link','activity','html','config'];
 // The parser reads script/set/setstate as ONE key (script wins), so emit set only when script is empty.
 function mfRunLine(r, fallback) {
   const sc = (r.script||'').trim(), st = (r.set||'').trim();
-  if (sc) return `\nscript = "${tomlEsc(sc)}"`;
-  if (st) return `\nset = "${tomlEsc(st)}"`;
-  return fallback ? `\nscript = "${tomlEsc(fallback)}"` : '';
+  if (sc) return `\nscript = \"${tomlEsc(sc)}\"`;
+  if (st) return `\nset = \"${tomlEsc(st)}\"`;
+  return fallback ? `\nscript = \"${tomlEsc(fallback)}\"` : '';
+}
+function mfTextLine(r, base, tomlKey) {
+  const v = String(r[base] || '').trim();
+  if (r[base + 'ShOn'] && String(r[base + 'Sh'] || '').trim()) return `\n${tomlKey}-sh = \"${tomlEsc(String(r[base + 'Sh']).trim())}\"`;
+  return v ? `\n${tomlKey} = \"${tomlEsc(v)}\"` : '';
 }
 function mfItemBlock(container, r) {
-  let extra = '', tail = '';
   const t = r.type;
   const idLine = (r.id||'').trim() ? `\nkey = "${tomlEsc(r.id.trim())}"` : '';
-  const iconLine = (r.icon||'').trim() ? `\nicon = "${tomlEsc(r.icon.trim())}"` : '';
-  const common = ((r.desc||'').trim()?`\ndesc = "${tomlEsc(r.desc.trim())}"`: '')
-    + ((r.summary||'').trim()?`\nsummary = "${tomlEsc(r.summary.trim())}"`: '')
-    + ((r.support||'').trim()?`\nsupport = "${tomlEsc(r.support.trim())}"`: '')
-    + ((r.lock||'').trim()?`\nlock = "${tomlEsc(r.lock.trim())}"`: '')
-    + ((r.minSdk||'').trim()?`\nmin-sdk = ${parseInt(r.minSdk,10)}`: '')
-    + ((r.maxSdk||'').trim()?`\nmax-sdk = ${parseInt(r.maxSdk,10)}`: '')
-    + ((r.targetSdk||'').trim()?`\ntarget-sdk = ${parseInt(r.targetSdk,10)}`: '')
-    + (r.allowShortcut && r.allowShortcut !== 'auto' ? `\nallow-shortcut = ${r.allowShortcut}` : '')
-    + (r.confirm ? `\nconfirm = true` : '')
-    + ((r.warn||'').trim() && r.confirm ? `\nwarn = "${tomlEsc(r.warn.trim())}"` : '')
-    + (r.autoOff ? `\nauto-off = true` : '') + (r.autoFinish ? `\nauto-finish = true` : '')
-    + (r.autoKill ? `\nauto-kill = true` : '') + (r.autoRestart ? `\nauto-restart = true` : '')
-    + (r.interruptible ? `\ninterruptible = true` : '') + (r.needInput ? `\nneed-input = true` : '')
-    + (r.bgTask ? `\nbg-task = true` : '') + (r.reloadPage ? `\nreload-page = true` : '')
-    + ((r.reloadList||'').trim()?`\nreload = "${tomlEsc(r.reloadList.trim())}"`: '')
-    + (r.reload && !(r.reloadList||'').trim() ? `\nreload = true` : '')
-    + (r.shell && r.shell !== 'default' ? `\nshell = "${tomlEsc(r.shell)}"` : '');
-  const silentLine = r.silent ? `\nsilent = true` : '';
-  if (t === 'checkbox') extra = ((r.get||'').trim() ? `\nget = "${tomlEsc(r.get.trim())}"` : `\nget = "test -f /data/flag && echo 1"`) + mfRunLine(r, 'touch /data/flag');
-  else if (t === 'spinner') {
+  const supportRaw = (r.support || '').trim();
+  const supportLineMf = !supportRaw || /^(true|1)$/i.test(supportRaw) ? ''
+    : /^(false|0)$/i.test(supportRaw) ? '\nsupport = false'
+    : `\nsupport = "${tomlEsc(supportRaw)}"`;
+  const common = supportLineMf;
+  const iconLine = mfTextLine(r,'icon','icon');
+  const runnable = MF_RUN_TYPES.includes(t);
+  const runnableCommon = runnable
+    ? (r.autoOff ? `\nauto-off = true` : '')
+      + (r.autoFinish ? `\nauto-finish = true` : '')
+      + (r.autoKill ? `\nauto-kill = true` : '')
+      + (r.autoRestart ? `\nauto-restart = true` : '')
+      + (r.interruptible ? `\ninterruptible = true` : '')
+      + (r.needInput ? `\nneed-input = true` : '')
+      + (r.reloadPage ? `\nreload-page = true` : '')
+      + (r.reload ? `\nreload = true` : '')
+    : '';
+  const silentLine = runnable && r.silent ? `\nsilent = true` : '';
+  let extra = '', tail = '';
+  if (t === 'checkbox') {
+    if ((r.get||'').trim()) extra += `\nget = "${tomlEsc(r.get.trim())}"`;
+    extra += mfRunLine(r);
+  } else if (t === 'spinner') {
     const mode = r.optMode || 'options';
+    if ((r.get||'').trim()) extra += `\nget = "${tomlEsc(r.get.trim())}"`;
     if (mode === 'sh') {
       const sh = (r.optSh||'').trim();
-      extra = sh ? `\noptions-sh = "${tomlEsc(sh)}"` : `\nitems = ["a|Option A", "b|Option B"]`;
+      if (sh) extra += `\noptions-sh = "${tomlEsc(sh)}"`;
     } else if (mode === 'items') {
       const arr = (r.items||[]).map(x=>(x||'').trim()).filter(Boolean);
-      extra = arr.length ? `\nitems = [${arr.map(x=>`"${tomlEsc(x)}"`).join(', ')}]` : `\nitems = ["a|Option A", "b|Option B"]`;
+      if (arr.length) extra += `\nitems = [${arr.map(x=>`"${tomlEsc(x)}"`).join(', ')}]`;
     } else {
       const tbls = (r.options||[]).map(o => {
         const v = ((o&&o.value)||'').trim(), ti = ((o&&o.title)||'').trim();
         if (!v && !ti) return '';
         return `\n\n[[${container}.items.options]]\ntitle = "${tomlEsc(ti || v)}"` + (v && v !== ti ? `\nvalue = "${tomlEsc(v)}"` : '');
       }).filter(Boolean).join('');
-      extra = tbls ? '' : `\nitems = ["a|Option A", "b|Option B"]`;
-      tail = tbls;
+      if (tbls) tail = tbls;
     }
-    extra += ((r.get||'').trim() ? `\nget = "${tomlEsc(r.get.trim())}"` : `\nget = "cat /data/choice"`) + mfRunLine(r, 'echo $state');
-  }
-  else if (t === 'file')   extra = `\nsuffix = "${tomlEsc(r.suffix || 'zip')}"` + ((r.mime||'').trim() ? `\nmime = "${tomlEsc(r.mime.trim())}"` : '') + `\npath-home = "${tomlEsc(r.pathHome || '/sdcard')}"` + (r.multiple ? `\nmultiple = true` : '') + mfRunLine(r, 'echo $file');
-  else if (t === 'folder') extra = `\npath-home = "${tomlEsc(r.pathHome || '/sdcard')}"` + mfRunLine(r, 'echo $folder');
-  else if (t === 'link')     extra = `\nlink = "${tomlEsc(r.link || 'https://example.com')}"` + mfRunLine(r);
-  else if (t === 'activity') extra = `\nactivity = "${tomlEsc(r.activity || 'com.android.settings/.Settings')}"` + mfRunLine(r);
-  else if (t === 'html')     extra = `\nhtml = "${tomlEsc(r.html || 'https://example.com')}"` + mfRunLine(r);
-  else if (t === 'config') {
-    extra = (r.configSh||'').trim()
-      ? `\nconfig-sh = "${tomlEsc(r.configSh.trim())}"`
-      : ((r.config||'').trim() ? `\nconfig = "${tomlEsc(r.config.trim())}"` : '');
     extra += mfRunLine(r);
+  } else if (t === 'file') {
+    if ((r.suffix||'').trim()) extra += `\nsuffix = "${tomlEsc(r.suffix.trim())}"`;
+    if ((r.mime||'').trim()) extra += `\nmime = "${tomlEsc(r.mime.trim())}"`;
+    if ((r.pathHome||'').trim()) extra += `\npath-home = "${tomlEsc(r.pathHome.trim())}"`;
+    if (r.multiple) extra += `\nmultiple = true`;
+    extra += mfRunLine(r);
+  } else if (t === 'folder') {
+    if ((r.pathHome||'').trim()) extra += `\npath-home = "${tomlEsc(r.pathHome.trim())}"`;
+    if (r.multiple) extra += `\nmultiple = true`;
+    extra += mfRunLine(r);
+  } else if (t === 'link') {
+    if ((r.link||'').trim()) extra = `\nlink = "${tomlEsc(r.link.trim())}"`;
+  } else if (t === 'activity') {
+    if ((r.activity||'').trim()) extra = `\nactivity = "${tomlEsc(r.activity.trim())}"`;
+  } else if (t === 'html') {
+    if ((r.html||'').trim()) extra = `\nhtml = "${tomlEsc(r.html.trim())}"`;
+  } else if (t === 'config') {
+    if ((r.configSh||'').trim()) extra = `\nconfig-sh = "${tomlEsc(r.configSh.trim())}"`;
+    else if ((r.config||'').trim()) extra = `\nconfig = "${tomlEsc(r.config.trim())}"`;
   }
-  else if (!MF_NO_EXTRA.includes(t)) extra = mfRunLine(r, 'echo $menu_id');
-  else extra = mfRunLine(r);
-  return `\n\n[[${container}.items]]\ntitle = "${tomlEsc(r.title)}"${idLine}\ntype = "${tomlEsc(t)}"${iconLine}${silentLine}${common}${extra}${tail}`;
+  return `\n\n[[${container}.items]]${mfTextLine(r,'title','title')}${idLine}\ntype = "${tomlEsc(t)}"${iconLine}${silentLine}${common}${runnableCommon}${extra}${tail}`;
+}
+
+function handlerLine(f, key) {
+  const v = String(f[key] || '').trim();
+  return v ? `\nhandler = "${tomlEsc(v)}"` : '';
 }
 
 // --- advanced field definitions (shared pools) -------------------------------
@@ -1173,6 +1268,10 @@ const A_PROCESS    = { key:'advProcess',   label:'process', type:'checkbox', hin
 const A_PLACEHOLDER= { key:'advPlaceholder', label:'placeholder-count', type:'text', ph:'3', hint:'Skeleton count while waiting (process = true).' };
 const A_GROUP      = { key:'advGroup',      label:'wrap in [[group]]', type:'checkbox', hint:'Emits a [[group]] header before this node — ticking also shows the group menu / fab items editor below.' };
 const A_GROUPTITLE = { key:'advGroupTitle', label:'group title', type:'text', ph:'CPU', hint:'Emitted as the [[group]] title when wrap is on and shown as the section header in the preview. Left empty → [[group]] is emitted without a title line.' };
+const MF_MENU_HANDLER_WRAP = { key:'menuHandler', label:'[[menu]] handler', type:'text', default:'', hint:'Default shell command for menu items that have no own script. Same role as script.' };
+const MF_MENU_ICON_WRAP = { key:'menuIcon', label:'[[menu]] icon', type:'text', default:'', hint:'Icon for the menu container. Alias: icon-path.' };
+const MF_FAB_HANDLER_WRAP = { key:'fabHandler', label:'[[fab]] handler', type:'text', default:'', hint:'Default shell command for FAB items that have no own script. Same role as script.' };
+const MF_FAB_ICON_WRAP = { key:'fabIcon', label:'[[fab]] icon', type:'text', default:'', hint:'Icon for the FAB container.' };
 const MF_ITEMS_WRAP= { key:'mfItems', label:'group menu / fab items', type:'mfitems', default:[], hint:'Optional. Emitted as [[menu]] / [[fab]] blocks right after the [[group]] header — page-level containers, independent of the node below. Same card editor as the group tab: every card has key (id), icon, silent, script; spinner has the 3-mode options editor.' };
 
 const ADV_DYN      = [A_SUMMARY];
@@ -1204,11 +1303,28 @@ const bgLine      = f => shOrStatic(f, 'advBg',      'bg');
 const lockLine    = f => shOrStatic(f, 'lock',       'lock');
 const warnLine    = f => f.confirm ? shOrStatic(f, 'warn', 'warn') : '';
 
+function isIntText(v) { return /^[-+]?\d+$/.test(String(v ?? '').trim()); }
+function isNumberText(v) { return /^[-+]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(String(v ?? '').trim()); }
+function intLine(key, value) {
+  const v = String(value ?? '').trim();
+  return v && isIntText(v) ? `\n${key} = ${v}` : '';
+}
+function numberLine(key, value) {
+  const v = String(value ?? '').trim();
+  return v && isNumberText(v) ? `\n${key} = ${v}` : '';
+}
+function paramNumberLine(key, value, type) {
+  const v = String(value ?? '').trim();
+  if (!v) return '';
+  if (type === 'int' || type === 'seekbar' || key === 'maxlength') return intLine(key, v);
+  return numberLine(key, v);
+}
+
 function mediaLines(f) {
   const line = (k, tomlKey, numeric=false) => {
     const v = String(f[k] ?? '').trim();
     if (!v) return '';
-    if (numeric && !/^-?\d+(?:\.\d+)?$/.test(v)) return '';
+    if (numeric && !isNumberText(v)) return '';
     return `\n${tomlKey} = ${numeric ? v : `"${tomlEsc(v)}"`}`;
   };
   let s = '';
@@ -1271,9 +1387,9 @@ function runnableTail(f) {
 }
 function gating(f) {
   return (f.advLoadAfter ? '\nload-after = true' : '')
-    + ((f.advMinSdk||'').trim() ? `\nmin-sdk = ${parseInt(f.advMinSdk,10)||0}` : '')
-    + ((f.advMaxSdk||'').trim() ? `\nmax-sdk = ${parseInt(f.advMaxSdk,10)||100}` : '')
-    + ((f.advTargetSdk||'').trim() ? `\ntarget-sdk = ${parseInt(f.advTargetSdk,10)||0}` : '')
+    + intLine('min-sdk', f.advMinSdk)
+    + intLine('max-sdk', f.advMaxSdk)
+    + intLine('target-sdk', f.advTargetSdk)
     + (f.advShortcut && f.advShortcut !== 'auto' ? `\nallow-shortcut = ${f.advShortcut}` : '');
 }
 function advPage(f) {
@@ -1281,7 +1397,7 @@ function advPage(f) {
         + advSh0(f,'advLoadOk','load-ok') + advSh0(f,'advLoadFail','load-fail');
   if (f.advProcess) {
     s += '\nprocess = true';
-    if ((f.advPlaceholder||'').trim()) s += `\nplaceholder-count = ${parseInt(f.advPlaceholder,10)||1}`;
+    s += intLine('placeholder-count', f.advPlaceholder);
   }
   return s;
 }
@@ -1297,7 +1413,7 @@ function groupHeaderToml(f) {
   const mf = parseMfItems(f.mfItems);
   const containerBlock = (kind, rows, handlerKey, iconKey) => {
     if (!rows.length) return '';
-    const handler = shOrStatic(f, handlerKey, 'handler');
+    const handler = handlerLine(f, handlerKey);
     const icon = (f[iconKey] || '').trim();
     return `[[${kind}]]` + handler + (icon ? `\nicon = "${tomlEsc(icon)}"` : '')
       + rows.map(r=>mfItemBlock(kind,r)).join('');
@@ -1370,7 +1486,7 @@ function paramCardHtml(p, idx, list) {
     const active = !!(shField && on[shField]);
     const cur = active ? ((p.sh||{})[shField]||'') : (val || '');
     const labelRow = shField
-      ? `<div class="pcell-label-row"><label>${label}</label><label class="sh-toggle${active?' on':''}"><input type="checkbox" data-pidx="${idx}" data-pshon="${shField}"${active?' checked':''}>-sh</label></div>`
+      ? `<div class="pcell-label-row"><label>${label}</label><label class="sh-toggle${active?' on':''}"><input type="checkbox" data-pidx="${idx}" data-pshon="${shField}"${active?' checked':''}>${shField==='support'?'Shell':'-sh'}</label></div>`
       : `<label>${label}</label>`;
     return `<div class="param-cell">${labelRow}<input type="text" class="${active?'sh-active':''}" data-pidx="${idx}" data-pfield="${active ? 'sh:'+shField : storeKey}" value="${esc(cur)}" placeholder="${esc(ph||'')}"></div>`;
   };
@@ -1472,7 +1588,7 @@ function paramCardHtml(p, idx, list) {
     <div class="param-card-head">
       <span class="param-num">#${idx+1}</span>
       <span class="param-type-chip">${esc(t)}</span>
-      <span class="param-var">${esc(paramVar(p))}</span>
+      <span class="param-var">${esc(paramVar(p, list, idx))}</span>
       <span class="param-actions">
         <button type="button" class="param-btn" data-pact="up" data-pidx="${idx}" title="move up">↑</button>
         <button type="button" class="param-btn" data-pact="down" data-pidx="${idx}" title="move down">↓</button>
@@ -1532,44 +1648,49 @@ function mfOptionsEditor(r, idx) {
   return `<div class="param-opts">${head}${body}</div>`;
 }
 // menu/fab item card — authored like action.params cards (group tab)
+function mfShSample(base, value) {
+  const v = (value||'').trim();
+  if (base === 'title') return `echo "${v || 'Menu item'}"`;
+  if (base === 'icon') return `echo "${v || '{ICON}/item.png'}"`;
+  return '';
+}
+function mfShCell(label, base, val, shVal, active, ph, idx) {
+  const script = active ? (shVal || '') : (val || '');
+  // Menu/FAB text fields use the normal -sh toggle. `shLabel` is local to
+  // fieldHtml(), so it must not be referenced from this helper.
+  const toggleLabel = '-sh';
+  return `<div class="param-cell"><div class="pcell-label-row"><label>${label}</label><label class="sh-toggle${active?' on':''}"><input type="checkbox" data-mfidx="${idx}" data-mffield="${base}ShOn"${active?' checked':''}>${toggleLabel}</label></div><input type="text" class="${active?'sh-active':''}" data-mfidx="${idx}" data-mffield="${active ? base+'Sh' : base}" value="${esc(script)}" placeholder="${esc(ph||'')}"></div>`;
+}
 function mfCardHtml(r, idx) {
   r = mfNorm(r);
   const t = r.type;
+  const runnable = MF_RUN_TYPES.includes(t);
+  const targetType = MF_TARGET_TYPES.includes(t);
+  const noRunType = MF_NONRUN_TYPES.includes(t);
   const cell = (label, fkey, val, ph) => `<div class="param-cell"><label>${label}</label><input type="text" data-mfidx="${idx}" data-mffield="${fkey}" value="${esc(val||'')}" placeholder="${esc(ph||'')}"></div>`;
-  const chk = (label, fkey, on) => `<div class="param-cell param-cell-check"><label><input type="checkbox" data-mfidx="${idx}" data-mffield="${fkey}"${on?' checked':''}>${label}</label></div>`;
+  const chk = (label, fkey, on, disabled=false, desc='') => `<div class="param-cell param-cell-check"><label><input type="checkbox" data-mfidx="${idx}" data-mffield="${fkey}"${on?' checked':''}${disabled?' disabled':''}><span>${label}${desc ? ` <span class="mf-check-desc">— ${esc(desc)}</span>` : ''}</span></label></div>`;
   const cells = [];
-  cells.push(cell('<b>title</b> — menu label', 'title', r.title, 'Item title'));
-  cells.push(cell('key (id)', 'id', r.id, 'passed to the script as $state / $menu_id — blank = auto from title'));
+  cells.push(mfShCell('<b>title</b> — menu label', 'title', r.title, r.titleSh, r.titleShOn, 'Item title', idx));
+  cells.push(cell('key (id)', 'id', r.id, 'passed to the script as $menu_id / $state — blank = auto'));
   cells.push(`<div class="param-cell"><label>style — toolbar or floating</label><select data-mfidx="${idx}" data-mffield="style">${['menu','fab'].map(x=>`<option ${x===r.style?'selected':''}>${x}</option>`).join('')}</select></div>`);
   cells.push(`<div class="param-cell"><label>type</label><select data-mfidx="${idx}" data-mffield="type">${MF_TYPES.map(x=>`<option ${x===t?'selected':''}>${x}</option>`).join('')}</select></div>`);
-  const MF_SCRIPT_PH = { checkbox:'touch /data/flag', spinner:'echo $state', file:'echo $file', folder:'echo $folder', action:'echo $menu_id' };
-  cells.push(cell('desc', 'desc', r.desc, 'Item description'));
-  cells.push(cell('summary', 'summary', r.summary, 'Secondary summary'));
   cells.push(cell('support', 'support', r.support, 'true / false / shell'));
-  cells.push(cell('lock', 'lock', r.lock, '1|Message'));
-  cells.push(cell('min-sdk', 'minSdk', r.minSdk, '26'));
-  cells.push(cell('max-sdk', 'maxSdk', r.maxSdk, '35'));
-  cells.push(cell('target-sdk', 'targetSdk', r.targetSdk, '35'));
-  cells.push(`<div class="param-cell"><label>allow-shortcut</label><select data-mfidx="${idx}" data-mffield="allowShortcut">${['auto','true','false'].map(x=>`<option ${x===r.allowShortcut?'selected':''}>${x}</option>`).join('')}</select></div>`);
-  cells.push(chk('confirm — ask before run', 'confirm', r.confirm));
-  cells.push(cell('warn — confirmation text', 'warn', r.warn, 'Are you sure?'));
-  cells.push(chk('auto-off', 'autoOff', r.autoOff));
-  cells.push(chk('auto-finish', 'autoFinish', r.autoFinish));
-  cells.push(chk('auto-kill', 'autoKill', r.autoKill));
-  cells.push(chk('auto-restart', 'autoRestart', r.autoRestart));
-  cells.push(chk('interruptible', 'interruptible', r.interruptible));
-  cells.push(chk('need-input', 'needInput', r.needInput));
-  cells.push(chk('bg-task', 'bgTask', r.bgTask));
-  cells.push(chk('reload-page', 'reloadPage', r.reloadPage));
-  cells.push(chk('reload', 'reload', r.reload));
-  cells.push(cell('reload key list', 'reloadList', r.reloadList, 'key1,key2'));
-  cells.push(`<div class="param-cell"><label>shell</label><select data-mfidx="${idx}" data-mffield="shell">${['default','bg-task','hidden'].map(x=>`<option ${x===r.shell?'selected':''}>${x}</option>`).join('')}</select></div>`);
+  if (runnable) {
+    cells.push(chk('auto-off', 'autoOff', r.autoOff, false, 'auto-close the log dialog after running'));
+    cells.push(chk('auto-finish', 'autoFinish', r.autoFinish, false, 'close the whole page after running'));
+    cells.push(chk('auto-kill', 'autoKill', r.autoKill, false, 'auto-kill related processes'));
+    cells.push(chk('auto-restart', 'autoRestart', r.autoRestart, false, 'auto-restart the service'));
+    cells.push(chk('interruptible', 'interruptible', r.interruptible, false, 'allow the user to stop the run midway'));
+    cells.push(chk('need-input', 'needInput', r.needInput, r.silent, 'allow the script to receive keyboard input via read'));
+    cells.push(chk('reload-page', 'reloadPage', r.reloadPage, false, 'reload the whole page after running'));
+    cells.push(chk('reload', 'reload', r.reload, false, 'reload the page after running'));
+  }
   if (t === 'spinner') {
     cells.push(cell('preview — value beside the arrow', 'preview', r.preview, 'performance'));
-    cells.push(cell('get — shell returning the current value (empty = sample)', 'get', r.get, 'cat /data/choice'));
+    cells.push(cell('get — current value (optional)', 'get', r.get, 'cat /data/choice'));
   } else if (t === 'checkbox') {
     cells.push(cell('preview — "1" shows the check mark', 'preview', r.preview, '1'));
-    cells.push(cell('get — shell returning "1"/"0" (empty = sample)', 'get', r.get, 'test -f /data/flag && echo 1'));
+    cells.push(cell('get — current state (optional)', 'get', r.get, 'test -f /data/flag && echo 1'));
   } else if (t === 'file') {
     cells.push(cell('suffix — extension filter', 'suffix', r.suffix, 'zip'));
     cells.push(cell('mime — MIME filter (optional)', 'mime', r.mime, 'application/zip'));
@@ -1577,22 +1698,25 @@ function mfCardHtml(r, idx) {
     cells.push(chk('multiple — allow picking several files', 'multiple', r.multiple));
   } else if (t === 'folder') {
     cells.push(cell('path-home — starting dir', 'pathHome', r.pathHome, '/sdcard'));
+    cells.push(chk('multiple — allow picking several folders', 'multiple', r.multiple));
   } else if (t === 'link') {
     cells.push(cell('link — URL to open', 'link', r.link, 'https://example.com'));
   } else if (t === 'activity') {
     cells.push(cell('activity — target component', 'activity', r.activity, 'com.android.settings/.Settings'));
   } else if (t === 'html') {
-    cells.push(cell('html — HTML page to open', 'html', r.html, 'https://example.com'));
+    cells.push(cell('html — page to open', 'html', r.html, 'https://example.com'));
   } else if (t === 'config') {
     cells.push(cell('config — sub page .toml', 'config', r.config, 'sub_page.toml'));
     cells.push(cell('config-sh — shell → path or inline TOML', 'configSh', r.configSh, 'cat sub_page.toml'));
   }
-  if (t === 'spinner' || t === 'checkbox') {
-    cells.push(cell('set — alias of script, used when script is empty', 'set', r.set, MF_SCRIPT_PH[t] || ''));
+  if (runnable && (t === 'spinner' || t === 'checkbox')) {
+    cells.push(cell('set — alias of script, used when script is empty', 'set', r.set, 'echo $state'));
   }
-  cells.push(cell(MF_SCRIPT_PH[t] ? 'script (empty = sample)' : 'script (empty = omitted)', 'script', r.script, MF_SCRIPT_PH[t] || ''));
-  cells.push(cell('icon — item icon ({HOME}/{ICON} ok, optional)', 'icon', r.icon, '{ICON}/item.png'));
-  cells.push(chk('silent — no log dialog', 'silent', r.silent));
+  if (runnable) cells.push(cell('script', 'script', r.script, t === 'file' ? 'sh $file' : t === 'folder' ? 'sh $folder' : t === 'spinner' ? 'echo $state' : 'echo $menu_id'));
+  cells.push(mfShCell('icon — item icon ({HOME}/{ICON} ok)', 'icon', r.icon, r.iconSh, r.iconShOn, '{ICON}/item.png', idx));
+  if (runnable) cells.push(chk('silent — no log dialog', 'silent', r.silent));
+  if (targetType) cells.push(`<div class="param-cell" style="grid-column:1/-1;"><label style="color:var(--fg-muted);">navigation target</label><div class="hint" style="margin-top:0;">This target opens immediately; runnable fields are not used for <code>${esc(t)}</code> items.</div></div>`);
+  if (noRunType) cells.push(`<div class="param-cell" style="grid-column:1/-1;"><label style="color:var(--fg-muted);">system action</label><div class="hint" style="margin-top:0;">This type is handled directly by the page and does not run a script.</div></div>`);
   return `<div class="param-card">
     <div class="param-card-head">
       <span class="param-num">#${idx+1}</span>
@@ -1618,14 +1742,14 @@ function rcCardHtml(r, idx, srcKey) {
   cells.push(`<div class="param-cell"><label>style</label><select data-ridx="${idx}" data-rckey="${k}" data-rfield="style">${(ROW_STYLES.includes(st)?ROW_STYLES:[st].concat(ROW_STYLES)).map(x=>`<option ${x===st?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`);
   if (st !== 'divider') {
     cells.push(cell('text — the row label', 'text', r.text, 'Row text'));
-    if (st === 'link') cells.push(cell('link — URL opened on tap', 'pos0', r.pos[0]||'', 'https://example.com'));
+    if (st === 'link') cells.push(cell('link — URL opened on tap', 'pos0', r.pos[0]||'', 'https://…'));
     else if (st === 'html') cells.push(cell('html — file path or https URL', 'pos0', r.pos[0]||'', 'assets/page.html'));
     else if (st === 'progress') {
       cells.push(cell('progress — percent 0-100', 'pos0', r.pos[0]||'', '82', true));
       cells.push(cell('progress-max — scale top (optional)', 'kv:progress-max', rcKvGet(r,'progress-max'), '100', true));
     } else if (st === 'toggle') {
-      cells.push(cell('get — shell returning "1"/"0" (empty = sample)', 'kv:get', rcKvGet(r,'get'), 'test -e {HOME}/flag && echo 1'));
-      cells.push(cell('set — shell run with $state (empty = sample)', 'kv:set', rcKvGet(r,'set'), 'echo $state > {HOME}/flag'));
+      cells.push(cell('get — shell returning "1"/"0" (optional)', 'kv:get', rcKvGet(r,'get'), 'test -e {HOME}/flag && echo 1'));
+      cells.push(cell('set — shell run with $state (optional)', 'kv:set', rcKvGet(r,'set'), 'echo $state > {HOME}/flag'));
     }
     cells.push(cell('color — text color (#hex or name)', 'kv:color', rcKvGet(r,'color'), '#ff6200'));
     cells.push(cell('size — text size (sp)', 'kv:size', rcKvGet(r,'size'), '16', true));
@@ -1655,27 +1779,27 @@ const TYPES = {
     label: 'group',
     desc: 'Groups related nodes. Resource, menu and FAB blocks can also be added here.',
     adv: [A_RESDIR],
-    advNote: 'Group uses title, key and support. load-key is a top-level i18n directive. support: true = show · false = hide children · other = shell → 1. -sh enables the shell form. resource-dir extends [[resource]].',
+    advNote: 'Group uses title, key and support. load-key is a top-level i18n directive. support: true = show · false = hide children · other = shell → 1. The Shell toggle makes support shell-backed. resource-dir extends [[resource]].',
     fields: [
       { key:'loadKey', label:'load-key', type:'text', default:'', sh:true, hint:'Top-level i18n file. @name tokens use this file. -sh = dynamic path. Blank → omitted.' },
       { key:'title', label:'title', type:'text', default:'CPU', sh:true, hint:'Display title. -sh = title-sh shell form.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Unique ID. Required for desktop shortcuts. @ prefix disables them.' },
-      { key:'support', label:'support', type:'text', default:'true', sh:true, hint:'true = show · false = hide group/children · other = shell → 1. -sh = shell form.' },
+      { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide group/children · other = shell → 1. -sh = shell form.' },
       { key:'child1', label:'first child title (preview only)', type:'text', default:'Optimize CPU' },
       { key:'child2', label:'second child title (preview only)', type:'text', default:'Governor' },
       { key:'resourceTitle', label:'resource preview title (UI only)', type:'text', default:'Extract assets' },
       { key:'resourceFile', label:'resource-file', type:'text', default:'', hint:'APK asset path to extract. resource-dir = whole folder. Blank → omitted.' },
-      { key:'menuHandler', label:'[[menu]] handler', type:'text', default:'', sh:true, hint:'Default shell for menu items that have no own script. -sh: handler-sh.' },
-      { key:'menuIcon', label:'[[menu]] icon', type:'text', default:'', hint:'Container icon. Alias: icon-path.' },
-      { key:'fabHandler', label:'[[fab]] handler', type:'text', default:'', sh:true, hint:'Default shell for fab items that have no own script. -sh: handler-sh.' },
-      { key:'fabIcon', label:'[[fab]] icon', type:'text', default:'', hint:'Default FAB icon.' },
-      { key:'mfItems', label:'menu / fab items', type:'mfitems', default:[], hint:'Toolbar/FAB entries. Cards emit [[menu.items]] / [[fab.items]]. Key → $state / $menu_id; icon, silent. Spinner: options-sh / options / items. Checkbox: get + set/script. File: suffix / mime / path-home / multiple. Other targets use matching keys. Empty → no output.' },
+      { key:'menuHandler', label:'[[menu]] handler', type:'text', default:'', hint:'Default shell command for menu items that have no own script. Same role as script.' },
+      { key:'menuIcon', label:'[[menu]] icon', type:'text', default:'', hint:'Icon for the menu container. Alias: icon-path.' },
+      { key:'fabHandler', label:'[[fab]] handler', type:'text', default:'', hint:'Default shell command for FAB items that have no own script. Same role as script.' },
+      { key:'fabIcon', label:'[[fab]] icon', type:'text', default:'', hint:'Icon for the FAB container.' },
+      { key:'mfItems', label:'menu / fab items', type:'mfitems', default:[], hint:'Toolbar/FAB entries. Cards emit [[menu.items]] / [[fab.items]]. Key → $state / $menu_id; icon, silent. Runnable items expose auto-off / auto-finish / auto-kill / auto-restart / interruptible / need-input / reload-page / reload. Spinner: options-sh / options / items. Checkbox: get + set/script. File: suffix / mime / path-home / multiple. Other targets use matching keys. Empty → no output.' },
     ],
     code: f => {
       const lk = shOrStatic(f, 'loadKey', 'load-key');
       const loadKey = lk ? lk.slice(1) + '\n\n' : '';
       const keyLine = f.nodeKey ? `\nkey = "${tomlEsc(f.nodeKey)}"` : '';
-      let out = loadKey + `[[group]]${titleLine(f)}${keyLine}${supportLine(f)}\n\n[[action]]\ntitle = "${tomlEsc(f.child1)}"\nscript = "..."\n\n[[picker]]\ntitle = "${tomlEsc(f.child2)}"\nget = "..."\nset = "..."\n`;
+      let out = loadKey + `[[group]]${titleLine(f)}${keyLine}${supportLine(f)}\n`;
       const rf = (f.resourceFile||'').trim();
       const rd = (f.advResDir||'').trim();
       if (rf || rd) {
@@ -1684,7 +1808,7 @@ const TYPES = {
       const mf = parseMfItems(f.mfItems);
       const containerBlock = (kind, rows, handlerKey, iconKey) => {
         if (!rows.length) return '';
-        const handler = shOrStatic(f, handlerKey, 'handler');
+        const handler = handlerLine(f, handlerKey);
         const icon = (f[iconKey] || '').trim();
         return `[[${kind}]]` + handler + (icon ? `\nicon = "${tomlEsc(icon)}"` : '') + rows.map(r=>mfItemBlock(kind,r)).join('');
       };
@@ -1724,7 +1848,7 @@ const TYPES = {
     },
     hint: f => {
       if (supportHidden(f)) return 'support = false — set the field back to "true" to render this group and its children again.';
-      let h = 'A group is a title + its children (cannot be nested). [[resource]] and [[menu]]/[[fab]] blocks authored here are emitted under the children.';
+      let h = 'A group is a title + its following flat children (cannot be nested). This generator emits the group header itself; create child nodes in their own tabs. [[resource]] and [[menu]]/[[fab]] blocks authored here remain root-level containers.';
       if (f.supportShOn) h += ' a shell support makes visibility dynamic — the demo cannot predict it.';
       if ((f.loadKey||'').trim()) h += ' load-key is emitted at the very top of the file (page-level i18n directive).';
       return h;
@@ -1744,7 +1868,7 @@ const TYPES = {
       { key:'target', label:'target type', type:'select', options:['config (sub .toml)','config-sh (script → path or inline TOML)','html (WebView URL)','link (open browser)','activity (launch Activity)'], default:'config (sub .toml)' },
       { key:'targetValue', label:'target value', type:'text', default:'', ph: s => targetValuePh(s.target), hint:'Match target: config = path · config-sh = script · html/link = URL · activity = intent. Blank → omitted.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'' },
-      { key:'support', label:'support', type:'text', default:'true', sh:true, hint:'true = show · false = hide · other = shell → 1. -sh = shell form.' },
+      { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide · other = shell → 1. Shell switches this field to its shell form.' },
       { key:'lock', label:'lock', type:'text', default:'', sh:true, hint:'"1|message" or "1" — or a shell string printing "1" to lock. Blank = unlocked. -sh: lock-sh — a lock-check sample is filled auto.' },
       rowsField(),
     ],
@@ -1818,7 +1942,7 @@ const TYPES = {
       { key:'bgTask', label:'bg-task - Run in background', type:'checkbox', default:false, hint:'Runs without a log dialog.' },
       { key:'interruptible', label:'interruptible', type:'checkbox', default:false, hint:'Allow interruption.' },
       { key:'needInput', label:'need-input', type:'checkbox', default:false, hint:'Script uses "read" input.' },
-      { key:'support', label:'support', type:'text', default:'true', sh:true, hint:'true = show · false = hide · other = shell → 1. -sh = shell form.' },
+      { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide · other = shell → 1. Shell switches this field to its shell form.' },
       { key:'lock', label:'lock', type:'text', default:'', sh:true, hint:'"1|message" or "1" — or a shell string printing "1" to lock. Blank = unlocked. -sh: lock-sh — a lock-check sample is filled auto.' },
       rowsField(),
     ],
@@ -1827,11 +1951,13 @@ const TYPES = {
       const scriptLine = (f.script||'').trim() ? `\nscript = "${tomlEsc(f.script)}"` : '';
       const rows = f.rows && f.rows.trim() ? rowsBlockToml('action', f.rows) : '';
       const pRows = f.paramsRows && f.paramsRows.trim() ? rowsBlockToml('action', f.paramsRows, '.params-rows') : '';
+      const params = f.paramList || [];
+      const paramNamesOut = resolvedParamNames(params);
       return groupHeaderToml(f)
         + `[[action]]${titleLine(f)}${descLine(f)}${summaryLine(f)}${iconLine(f)}${photoLine(f)}${bgLine(f)}${mediaLines(f)}${resourceLines(f)}${keyLine}${supportLine(f)}`
         + `${f.confirm?`\nconfirm = true`:''}${warnLine(f)}${f.menu?`\nmenu = true`:''}${showLine(f)}${f.autoOff?`\nauto-off = true`:''}${f.autoFinish?`\nauto-finish = true`:''}${shellLine(f)}${f.interruptible?`\ninterruptible = true`:''}${f.needInput?`\nneed-input = true`:''}`
         + `${lockLine(f)}${runnableTail(f)}${gating(f)}`
-        + scriptLine + rows + (f.paramList || []).map(q => paramToToml(q)).join('') + pRows + '\n';
+        + scriptLine + rows + params.map((q,i) => paramToToml(q, paramNamesOut[i])).join('') + pRows + '\n';
     },
     demo: f => {
       const locked = !!(f.lock||'').trim();
@@ -1887,7 +2013,7 @@ const TYPES = {
       { key:'desc', label:'desc', type:'text', default:'Enable fast charging', sh:true, hint:'-sh: desc-sh — the value becomes echo "…" auto.' },
       { key:'icon', label:'icon', type:'text', default:'', sh:true, hint:'File PATH shown on the left — e.g. {ICON}/switch.png. -sh: icon-sh.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'' },
-      { key:'support', label:'support', type:'text', default:'true', sh:true, hint:'true = show · false = hide · other = shell → 1. -sh = shell form.' },
+      { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide · other = shell → 1. Shell switches this field to its shell form.' },
       { key:'get', label:'get', type:'text', default:'getprop sys.fastcharge', hint:'Must output "1" or "0". Deferred — batched after the page renders. Blank = omitted.' },
       { key:'set', label:'set', type:'text', default:'setprop sys.fastcharge $state', hint:'Runs with $state = "1" or "0". Blank = omitted.' },
       { key:'lock', label:'lock', type:'text', default:'', sh:true, hint:'"1|message" or "1" — or a shell string printing "1" to lock. Blank = unlocked. -sh: lock-sh — a lock-check sample is filled auto.' },
@@ -1935,12 +2061,13 @@ const TYPES = {
     wrap: true,
     desc: 'Shows a value and opens an option list. Supports [[picker.options]] or options-sh.',
     adv: [...ADV_DYN, ...ADV_VIS, ...ADV_MEDIA, ...ADV_LOCKSEC, ...ADV_RES, ...ADV_RUNNABLE, A_SEP],
-    advNote: 'Choose ONE: options-sh, [[picker.options]], or items ("value|Title"). multiple joins values with separator. get is deferred. -sh enables dynamic title/icon/support/lock.',
+    advNote: 'Choose ONE: options-sh, [[picker.options]], or items ("value|Title"). multiple joins values with separator. get is deferred. -sh enables dynamic title/desc/icon/support/lock.',
     fields: [
       { key:'title', label:'title', type:'text', default:'Governor', sh:true, hint:'-sh: title-sh — the value becomes echo "…" auto.' },
+      { key:'desc', label:'desc', type:'text', default:'Select a governor', sh:true, hint:'NodeInfoBase description shown under the picker title. -sh: desc-sh.' },
       { key:'icon', label:'icon', type:'text', default:'⚙️', sh:true, hint:'File path required — e.g. {ICON}/picker.png ({HOME} ok); emoji is preview-only. The real app loads the icon from a PATH. -sh: icon-sh.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'' },
-      { key:'support', label:'support', type:'text', default:'true', sh:true, hint:'true = show · false = hide · other = shell → 1. -sh = shell form.' },
+      { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide · other = shell → 1. Shell switches this field to its shell form.' },
       { key:'lock', label:'lock', type:'text', default:'', sh:true, hint:'"1|message" or "1" — or a shell string printing "1" to lock. Blank = unlocked. -sh: lock-sh — a lock-check sample is filled auto.' },
       { key:'multiple', label:'multiple', type:'checkbox', default:false, hint:'Allow selecting more than one value.' },
       { key:'get', label:'get', type:'text', default:'cat /sys/.../scaling_governor', hint:'Blank = omitted.' },
@@ -1973,7 +2100,7 @@ const TYPES = {
       const setLine = (f.set||'').trim() ? `\nset = "${tomlEsc(f.set)}"` : '';
       const sep = (f.multiple && (f.advSeparator||'').trim()) ? `\nseparator = "${tomlEsc(f.advSeparator.trim())}"` : '';
       return groupHeaderToml(f)
-        + `[[picker]]${titleLine(f)}${iconLine(f)}${summaryLine(f)}${photoLine(f)}${bgLine(f)}${mediaLines(f)}${resourceLines(f)}${keyLine}${supportLine(f)}${f.multiple?`\nmultiple = true`:''}${sep}`
+        + `[[picker]]${titleLine(f)}${descLine(f)}${iconLine(f)}${summaryLine(f)}${photoLine(f)}${bgLine(f)}${mediaLines(f)}${resourceLines(f)}${keyLine}${supportLine(f)}${f.multiple?`\nmultiple = true`:''}${sep}`
         + getLine + setLine + `${f.confirm?`\nconfirm = true`:''}${warnLine(f)}${shellLine(f)}${f.needInput?`\nneed-input = true`:''}${f.interruptible?`\ninterruptible = true`:''}${f.autoOff?`\nauto-off = true`:''}${f.autoFinish?`\nauto-finish = true`:''}` + optMain + lockLine(f) + runnableTail(f) + gating(f) + optTables + '\n';
     },
     demo: f => {
@@ -2013,7 +2140,7 @@ const TYPES = {
       { key:'title', label:'title', type:'text', default:'Device info', sh:true, hint:'-sh: title-sh — the value becomes echo "…" auto. Hidden from the preview header when group wrap is ON.' },
       { key:'desc', label:'desc', type:'text', default:'Additional device information', sh:true, hint:'NodeInfoBase description under the title. -sh: desc-sh.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Unique node ID.' },
-      { key:'support', label:'support', type:'text', default:'true', sh:true, hint:'"false" hides the text block; another string is treated as a shell returning "1". -sh: a shell form.' },
+      { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'"false" hides the text block; another string is treated as a shell returning "1". Shell switches this field to its shell form.' },
       { key:'rowsMain', label:'rows', type:'rowcards', default:'bold|Kernel version\nmono|5.10.101-perf+\nunderline|Important notice\nstrike|Deprecated field\ncenter|— updated today —\ndivider\nprogress|Battery health|82\ntoggle|Show notifications\nplain|Last updated 3 days ago\nlink|View full changelog', hint:'Cards emit [[text.rows]]. Style selects the row type; toggle → get/set; progress → percent/max.' },
     ],
     code: f => {
@@ -2049,7 +2176,7 @@ const TYPES = {
       { key:'placeholder', label:'placeholder', type:'text', default:'', hint:'Hint when file is empty.' },
       { key:'needInput', label:'need-input', type:'checkbox', default:false, hint:'Edited script uses read; show input on Run.' },
       { key:'value', label:'value', type:'text', default:'', sh:true, hint:'Initial content; only if file is new. -sh: value-sh (the script output becomes the initial content and wins over value).' },
-      { key:'support', label:'support', type:'text', default:'true', sh:true, hint:'true = show · false = hide · other = shell → 1. -sh = shell form.' },
+      { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide · other = shell → 1. Shell switches this field to its shell form.' },
       { key:'lock', label:'lock', type:'text', default:'', sh:true, hint:'"1|message" or "1" — or a shell string printing "1" to lock. Blank = unlocked. -sh: lock-sh — a lock-check sample is filled auto.' },
       rowsField(),
       { key:'preview', label:'file preview (one line per row)', type:'textarea', default:'ro.build.version.release=14\nro.product.model=Redmi Note 12\npersist.sys.fastcharge=1\nro.debuggable=0' },
@@ -2099,7 +2226,7 @@ const TYPES = {
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'' },
       { key:'confirm', label:'confirm before running', type:'checkbox', default:false, hint:'Confirm before download/run.' },
       { key:'warn', label:'warn', type:'text', default:'', sh:true, hint:'Confirmation text. -sh: warn-sh — the value becomes echo "…" auto. Blank = omitted.' },
-      { key:'support', label:'support', type:'text', default:'true', sh:true, hint:'true = show · false = hide · other = shell → 1. -sh = shell form.' },
+      { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide · other = shell → 1. Shell switches this field to its shell form.' },
       { key:'lock', label:'lock', type:'text', default:'', sh:true, hint:'"1|message" or "1" — or a shell string printing "1" to lock. Blank = unlocked. -sh: lock-sh — a lock-check sample is filled auto.' },
       { key:'state', label:'preview state', type:'select', options:['idle','downloading','done','error'], default:'downloading' },
       { key:'pct', label:'preview progress % (when downloading)', type:'text', default:'45' },
@@ -2135,39 +2262,7 @@ const TYPES = {
     hint: f => ((f.url||'').trim() ? '' : '⚠ url is empty — the parser skips a download node that has neither url nor url-sh. ')
       + 'Shows download_done once the download and any follow-up script both finish successfully; a failed download or script keeps the item tappable to retry.'
   },
-  resource: {
-    label: 'resource',
-    wrap: false,
-    desc: '[[resource]] is an invisible asset-extraction node. It copies an APK asset file or directory to the app/toolkit storage before the referenced node uses it.',
-    adv: [],
-    advNote: 'Use resource-file/resource-dir for simple extraction, or add one [[resource.resources]] entry per file or directory.',
-    fields: [
-      { key:'resourceFile', label:'resource-file', type:'text', default:'busybox', hint:'APK asset file to extract. Blank = omitted.' },
-      { key:'resourceDir', label:'resource-dir', type:'text', default:'', hint:'APK asset directory to extract. Blank = omitted.' },
-      { key:'resourceEntries', label:'[[resource.resources]]', type:'textarea', default:'', ph:'file=assets/tools/busybox\ndir=assets/scripts', hint:'One child per line: file=ASSET_PATH or dir=ASSET_PATH. Emits [[resource.resources]] tables in order.' },
-    ],
-    code: f => {
-      const rf = (f.resourceFile||'').trim();
-      const rd = (f.resourceDir||'').trim();
-      const entries = String(f.resourceEntries||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      const child = entries.map(line => {
-        const m = line.match(/^(file|dir)\s*=\s*(.*)$/i);
-        if (!m || !m[2].trim()) return '';
-        let value = m[2].trim();
-        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) value = value.slice(1,-1);
-        return `\n[[resource.resources]]\n${m[1].toLowerCase()} = "${tomlEsc(value)}"`;
-      }).filter(Boolean).join('');
-      return `[[resource]]${rf ? `\nresource-file = "${tomlEsc(rf)}"` : ''}${rd ? `\nresource-dir = "${tomlEsc(rd)}"` : ''}${child}\n`;
-    },
-    demo: f => {
-      const rf = (f.resourceFile||'').trim(), rd = (f.resourceDir||'').trim();
-      return `<div class="d-body"><div class="d-item"><div class="d-icon">&#128230;</div><div class="d-content"><div class="d-title2">Asset extraction</div><div class="d-desc">${esc(rf || rd || 'No resource selected')}</div></div></div></div>`;
-    },
-    hint: f => {
-      const rf = (f.resourceFile||'').trim(), rd = (f.resourceDir||'').trim();
-      return rf || rd ? 'The resource node is invisible in the real page; it only extracts the selected APK asset(s).' : 'Set resource-file or resource-dir to emit the [[resource]] node.';
-    }
-  },
+
 
 };
 
@@ -2177,7 +2272,7 @@ const TYPES = {
 const DOCS = {
 
   group: {
-    intro: `<code>[[group]]</code> is a container that groups related nodes. It renders as a grey uppercase header — no icon, not clickable. All flat entries declared <em>after</em> it (until the next <code>[[group]]</code>) automatically become its children; entries before the first group render directly on the page without a header. <code>[[resource]]</code> has a dedicated tab; the group tab can also emit resource blocks and page-level <code>[[menu]]</code>/<code>[[fab]]</code> containers.`,
+    intro: `<code>[[group]]</code> is a container that groups related nodes. It renders as a grey uppercase header — no icon, not clickable. All flat entries declared <em>after</em> it (until the next <code>[[group]]</code>) automatically become its children; entries before the first group render directly on the page without a header. <code>[[resource]]</code> is emitted from the group tab when asset extraction is needed; the same tab also emits page-level <code>[[menu]]</code>/<code>[[fab]]</code> containers.`,
     fields: [
       ['title','','String','""','Group title, displayed uppercase and grey. Accepts <code>@string/…</code>'],
       ['title-sh','','String','""','<span class="badge shell">shell</span> Script producing the title dynamically; overrides <code>title</code>'],
@@ -2188,24 +2283,30 @@ const DOCS = {
 <div class="doc-tbl-wrap"><table class="doc-tbl">
 <tr><th>Field</th><th>Type</th><th>Description</th></tr>
 <tr><td>handler</td><td>String</td><td>Default shell used by child menu/FAB items that do not define their own <code>script</code>.</td></tr>
-<tr><td>handler-sh</td><td>String</td><td>Accepted alias by the parser for the handler value; the menu/FAB container reads <code>handler</code> or <code>handler-sh</code>.</td></tr>
+
 <tr><td>icon / icon-path</td><td>String</td><td>Container icon path. <code>icon-path</code> is an alias of <code>icon</code>.</td></tr>
 <tr><td>items</td><td>Array</td><td>Child <code>[[menu.items]]</code> or <code>[[fab.items]]</code> tables. Each item uses the fields below.</td></tr>
 </table></div>
 <div class="doc-tbl-wrap"><table class="doc-tbl">
 <tr><th>Item field</th><th>Alias / mode</th><th>Description</th></tr>
 <tr><td>type</td><td>String</td><td>Item type, such as <code>action</code>, <code>spinner</code>, <code>checkbox</code>, <code>file</code>, <code>folder</code>, <code>link</code>, <code>activity</code>, <code>html</code>, or <code>config</code>.</td></tr>
-<tr><td>style</td><td>String</td><td><code>fab</code> marks the item as a FAB entry; the parent <code>[[fab]]</code> already sets this context.</td></tr>
 <tr><td>title / text</td><td>String</td><td>Displayed item title.</td></tr>
+<tr><td>title-sh</td><td>String</td><td>Shell producing the item title dynamically.</td></tr>
 <tr><td>key / index / id</td><td>String</td><td>Optional item ID; the parser assigns a unique fallback when empty.</td></tr>
+<tr><td>support / visible</td><td>Bool|Shell</td><td>Whether the item is included. A shell is evaluated while parsing; <code>false</code> omits the item.</td></tr>
+<tr><td>icon / icon-path / icon-sh</td><td>String</td><td>Item icon path; <code>icon-sh</code> resolves it dynamically.</td></tr>
 <tr><td>script / set / setstate</td><td>String</td><td>Item shell. If empty, the parent <code>handler</code> is inherited.</td></tr>
+<tr><td>auto-off / auto-finish / auto-kill / auto-restart</td><td>Bool</td><td>Post-execution behavior supported by runnable menu/FAB items.</td></tr>
+<tr><td>interruptible / need-input</td><td>Bool</td><td>Execution controls for the runnable item.</td></tr>
+<tr><td>reload-page / reload</td><td>Bool</td><td>Reload the page after execution. The generator emits the supported <code>true</code> form.</td></tr>
+<tr><td>silent / hidden</td><td>Bool</td><td>Execute without the normal log dialog while retaining the item.</td></tr>
 <tr><td>get / getstate</td><td>String</td><td>State shell for checkbox/spinner items.</td></tr>
 <tr><td>options-sh / option-sh</td><td>String</td><td>Dynamic spinner option list; each output line is <code>value|Title</code>.</td></tr>
 <tr><td>options / items</td><td>Array</td><td>Static spinner options as child tables or compact <code>value|Title</code> strings.</td></tr>
-<tr><td>silent / hidden</td><td>Bool</td><td>Hide the item from normal display while retaining the configuration.</td></tr>
 <tr><td>suffix / mime / path-home / multiple</td><td>String / Bool</td><td>File/folder picker options.</td></tr>
 <tr><td>link / href / activity / a / intent / html / config / config-sh</td><td>String</td><td>External link, Activity, WebView, or sub-page target.</td></tr>
-</table></div>`,
+</table></div>
+<div class="doc-note warn"><b>Scope:</b> menu/FAB items are toolbar/popup entries, not normal page-list nodes. The generator therefore does not expose normal-node display fields such as <code>desc</code>/<code>summary</code>, or normal-node SDK/shortcut/lock fields. Navigation types (<code>link</code>, <code>activity</code>, <code>html</code>, <code>config</code>) open their target directly and do not use runnable fields.</div>`,
     notes: [
       ['warn','<code>load-after</code>, <code>min-sdk</code>, <code>max-sdk</code> and <code>allow-shortcut</code> are <b>not read on a group</b> — put them on the child nodes instead.'],
       ['danger','<b>Dot-notation removed:</b> nested entries like <code>[[group.action]]</code> are <b>silently ignored</b> — the parser only reads node tables at the top level of the document.'],
@@ -2309,7 +2410,7 @@ value = "5"`
       ['type','','String','text','One of the 15 control types (see the table below)'],
       ['value','value-sh','String','','Default value; with the -sh pill it becomes <code>value-sh</code> (dynamic default)'],
       ['desc','desc-sh','String','','Hint line under the label; with the -sh pill it becomes <code>desc-sh</code>'],
-      ['support','visible','Bool|Shell','true','Visibility; "true"/"1"/empty → omitted · "false"/"0" → <code>support = false</code> · other string → run as shell ("1" = shown) · the -sh pill only fills a shell sample, the emitted key is still <code>support</code>'],
+      ['support','visible','Bool|Shell','true','Visibility; "true"/"1"/empty → omitted · "false"/"0" → <code>support = false</code> · other string → run as shell ("1" = shown) · the Shell toggle fills a shell sample, while the emitted key remains <code>support</code>'],
       ['required','','Bool','false','Input must not be empty (card: more fields)'],
       ['readonly','','Bool|Shell','false','<code>true</code>/<code>false</code> or a shell returning "1" = read-only; with <code>sort = true</code> read-only params sink to the bottom'],
       ['placeholder','placeholder-sh','String','','Hint when empty (text / int / number)'],
@@ -2596,7 +2697,7 @@ const TOPICS = [
 { id:'intro', title:'1. Introduction — TOML pages', html:`
 <p><strong>Tool-Tree</strong> powers the function menu of the <code>com.tool.tree</code> Android app. Every page is described by a single <strong>TOML</strong> file (XML support has been removed). The parser lives in <code>com.omarea.krscript.config.PageConfigReader</code> and uses the <code>org.tomlj:tomlj</code> library.</p>
 <p>A page file is a <b>flat list of nodes</b> — group, page, action, switch, picker, text, editor, download, resource — plus the <code>[[action.params]]</code> input dialog (authored inside the action tab) — displayed top-to-bottom in the order they appear in the file. A node that follows a <code>[[group]]</code> (and precedes the next one) automatically becomes that group's child; no nesting is needed (or allowed).</p>
-<div class="doc-note tip">Use the tabs to edit a node, preview it, and copy its TOML. <code>[[resource]]</code>, <code>[[menu]]</code>/<code>[[fab]]</code>, and <code>[[action.params]]</code> have dedicated editors.</div>`
+<div class="doc-note tip">Use the tabs to edit a node, preview it, and copy its TOML. <code>[[resource]]</code> is generated from the group tab; <code>[[menu]]</code>/<code>[[fab]]</code> and <code>[[action.params]]</code> have dedicated editors.</div>`
 },
 { id:'overview', title:'2. Node types overview', html:`
 <div class="doc-tbl-wrap"><table class="doc-tbl">
@@ -2610,14 +2711,14 @@ const TOPICS = [
 <tr><td>text</td><td>static</td><td>Rich-text block built from rows (bold/italic/link/divider/toggle/progress)</td></tr>
 <tr><td>editor</td><td>clickable</td><td>Opens a file in the built-in text editor</td></tr>
 <tr><td>download</td><td>runnable</td><td>Downloads a file with progress, then may run a follow-up script</td></tr>
-<tr><td>resource</td><td>invisible</td><td>Extracts APK assets; can be generated directly from the resource tab or alongside a group</td></tr>
+<tr><td>resource</td><td>invisible</td><td>Extracts APK assets; is generated from the group tab when needed</td></tr>
 <tr><td>menu / fab</td><td>containers</td><td>Page toolbar menu and floating buttons; authored in the group tab.</td></tr>
 </table></div>
 <p><b>Clickable</b> = page, action, switch, picker, editor, download. <b>Runnable</b> = action, switch, picker, download. A node's type IS its TOML table name — there is no separate <code>type</code> field for the node itself.</p>`
 },
 { id:'syntax', title:'3. TOML syntax and special values', html:`
-<h4>Always use double brackets [[name]]</h4>
-<p>TOML forbids mixing <code>[name]</code> and <code>[[name]]</code> for the same key — a parse error. Always use <code>[[name]]</code>, even for a single entry.</p>
+<h4>Use single tables for one entry, double brackets for repeatable entries</h4>
+<p>Tool-Tree accepts both <code>[name]</code> (one table) and <code>[[name]]</code> (array of tables). Use <code>[[name]]</code> for repeatable nodes and child collections. Do not mix the two forms as though they were separate entries for the same key.</p>
 <h4>Node type = table name — no "type" field</h4>
 <p><code>group</code>, <code>page</code>, <code>action</code>, <code>switch</code>, <code>picker</code>, <code>text</code>, <code>editor</code>, <code>download</code>, <code>resource</code>, <code>menu</code>, <code>fab</code>.</p>
 <h4>Children = nearest preceding [[group]]; order = file position</h4>
@@ -2851,7 +2952,7 @@ lock = "{LOT}|Requires root access"</pre>`
 <li>Always <code>[[name]]</code> — mixing <code>[name]</code> with <code>[[name]]</code> is a parse error.</li>
 <li>No dot-notation: <code>[[group.action]]</code> is silently ignored. Children attach to the nearest preceding <code>[[group]]</code>.</li>
 <li>Wrap a lone node in a section header with <code>[[group]]</code> — the generator's "wrap in [[group]]" checkbox at the top of Fields emits this for you.</li>
-<li>Author standalone <code>[[resource]]</code> from the <b>resource</b> tab; the <b>group</b> tab can also emit resource/menu/fab blocks. Author <code>[[action.params]]</code> inside the <b>action</b> tab.</li>
+<li>Author <code>[[resource]]</code> from the <b>group</b> tab when you need asset extraction; the same tab also emits menu/fab blocks. Author <code>[[action.params]]</code> inside the <b>action</b> tab.</li>
 <li><code>support = false</code> on a group hides AND skips its children's shells entirely.</li>
 <li>Expensive shell in <code>support</code>? Add <code>load-after = true</code> so the page shows first.</li>
 <li>Never write both a static field and its <code>*-sh</code> variant — keep exactly one (the generator auto-switches the input between text and shell form when you toggle the pill).</li>
@@ -2873,6 +2974,7 @@ lock = "{LOT}|Requires root access"</pre>`
 },
 { id:'changelog', title:'13. Changelog', html:`<div class="doc-note tip">
 <b>Note:</b> This section is intended to record notable changes to the documentation and TOML generator. Only add changes that affect syntax, data fields, usage, or generator behavior; minor interface-only changes do not need to be listed.
+<ul><li><b>2026-10-03</b> — Generator v20: removed the redundant resource toolbar tab; resource extraction remains available from the group tab; group no longer emits sample child nodes; menu/FAB output now respects navigation/system-action behavior; blank executable samples are omitted; numeric/dependency checks are stricter; parameter auto-names avoid collisions; drafts persist locally.</li></ul>
 </div>`
 },
 ];
@@ -2882,6 +2984,26 @@ lock = "{LOT}|Requires root access"</pre>`
 // ============================================================================
 let cur = 'group';
 const state = {};
+const DRAFT_STORAGE_KEY = 'tool-tree.toml-generator.v2';
+let draftSaveTimer = 0;
+function scheduleDraftSave() {
+  clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ cur, state }));
+    } catch (_) {}
+  }, 180);
+}
+function restoreDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (!saved || typeof saved !== 'object' || !saved.state) return;
+    Object.keys(TYPES).forEach(k => { if (saved.state[k] && typeof saved.state[k] === 'object') state[k] = saved.state[k]; });
+    if (TYPES[saved.cur]) cur = saved.cur;
+  } catch (_) {}
+}
 
 function newParam(type, title) {
   return { name:'', title: title || 'Param', label:'', type: type || 'text', min:'', max:'', value:'', desc:'', support:'true', extra:'', options: null, items: null, optMode: 'tables', optionsShOn:false, optionsSh:'', sh:{}, shOn:{}, x:{}, dep:{ on:'', value:'', mode:'none' } };
@@ -2917,6 +3039,7 @@ function fieldHtml(field, val, prefix) {
   const id = prefix + field.key;
   const phv = typeof field.ph === 'function' ? field.ph(state[cur]) : field.ph;
   const hint = field.hint ? `<div class="hint">${esc(field.hint)}</div>` : '';
+  const shLabel = field.shellOnly ? 'Shell' : '-sh';
   if (field.type === 'checkbox') {
     const shortHint = field.hint && field.hint.length <= 55;
     if (shortHint) {
@@ -2999,7 +3122,7 @@ function fieldHtml(field, val, prefix) {
     return `<div class="field"><label for="${id}">${esc(field.label)}</label><div class="in-wrap"><textarea id="${id}" data-key="${field.key}" placeholder="${esc(phv||'')}">${esc(val)}</textarea><button type="button" class="in-clear" data-clearkey="${field.key}" title="Clear this field">✕</button></div>${hint}</div>`;
   }
   const labelRow = field.sh
-    ? `<div class="field-label-row"><label class="fl-main" for="${id}">${esc(field.label)}</label><label class="sh-toggle${state[cur][field.key+'ShOn']?' on':''}" for="${id}_shon"><input type="checkbox" id="${id}_shon" data-key="${field.key}ShOn"${state[cur][field.key+'ShOn']?' checked':''}>-sh</label></div>`
+    ? `<div class="field-label-row"><label class="fl-main" for="${id}">${esc(field.label)}</label><label class="sh-toggle${state[cur][field.key+'ShOn']?' on':''}" for="${id}_shon"><input type="checkbox" id="${id}_shon" data-key="${field.key}ShOn"${state[cur][field.key+'ShOn']?' checked':''}>${field.shellOnly?'Shell':'-sh'}</label></div>`
     : `<label for="${id}">${esc(field.label)}</label>`;
   return `<div class="field">${labelRow}<div class="in-wrap"><input type="text" id="${id}" data-key="${field.key}" value="${esc(val)}" placeholder="${esc(phv||'')}"><button type="button" class="in-clear" data-clearkey="${field.key}" title="Clear this field">✕</button></div>${hint}</div>`;
 }
@@ -3018,7 +3141,7 @@ function renderForm() {
   const faT = el('faType');
   if (faT) faT.textContent = t.label;
   const wrapFields = t.wrap
-    ? [A_GROUP, ...(s.advGroup ? [A_GROUPTITLE, MF_ITEMS_WRAP] : [])]
+    ? [A_GROUP, ...(s.advGroup ? [A_GROUPTITLE, MF_MENU_HANDLER_WRAP, MF_MENU_ICON_WRAP, MF_FAB_HANDLER_WRAP, MF_FAB_ICON_WRAP, MF_ITEMS_WRAP] : [])]
     : [];
   el('formFields').innerHTML = wrapFields.map(f => fieldHtml(f, s[f.key], 'bf_')).join('')
     + (t.fields||[]).map(f => fieldHtml(f, s[f.key], 'bf_')).join('');
@@ -3110,9 +3233,129 @@ function hlToml(src) {
   flush();
   return out.join('');
 }
+function generatedTomlScan(src) {
+  const issues = [];
+  let section = '';
+  let seen = new Set();
+  const lines = String(src || '').split('\n');
+  lines.forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) return;
+    const h = line.match(/^\[\[([^\]]+)\]\]$/);
+    if (h) { section = h[1]; seen = new Set(); return; }
+    const kv = line.match(/^([A-Za-z0-9_-]+)\s*=/);
+    if (kv) {
+      const key = kv[1];
+      if (seen.has(key)) issues.push({level:'error', text:`line ${i+1}: duplicate key "${key}" in [[${section}]]`});
+      seen.add(key);
+    }
+  });
+  return issues;
+}
+function pushIntIssue(issues, label, value) {
+  const v = String(value ?? '').trim();
+  if (v && !isIntText(v)) issues.push({level:'warning', text:`${label} must be an integer; the invalid value will be omitted from TOML`});
+}
+function pushNumIssue(issues, label, value) {
+  const v = String(value ?? '').trim();
+  if (v && !isNumberText(v)) issues.push({level:'warning', text:`${label} must be numeric; the invalid value will be omitted from TOML`});
+}
+function validateParamState(issues, list) {
+  const names = resolvedParamNames(list);
+  const explicitSeen = new Set();
+  list.forEach((p, i) => {
+    const raw = (p.name||'').trim();
+    if (raw) {
+      const normalized = paramNameFrom(raw);
+      if (explicitSeen.has(normalized)) issues.push({level:'error', text:`param #${i+1}: duplicate parameter name "${normalized}"`});
+      explicitSeen.add(normalized);
+    }
+    if (['int','seekbar'].includes(p.type)) { pushIntIssue(issues, `param #${i+1} min`, p.min); pushIntIssue(issues, `param #${i+1} max`, p.max); }
+    else if (p.type === 'number') { pushNumIssue(issues, `param #${i+1} min`, p.min); pushNumIssue(issues, `param #${i+1} max`, p.max); }
+    if (p.type === 'text') pushIntIssue(issues, `param #${i+1} maxlength`, (p.x||{}).maxlength);
+    const dep = p.dep || {};
+    depWarnings(list, p).forEach(w => issues.push({level:'warning', text:`param #${i+1}: ${w}`}));
+  });
+  return names;
+}
+function validateMfItems(issues, rows) {
+  (rows||[]).map(mfNorm).forEach((r, i) => {
+    const label = `menu/fab item #${i+1}`;
+    const t = r.type;
+    if (MF_RUN_TYPES.includes(t)) {
+      const hasRunner = !!((r.script||'').trim() || (r.set||'').trim());
+      if (!hasRunner) issues.push({level:'warning', text:`${label}: no script/set is configured; the item may do nothing (unless a parent handler supplies the script)`});
+      if (t === 'checkbox' && !(r.get||'').trim()) issues.push({level:'warning', text:`${label}: checkbox has no get/getstate script, so its checked state cannot be read dynamically`});
+      if (t === 'spinner') {
+        const mode = r.optMode || 'options';
+        const hasOptions = mode === 'sh' ? !!(r.optSh||'').trim() : mode === 'items' ? (r.items||[]).some(x=>(x||'').trim()) : (r.options||[]).some(o=>((o&&o.value)||'').trim() || ((o&&o.title)||'').trim());
+        if (!hasOptions) issues.push({level:'warning', text:`${label}: spinner has no options/options-sh/items configured`});
+      }
+    }
+    if (t === 'link' && r.link && !/^https?:\/\//i.test(r.link.trim())) issues.push({level:'warning', text:`${label}: link does not look like an http(s) URL`});
+    if (t === 'html' && r.html && !/^(https?:\/\/|[A-Za-z]:[\\/]|\/)/i.test(r.html.trim())) issues.push({level:'warning', text:`${label}: html should be a URL or a valid file path`});
+    if (r.minSdk) pushIntIssue(issues, `${label} min-sdk`, r.minSdk);
+    if (r.maxSdk) pushIntIssue(issues, `${label} max-sdk`, r.maxSdk);
+    if (r.targetSdk) pushIntIssue(issues, `${label} target-sdk`, r.targetSdk);
+    if (isIntText(r.minSdk) && isIntText(r.maxSdk) && +r.minSdk > +r.maxSdk) issues.push({level:'warning', text:`${label}: min-sdk is greater than max-sdk`});
+    if (isIntText(r.minSdk) && isIntText(r.targetSdk) && +r.targetSdk < +r.minSdk) issues.push({level:'warning', text:`${label}: target-sdk is below min-sdk`});
+    if (isIntText(r.maxSdk) && isIntText(r.targetSdk) && +r.targetSdk > +r.maxSdk) issues.push({level:'warning', text:`${label}: target-sdk is above max-sdk`});
+  });
+}
+function validateCurrentConfig(type, s, code) {
+  const issues = generatedTomlScan(code);
+  if (type === 'group') {
+    // group intentionally emits no sample children; menu/fab rows, if any, are real output.
+    validateMfItems(issues, s.mfItems || []);
+  }
+  if (type === 'action' && Array.isArray(s.paramList)) validateParamState(issues, s.paramList);
+  ['advMinSdk','advMaxSdk','advTargetSdk'].forEach(k => pushIntIssue(issues, k.replace('adv','').replace('Sdk','-sdk').toLowerCase(), s[k]));
+  if (type === 'page') {
+    const target = (s.targetValue||'').trim();
+    if (!target) issues.push({level:'warning', text:'page: no navigation target is configured; the generated node will not open another page'});
+    if (['config','config-sh','html','link','activity'].includes(s.target) && !target) issues.push({level:'error', text:`page: target type "${s.target}" is selected but target value is empty`});
+  }
+  if (type === 'editor' && !(s.file||'').trim()) issues.push({level:'error', text:'editor: file is required; the parser skips an editor without a file path'});
+  if (type === 'download' && !(s.url||'').trim()) {
+    issues.push({level:'error', text:'download: url or url-sh is required'});
+  }
+  if (type === 'picker') {
+    const O = s.options || {};
+    const mode = O.mode || 'tables';
+    const hasOptions = mode === 'sh' ? !!(O.sh||'').trim() : mode === 'items' ? (O.items||[]).some(x=>(x||'').trim()) : (O.rows||[]).some(o=>((o&&o.value)||'').trim() || ((o&&o.title)||'').trim());
+    if (!hasOptions) issues.push({level:'warning', text:'picker: no options/options-sh/items are configured'});
+  }
+  if (type === 'resource') {
+    const entries = String(s.resourceEntries||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    entries.forEach((line, i) => { if (!/^(file|dir)\s*=\s*.+$/i.test(line)) issues.push({level:'warning', text:`resource.resources #${i+1}: expected file=ASSET_PATH or dir=ASSET_PATH`}); });
+  }
+  if (s.advMinSdk && s.advMaxSdk && isIntText(s.advMinSdk) && isIntText(s.advMaxSdk) && +s.advMinSdk > +s.advMaxSdk) issues.push({level:'warning', text:'min-sdk is greater than max-sdk'});
+  if (s.advMinSdk && s.advTargetSdk && isIntText(s.advMinSdk) && isIntText(s.advTargetSdk) && +s.advTargetSdk < +s.advMinSdk) issues.push({level:'warning', text:'target-sdk is below min-sdk'});
+  if (s.advMaxSdk && s.advTargetSdk && isIntText(s.advMaxSdk) && isIntText(s.advTargetSdk) && +s.advTargetSdk > +s.advMaxSdk) issues.push({level:'warning', text:'target-sdk is above max-sdk'});
+  pushIntIssue(issues, 'placeholder-count', s.advPlaceholder);
+  return issues;
+}
+function renderValidation(type, s, code) {
+  const status = el('validationStatus'), box = el('validationBox');
+  if (!status || !box) return;
+  const issues = validateCurrentConfig(type, s, code);
+  const errors = issues.filter(x=>x.level==='error').length;
+  const warnings = issues.filter(x=>x.level==='warning').length;
+  status.classList.remove('warn','error');
+  if (!issues.length) {
+    status.textContent = '✓ checks passed';
+    box.innerHTML = '';
+    return;
+  }
+  if (errors) { status.classList.add('error'); status.textContent = `✕ ${errors} error${errors>1?'s':''}${warnings?`, ${warnings} warning${warnings>1?'s':''}`:''}`; }
+  else { status.classList.add('warn'); status.textContent = `⚠ ${warnings} warning${warnings>1?'s':''}`; }
+  box.innerHTML = issues.map(x=>`<div class="validation-item ${x.level}">${x.level==='error'?'✕':'⚠'} ${esc(x.text)}</div>`).join('');
+}
 function renderCode() {
   const code = TYPES[cur].code(state[cur]);
   el('codeOut').innerHTML = hlToml(code);
+  renderValidation(cur, state[cur], code);
+  scheduleDraftSave();
 }
 function docsHtml(type) {
   const d = DOCS[type];
@@ -3189,8 +3432,14 @@ function applyInput(e) {
     if (!r) return;
     if (t.dataset.mffield) {
       const fk = t.dataset.mffield;
-      if (t.type === 'checkbox') r[fk] = t.checked;
-      else r[fk] = t.value;
+      if (t.type === 'checkbox') {
+        r[fk] = t.checked;
+        if (fk.endsWith('ShOn')) {
+          const base = fk.slice(0, -4);
+          if (t.checked && !(r[base + 'Sh'] || '').trim()) r[base + 'Sh'] = mfShSample(base, r[base]);
+          renderForm();
+        }
+      } else r[fk] = t.value;
       if (fk === 'title') {
         const mcard = t.closest('.param-card');
         const mvc = mcard && mcard.querySelector('.param-var');
@@ -3274,7 +3523,7 @@ function applyInput(e) {
       const card = t.closest('.param-card');
       if (card) {
         const vc = card.querySelector('.param-var');
-        if (vc) vc.textContent = paramVar(p);
+        if (vc) vc.textContent = paramVar(p, list, +t.dataset.pidx);
       }
       refreshDepWarnings();
     } else if (t.dataset.pfield === 'title') {
@@ -3282,7 +3531,7 @@ function applyInput(e) {
       const card = t.closest('.param-card');
       if (card) {
         const vc = card.querySelector('.param-var');
-        if (vc) vc.textContent = paramVar(p);
+        if (vc) vc.textContent = paramVar(p, list, +t.dataset.pidx);
         const nm = card.querySelector('input[data-pfield="name"]');
         if (nm && !nm.value) nm.placeholder = paramNameFrom(p.title || p.label);
       }
@@ -3349,7 +3598,13 @@ function applyInput(e) {
   const k = t.dataset.key;
   if (!k) return;
   state[cur][k] = t.type === 'checkbox' ? t.checked : t.value;
-  if (k === 'advGroup') renderForm();
+  if (k === 'advGroup') {
+    if (state[cur][k]) {
+      if (!Array.isArray(state[cur].mfItems)) state[cur].mfItems = [];
+      if (state[cur].advGroupTitle === undefined) state[cur].advGroupTitle = '';
+    }
+    renderForm();
+  }
   if (k === 'target') {
     const tv = el('bf_targetValue');
     if (tv) tv.placeholder = targetValuePh(state[cur].target);
@@ -3558,8 +3813,9 @@ el('formFields').addEventListener('click', e => {
   }
   const mfadd = e.target.closest('[data-mfadd]');
   if (mfadd) {
-    const rows = state[cur].mfItems = state[cur].mfItems || [];
-    rows.push(mfNew(mfadd.dataset.mfadd));
+    const rows = state[cur].mfItems = Array.isArray(state[cur].mfItems) ? state[cur].mfItems : [];
+    const style = mfadd.dataset.mfadd === 'fab' ? 'fab' : 'menu';
+    rows.push(mfNew(style));
     renderForm(); safe(renderDemo); safe(renderHint); safe(renderCode);
     return;
   }
@@ -3763,6 +4019,7 @@ function initPanelOpen() {
   if (window.matchMedia('(min-width: 821px)').matches) d.open = true;
 }
 Object.keys(TYPES).forEach(t => { state[t] = initState(t); });
+restoreDraft();
 renderTopics();
 selectType('group');
 initPanelOpen();

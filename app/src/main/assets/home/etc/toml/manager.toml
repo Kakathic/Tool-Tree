@@ -9,16 +9,80 @@ link = "https://kakathic.github.io/Tool-Tree/website/Toml-generator.html"
 
 [[group]]
 [[action]]
-title = "Thư mục"
+title = "Thư mục add-on"
 menu = true
 show = true
 shell = "hidden"
+warn = "Tài khoản có tác dụng là khi bạn upload add-on lên kho, nếu khớp tài khoản lần đầu upload, add-on sẽ được phép cập nhật, nếu sai tài khoản nó sẽ bị bỏ qua.\nLưu ý: Không được dùng tên tác giả add-on giống với tên tài khoản, nếu người khác dùng tên tài khoản của bạn, họ có thể thay đổi add-on của bạn."
+
+[[action.params]]
+name = "acc"
+title = "Nhập tên tài khoản"
+label = "Tài khoản"
+desc = "Nó giống như một loại mã để phân biệt, khi update add-on"
+type = "text"
+required = true
 
 [[action.params]]
 name = "test"
-title = "Param 1"
-label = "Jdjej"
+desc = "Lựa chọn tên id của add-on, nếu chưa có nó sẽ tạo mới"
+label = "Nhập tên"
 type = "single-select"
 options-sh = "echo \"1\n2\n3\""
 required = true
 editable = true
+
+[[group]]
+[[action]]
+title = "Tạo Add-on.bash"
+
+[[action.params]]
+name = "nameadd"
+label = "Tên id"
+type = "text"
+readonly = true
+
+[[action.params]]
+name = "nameadd"
+title = "Nhập Tên add-on"
+label = "Tên add-on"
+type = "text"
+
+[[action.params]]
+name = "nameadd2"
+title = "Nhập Tên tác giả"
+label = "Tên tác giả"
+type = "text"
+
+[[action.params]]
+name = "nameadd3"
+title = "Nhập mô tả tính năng"
+label = "Mô tả"
+type = "text"
+
+[[action.params]]
+name = "nameadd4"
+title = "Nhập phiên bản"
+label = "Phiên bản"
+type = "number"
+
+[[action.params]]
+name = "nameadd5"
+title = "Nhập code phiên bản"
+label = "Mã phiên bản"
+type = "number"
+
+[[action.params]]
+name = "nameadd6"
+title = "Giới hạn quyền sử dụng"
+label = "Root để sử dụng"
+desc = "Thiết bị không root sẽ bị giới hạn, không thể sử dụng add-on"
+type = "switch"
+
+[[group]]
+[[page]]
+title = "Chỉnh sửa index.bash"
+config = "test.toml"
+lock-sh = """
+test -f $ETC/toml/test.toml && echo 0 || echo "Mở kiểm thử mã TOML trước"
+"""
