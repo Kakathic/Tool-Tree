@@ -603,7 +603,10 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                     window?.let { DialogHelper.applyEdgeToEdge(it, darkMode, dialogView) }
                                 }
                         } else {
-                            DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog
+                            DialogHelper.customDialog(requireActivity(), dialogView, cancelable).dialog.also {
+                                // Dialog nhỏ: bàn phím che ô nhập thì tự đẩy cửa sổ lên để lộ ô đang focus
+                                it.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+                            }
                         }
                         if (isLongList) {
                             if (cancelable) {

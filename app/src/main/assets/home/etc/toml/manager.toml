@@ -9,26 +9,28 @@ link = "https://kakathic.github.io/Tool-Tree/website/Toml-generator.html"
 
 [[group]]
 [[action]]
-title = "Thư mục add-on"
+title = "Dự án add-on"
 menu = true
 show = true
 shell = "hidden"
-warn = "Tài khoản có tác dụng là khi bạn upload add-on lên kho, nếu khớp tài khoản lần đầu upload, add-on sẽ được phép cập nhật, nếu sai tài khoản nó sẽ bị bỏ qua.\nLưu ý: Không được dùng tên tác giả add-on giống với tên tài khoản, nếu người khác dùng tên tài khoản của bạn, họ có thể thay đổi add-on của bạn."
+warn = """
+Tài khoản có tác dụng là khi bạn upload add-on lên kho, nếu khớp tài khoản lần đầu upload, add-on sẽ được phép cập nhật, nếu sai tài khoản nó sẽ bị bỏ qua.
+Lưu ý: Không được dùng tên tác giả add-on giống với tên tài khoản, nếu người khác dùng tên tài khoản của bạn, họ có thể thay đổi add-on của bạn.
+"""
 
 [[action.params]]
-name = "acc"
-title = "Nhập tên tài khoản"
+name = "account_add_on"
 label = "Tài khoản"
 desc = "Nó giống như một loại mã để phân biệt, khi update add-on"
 type = "text"
 required = true
 
 [[action.params]]
-name = "test"
-desc = "Lựa chọn tên id của add-on, nếu chưa có nó sẽ tạo mới"
+name = "list_add_on"
+desc = "Lựa chọn hoặc tạo mới id của add-on"
 label = "Nhập tên"
 type = "single-select"
-options-sh = "echo \"1\n2\n3\""
+options-sh = "findfile for $UZZ"
 required = true
 editable = true
 
@@ -37,52 +39,70 @@ editable = true
 title = "Tạo Add-on.bash"
 
 [[action.params]]
-name = "nameadd"
+name = "addon_name_id"
 label = "Tên id"
+desc = "Tự động lấy tên dự án hiện tại làm id"
 type = "text"
 readonly = true
 
 [[action.params]]
-name = "nameadd"
+name = "addon_name"
 title = "Nhập Tên add-on"
 label = "Tên add-on"
 type = "text"
+required = true
+placeholder = "Test"
 
 [[action.params]]
-name = "nameadd2"
+name = "addon_author"
 title = "Nhập Tên tác giả"
 label = "Tên tác giả"
 type = "text"
+required = true
+placeholder = "Kakathic"
 
 [[action.params]]
-name = "nameadd3"
+name = "addon_descss"
 title = "Nhập mô tả tính năng"
 label = "Mô tả"
 type = "text"
+required = true
+placeholder = "Test zzz"
 
 [[action.params]]
-name = "nameadd4"
+name = "addon_version"
 title = "Nhập phiên bản"
 label = "Phiên bản"
 type = "number"
+required = true
+placeholder = "1.0"
 
 [[action.params]]
-name = "nameadd5"
+name = "addon_code_version"
 title = "Nhập code phiên bản"
 label = "Mã phiên bản"
 type = "number"
+required = true
+placeholder = 100
 
 [[action.params]]
-name = "nameadd6"
-title = "Giới hạn quyền sử dụng"
+name = "addon_root"
+title = "sử dụng quyền root"
 label = "Root để sử dụng"
 desc = "Thiết bị không root sẽ bị giới hạn, không thể sử dụng add-on"
 type = "switch"
+required = true
 
-[[group]]
-[[page]]
-title = "Chỉnh sửa index.bash"
-config = "test.toml"
+[[editor]]
+title = "Sửa index.bash"
+file = "test.toml"
 lock-sh = """
 test -f $ETC/toml/test.toml && echo 0 || echo "Mở kiểm thử mã TOML trước"
 """
+
+[[group]]
+[[page]]
+title = "Quản lý add-on"
+icon = "add_online.png"
+process = true
+config-sh = "$ETC/tool-tree.bash Addon $UZZ"
