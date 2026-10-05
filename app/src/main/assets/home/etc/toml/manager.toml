@@ -16,8 +16,14 @@ link = "https://kakathic.github.io/Tool-Tree/website/Toml-generator.html"
 title = "@project_addon_title"
 menu = true
 show = true
+reload = true
 shell = "hidden"
 warn = "@project_addon_warn"
+script = """
+slog id_add_on "$id_add_on"
+slog account_add_on "$account_add_on"
+mkdir -p "$UZZ/$id_add_on"
+"""
 
 [[action.params]]
 name = "account_add_on"
@@ -28,7 +34,7 @@ required = true
 placeholder = "Kakathic_test_1234"
 
 [[action.params]]
-name = "list_add_on"
+name = "id_add_on"
 desc = "@list_addon_desc"
 label = "@input_name_label"
 type = "single-select"
@@ -40,11 +46,23 @@ placeholder = "test_addon"
 [[group]]
 [[action]]
 title = "@create_addon_title"
+script = """
+[ "$addon_root" == 1 ] && addon_root_bl=true || addon_root_bl=false
+echo "# Add-on
+id=$addon_name_id
+name=\"$addon_name\"
+author=\"$addon_author\"
+version=\"$addon_version\"
+versionCode=$addon_code_version
+description=\"$addon_descss\"
+root=$addon_root_bl" > $UZZ/$addon_name_id/Add-on.bash
+"""
 
 [[action.params]]
 name = "addon_name_id"
 label = "@addon_id_label"
 desc = "@addon_id_desc"
+value-sh = "glog id_add_on"
 type = "text"
 readonly = true
 
@@ -92,7 +110,9 @@ required = true
 
 [[editor]]
 title = "@edit_index_title"
-file = "test.toml"
+file-sh = """
+echo "$UZZ/$(glog id_add_on)/Add-on.bash"
+"""
 
 [[group]]
 [[page]]
