@@ -1077,6 +1077,7 @@ class PageConfigReader {
             registerDynamicString(editor, "file", editor.fileSh)
         }
         tomlGet(table, "wrap")?.let { editor.wrap = !(it == "0" || it == "false" || it == "off" || it == "no-wrap") }
+        tomlGet(table, "run", "runnable")?.let { editor.run = !(it == "0" || it == "false" || it == "off" || it == "no") }
         tomlGet(table, "placeholder")?.let { editor.placeholder = StringResRef.resolve(context, it) }
         tomlGet(table, "readonly")?.let { editor.readonly = resolveBoolOrShell(it) }
         tomlGet(table, "need-input")?.let { editor.needInput = (it == "true" || it == "1") }

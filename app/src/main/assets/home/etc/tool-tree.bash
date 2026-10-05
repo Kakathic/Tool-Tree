@@ -1,163 +1,5 @@
 #!/data/data/com.tool.tree/files/home/bin/bash
 
-
-Addss(){
-
-echo '
-  [[group]]
-  [[page]]
-  title = "Phòng thí nghiệm"
-  desc = "Tạo add-on cơ bản và upload lên"
-  icon = "'$urlicon'/add_user.png"
-  config = "'$ETC'/toml/manager.toml"
-
-  [[page]]
-  title = "Demo tính năng"
-  desc = "Hướng dẫn dành cho nhà phát triển"
-  icon = "'$urlicon'/add_list.png"
-  config = "'$ETC'/toml/demo.toml"
-  
-  [[group]]
-  [[page]]
-  title = "Add-on có sẵn"
-  desc = "Đây là các add-on do tác giả tạo ra"
-  icon = "'$urlicon'/add_off.png"
-  process = true
-  config-sh = "'$ETC'/tool-tree.bash Addon $UPL"
-
-  [[group]]
-  [[page]]
-  title = "Add-on online"
-  desc = "Đây là các add-on do người dùng tải lên"
-  icon = "'$urlicon'/add_online.png"
-  process = true
-  config-sh = "'$ETC'/tool-tree.bash Addon $UZE"
-  '
-}
-
-show_sett() {
-  echo '
-  [[group]]
-  [[action]]
-  shell = "hidden"
-  reload = true
-  menu = true
-  title = "'$projects_text'"
-  desc = "'$path_text': '$PTSD'"
-  script = """
-  slog SDH "$SDH"
-  if [ ! -d "$SDC/$Name" ] || [ ! -d "$SDH/$Name" ]; then
-    slog PTSD "$SDC/$Name"
-    slog PTSH "$Name"
-    mkdir -p "$SDH/$Name" "$SDC/$Name/out"
-  elif [ -d "$SDH/$Name" ]; then
-    slog PTSH "$Name"
-    slog PTSD "$SDC/$Name"
-  fi
-  """
-
-  [[action.params]]
-  name = "SDH"
-  title = "'$output_folder_text'"
-  desc = "'$path_text': '$SDH'"
-  type = "folder"
-  value-sh = "glog SDH"
-  path-home = "'$HOME'"
-  editable = true
-  
-  [[action.params]]
-  name = "Name"
-  title = "'$setting_text_3'"
-  desc = "'$config_text_1'"
-  label = "'$option_text'"
-  options-sh = "findfile for $SDH"
-  value-sh = "glog PTSH"
-  editable = true
-'
-}
-
-show_apkset() {
-  echo '
-  [[group]]
-  [[action]]
-  shell = "hidden"
-  reload = true
-  menu = true
-  title = "'$projects_text'"
-  desc = "'$path_text': '$PTAD'"
-  script = """
-  slog APK "$APK"
-  if [ ! -d "$SDC/$Name" ] || [ ! -d "$APK/$Name" ]; then
-    slog PTAD "$SDC/$Name"
-    slog PTAH "$Name"
-    mkdir -p "$APK/$Name" "$SDC/$Name/out"
-  elif [ -d "$APK/$Name" ]; then
-    slog PTAH "$Name"
-    slog PTAD "$SDC/$Name"
-  fi
-  """
-
-  [[action.params]]
-  name = "APK"
-  title = "'$output_folder_text'"
-  desc = "'$path_text': '$APK'"
-  type = "folder"
-  value-sh = "glog APK"
-  path-home = "'$HOME'"
-  editable = true
-
-  [[action.params]]
-  name = "Name"
-  title = "'$setting_text_3'"
-  desc = "'$config_text_1'"
-  label = "'$option_text'"
-  options-sh = "findfile for $APK"
-  value-sh = "glog PTAH"
-  editable = true
-  '
-}
-
-inforkk() {
-echo '
-  [[group]]
-  [[text.rows]]
-  size = 13
-  text = "'$root_text': {'${ROOT^}'}(#0dbda2)"
-  bold = true
-  icon = "'$urlicon'/1shield.png"
-  line-height = 1.3
-  break = true
-  markdown = true
-  
-  [[text.rows]]
-  text = "'$device_text': {'$ANDROID_BRAND' - '$ANDROID_DEVICE'}(#0dbda2)"
-  break = true
-  size = 13
-  bold = true
-  line-height = 1.3
-  icon = "'$urlicon'/1smart.png"
-  markdown = true
-  
-  [[text.rows]]
-  text = "'$operating_system': {Android '$ANDROID_RELEASE' - '$API'}(#0dbda2)"
-  break = true
-  size = 13
-  bold = true
-  line-height = 1.3
-  icon = "'$urlicon'/1android.png"
-  markdown = true
-  
-  [[text.rows]]
-  text = "'$microprocessors': {'${CPU_ABI^}'}(#0dbda2)"
-  break = true
-  size = 13
-  bold = true
-  line-height = 1.3
-  icon = "'$urlicon'/1cpu.png"
-  markdown = true
-  '
-}
-
 # Ngôn ngữ
 source language 2>/dev/null
 
@@ -238,7 +80,41 @@ More() {
   '
 }
 
-Info() {
+Addss(){
+
+echo '
+  [[group]]
+  [[page]]
+  title = "'$text_addon_manage'"
+  desc = "'$text_addon_manage_desc'"
+  icon = "'$urlicon'/add_user.png"
+  config = "'$ETC'/toml/manager.toml"
+
+  [[page]]
+  title = "'$text_addon_demo'"
+  desc = "'$text_addon_demo_desc'"
+  icon = "'$urlicon'/add_list.png"
+  config = "'$ETC'/toml/demo.toml"
+  
+  [[group]]
+  [[page]]
+  title = "'$text_addon_available'"
+  desc = "'$text_addon_available_desc'"
+  icon = "'$urlicon'/add_off.png"
+  process = true
+  config-sh = "'$ETC'/tool-tree.bash Addon $UPL"
+
+  [[group]]
+  [[page]]
+  title = "'$text_addon_online'"
+  desc = "'$text_addon_online_desc'"
+  icon = "'$urlicon'/add_online.png"
+  process = true
+  config-sh = "'$ETC'/tool-tree.bash Addon $UZE"
+  '
+}
+
+Settings() {
   echo '
   [[group]]
   [[page]]
@@ -343,8 +219,6 @@ Info() {
   placeholder = "#!/data/data/com.tool.tree/files/home/bin/bash"
   '
 }
-
-
 
 Project() {
 
@@ -1467,6 +1341,129 @@ Utiliapk() {
     title = "'$restore_apk_text_2'"
     options-sh = "findfile 10 $PTAD"
     required = true
+  '
+}
+
+show_sett() {
+  echo '
+  [[group]]
+  [[action]]
+  shell = "hidden"
+  reload = true
+  menu = true
+  title = "'$projects_text'"
+  desc = "'$path_text': '$PTSD'"
+  script = """
+  slog SDH "$SDH"
+  if [ ! -d "$SDC/$Name" ] || [ ! -d "$SDH/$Name" ]; then
+    slog PTSD "$SDC/$Name"
+    slog PTSH "$Name"
+    mkdir -p "$SDH/$Name" "$SDC/$Name/out"
+  elif [ -d "$SDH/$Name" ]; then
+    slog PTSH "$Name"
+    slog PTSD "$SDC/$Name"
+  fi
+  """
+
+  [[action.params]]
+  name = "SDH"
+  title = "'$output_folder_text'"
+  desc = "'$path_text': '$SDH'"
+  type = "folder"
+  value-sh = "glog SDH"
+  path-home = "'$HOME'"
+  editable = true
+  
+  [[action.params]]
+  name = "Name"
+  title = "'$setting_text_3'"
+  desc = "'$config_text_1'"
+  label = "'$option_text'"
+  options-sh = "findfile for $SDH"
+  value-sh = "glog PTSH"
+  editable = true
+'
+}
+
+show_apkset() {
+  echo '
+  [[group]]
+  [[action]]
+  shell = "hidden"
+  reload = true
+  menu = true
+  title = "'$projects_text'"
+  desc = "'$path_text': '$PTAD'"
+  script = """
+  slog APK "$APK"
+  if [ ! -d "$SDC/$Name" ] || [ ! -d "$APK/$Name" ]; then
+    slog PTAD "$SDC/$Name"
+    slog PTAH "$Name"
+    mkdir -p "$APK/$Name" "$SDC/$Name/out"
+  elif [ -d "$APK/$Name" ]; then
+    slog PTAH "$Name"
+    slog PTAD "$SDC/$Name"
+  fi
+  """
+
+  [[action.params]]
+  name = "APK"
+  title = "'$output_folder_text'"
+  desc = "'$path_text': '$APK'"
+  type = "folder"
+  value-sh = "glog APK"
+  path-home = "'$HOME'"
+  editable = true
+
+  [[action.params]]
+  name = "Name"
+  title = "'$setting_text_3'"
+  desc = "'$config_text_1'"
+  label = "'$option_text'"
+  options-sh = "findfile for $APK"
+  value-sh = "glog PTAH"
+  editable = true
+  '
+}
+
+inforkk() {
+echo '
+  [[group]]
+  [[text.rows]]
+  size = 13
+  text = "'$root_text': {'${ROOT^}'}(#0dbda2)"
+  bold = true
+  icon = "'$urlicon'/1shield.png"
+  line-height = 1.3
+  break = true
+  markdown = true
+  
+  [[text.rows]]
+  text = "'$device_text': {'$ANDROID_BRAND' - '$ANDROID_DEVICE'}(#0dbda2)"
+  break = true
+  size = 13
+  bold = true
+  line-height = 1.3
+  icon = "'$urlicon'/1smart.png"
+  markdown = true
+  
+  [[text.rows]]
+  text = "'$operating_system': {Android '$ANDROID_RELEASE' - '$API'}(#0dbda2)"
+  break = true
+  size = 13
+  bold = true
+  line-height = 1.3
+  icon = "'$urlicon'/1android.png"
+  markdown = true
+  
+  [[text.rows]]
+  text = "'$microprocessors': {'${CPU_ABI^}'}(#0dbda2)"
+  break = true
+  size = 13
+  bold = true
+  line-height = 1.3
+  icon = "'$urlicon'/1cpu.png"
+  markdown = true
   '
 }
 

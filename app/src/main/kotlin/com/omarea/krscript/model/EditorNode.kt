@@ -7,6 +7,7 @@ class EditorNode(currentConfigXml: String) : ClickableNode(currentConfigXml) {
     var placeholder: String? = null
 
     var wrap: Boolean = true
+    var run: Boolean = true
 
     var readonly: Boolean = false
 

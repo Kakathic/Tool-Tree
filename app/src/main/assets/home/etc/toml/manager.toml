@@ -110,6 +110,7 @@ required = true
 
 [[editor]]
 title = "@edit_index_title"
+run = false
 file-sh = """
 echo "$UZZ/$(glog id_add_on)/Add-on.bash"
 """

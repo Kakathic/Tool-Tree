@@ -945,6 +945,7 @@ The companion `flash` effect makes a reset-driven value change visible: whenever
 | file                                                                               | path  | String      | ""      | `required at runtime` Path of the file to open. The parser accepts an empty value, but the editor UI rejects an editor entry with no file path. |
 | file-sh | path-sh | String | "" | `shell` Script that prints the file path dynamically. Runs during parse (batched with title-sh/desc-sh/icon-sh/...); a non-empty result overrides `file`, an empty result or `error` keeps `file` |
 | wrap                                                                               | \-    | Bool        | true    | Enable line wrapping                                                                                                                            |
+| run | runnable | Bool | true | Show the Run button in the editor (only for runnable files: sh/py or a shebang). `run = false` hides it; works together with `readonly` (a read-only file can still run when `run` is not false) |
 | placeholder                                                                        | \-    | String      | null    | Hint when file is empty                                                                                                                         |
 | readonly                                                                           | \-    | Bool\|Shell | false   | Read-only. Accepts shell too!                                                                                                                   |
 | need-input                                                                         | \-    | Bool        | false   | Whether the run script uses `read`                                                                                                              |
@@ -979,6 +980,11 @@ value = "#!/system/bin/sh\necho hello"
 [[editor]]
 title = "Active config"
 file-sh = "echo /data/adb/modules/demo/$(getprop ro.product.device).conf"
+
+[[editor]]
+title = "View-only script (no Run)"
+file = "/sdcard/myscript.sh"
+run = false
 ```
 
 > **Warning:** `value` is only written when the file **does not exist**. If the file already exists, `value`/`value-sh` are ignored - the existing file content is preserved.

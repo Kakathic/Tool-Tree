@@ -318,7 +318,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
             }
             com.tool.tree.TextEditorActivity.start(
                 context, item.file, item.title, item.desc, item.wrap, item.pageConfigDir, item.placeholder,
-                item.readonly, item.needInput, item.value, item.valueSh
+                item.readonly, item.needInput, item.value, item.valueSh, item.run
             )
             onCompleted.run()
         }

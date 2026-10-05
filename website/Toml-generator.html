@@ -2173,6 +2173,7 @@ const TYPES = {
       { key:'icon', label:'icon', type:'text', default:'', sh:true, hint:'File path required — {ICON}/edit.png, {HOME} ok. -sh: icon-sh. Blank = omitted.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'' },
       { key:'wrap', label:'wrap', type:'checkbox', default:true, hint:'Soft-wrap long lines (default on).' },
+      { key:'run', label:'run', type:'checkbox', default:true, hint:'Show the Run button for runnable files (sh/py/shebang). Uncheck → run = false. Still works with readonly.' },
       { key:'placeholder', label:'placeholder', type:'text', default:'', hint:'Hint when file is empty.' },
       { key:'needInput', label:'need-input', type:'checkbox', default:false, hint:'Edited script uses read; show input on Run.' },
       { key:'value', label:'value', type:'text', default:'', sh:true, hint:'Initial content; only if file is new. -sh: value-sh (the script output becomes the initial content and wins over value).' },
@@ -2186,6 +2187,7 @@ const TYPES = {
       const fileLine = shOrStatic(f, 'file', 'file');
       const keyLine = f.nodeKey ? `\nkey = "${tomlEsc(f.nodeKey)}"` : '';
       const misc = (f.wrap === false ? `\nwrap = false` : '')
+        + (f.run === false ? `\nrun = false` : '')
         + ((f.placeholder||'').trim() ? `\nplaceholder = "${tomlEsc(f.placeholder.trim())}"` : '')
         + (f.needInput ? `\nneed-input = true` : '')
         + shOrStatic(f, 'value', 'value');
@@ -2634,6 +2636,7 @@ progress-max = 100`
       ['wrap','','Bool','true','Soft-wrap long lines when the editor opens (<code>wrap = false</code> to disable)'],
       ['placeholder','','String','','Hint shown while the file is empty'],
       ['need-input','','Bool','false','The edited script calls <code>read</code> — an input box appears on Run'],
+      ['run / runnable','','Bool','true','Show the Run button (sh/py/shebang files); <code>run = false</code> hides it, independent of <code>readonly</code>'],
       ['value / value-sh','','String','','Initial content, written ONLY when the file does not exist yet; <code>value-sh</code> wins over <code>value</code>'],
       ['key / support / icon','','—','','Same as every node: <code>support</code> takes true/false or a shell'],
       ['lock / lock-sh','','String','','<code>"1|message"</code> / <code>"1"</code> / a shell returning "1"'],

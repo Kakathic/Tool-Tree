@@ -1,1 +1,1 @@
-exec $ETC/tool-tree.bash Info
+exec $ETC/tool-tree.bash Settings

@@ -60,6 +60,7 @@ class TextEditorActivity : AppCompatActivity() {
         private const val EXTRA_PLACEHOLDER = "placeholder"
         private const val EXTRA_READONLY = "readonly"
         private const val EXTRA_NEED_INPUT = "need_input"
+        private const val EXTRA_RUN = "run"
         private const val EXTRA_VALUE = "value"
         private const val EXTRA_VALUE_SH = "value_sh"
 
@@ -98,7 +99,8 @@ class TextEditorActivity : AppCompatActivity() {
             readonly: Boolean = false,
             needInput: Boolean = false,
             value: String? = null,
-            valueSh: String? = null
+            valueSh: String? = null,
+            run: Boolean = true
         ) {
             val intent = Intent(context, TextEditorActivity::class.java).apply {
                 putExtra(EXTRA_FILE, file)
@@ -109,6 +111,7 @@ class TextEditorActivity : AppCompatActivity() {
                 putExtra(EXTRA_PLACEHOLDER, placeholder ?: "")
                 putExtra(EXTRA_READONLY, readonly)
                 putExtra(EXTRA_NEED_INPUT, needInput)
+                putExtra(EXTRA_RUN, run)
                 putExtra(EXTRA_VALUE, value ?: "")
                 putExtra(EXTRA_VALUE_SH, valueSh ?: "")
                 if (context !is AppCompatActivity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -132,6 +135,7 @@ class TextEditorActivity : AppCompatActivity() {
     private var titleText: String = ""
     private var readonlyMode: Boolean = false
     private var needInput: Boolean = false
+    private var runEnabled: Boolean = true
     private var initialValue: String = ""
     private var initialValueSh: String = ""
     private var lastLanguageOverride: String? = null
@@ -189,6 +193,7 @@ class TextEditorActivity : AppCompatActivity() {
         titleText = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         readonlyMode = intent.getBooleanExtra(EXTRA_READONLY, false)
         needInput = intent.getBooleanExtra(EXTRA_NEED_INPUT, false)
+        runEnabled = intent.getBooleanExtra(EXTRA_RUN, true)
         initialValue = intent.getStringExtra(EXTRA_VALUE).orEmpty()
         initialValueSh = intent.getStringExtra(EXTRA_VALUE_SH).orEmpty()
 
@@ -828,7 +833,7 @@ class TextEditorActivity : AppCompatActivity() {
         redoMenuItem = menu.findItem(R.id.editor_menu_redo)
         saveMenuItem = menu.findItem(R.id.editor_menu_save)
 
-        menu.findItem(R.id.editor_menu_run)?.isVisible = !readonlyMode && runnableInterpreter() != null
+        menu.findItem(R.id.editor_menu_run)?.isVisible = runEnabled && runnableInterpreter() != null
 
         if (readonlyMode) {
             menu.findItem(R.id.editor_menu_save)?.isVisible = false
@@ -881,7 +886,7 @@ class TextEditorActivity : AppCompatActivity() {
                 true
             }
             R.id.editor_menu_run -> {
-                runnableInterpreter()?.let { saveAndRun(it) }
+                if (runEnabled) runnableInterpreter()?.let { saveAndRun(it) }
                 true
             }
             R.id.editor_menu_save -> {
