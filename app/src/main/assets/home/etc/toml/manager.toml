@@ -1,3 +1,7 @@
+
+[[toml]]
+load-key-sh = "langpath"
+
 [[group]]
 [[menu]]
 [[menu.items]]

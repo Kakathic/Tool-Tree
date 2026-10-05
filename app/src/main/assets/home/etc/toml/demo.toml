@@ -1,3 +1,6 @@
+[[toml]]
+load-key-sh = "langpath"
+
 [[group]]
 [[page]]
 title = "@guide_title"
