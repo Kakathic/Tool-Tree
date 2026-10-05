@@ -943,6 +943,7 @@ The companion `flash` effect makes a reset-driven value change visible: whenever
 | Field                                                                              | Alias | Type        | Default | Description                                                                                                                                     |
 |------------------------------------------------------------------------------------|-------|-------------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------|
 | file                                                                               | path  | String      | ""      | `required at runtime` Path of the file to open. The parser accepts an empty value, but the editor UI rejects an editor entry with no file path. |
+| file-sh | path-sh | String | "" | `shell` Script that prints the file path dynamically. Runs during parse (batched with title-sh/desc-sh/icon-sh/...); a non-empty result overrides `file`, an empty result or `error` keeps `file` |
 | wrap                                                                               | \-    | Bool        | true    | Enable line wrapping                                                                                                                            |
 | placeholder                                                                        | \-    | String      | null    | Hint when file is empty                                                                                                                         |
 | readonly                                                                           | \-    | Bool\|Shell | false   | Read-only. Accepts shell too!                                                                                                                   |
@@ -974,6 +975,10 @@ title = "Create new script"
 desc = "/sdcard/myscript.sh"
 file = "/sdcard/myscript.sh"
 value = "#!/system/bin/sh\necho hello"
+
+[[editor]]
+title = "Active config"
+file-sh = "echo /data/adb/modules/demo/$(getprop ro.product.device).conf"
 ```
 
 > **Warning:** `value` is only written when the file **does not exist**. If the file already exists, `value`/`value-sh` are ignored - the existing file content is preserved.
@@ -1270,6 +1275,7 @@ In Tool-Tree, many fields accept a **static value** plus a dedicated `-sh` field
 | icon-sh                 | ClickableNode (page, action, switch, picker, download, editor)                     | Produce icon path dynamically - runs during parse, batched with title-sh/desc-sh/summary-sh                                       |
 | photo-sh                | ClickableNode (page, action, switch, picker, download, editor)                     | Produce photo path dynamically - runs during parse, batched with the other node-level -sh fields                                  |
 | bg-sh                   | ClickableNode (page, action, switch, picker, download, editor)                     | Produce background image path dynamically - runs during parse, batched                                                            |
+| file-sh / path-sh | EditorNode | Produce the editor file path dynamically - runs during parse, batched; overrides `file` when non-empty |
 | icon-sh (row)           | TextRow                                                                            | Produce row's inline icon path dynamically - re-runs every render (batched with text-sh/photo-sh of the row, not cached)          |
 | photo-sh (row)          | TextRow                                                                            | Produce row's photo path dynamically - re-runs every render (batched, not cached)                                                 |
 | progress-sh (row)       | TextRow                                                                            | Produce the row's inline progress-bar value dynamically (a number) - re-runs every render (batched with text-sh/icon-sh/photo-sh) |

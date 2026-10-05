@@ -1336,6 +1336,7 @@ reset = "all"
 <table class="tbl cols-5">
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Default</th><th>Description</th></tr>
 <tr><td class="field-name">file</td><td>path</td><td class="field-type">String</td><td>""</td><td><span class="badge req">required at runtime</span> Path of the file to open. The parser accepts an empty value, but the editor UI rejects an editor entry with no file path.</td></tr>
+<tr><td class="field-name">file-sh</td><td>path-sh</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that prints the file path dynamically. Runs during parse (batched with title-sh/desc-sh/icon-sh/...); a non-empty result overrides <code>file</code>, an empty result or <code>error</code> keeps <code>file</code></td></tr>
 <tr><td class="field-name">wrap</td><td>-</td><td class="field-type">Bool</td><td>true</td><td>Enable line wrapping</td></tr>
 <tr><td class="field-name">placeholder</td><td>-</td><td class="field-type">String</td><td>null</td><td>Hint when file is empty</td></tr>
 <tr><td class="field-name">readonly</td><td>-</td><td class="field-type">Bool|Shell</td><td>false</td><td>Read-only. Accepts shell too!</td></tr>
@@ -1373,6 +1374,10 @@ title = "Create new script"
 desc = "/sdcard/myscript.sh"
 file = "/sdcard/myscript.sh"
 value = "#!/system/bin/sh\necho hello"
+
+[[editor]]
+title = "Active config"
+file-sh = "echo /data/adb/modules/demo/$(getprop ro.product.device).conf"
 </code></pre>
 <div class="callout warn"><code>value</code> is only written when the file <strong>does not exist</strong>. If the file already exists, <code>value</code>/<code>value-sh</code> are ignored - the existing file content is preserved.</div>
 </section>
@@ -1684,6 +1689,7 @@ depend-value = "folder"
 <tr><td class="field-name">icon-sh</td><td>ClickableNode (page, action, switch, picker, download, editor)</td><td>Produce icon path dynamically - runs during parse, batched with title-sh/desc-sh/summary-sh</td></tr>
 <tr><td class="field-name">photo-sh</td><td>ClickableNode (page, action, switch, picker, download, editor)</td><td>Produce photo path dynamically - runs during parse, batched with the other node-level -sh fields</td></tr>
 <tr><td class="field-name">bg-sh</td><td>ClickableNode (page, action, switch, picker, download, editor)</td><td>Produce background image path dynamically - runs during parse, batched</td></tr>
+<tr><td class="field-name">file-sh / path-sh</td><td>EditorNode</td><td>Produce the editor file path dynamically - runs during parse, batched; overrides <code>file</code> when non-empty</td></tr>
 <tr><td class="field-name">icon-sh (row)</td><td>TextRow</td><td>Produce row's inline icon path dynamically - re-runs every render (batched with text-sh/photo-sh of the row, not cached)</td></tr>
 <tr><td class="field-name">photo-sh (row)</td><td>TextRow</td><td>Produce row's photo path dynamically - re-runs every render (batched, not cached)</td></tr>
 <tr><td class="field-name">progress-sh (row)</td><td>TextRow</td><td>Produce the row's inline progress-bar value dynamically (a number) - re-runs every render (batched with text-sh/icon-sh/photo-sh)</td></tr>

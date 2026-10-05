@@ -202,6 +202,7 @@ class PageConfigReader {
                         "icon" -> target.iconPath = shellResult
                         "photo" -> target.photoPath = shellResult
                         "bg" -> target.bgPath = shellResult
+                        "file" -> if (target is EditorNode && shellResult.isNotBlank()) target.file = shellResult.trim()
                     }
                     target is NodeInfoBase -> when (fieldKey) {
                         "title" -> target.title = shellResult
@@ -1071,6 +1072,10 @@ class PageConfigReader {
     private fun editorNodeToml(table: TomlTable): EditorNode? {
         val editor = clickableNodeToml(EditorNode(pageConfigAbsPath), table) as EditorNode? ?: return null
         tomlGet(table, "file", "path")?.let { editor.file = it.trim() }
+        tomlGet(table, "file-sh", "path-sh")?.let {
+            editor.fileSh = it.trim()
+            registerDynamicString(editor, "file", editor.fileSh)
+        }
         tomlGet(table, "wrap")?.let { editor.wrap = !(it == "0" || it == "false" || it == "off" || it == "no-wrap") }
         tomlGet(table, "placeholder")?.let { editor.placeholder = StringResRef.resolve(context, it) }
         tomlGet(table, "readonly")?.let { editor.readonly = resolveBoolOrShell(it) }

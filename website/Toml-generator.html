@@ -2169,7 +2169,7 @@ const TYPES = {
     fields: [
       { key:'title', label:'title', type:'text', default:'Edit build.prop', sh:true, hint:'-sh: title-sh — the value becomes echo "…" auto.' },
       { key:'desc', label:'desc', type:'text', default:'System build properties', sh:true, hint:'-sh: desc-sh — the value becomes echo "…" auto.' },
-      { key:'file', label:'file', type:'text', default:'/system/build.prop', hint:'File path required — {HOME}/{ICON} ok. The editor opens exactly this path and saves back to it. Blank = node is dropped.' },
+      { key:'file', label:'file', type:'text', default:'/system/build.prop', sh:true, hint:'File path required — {HOME}/{ICON} ok. The editor opens exactly this path and saves back to it. -sh: file-sh (the script output is the path; a non-empty result wins over file, runs at parse time).' },
       { key:'icon', label:'icon', type:'text', default:'', sh:true, hint:'File path required — {ICON}/edit.png, {HOME} ok. -sh: icon-sh. Blank = omitted.' },
       { key:'nodeKey', label:'key (id, optional)', type:'text', default:'' },
       { key:'wrap', label:'wrap', type:'checkbox', default:true, hint:'Soft-wrap long lines (default on).' },
@@ -2183,7 +2183,7 @@ const TYPES = {
     ],
     code: f => {
       const ro = (f.advReadonly||'').trim() ? `\nreadonly = "${tomlEsc(f.advReadonly.trim())}"` : '';
-      const fileLine = (f.file||'').trim() ? `\nfile = "${tomlEsc(f.file)}"` : '';
+      const fileLine = shOrStatic(f, 'file', 'file');
       const keyLine = f.nodeKey ? `\nkey = "${tomlEsc(f.nodeKey)}"` : '';
       const misc = (f.wrap === false ? `\nwrap = false` : '')
         + ((f.placeholder||'').trim() ? `\nplaceholder = "${tomlEsc(f.placeholder.trim())}"` : '')
@@ -2629,6 +2629,7 @@ progress-max = 100`
     intro: `<code>[[editor]]</code> opens a file in the built-in text editor for viewing/editing (a build.prop, a script file…). Changes are saved back to <code>file</code> via the toolbar save icon.`,
     fields: [
       ['file','','String','','<span class="badge req">req</span> File PATH to open — accepts <code>{HOME}</code>/<code>{ICON}</code>'],
+      ['file-sh','path-sh','String','','<span class="badge shell">shell</span> Script printing the file PATH; runs at parse time and a non-empty result overrides <code>file</code>'],
       ['readonly','','Bool|Shell','false','<code>true</code>/<code>1</code> opens read-only, or a shell returning "1" (resolveBoolOrShell)'],
       ['wrap','','Bool','true','Soft-wrap long lines when the editor opens (<code>wrap = false</code> to disable)'],
       ['placeholder','','String','','Hint shown while the file is empty'],
@@ -2783,6 +2784,7 @@ const TOPICS = [
 <tr><th>Field</th><th>Applies to</th><th>When it runs</th></tr>
 <tr><td>title-sh / desc-sh / summary-sh</td><td>every node</td><td>Parse time (pending batch)</td></tr>
 <tr><td>icon-sh / photo-sh / bg-sh</td><td>clickable nodes</td><td>Parse time (pending batch)</td></tr>
+<tr><td>file-sh</td><td>[[editor]]</td><td>Parse time (pending batch)</td></tr>
 <tr><td>warn-sh</td><td>runnable nodes</td><td>Parse time</td></tr>
 <tr><td>lock-sh</td><td>clickable nodes</td><td>Parse time — "1" = locked</td></tr>
 <tr><td>support (shell form)</td><td>every node</td><td>Parse time — "1" = shown; an expensive one delays the page → use <code>load-after</code></td></tr>

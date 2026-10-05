@@ -2,6 +2,8 @@ package com.omarea.krscript.model
 
 class EditorNode(currentConfigXml: String) : ClickableNode(currentConfigXml) {
     var file: String = ""
+
+    var fileSh: String = ""
     var placeholder: String? = null
 
     var wrap: Boolean = true
