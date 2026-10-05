@@ -29,7 +29,7 @@ mkdir -p "$UZZ/$id_add_on"
 name = "account_add_on"
 title = "@secret_code_title"
 desc = "@secret_code_desc"
-type = "text"
+type = "password"
 required = true
 placeholder = "Kakathic_test_1234"
 
@@ -112,7 +112,11 @@ required = true
 title = "@edit_index_title"
 run = false
 file-sh = """
-echo "$UZZ/$(glog id_add_on)/Add-on.bash"
+echo "$UZZ/$(glog id_add_on)/index.toml"
+"""
+value = """[[toml]]
+[[group]]
+title = "Hello"
 """
 
 [[group]]
