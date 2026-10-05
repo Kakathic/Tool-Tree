@@ -634,7 +634,7 @@ const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g
 const tomlEsc = s => (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"')
   .replace(/\r/g,'').replace(/\n/g,'\\n').replace(/\t/g,'\\t');
 
-const PARAM_TYPES = ['text','int','number','seekbar','switch','bool','checkbox','spinner','single-select','multi-select','file','folder','app','packages','color'];
+const PARAM_TYPES = ['text','int','number','seekbar','switch','bool','checkbox','spinner','single-select','multi-select','file','folder','app','packages','color','password'];
 const OPT_TYPES = ['spinner','single-select','multi-select'];
 
 // --- -sh auto-sampling: tick = shell form, untick = plain text ---------------

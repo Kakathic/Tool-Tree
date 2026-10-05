@@ -4,6 +4,7 @@ import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.EditText
+import android.widget.ImageView
 import androidx.fragment.app.FragmentActivity
 import com.omarea.common.ui.DialogTextEditor
 import com.tool.tree.R
@@ -15,6 +16,8 @@ class ParamsEditText(private var actionParamInfo: ActionParamInfo, private var c
     private val darkMode: Boolean = ThemeModeState.isDarkMode()
 
     fun render(): View {
+        if (actionParamInfo.type == "password") return renderPassword()
+
         val layout = LayoutInflater.from(context).inflate(R.layout.kr_param_text, null)
         val expandBtn = layout.findViewById<View>(R.id.kr_param_text_expand)
         val activity = context
@@ -88,6 +91,42 @@ class ParamsEditText(private var actionParamInfo: ActionParamInfo, private var c
                     setFilters(arrayOf(paramFilter))
                     setHint(editText.hint)
                 }.show(activity.supportFragmentManager, "params-text-editor")
+            }
+        }
+
+        return layout
+    }
+
+    private fun renderPassword(): View {
+        val layout = LayoutInflater.from(context).inflate(R.layout.kr_param_password, null)
+        val toggleBtn = layout.findViewById<View>(R.id.kr_param_password_toggle)
+        val toggleIcon = layout.findViewById<ImageView>(R.id.kr_param_password_toggle_icon)
+        val hiddenType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        val shownType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+
+        layout.findViewById<EditText>(R.id.kr_param_text).run {
+            tag = actionParamInfo.name
+            if (actionParamInfo.valueFromShell != null)
+                setText(actionParamInfo.valueFromShell)
+            else if (actionParamInfo.value != null) {
+                setText(actionParamInfo.value)
+            }
+            filters = arrayOf(ParamInfoFilter(actionParamInfo))
+            inputType = hiddenType
+
+            isEnabled = !actionParamInfo.readonly
+
+            if (actionParamInfo.placeholder.isNotEmpty()) {
+                hint = actionParamInfo.placeholder
+            }
+
+            var visible = false
+            toggleBtn.setOnClickListener {
+                visible = !visible
+                val cursor = selectionStart
+                inputType = if (visible) shownType else hiddenType
+                toggleIcon.setImageResource(if (visible) R.drawable.ic_visibility else R.drawable.ic_visibility_off)
+                if (cursor >= 0) setSelection(cursor.coerceAtMost(text?.length ?: 0))
             }
         }
 

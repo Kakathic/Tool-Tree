@@ -847,7 +847,7 @@ auto-off = true
 <tr><td class="field-name">desc-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces desc</td></tr>
 <tr><td class="field-name">desc-on</td><td>on-desc, desc-checked</td><td class="field-type">String</td><td>Note shown SPECIFICALLY when the checkbox/switch is ON (only for type=bool/checkbox/switch)</td></tr>
 <tr><td class="field-name">desc-on-sh</td><td>on-desc-sh, desc-checked-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces desc-on</td></tr>
-<tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td>Input type: <code>text</code>/<code>int</code>/<code>number</code>/<code>bool</code>/<code>checkbox</code>/<code>switch</code>/<code>seekbar</code>/<code>file</code>/<code>folder</code>/<code>app</code>/<code>packages</code>/<code>spinner</code>/<code>single-select</code>/<code>multi-select</code>/<code>color</code></td></tr>
+<tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td>Input type: <code>text</code>/<code>int</code>/<code>number</code>/<code>bool</code>/<code>checkbox</code>/<code>switch</code>/<code>seekbar</code>/<code>file</code>/<code>folder</code>/<code>app</code>/<code>packages</code>/<code>spinner</code>/<code>single-select</code>/<code>multi-select</code>/<code>color</code>/<code>password</code></td></tr>
 <tr><td class="field-name">value</td><td>-</td><td class="field-type">String|Array</td><td>Default value. Also accepts a TOML array of strings (e.g. <code>value = ["a", "b"]</code>) for <code>multi-select</code> - each entry is one selected value, joined internally using <code>separator</code></td></tr>
 <tr><td class="field-name">value-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that fetches value dynamically (runs when dialog opens)</td></tr>
 <tr><td class="field-name">placeholder</td><td>-</td><td class="field-type">String</td><td>Hint when empty</td></tr>
@@ -886,6 +886,7 @@ auto-off = true
 <tr><td><code>spinner</code> / <code>single-select</code></td><td>Dropdown single choice; with <code>editable=true</code>, the value field can also be typed manually</td><td><code>options</code>/<code>options-sh</code>, <code>allow-no-selection</code>, <code>editable</code></td></tr>
 <tr><td><code>multi-select</code></td><td>Checkbox list multi choice</td><td><code>options</code>, <code>multiple=true</code>, <code>separator</code></td></tr>
 <tr><td><code>color</code></td><td>Color picker widget - accepts <code>#RRGGBB</code>/<code>#AARRGGBB</code> hex or a resource reference (<code>@color/name</code>, <code>@android:color/name</code>); an invalid value blocks OK</td><td><code>value</code> (default color)</td></tr>
+<tr><td><code>password</code></td><td>Single-line text field whose characters are hidden on screen; an eye icon beside it shows/hides the text. The value passed to the script is the real text. No fullscreen expand button. Note: <code>remember</code> still applies (default <code>true</code>)</td><td><code>value</code>, <code>placeholder</code>, <code>readonly</code></td></tr>
 <tr><td><code>packages</code></td><td>Alias of <code>app</code> - same app-chooser UI and behavior</td><td><code>multiple</code></td></tr>
 </table>
 </div>
