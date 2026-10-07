@@ -46,15 +46,17 @@ placeholder = "test_addon"
 [[group]]
 [[action]]
 title = "@create_addon_title"
+reload = true
 script = """
+slog addon_type_toml "$addon_type_toml"
 [ "$addon_root" == 1 ] && addon_root_bl=true || addon_root_bl=false
 echo "# Add-on
 id=$addon_name_id
 name=\"$addon_name\"
 author=\"$addon_author\"
 version=\"$addon_version\"
-versionCode=$addon_code_version
 description=\"$addon_descss\"
+versionCode=$addon_code_version
 root=$addon_root_bl" > $UZZ/$addon_name_id/Add-on.bash
 """
 
@@ -108,15 +110,31 @@ desc = "@addon_root_desc"
 type = "switch"
 required = true
 
+[[action.params]]
+name = "addon_type_toml"
+label = "@addon_type_index"
+type = "single-select"
+items = ["toml", "bash"]
+
 [[editor]]
 title = "@edit_index_title"
 run = false
 file-sh = """
-echo "$UZZ/$(glog id_add_on)/index.toml"
+echo "$UZZ/$(glog id_add_on)/index.$(glog addon_type_toml toml)"
 """
-value = """[[toml]]
+placeholder = """# toml
+[[toml]]
 [[group]]
 title = "Hello"
+
+# bash
+home (){
+  echo '
+  [[toml]]
+  [[group]]
+  title = "Hello"
+  '
+}
 """
 
 [[group]]

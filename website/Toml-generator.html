@@ -1797,7 +1797,7 @@ const TYPES = {
     ],
     code: f => {
       const lk = shOrStatic(f, 'loadKey', 'load-key');
-      const loadKey = lk ? lk.slice(1) + '\n\n' : '';
+      const loadKey = lk ? '[[toml]]' + lk + '\n\n' : '';
       const keyLine = f.nodeKey ? `\nkey = "${tomlEsc(f.nodeKey)}"` : '';
       let out = loadKey + `[[group]]${titleLine(f)}${keyLine}${supportLine(f)}\n`;
       const rf = (f.resourceFile||'').trim();
@@ -1850,7 +1850,7 @@ const TYPES = {
       if (supportHidden(f)) return 'support = false — set the field back to "true" to render this group and its children again.';
       let h = 'A group is a title + its following flat children (cannot be nested). This generator emits the group header itself; create child nodes in their own tabs. [[resource]] and [[menu]]/[[fab]] blocks authored here remain root-level containers.';
       if (f.supportShOn) h += ' a shell support makes visibility dynamic — the demo cannot predict it.';
-      if ((f.loadKey||'').trim()) h += ' load-key is emitted at the very top of the file (page-level i18n directive).';
+      if ((f.loadKey||'').trim()) h += ' load-key is emitted at the very top of the file, under a [[toml]] marker line (page-level i18n directive).';
       return h;
     }
   },
@@ -2314,7 +2314,7 @@ const DOCS = {
       ['danger','<b>Dot-notation removed:</b> nested entries like <code>[[group.action]]</code> are <b>silently ignored</b> — the parser only reads node tables at the top level of the document.'],
       ['warn','Groups have no <code>desc</code>/<code>summary</code> and cannot inline <code>resource-file</code>/<code>resource-dir</code> — the generator emits a separate <code>[[resource]]</code> node instead.'],
       ['tip','Groups cannot be nested: declaring a new <code>[[group]]</code> closes the previous one. Reserved name: <code>[[toml]]</code> is a parser marker (inline TOML from <code>config-sh</code>), not a node — it is skipped harmlessly. To wrap a single node in a group, use the <b>wrap in [[group]]</b> checkbox at the top of its Fields panel.'],
-      ['tip','<b>load-key / load-key-sh</b> is a page-level directive, not a group field — this tab emits it (with its -sh toggle) at the very top of the file when filled.'],
+      ['tip','<b>load-key / load-key-sh</b> is a page-level directive, not a group field — this tab emits it (with its -sh toggle) at the very top of the file when filled, preceded by a <code>[[toml]]</code> marker line.'],
     ],
     example: `[[group]]
 title = "CPU"
