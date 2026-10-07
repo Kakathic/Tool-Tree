@@ -50,14 +50,25 @@ reload = true
 script = """
 slog addon_type_toml "$addon_type_toml"
 [ "$addon_root" == 1 ] && addon_root_bl=true || addon_root_bl=false
+[ -f "$addon_icon_path" ] && cp -rf "$addon_icon_path" "$UZZ/$addon_name_id/icon.png"
+if [ -f "$UZZ/$addon_name_id/Add-on.bash" ]; then
+sed -i \
+  -e "s/^name=.*/name=\"$addon_name\"/" \
+  -e "s/^author=.*/author=\"$addon_author\"/" \
+  -e "s/^version=.*/version=\"$addon_version\"/" \
+  -e "s/^description=.*/description=\"$addon_descss\"/" \
+  -e "s/^versionCode=.*/versionCode=\"$addon_code_version\"/" \
+  -e "s/^root=.*/root=\"$addon_root_bl\"/" "$UZZ/$addon_name_id/Add-on.bash"
+else
 echo "# Add-on
 id=$addon_name_id
 name=\"$addon_name\"
 author=\"$addon_author\"
 version=\"$addon_version\"
 description=\"$addon_descss\"
-versionCode=$addon_code_version
-root=$addon_root_bl" > $UZZ/$addon_name_id/Add-on.bash
+versionCode=\"$addon_code_version\"
+root=\"$addon_root_bl\"" > "$UZZ/$addon_name_id/Add-on.bash"
+fi
 """
 
 [[action.params]]
@@ -115,6 +126,12 @@ name = "addon_type_toml"
 label = "@addon_type_index"
 type = "single-select"
 items = ["toml", "bash"]
+
+[[action.params]]
+name = "addon_icon_path"
+label = "Icon add-on"
+type = "file"
+suffix = "png"
 
 [[editor]]
 title = "@edit_index_title"
