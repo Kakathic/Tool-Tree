@@ -68,7 +68,7 @@ def SignCapex(input_capex, output_capex, key_name="testkey", verbose=False):
 
     cmd = [
         "java", "-jar",
-        "etc/signapk.jar",
+        "lib/signapk.jar",
         "-a", "60",
         pem, pk8,
         input_capex,
