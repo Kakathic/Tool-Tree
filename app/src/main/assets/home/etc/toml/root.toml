@@ -26,7 +26,7 @@ echo "@save_text $SDH/raw"
   [[action.params]]
   name = "IMG_NAME"
   desc = "@mount_text_2"
-  options-sh = "findfile 3 $PTSD | grep -E \"(f2fs)|(ext)|(erofs)\""
+  options-sh = 'findfile 3 $PTSD | grep -E "(f2fs)|(ext)|(erofs)"'
   required = true
   multiple = true
 
@@ -84,7 +84,7 @@ echo "@save_text $Extract"
   [[action.params]]
   name = "IMG"
   label = "IMAGE"
-  desc-sh = "echo \"@backup_text_2 $PTSD\""
+  desc-sh = 'echo "@backup_text_2 $PTSD"'
   options-sh = "search_image"
   required = true
   multiple = true

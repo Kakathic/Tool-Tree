@@ -52,7 +52,7 @@ export TMP="$TMPDIR"
 export JAVA_HOME="$TERMUX"
 export PIP_ROOT_USER_ACTION=ignore
 export COLORTERM=truecolor
-export PATH="$BIN:$TERMUX/bin:$TERMUX/py:$PATH"
+export PATH="$BIN:$TERMUX/bin:$ETC/py:$PATH"
 export TERM=xterm-256color
 export START_TIME="$(date +%s)"
 

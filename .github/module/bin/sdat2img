@@ -5,4 +5,4 @@ if [ "$1" == "-h" ] || [ -z "$1" ]; then
     exit 1
 fi
 
-python $TERMUX/py/sdat2img.py "$@"
+python $ETC/py/sdat2img.py "$@"

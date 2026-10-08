@@ -1,4 +1,3 @@
-
 [[toml]]
 load-key-sh = "langpath"
 
@@ -19,11 +18,11 @@ show = true
 reload = true
 shell = "hidden"
 warn = "@project_addon_warn"
-script = """
+script = '''
 slog id_add_on "$id_add_on"
 slog account_add_on "$account_add_on"
 mkdir -p "$UZZ/$id_add_on"
-"""
+'''
 
 [[action.params]]
 name = "account_add_on"
@@ -39,6 +38,7 @@ desc = "@list_addon_desc"
 label = "@input_name_label"
 type = "single-select"
 options-sh = "findfile for $UZZ"
+value-sh = "glog id_add_on"
 required = true
 editable = true
 placeholder = "test_addon"
@@ -47,32 +47,34 @@ placeholder = "test_addon"
 [[action]]
 title = "@create_addon_title"
 reload = true
-script = """
+shell = "hidden"
+script = '''
 slog addon_type_toml "$addon_type_toml"
+id_addons="$(glog id_add_on)"
 [ "$addon_root" == 1 ] && addon_root_bl=true || addon_root_bl=false
-[ -f "$addon_icon_path" ] && cp -rf "$addon_icon_path" "$UZZ/$addon_name_id/icon.png"
-if [ -f "$UZZ/$addon_name_id/Add-on.bash" ]; then
+[ -f "$addon_icon_path" ] && cp -rf "$addon_icon_path" "$UZZ/$id_addons/icon.png"
+if [ -f "$UZZ/$id_addons/Add-on.bash" ]; then
 sed -i \
   -e "s/^name=.*/name=\"$addon_name\"/" \
   -e "s/^author=.*/author=\"$addon_author\"/" \
   -e "s/^version=.*/version=\"$addon_version\"/" \
   -e "s/^description=.*/description=\"$addon_descss\"/" \
   -e "s/^versionCode=.*/versionCode=\"$addon_code_version\"/" \
-  -e "s/^root=.*/root=\"$addon_root_bl\"/" "$UZZ/$addon_name_id/Add-on.bash"
+  -e "s/^root=.*/root=\"$addon_root_bl\"/" "$UZZ/$id_addons/Add-on.bash"
 else
 echo "# Add-on
-id=$addon_name_id
+id=$id_addons
 name=\"$addon_name\"
 author=\"$addon_author\"
 version=\"$addon_version\"
 description=\"$addon_descss\"
 versionCode=\"$addon_code_version\"
-root=\"$addon_root_bl\"" > "$UZZ/$addon_name_id/Add-on.bash"
+root=\"$addon_root_bl\"" > "$UZZ/$id_addons/Add-on.bash"
 fi
-"""
+'''
 
 [[action.params]]
-name = "addon_name_id"
+name = "idsssss"
 label = "@addon_id_label"
 desc = "@addon_id_desc"
 value-sh = "glog id_add_on"
@@ -85,60 +87,66 @@ label = "@addon_name_label"
 type = "text"
 required = true
 placeholder = "Test"
-value-sh = """
-source "$UZZ/$addon_name_id/Add-on.bash"
+value-sh = '''
+source "$UZZ/$(glog id_add_on)/Add-on.bash"
 echo "$name"
-"""
+'''
+
 [[action.params]]
 name = "addon_author"
 label = "@addon_author_label"
 type = "text"
 required = true
 placeholder = "Kakathic"
-value-sh = """
-source "$UZZ/$addon_name_id/Add-on.bash"
+value-sh = '''
+source "$UZZ/$(glog id_add_on)/Add-on.bash"
 echo "$author"
-"""
+'''
+
 [[action.params]]
 name = "addon_descss"
 label = "@addon_desc_label"
 type = "text"
 required = true
 placeholder = "Test zzz"
-value-sh = """
-source "$UZZ/$addon_name_id/Add-on.bash"
+value-sh = '''
+source "$UZZ/$(glog id_add_on)/Add-on.bash"
 echo "$description"
-"""
+'''
+
 [[action.params]]
 name = "addon_version"
 label = "@addon_version_label"
 type = "number"
 required = true
 placeholder = "1.0"
-value-sh = """
-source "$UZZ/$addon_name_id/Add-on.bash"
+value-sh = '''
+source "$UZZ/$(glog id_add_on)/Add-on.bash"
 echo "$version"
-"""
+'''
+
 [[action.params]]
 name = "addon_code_version"
 label = "@addon_code_version_label"
 type = "number"
 required = true
 placeholder = 100
-value-sh = """
-source "$UZZ/$addon_name_id/Add-on.bash"
+value-sh = '''
+source "$UZZ/$(glog id_add_on)/Add-on.bash"
 echo "$versionCode"
-"""
+'''
+
 [[action.params]]
 name = "addon_root"
 label = "@addon_root_label"
 desc = "@addon_root_desc"
 type = "switch"
 required = true
-value-sh = """
-source "$UZZ/$addon_name_id/Add-on.bash"
+value-sh = '''
+source "$UZZ/$(glog id_add_on)/Add-on.bash"
 echo "$root"
-"""
+'''
+
 [[action.params]]
 name = "addon_type_toml"
 label = "@addon_type_index"
@@ -154,10 +162,10 @@ suffix = "png"
 [[editor]]
 title = "@edit_index_title"
 run = false
-file-sh = """
+file-sh = '''
 echo "$UZZ/$(glog id_add_on)/index.$(glog addon_type_toml toml)"
-"""
-placeholder = """# toml
+'''
+placeholder = '''# toml
 [[toml]]
 [[group]]
 title = "Hello"
@@ -170,7 +178,7 @@ home (){
   title = "Hello"
   '
 }
-"""
+'''
 
 [[group]]
 [[page]]
