@@ -85,42 +85,60 @@ label = "@addon_name_label"
 type = "text"
 required = true
 placeholder = "Test"
-
+value-sh = """
+source "$UZZ/$addon_name_id/Add-on.bash"
+echo "$name"
+"""
 [[action.params]]
 name = "addon_author"
 label = "@addon_author_label"
 type = "text"
 required = true
 placeholder = "Kakathic"
-
+value-sh = """
+source "$UZZ/$addon_name_id/Add-on.bash"
+echo "$author"
+"""
 [[action.params]]
 name = "addon_descss"
 label = "@addon_desc_label"
 type = "text"
 required = true
 placeholder = "Test zzz"
-
+value-sh = """
+source "$UZZ/$addon_name_id/Add-on.bash"
+echo "$description"
+"""
 [[action.params]]
 name = "addon_version"
 label = "@addon_version_label"
 type = "number"
 required = true
 placeholder = "1.0"
-
+value-sh = """
+source "$UZZ/$addon_name_id/Add-on.bash"
+echo "$version"
+"""
 [[action.params]]
 name = "addon_code_version"
 label = "@addon_code_version_label"
 type = "number"
 required = true
 placeholder = 100
-
+value-sh = """
+source "$UZZ/$addon_name_id/Add-on.bash"
+echo "$versionCode"
+"""
 [[action.params]]
 name = "addon_root"
 label = "@addon_root_label"
 desc = "@addon_root_desc"
 type = "switch"
 required = true
-
+value-sh = """
+source "$UZZ/$addon_name_id/Add-on.bash"
+echo "$root"
+"""
 [[action.params]]
 name = "addon_type_toml"
 label = "@addon_type_index"
