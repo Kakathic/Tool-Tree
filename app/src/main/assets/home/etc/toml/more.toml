@@ -1,0 +1,73 @@
+[[toml]]
+load-key-sh = "langpath"
+
+[[group]]
+[[text]]
+rows-sh = '''
+echo "[[rows]]
+size = 13
+text = "@root_text: {${ROOT^}}(#0dbda2)"
+bold = true
+icon = "{ICON}/1shield.png"
+line-height = 1.3
+break = true
+markdown = true
+
+[[rows]]
+text = "@device_text: {$ANDROID_BRAND - $ANDROID_DEVICE}(#0dbda2)"
+break = true
+size = 13
+bold = true
+line-height = 1.3
+icon = "{ICON}/1smart.png"
+markdown = true
+
+[[rows]]
+text = "@operating_system: {Android $ANDROID_RELEASE - $API}(#0dbda2)"
+break = true
+size = 13
+bold = true
+line-height = 1.3
+icon = "{ICON}/1android.png"
+markdown = true
+
+[[rows]]
+text = "@microprocessors: {${CPU_ABI^}}(#0dbda2)"
+break = true
+size = 13
+bold = true
+line-height = 1.3
+icon = "{ICON}/1cpu.png"
+markdown = true
+"
+'''
+
+[[group]]
+[[page]]
+title = "@editor_apk'"
+desc = "@setting_text_4'"
+icon = "{ICON}/project2.png"
+config-sh = "$ETC/tool-tree.bash Project 2"
+
+[[group]]
+[[page]]
+title = "@customize_text'"
+desc = "@more_text_6'"
+icon = "{ICON}/apk_utility.png"
+config-sh = "$ETC/tool-tree.bash Utiliapk"
+lock = '[ -f $HOME/check_unpack ] && echo "@boot_text_1" || echo 0'
+
+[[group]]
+[[page]]
+title = "@tools_text'"
+desc = "@more_text_7'"
+icon = "{ICON}/tool_apk.png"
+config = "{HOME}/etc/toml/troot.toml"
+
+[[group]]
+[[page]]
+title = "@plugin_text'"
+desc = "@more_text_8'"
+icon = "{ICON}/apk_addon.png"
+process = true
+config-sh = "$ETC/tool-tree.bash Addon $AOK"

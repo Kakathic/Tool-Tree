@@ -1,6 +1,6 @@
 # Kakathic
 if [ "$(glog Tset)" == 1 ]; then
-exec $ETC/tool-tree.bash Home
+echo "$ETC/toml/home.toml"
 else
-exec $ETC/tool-tree.bash More
+echo "$ETC/toml/more.toml"
 fi

@@ -1,0 +1,104 @@
+[[toml]]
+load-key-sh = "langpath"
+
+[[group]]
+[[page]]
+title = "@setting_text_1"
+desc = "@setting_text_2"
+icon = "{ICON}/info.png"
+config = "{HOME}/etc/toml/update.toml"
+  
+[[group]]
+[[page]]
+title = "@setting_text_7"
+desc = "@setting_text_8"
+icon = "{ICON}/feature.png"
+config = "{HOME}/etc/toml/feature.toml"
+
+[[group]]
+[[picker]]
+title = "@permis_text_2"
+desc = "@permis_text_5"
+icon = "{ICON}/language.png"
+option-sh = """
+echo -e "|@default_text\nai|Gemini Ai\nen|English\nvi|Việt nam\nru|Русский\nhu|Hungarian\nid|Indonesia\nes|Spanish"
+"""
+get = "glog language_kkts"
+set = """
+  if [ "$state" == "ai" ]; then
+    if transai -c; then
+      slog language_kkts "$state"
+      auto_trans
+      echo "exit:[restart]"
+      exit
+    else
+    echo
+    echo "@warn_gemini_text" >&2
+    fi
+  else
+    slog language_kkts "$state"
+    [ -f $ETC/lang/auto.sh ] && rm -fr $ETC/lang/auto.sh
+    slog language "$state"
+    echo "exit:[restart]"
+    exit
+  fi
+"""
+  
+[[group]]
+[[action]]
+id = "chatgemini"
+title = "Chat Gemini"
+desc = "@chat_gemini_text"
+icon = "{ICON}/chatai.png"
+lock-sh = '[ -z $(glog api_genmini) ] && echo "@warn_gemini_text" || echo 0'
+script = """
+[ "$models_thinking" -gt 0 ] && thingkk="-t $models_thinking"
+transai -m "$chatai" -l "$chatai_lang" $thingkk
+"""
+
+[[action.params]]
+name = "models_genmini"
+placeholder = "gemini-3.1-flash-lite"
+title = "Models Gemini"
+editable = true
+label = "Models"
+items = [ "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" ]
+value-sh = "glog models_genmini gemini-3.1-flash-lite"
+
+[[action.params]]
+name = "models_thinking"
+title = "@chatai_think_text"
+label = "@option_text"
+items = [ "0|@default_text", "1024", "2048", "4096" ]
+value = "0"
+
+[[action.params]]
+name = "chatai_lang"
+title = "@permis_text_5"
+label = "@permis_text_2"
+placeholder = "en-US"
+type = "text"
+value-sh = 'echo "$LANGUAGE-$COUNTRY"'
+
+[[action.params]]
+name = "chatai_nextrule"
+title = "@chatai_rule_text"
+placeholder = "- Always return text in uppercase"
+type = "text"
+
+[[action.params]]
+name = "chatai"
+title = "@doc_text"
+placeholder = "Hello Gemini"
+type = "text"
+required = true
+
+[[group]]
+[[editor]]
+id = "shella"
+title = "@home_text_5"
+desc = "@home_text_6"
+icon = "{ICON}/shella.png"
+file = "home/usr/run_shella.bash"
+need-input = true
+placeholder = "#!/data/data/com.tool.tree/files/home/bin/bash"
