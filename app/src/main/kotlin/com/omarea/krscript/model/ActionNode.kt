@@ -4,6 +4,7 @@ import java.util.*
 
 class ActionNode(currentConfigXml: String) : RunnableNode(currentConfigXml){
     var params: ArrayList<ActionParamInfo>? = null
+    var paramsSh: String = ""
     val rows = ArrayList<TextNode.TextRow>()
     val paramsRows = ArrayList<TextNode.TextRow>()
 

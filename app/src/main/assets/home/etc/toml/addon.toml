@@ -1,0 +1,31 @@
+[[toml]]
+load-key-sh = "langpath"
+
+[[group]]
+[[page]]
+title = "@text_addon_manage"
+desc = "@text_addon_manage_desc"
+icon = "{ICON}/add_user.png"
+config = "{HOME}/etc/toml/manager.toml"
+
+[[page]]
+title = "@text_addon_demo"
+desc = "@text_addon_demo_desc"
+icon = "{ICON}/add_list.png"
+config = "{HOME}/etc/toml/demo.toml"
+
+[[group]]
+[[page]]
+title = "@text_addon_available"
+desc = "@text_addon_available_desc"
+icon = "{ICON}/add_off.png"
+process = true
+config-sh = "$ETC/tool-tree.bash Addon $UPL"
+
+[[group]]
+[[page]]
+title = "@text_addon_online"
+desc = "@text_addon_online_desc"
+icon = "{ICON}/add_online.png"
+process = true
+config-sh = "$ETC/tool-tree.bash Addon $UZE"

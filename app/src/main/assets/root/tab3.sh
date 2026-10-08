@@ -1,1 +1,1 @@
-exec $ETC/tool-tree.bash Addss
+echo "$ETC/toml/addon.toml"

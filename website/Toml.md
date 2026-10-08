@@ -339,6 +339,7 @@ Since dot-notation was removed, groups can no longer be nested inside each other
 | lock              | lock-state        | String | Static lock: `true`/`1` or the `"1|message"` format (message accepts `@string/...`, `@key`, `{ROT}`/`{LOT}` - see §3.2)                                                                                                                   |
 | lock-sh           | \-                | String | `shell` Script to check the lock state (returns `"1"` = locked)                                                                                                                                                                           |
 | rows              | \-                | Array  | Rich-text rows shown below the page (see [section 3](#11-textrows---rich-text-row))                                                                                                                                                       |
+| rows-sh | \-                | String | `shell` Script that prints `[[rows]]` tables (inline TOML, also accepts `[[<type>.rows]]`) to build the rows dynamically. Runs during parse (batched); a non-empty valid result replaces the static `rows`, empty/`error`/invalid TOML keeps them |
 
 ### 6.2. Demo
 
@@ -378,8 +379,10 @@ config = "/sdcard/Tool-Tree/advanced.toml"
 | lock-sh                                                                                                                                | \-            | String      | `shell` Script to check lock dynamically (returns `"1"` = locked)                                                                                                 |
 | menu                                                                                                                                   | \-            | Bool        | true: action does NOT appear in the list; instead appears as its own icon on the toolbar                                                                          |
 | show                                                                                                                                   | \-            | Bool\|Shell | true (or shell): auto-open this action's dialog when entering the page (only once)                                                                                |
+| params-sh | \- | String | "" | `shell` Script that prints `[[params]]` tables (inline TOML, also accepts `[[action.params]]`) to build the parameter list dynamically. Runs during parse (batched). Non-empty valid result **replaces** the static `[[action.params]]`; empty/`error`/invalid TOML keeps them. Per-param `-sh` fields inside the output still run when the dialog opens |
 | params                                                                                                                                 | \-            | Array       | List of input parameters - see [section 3](#7-actionparams---input-parameters)                                                                                    |
 | rows                                                                                                                                   | \-            | Array       | Rich-text rows shown below the item - see [section 3](#11-textrows---rich-text-row)                                                                               |
+| rows-sh | \-            | String | `shell` Script that prints `[[rows]]` tables (inline TOML, also accepts `[[<type>.rows]]`) to build the rows dynamically. Runs during parse (batched); a non-empty valid result replaces the static `rows`, empty/`error`/invalid TOML keeps them |
 | params-rows                                                                                                                            | \-            | Array       | Rows for the params dialog only (separate from `rows` which appear both in list and dialog)                                                                       |
 | \+ all fields of RunnableNode, ClickableNode, NodeInfoBase (see [section 3](#3-shared-fields-nodeinfobase-clickablenode-runnablenode)) |               |             |                                                                                                                                                                   |
 
@@ -414,6 +417,30 @@ auto-off = true
 
 
 ## 7. `[[action.params]]` - Input parameters
+
+**Dynamic params:** see `params-sh` in section 7.1.
+
+```toml
+[[action]]
+title = "Wi-Fi setup"
+params-sh = "sh {HOME}/gen_wifi_params.sh"
+script = "echo $ssid $pass"
+```
+
+`gen_wifi_params.sh` prints:
+
+```toml
+[[params]]
+name = "ssid"
+title = "Network"
+type = "spinner"
+options-sh = "nmcli -t -f SSID dev wifi"
+
+[[params]]
+name = "pass"
+title = "Password"
+type = "password"
+```
 
 Each `[[action.params]]` defines one input field in the dialog shown when the user clicks an action. The parameter's value is passed to the action's script via the `$param_name` environment variable.
 
@@ -547,6 +574,7 @@ A param can be hidden/shown (or switched to readonly) based on the value of anot
 | lock                                                       | lock-state | String | Static lock: `true`/`1` or the `"1|message"` format (message accepts `@string/...`, `@key`, `{ROT}`/`{LOT}` - see §3.2)     |
 | lock-sh                                                    | \-         | String | `shell` Script to check lock dynamically (returns `"1"` = locked)                                                           |
 | rows                                                       | \-         | Array  | Rich-text rows shown below the item - see [section 3](#11-textrows---rich-text-row)                                         |
+| rows-sh | \-         | String | `shell` Script that prints `[[rows]]` tables (inline TOML, also accepts `[[<type>.rows]]`) to build the rows dynamically. Runs during parse (batched); a non-empty valid result replaces the static `rows`, empty/`error`/invalid TOML keeps them |
 | \+ all fields of RunnableNode, ClickableNode, NodeInfoBase |            |        |                                                                                                                             |
 
 ### 9.2. Demo
@@ -598,6 +626,7 @@ set = "settings put system screen_brightness_mode $state"
 | lock                                                       | lock-state | String          | Static lock: `true`/`1` or the `"1|message"` format (message accepts `@string/...`, `@key`, `{ROT}`/`{LOT}` - see §3.2)                                                                                                    |
 | lock-sh                                                    | \-         | String          | `shell` Script to check lock dynamically (returns `"1"` = locked)                                                                                                                                                          |
 | rows                                                       | \-         | Array           | Rich-text rows shown below the item - see [section 3](#11-textrows---rich-text-row)                                                                                                                                        |
+| rows-sh | \-         | String | `shell` Script that prints `[[rows]]` tables (inline TOML, also accepts `[[<type>.rows]]`) to build the rows dynamically. Runs during parse (batched); a non-empty valid result replaces the static `rows`, empty/`error`/invalid TOML keeps them |
 | \+ all fields of RunnableNode, ClickableNode, NodeInfoBase |            |                 |                                                                                                                                                                                                                            |
 
 ### 10.2. Demo
@@ -643,6 +672,7 @@ option-sh = "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequenc
 | Field                                                                        | Alias | Type  | Description                                                                                            |
 |------------------------------------------------------------------------------|-------|-------|--------------------------------------------------------------------------------------------------------|
 | rows                                                                         | \-    | Array | Rich-text rows - see [section 3](#11-textrows---rich-text-row). The parser also accepts an empty list. |
+| rows-sh | \-    | String | `shell` Script that prints `[[rows]]` tables (inline TOML, also accepts `[[<type>.rows]]`) to build the rows dynamically. Runs during parse (batched); a non-empty valid result replaces the static `rows`, empty/`error`/invalid TOML keeps them |
 | \+ NodeInfoBase fields (title, title-sh, desc, desc-sh, summary, support...) |       |       |                                                                                                        |
 
 ### 11.2. Demo
@@ -681,6 +711,24 @@ italic = true
 ```
 
 ## 11. `[[text.rows]]` - Rich text row
+
+**Dynamic rows (`rows-sh`):** every node that has `rows` (text, action, page, switch, picker, download, editor) accepts `rows-sh`, a script that prints the rows as inline TOML.
+
+```toml
+[[text]]
+rows-sh = "sh {HOME}/gen_rows.sh"
+```
+
+`gen_rows.sh` prints:
+
+```toml
+[[rows]]
+text = "CPU: 8 cores"
+bold = true
+
+[[rows]]
+text = "Temp: 41 C"
+```
 
 This is the **most common** display component: used in `[[text]]`, `[[action]]`, `[[page]]`, `[[download]]`, `[[action.params-rows]]` and `[[switch]]`, `[[picker]]`, `[[editor]]`. Each row is a single line of text that can have style, icon, toggle, photo, etc.
 
@@ -953,6 +1001,7 @@ The companion `flash` effect makes a reset-driven value change visible: whenever
 | value                                                                              | \-    | String      | ""      | Initial content (only when file does not exist)                                                                                                 |
 | value-sh                                                                           | \-    | String      | ""      | `shell` Script that produces initial content (higher priority than `value`)                                                                     |
 | rows                                                                               | \-    | Array       | \[\]    | Rich-text rows shown below the item - see [section 3](#11-textrows---rich-text-row)                                                             |
+| rows-sh | \-    | String | "" | `shell` Script that prints `[[rows]]` tables (inline TOML, also accepts `[[<type>.rows]]`) to build the rows dynamically. Runs during parse (batched); a non-empty valid result replaces the static `rows`, empty/`error`/invalid TOML keeps them |
 | \+ ClickableNode fields (icon, lock, min-sdk...) and NodeInfoBase (title, desc...) |       |             |         |                                                                                                                                                 |
 
 ### 13.2. Demo
@@ -1005,6 +1054,7 @@ run = false
 | lock                                                              | lock-state    | String | Static lock: `true`/`1` or the `"1|message"` format (message accepts `@string/...`, `@key`, `{ROT}`/`{LOT}` - see §3.2)                                                                                                                                                                                                                             |
 | lock-sh                                                           | \-            | String | `shell` Script to check lock dynamically (returns `"1"` = locked)                                                                                                                                                                                                                                                                                   |
 | rows                                                              | \-            | Array  | Rich-text rows shown below the item - see [section 3](#11-textrows---rich-text-row)                                                                                                                                                                                                                                                                 |
+| rows-sh | \-            | String | `shell` Script that prints `[[rows]]` tables (inline TOML, also accepts `[[<type>.rows]]`) to build the rows dynamically. Runs during parse (batched); a non-empty valid result replaces the static `rows`, empty/`error`/invalid TOML keeps them |
 | \+ all RunnableNode fields: confirm, warn, reload, auto-finish... |               |        |                                                                                                                                                                                                                                                                                                                                                     |
 
 ### 14.2. Demo

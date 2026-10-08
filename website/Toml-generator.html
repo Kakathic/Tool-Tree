@@ -1066,6 +1066,10 @@ function rowToDemoHtml(line) {
 function rowsBlockDemoHtml(rowsStr) {
   return (rowsStr || '').split('\n').map(l => l.trim()).filter(Boolean).map(rowToDemoHtml).join('');
 }
+function rowsShField() {
+  return { key: 'rowsSh', label: 'rows-sh', type: 'text', default: '', hint: 'Shell that prints [[rows]] TOML (inline) to build the rows dynamically. Runs at parse time; a non-empty valid result replaces the rows above, empty/error/invalid keeps them. Blank → omitted.' };
+}
+const rowsShLine = f => ((f.rowsSh||'').trim() ? `\nrows-sh = "${tomlEsc(f.rowsSh)}"` : '');
 function rowsField() {
   return { key: 'rows', label: 'rows', type: 'rowcards', default: '', hint: 'Optional: one card per [[<type>.rows]] rich-text line below the item. Each card is one [[<type>.rows]] table; style picks the row kind; toggle exposes optional get/set, link/html/progress expose their value; color/size plus the "more keys" cell (icon, script, support, copy, …) cover the rest. Blank optional fields are omitted. ↑ ↓ ✕ reorder / remove.' };
 }
@@ -1871,6 +1875,7 @@ const TYPES = {
       { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide · other = shell → 1. Shell switches this field to its shell form.' },
       { key:'lock', label:'lock', type:'text', default:'', sh:true, hint:'"1|message" or "1" — or a shell string printing "1" to lock. Blank = unlocked. -sh: lock-sh — a lock-check sample is filled auto.' },
       rowsField(),
+      rowsShField(),
     ],
     code: f => {
       const targetKey = f.target.startsWith('config-sh') ? 'config-sh' : f.target.startsWith('html') ? 'html' : f.target.startsWith('link') ? 'link' : f.target.startsWith('activity') ? 'activity' : 'config';
@@ -1879,7 +1884,7 @@ const TYPES = {
       const rows = f.rows && f.rows.trim() ? rowsBlockToml('page', f.rows) : '';
       return groupHeaderToml(f)
         + `[[page]]${titleLine(f)}${descLine(f)}${summaryLine(f)}${iconLine(f)}${photoLine(f)}${bgLine(f)}${mediaLines(f)}${resourceLines(f)}${keyLine}${supportLine(f)}`
-        + tgt + lockLine(f) + advPage(f) + gating(f) + rows + '\n';
+        + tgt + lockLine(f) + advPage(f) + gating(f) + rowsShLine(f) + rows + '\n';
     },
     demo: f => {
       if (supportHidden(f)) {
@@ -1932,6 +1937,7 @@ const TYPES = {
         ],
         hint:'Add a card for one [[action.params]]. name → $env_var; title/label are labels. -sh switches text/shell. Dropdowns use options-sh / options / items. depend-* controls visibility. ↑ ↓ ✕ reorder.' },
       { key:'paramsRows', label:'params-rows', type:'rowcards', default:'', emptyNote:'Each card becomes one [[action.params-rows]] table — rendered at the top of the params dialog, above the inputs.', hint:'Optional cards for [[action.params-rows]], shown above params inputs. Same row styles/keys as rows. ↑ ↓ ✕ reorder.' },
+      { key:'paramsSh', label:'params-sh', type:'text', default:'', hint:'Shell that prints [[params]] TOML (inline) to build the param list dynamically. Runs at parse time; a non-empty valid result replaces the cards above, empty/error/invalid keeps them. Blank → omitted.' },
       { key:'confirm', label:'confirm before running', type:'checkbox', default:true },
       { key:'warn', label:'warn', type:'text', default:'Apply the selected governor?', sh:true, hint:'Confirm-dialog text — shown when confirm is on. -sh: warn-sh — the value becomes echo "…" auto. Blank = omitted.' },
       { key:'menu', label:'show as toolbar icon (menu = true)', type:'checkbox', default:false },
@@ -1945,6 +1951,7 @@ const TYPES = {
       { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide · other = shell → 1. Shell switches this field to its shell form.' },
       { key:'lock', label:'lock', type:'text', default:'', sh:true, hint:'"1|message" or "1" — or a shell string printing "1" to lock. Blank = unlocked. -sh: lock-sh — a lock-check sample is filled auto.' },
       rowsField(),
+      rowsShField(),
     ],
     code: f => {
       const keyLine = f.nodeKey ? `\nkey = "${tomlEsc(f.nodeKey)}"` : '';
@@ -1957,7 +1964,7 @@ const TYPES = {
         + `[[action]]${titleLine(f)}${descLine(f)}${summaryLine(f)}${iconLine(f)}${photoLine(f)}${bgLine(f)}${mediaLines(f)}${resourceLines(f)}${keyLine}${supportLine(f)}`
         + `${f.confirm?`\nconfirm = true`:''}${warnLine(f)}${f.menu?`\nmenu = true`:''}${showLine(f)}${f.autoOff?`\nauto-off = true`:''}${f.autoFinish?`\nauto-finish = true`:''}${shellLine(f)}${f.interruptible?`\ninterruptible = true`:''}${f.needInput?`\nneed-input = true`:''}`
         + `${lockLine(f)}${runnableTail(f)}${gating(f)}`
-        + scriptLine + rows + params.map((q,i) => paramToToml(q, paramNamesOut[i])).join('') + pRows + '\n';
+        + scriptLine + rowsShLine(f) + ((f.paramsSh||'').trim() ? `\nparams-sh = "${tomlEsc(f.paramsSh)}"` : '') + rows + params.map((q,i) => paramToToml(q, paramNamesOut[i])).join('') + pRows + '\n';
     },
     demo: f => {
       const locked = !!(f.lock||'').trim();
@@ -2180,6 +2187,7 @@ const TYPES = {
       { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide · other = shell → 1. Shell switches this field to its shell form.' },
       { key:'lock', label:'lock', type:'text', default:'', sh:true, hint:'"1|message" or "1" — or a shell string printing "1" to lock. Blank = unlocked. -sh: lock-sh — a lock-check sample is filled auto.' },
       rowsField(),
+      rowsShField(),
       { key:'preview', label:'file preview (one line per row)', type:'textarea', default:'ro.build.version.release=14\nro.product.model=Redmi Note 12\npersist.sys.fastcharge=1\nro.debuggable=0' },
     ],
     code: f => {
@@ -2190,6 +2198,7 @@ const TYPES = {
         + (f.run === false ? `\nrun = false` : '')
         + ((f.placeholder||'').trim() ? `\nplaceholder = "${tomlEsc(f.placeholder.trim())}"` : '')
         + (f.needInput ? `\nneed-input = true` : '')
+        + rowsShLine(f)
         + shOrStatic(f, 'value', 'value');
       return groupHeaderToml(f)
         + `[[editor]]${keyLine}${titleLine(f)}${descLine(f)}${iconLine(f)}${summaryLine(f)}${photoLine(f)}${bgLine(f)}${mediaLines(f)}`
@@ -2233,6 +2242,7 @@ const TYPES = {
       { key:'state', label:'preview state', type:'select', options:['idle','downloading','done','error'], default:'downloading' },
       { key:'pct', label:'preview progress % (when downloading)', type:'text', default:'45' },
       rowsField(),
+      rowsShField(),
     ],
     code: f => {
       const scr = (f.advScript||'').trim() ? `\nscript = "${tomlEsc(f.advScript.trim())}"` : '';
@@ -2241,7 +2251,7 @@ const TYPES = {
       const keyLine = f.nodeKey ? `\nkey = "${tomlEsc(f.nodeKey)}"` : '';
       return groupHeaderToml(f)
         + `[[download]]${keyLine}${titleLine(f)}${descLine(f)}${iconLine(f)}${summaryLine(f)}${photoLine(f)}${bgLine(f)}${mediaLines(f)}`
-        + urlLine + scr + `${f.confirm?`\nconfirm = true`:''}` + shellLine(f) + runnableTail(f) + supportLine(f) + lockLine(f) + shOrStatic(f,'warn','warn') + gating(f)
+        + urlLine + scr + `${f.confirm?`\nconfirm = true`:''}` + shellLine(f) + runnableTail(f) + supportLine(f) + lockLine(f) + shOrStatic(f,'warn','warn') + gating(f) + rowsShLine(f)
         + rowsBlockToml('download', f.rows) + '\n';
     },
     demo: f => {
@@ -2345,6 +2355,7 @@ resource-file = "assets/icons/flags.zip"`
       ['placeholder-count','placeholder_count','Int','1','Skeleton placeholders shown up-front while waiting (only with <code>process = true</code>)'],
       ['lock / lock-sh','lock-state','String','','<code>"1|message"</code> / <code>"1"</code> / a shell returning "1" (resolveBoolOrShell); <code>lock-sh</code> checks it dynamically'],
       ['rows','','Array','','<code>[[page.rows]]</code> rich-text lines shown below the item'],
+      ['rows-sh','','String','','<span class="badge shell">shell</span> Script printing <code>[[rows]]</code> inline TOML — builds the rows dynamically (parse time); non-empty valid result replaces static rows'],
     ],
     notes: [
       ['warn','<b>One target per page:</b> <code>config</code> / <code>config-sh</code> / <code>html</code> / <code>link</code> / <code>activity</code> are mutually exclusive — declare exactly ONE of them.'],
@@ -2371,6 +2382,7 @@ lock = "{LOT}|Requires root access"`
       ['warn / warn-sh','warning','String','','Warning text shown in the confirmation dialog; <code>warn-sh</code> produces it dynamically (one-variant rule)'],
       ['menu','','Bool','false','Render as a toolbar (3-dot) entry instead of a list row'],
       ['show','','Bool|Shell','false','Auto-open this action dialog once on page enter'],
+      ['params-sh','','String','','<span class="badge shell">shell</span> Script printing <code>[[params]]</code> inline TOML — builds the param list dynamically (parse time); non-empty valid result replaces static params'],
       ['auto-off','auto-close','Bool','false','Auto-close the log dialog after running'],
       ['auto-finish','','Bool','false','Auto-close the whole page after running'],
       ['auto-kill','','Bool','false','Auto-kill related processes'],
@@ -2383,6 +2395,7 @@ lock = "{LOT}|Requires root access"`
       ['bg-task','background-task, async-task','Bool','false','Run in background — equivalent to <code>shell = "bg-task"</code>'],
       ['lock / lock-sh','lock-state','String','','<code>"1|message"</code> / <code>"1"</code> / a shell returning "1"; <code>lock-sh</code> checks it dynamically'],
       ['rows','','Array','','<code>[[action.rows]]</code> rich-text lines under the action row in the list'],
+      ['rows-sh','','String','','<span class="badge shell">shell</span> Script printing <code>[[rows]]</code> inline TOML — builds the rows dynamically (parse time); non-empty valid result replaces static rows'],
       ['params-rows','','Array','','<code>[[action.params-rows]]</code> rich-text lines shown ONLY inside the params dialog, above the inputs — same row kinds as rows (bold / mono / link / divider / progress / toggle, …); needs the dialog to open (params / confirm / warn)'],
     ],
     notes: [
@@ -2575,6 +2588,7 @@ title = "Performance"`
     fields: [
       ['title','','String','""','Block title (optional header)'],
       ['rows','','Array','','<code>[[text.rows]]</code> — one table per displayed line'],
+      ['rows-sh','','String','','<span class="badge shell">shell</span> Script printing <code>[[rows]]</code> inline TOML — builds the rows dynamically (parse time); non-empty valid result replaces static rows'],
     ],
     extra: `<h4>[[text.rows]] — row fields</h4>
 <div class="doc-tbl-wrap"><table class="doc-tbl">
@@ -2641,6 +2655,7 @@ progress-max = 100`
       ['key / support / icon','','—','','Same as every node: <code>support</code> takes true/false or a shell'],
       ['lock / lock-sh','','String','','<code>"1|message"</code> / <code>"1"</code> / a shell returning "1"'],
       ['rows','','Array','','<code>[[editor.rows]]</code> rich-text lines shown below the item'],
+      ['rows-sh','','String','','<span class="badge shell">shell</span> Script printing <code>[[rows]]</code> inline TOML — builds the rows dynamically (parse time); non-empty valid result replaces static rows'],
     ],
     notes: [
       ['tip','Because <code>readonly</code> accepts a shell, you can make a file editable only under certain conditions, e.g. <code>readonly = "test -w /system && echo 0 || echo 1"</code>.'],
@@ -2788,6 +2803,8 @@ const TOPICS = [
 <tr><td>title-sh / desc-sh / summary-sh</td><td>every node</td><td>Parse time (pending batch)</td></tr>
 <tr><td>icon-sh / photo-sh / bg-sh</td><td>clickable nodes</td><td>Parse time (pending batch)</td></tr>
 <tr><td>file-sh</td><td>[[editor]]</td><td>Parse time (pending batch)</td></tr>
+<tr><td>params-sh</td><td>[[action]]</td><td>Parse time (pending batch) — output replaces static params</td></tr>
+<tr><td>rows-sh</td><td>every node with rows</td><td>Parse time (pending batch) — output replaces static rows</td></tr>
 <tr><td>warn-sh</td><td>runnable nodes</td><td>Parse time</td></tr>
 <tr><td>lock-sh</td><td>clickable nodes</td><td>Parse time — "1" = locked</td></tr>
 <tr><td>support (shell form)</td><td>every node</td><td>Parse time — "1" = shown; an expensive one delays the page → use <code>load-after</code></td></tr>

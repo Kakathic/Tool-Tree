@@ -189,12 +189,19 @@ class PageConfigReader {
                 triple.first.remove(triple.second)
             }
         }
+        val dynamicParamResults = ArrayList<Pair<ActionNode, String>>()
+        val dynamicRowResults = ArrayList<Pair<ArrayList<TextNode.TextRow>, String>>()
         pendingDynamicStrings.forEachIndexed { index, triple ->
             val shellResult = results["dynstr:$index"] ?: ""
             if (shellResult != "error") {
                 val (target, fieldKey, _) = triple
                 when {
                     target is RunnableNode && fieldKey == "warning" -> target.warning = shellResult
+                    target is ActionNode && fieldKey == "params" -> dynamicParamResults.add(target to shellResult)
+                    target is ArrayList<*> && fieldKey == "rows" -> {
+                        @Suppress("UNCHECKED_CAST")
+                        dynamicRowResults.add((target as ArrayList<TextNode.TextRow>) to shellResult)
+                    }
                     target is ClickableNode -> when (fieldKey) {
                         "title" -> target.title = shellResult
                         "desc" -> target.desc = shellResult
@@ -233,6 +240,77 @@ class PageConfigReader {
         pendingDynamicStrings.clear()
         pendingBoolShells.clear()
         pendingCheckboxStates.clear()
+
+        if (dynamicParamResults.isNotEmpty() || dynamicRowResults.isNotEmpty()) {
+            dynamicParamResults.forEach { (action, text) -> applyDynamicParams(action, text) }
+            dynamicRowResults.forEach { (rows, text) -> applyDynamicRows(rows, text) }
+            resolvePendingStates()
+        }
+    }
+
+    private fun rowsShToml(table: TomlTable, rows: ArrayList<TextNode.TextRow>) {
+        tomlGet(table, "rows-sh")?.let {
+            val script = it.trim()
+            if (script.isNotEmpty()) registerDynamicString(rows, "rows", script)
+        }
+    }
+
+    private fun applyDynamicRows(rows: ArrayList<TextNode.TextRow>, rawText: String) {
+        val text = rawText.trim()
+        if (text.isEmpty()) return
+        try {
+            val result = Toml.parse(text)
+            if (result.hasErrors()) {
+                val message = result.errors().joinToString("\n") { it.toString() }
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(context, "rows-sh: failed to parse toml\n$message", Toast.LENGTH_LONG).show()
+                }
+                Log.e("KrConfig rows-sh", message)
+                return
+            }
+            val tables = ArrayList<TomlTable>()
+            tables.addAll(tomlEntries(result, "rows"))
+            for (nodeKey in listOf("text", "action", "page", "switch", "picker", "download", "editor")) {
+                tomlEntries(result, nodeKey).forEach { tables.addAll(tomlEntries(it, "rows")) }
+            }
+            if (tables.isEmpty()) return
+            val old = ArrayList(rows)
+            rows.clear()
+            for (table in tables) textRowToml(rows, table)
+            if (rows.isEmpty()) rows.addAll(old)
+        } catch (ex: Exception) {
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "rows-sh: " + ex.message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun applyDynamicParams(action: ActionNode, rawText: String) {
+        val text = rawText.trim()
+        if (text.isEmpty()) return
+        try {
+            val result = Toml.parse(text)
+            if (result.hasErrors()) {
+                val message = result.errors().joinToString("\n") { it.toString() }
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(context, "params-sh: failed to parse toml\n$message", Toast.LENGTH_LONG).show()
+                }
+                Log.e("KrConfig params-sh", message)
+                return
+            }
+            val tables = ArrayList<TomlTable>()
+            tables.addAll(tomlEntries(result, "params"))
+            tomlEntries(result, "action").forEach { tables.addAll(tomlEntries(it, "params")) }
+            val params = ArrayList<ActionParamInfo>()
+            for (table in tables) {
+                actionParamToml(table)?.let { params.add(it) }
+            }
+            if (params.isNotEmpty()) action.params = params
+        } catch (ex: Exception) {
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "params-sh: " + ex.message, Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private val tomlNodeTypeOrder = listOf("group", "text", "switch", "picker", "action", "page", "download", "editor", "resource", "menu", "fab")
@@ -650,6 +728,7 @@ class PageConfigReader {
         for (rowTable in tomlEntries(table, "rows")) {
             textRowToml(page.rows, rowTable)
         }
+        rowsShToml(table, page.rows)
 
         resourceNodeToml(table)
         return page
@@ -729,6 +808,7 @@ class PageConfigReader {
         for (rowTable in tomlEntries(table, "rows")) {
             textRowToml(switchNode.rows, rowTable)
         }
+        rowsShToml(table, switchNode.rows)
 
         return switchNode
     }
@@ -784,6 +864,7 @@ class PageConfigReader {
         for (rowTable in tomlEntries(table, "rows")) {
             textRowToml(picker.rows, rowTable)
         }
+        rowsShToml(table, picker.rows)
 
         if (picker.getState.isNullOrEmpty()) {
             picker.getState = ""
@@ -807,6 +888,7 @@ class PageConfigReader {
         for (rowTable in tomlEntries(table, "rows")) {
             textRowToml(node.rows, rowTable)
         }
+        rowsShToml(table, node.rows)
 
         return node
     }
@@ -826,10 +908,15 @@ class PageConfigReader {
             }
             action.params = params
         }
+        tomlGet(table, "params-sh")?.let {
+            action.paramsSh = it.trim()
+            if (action.paramsSh.isNotEmpty()) registerDynamicString(action, "params", action.paramsSh)
+        }
 
         for (rowTable in tomlEntries(table, "rows")) {
             textRowToml(action.rows, rowTable)
         }
+        rowsShToml(table, action.rows)
 
         for (rowTable in tomlEntries(table, "params-rows")) {
             textRowToml(action.paramsRows, rowTable)
@@ -950,6 +1037,7 @@ class PageConfigReader {
         for (rowTable in tomlEntries(table, "rows")) {
             textRowToml(text.rows, rowTable)
         }
+        rowsShToml(table, text.rows)
         resourceNodeToml(table)
         return text
     }
@@ -1087,6 +1175,7 @@ class PageConfigReader {
         for (rowTable in tomlEntries(table, "rows")) {
             textRowToml(editor.rows, rowTable)
         }
+        rowsShToml(table, editor.rows)
 
         return editor
     }
