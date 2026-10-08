@@ -72,4 +72,5 @@ class ActionParamInfo : Serializable {
     var allowNoSelection: Boolean = false
 
     var remember: Boolean = true
+    var applyScript: String? = null
 }

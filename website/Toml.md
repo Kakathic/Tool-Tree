@@ -418,6 +418,33 @@ auto-off = true
 
 ## 7. `[[action.params]]` - Input parameters
 
+**Per-param script (`apply`):** each param can carry a snippet; on confirm, the snippets of all non-readonly params are merged (hidden ones only with `depend-include-hidden = true`, the default) (in param order) and run together, followed by the action `script`.
+
+```toml
+[[action]]
+title = "Setup"
+script = 'echo "Done: $mode"'
+
+[[action.params]]
+name = "mode"
+type = "spinner"
+options = ["a|Mode A", "b|Mode B"]
+apply = 'setprop sys.mode $mode'
+
+[[action.params]]
+name = "wifi"
+type = "switch"
+apply = '[ "$wifi" = "1" ] && svc wifi enable || svc wifi disable'
+```
+
+With `mode=b`, `wifi=1` the merged script is:
+
+```sh
+setprop sys.mode $mode
+[ "$wifi" = "1" ] && svc wifi enable || svc wifi disable
+echo "Done: $mode"
+```
+
 **Dynamic params:** see `params-sh` in section 7.1.
 
 ```toml
@@ -480,6 +507,7 @@ Each `[[action.params]]` defines one input field in the dialog shown when the us
 | sort               | \-                          | Bool            | Move readonly params to the bottom (only effective when `readonly` is declared)                                                                                                                                                                                                                                                                                                                                                                                               |
 | allow-no-selection | no-select                   | Bool            | Allow spinner to be empty (e.g. when you need to distinguish "not selected" from "first item")                                                                                                                                                                                                                                                                                                                                                                                |
 | remember           | remember-value              | Bool            | Persist the user's last chosen/entered value (keyed by page config path + action `key` + param `name`) and auto-restore it as the default the next time the dialog opens - overrides static `value`. If the param also has `value-sh`, the shell result still wins (it reflects the real current system state); the remembered value is only used when `value-sh` is absent. **Default: `true`** - set `remember = "false"` to opt out and always fall back to static `value` |
+| apply | param-script | String | `shell` Script snippet merged into ONE script and run when the user confirms the action dialog, before the action's `script`. Uses `$name` of any param (not `$state`). Skipped when the param is `readonly`, or hidden by `depend-on` with `depend-include-hidden = false` (with the default `true`, a hidden param still runs its `apply` and passes its value). Works with params from `params-sh` |
 
 ### 8.2. Common `type` values
 

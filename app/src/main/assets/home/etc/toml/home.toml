@@ -48,7 +48,7 @@ EOF
 title = "@editor_rom"
 desc = "@setting_text_4"
 icon = "{ICON}/project.png"
-config-sh = "$ETC/tool-tree.bash Project 1"
+config = "{HOME}/etc/toml/project.toml"
 
 [[group]]
 [[page]]

@@ -1,0 +1,49 @@
+[[toml]]
+load-key-sh = "langpath"
+
+[[group]]
+[[menu]]
+[[menu.items]]
+type = "refresh"
+title = "@refresh_text"
+
+[[group]]
+[[action]]
+shell = "hidden"
+reload = true
+icon = "{ICON}/folder_rom.png"
+title = "@folder_text"
+desc = "@path_text: @SDC"
+script = '''
+  if [ ! -d "$FOLDER" ]; then
+  slog SDC "$FOLDER"
+  mkdir -p "$FOLDER"
+  fi
+'''
+
+[[action.params]]
+name = "FOLDER"
+label = "@folder_text"
+desc = "@config_text_2"
+value-sh = "glog SDC"
+type = "folder"
+required = true
+
+[[group]]
+[[action]]
+title = "@project_text_3"
+icon = "{ICON}/cleanup.png"
+warn = "@project_text_4"
+auto-off = true
+script = '''
+  for vl in $dels; do
+  echo "Deleting the folder: $vl"
+  rm -fr "$vl"
+  done
+'''
+
+  [[action.params]]
+  name = "dels"
+  label = "@option_text"
+  options-sh = "findfile folders $APK/$PTAH"
+  multiple = true

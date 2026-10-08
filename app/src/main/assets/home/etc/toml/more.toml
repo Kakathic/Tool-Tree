@@ -48,7 +48,7 @@ EOF
 title = "@editor_apk"
 desc = "@setting_text_4"
 icon = "{ICON}/project2.png"
-config-sh = "$ETC/tool-tree.bash Project 2"
+config = "{HOME}/etc/toml/apkproject.toml"
 
 [[group]]
 [[page]]

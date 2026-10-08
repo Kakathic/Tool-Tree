@@ -666,6 +666,8 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
         return tips.toString()
     }
 
+    fun isParamHidden(name: String): Boolean = visibilityState[name] == false
+
     fun readParamsValue(actionParamInfos: ArrayList<ActionParamInfo>): HashMap<String, String> {
         val params = HashMap<String, String>()
         for (actionParamInfo in actionParamInfos) {

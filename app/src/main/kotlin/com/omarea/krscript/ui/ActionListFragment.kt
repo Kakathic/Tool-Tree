@@ -579,7 +579,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             val paramsValue = render.readParamsValue(actionParamInfos)
                             ActionParamMemory.save(requireContext(), action, actionParamInfos, paramsValue)
                             if (isAutoShow) ActionShowMemory.markConfirmed(requireContext(), action)
-                            actionExecute(action, script, onExit, paramsValue)
+                            actionExecute(action, ParamsApplyScript.merge(script, actionParamInfos, render), onExit, paramsValue)
                         } catch (ex: Exception) {
                             Toast.makeText(requireContext(), "" + ex.message, Toast.LENGTH_LONG).show()
                         }
@@ -641,7 +641,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                 val paramsValue = render.readParamsValue(actionParamInfos)
                                 ActionParamMemory.save(requireContext(), action, actionParamInfos, paramsValue)
                                 if (isAutoShow) ActionShowMemory.markConfirmed(requireContext(), action)
-                                actionExecute(action, script, onExit, paramsValue)
+                                actionExecute(action, ParamsApplyScript.merge(script, actionParamInfos, render), onExit, paramsValue)
                                 dialog?.dismiss()
                             } catch (ex: Exception) {
                                 Toast.makeText(requireContext(), "" + ex.message, Toast.LENGTH_LONG).show()

@@ -821,6 +821,7 @@ function paramExtraLines(p) {
     if (x.sort) s += `\nsort = true`;
   }
   if (x.noRemember) s += `\nremember = false`;
+  if ((x.apply||'').trim()) s += `\napply = "${tomlEsc(x.apply.trim())}"`;
   if (OPT_TYPES.includes(t) && t !== 'multi-select' && x.noSel) s += `\nallow-no-selection = true`;
   return s;
 }
@@ -1527,6 +1528,7 @@ function paramCardHtml(p, idx, list) {
   more.push(xt('readonly — true / false / shell ("1" = read-only)', 'readonly', 'true'));
   more.push(xc('sort — read-only params to the bottom (needs readonly)', 'sort'));
   more.push(xc('remember = false — do not restore the last value', 'noRemember'));
+  more.push(xt('apply — script merged & run on confirm (before the action script, use $name)', 'apply', 'setprop sys.mode $name'));
   if (t==='int' || t==='number' || t==='seekbar') {
     more.push(cell('min — lower bound', 'min', null, p.min, '0'));
     more.push(cell('max — upper bound', 'max', null, p.max, '60'));
@@ -2432,6 +2434,7 @@ value = "5"`
       ['maxlength','','Int','','Max characters (text)'],
       ['desc-on','desc-on-sh','String','','Note shown while a switch / bool / checkbox is ON'],
       ['remember','','Bool','true','<code>remember = false</code> = do not restore the last entered value next time'],
+      ['apply','param-script','String','','<span class="badge shell">shell</span> Snippet merged with the other non-readonly params\' snippets and run on confirm, before the action script; use <code>$name</code>. A param hidden by depend-on still runs unless depend-include-hidden = false'],
       ['allow-no-selection','','Bool','false','Spinner may stay empty'],
       ['mime / multiple / editable','','String|Bool','','File picker: MIME filter · several files · manual path entry (folder: multiple / editable)'],
       ['separator','','String','\\n','Joins multiple selected values (multi-select · multiple file/folder/app)'],

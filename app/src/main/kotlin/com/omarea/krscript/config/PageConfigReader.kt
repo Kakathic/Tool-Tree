@@ -934,6 +934,7 @@ class PageConfigReader {
         tomlGet(table, "name")?.let { p.name = it }
         tomlGet(table, "label")?.let { p.label = StringResRef.resolve(context, it) }
         tomlGet(table, "label-sh")?.let { p.labelSh = it }
+        tomlGet(table, "apply", "param-script")?.let { p.applyScript = it }
         tomlGet(table, "placeholder")?.let { p.placeholder = StringResRef.resolve(context, it) }
         tomlGet(table, "placeholder-sh")?.let { p.placeholderSh = it }
         tomlGet(table, "title")?.let { p.title = StringResRef.resolve(context, it) }
