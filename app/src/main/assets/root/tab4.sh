@@ -1,1 +1,1 @@
-exec $ETC/tool-tree.bash Settings
+echo "$ETC/toml/settings.toml"
