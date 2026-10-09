@@ -5,7 +5,7 @@ load-key-sh = "langpath"
 [[menu]]
 [[menu.items]]
 title = "@guide_title"
-link = "https://kakathic.github.io/Tool-Tree/website/Toml-html.html"
+link = "https://kakathic.github.io/Tool-Tree/website/Toml.html"
 [[menu.items]]
 title = "@gen_title"
 link = "https://kakathic.github.io/Tool-Tree/website/Toml-generator.html"
@@ -25,16 +25,23 @@ mkdir -p "$UZZ/$id_add_on"
 '''
 
 [[action.params]]
+name = "addon_features_toml"
+title = "@title_addon_features"
+label = "@option_text"
+type = "single-select"
+items = ["1|@default_text", "2|@pack_text", "3|@upload_online_text", "4|@delete_online_text"]
+readonly = '[ -n "$(glog id_add_on)" ] || echo 1'
+
+[[action.params]]
 name = "account_add_on"
 title = "@secret_code_title"
-desc = "@secret_code_desc"
 type = "password"
 required = true
 placeholder = "Kakathic_test_1234"
 
 [[action.params]]
 name = "id_add_on"
-desc = "@list_addon_desc"
+title = "@list_addon_desc"
 label = "@input_name_label"
 type = "single-select"
 options-sh = "findfile for $UZZ"

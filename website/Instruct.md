@@ -43,4 +43,4 @@ root=false    # if set to "true" root is required for add-on to work
 
 - There are many things that are difficult to say that can only be found out by yourself.
 
-- [See details](https://Kakathic.github.io/Tool-Tree/website/Toml-html.html)
+- [See details](https://Kakathic.github.io/Tool-Tree/website/Toml.html)

@@ -5,7 +5,7 @@ load-key-sh = "langpath"
 [[page]]
 title = "@guide_title"
 icon = "🔥"
-link = "https://kakathic.github.io/Tool-Tree/website/Toml-html.html"
+link = "https://kakathic.github.io/Tool-Tree/website/Toml.html"
 [[page]]
 title = "@gen_title"
 icon = "🔥"
