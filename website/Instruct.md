@@ -11,10 +11,10 @@
 ```
 file.add
 └── (in file.add)
-    ├── download.bash        # link to download add-on
-    ├── Add-on.bash           # add-on information
-    ├── icon.png (200x200)   # is the icon of the add-on
-    ├── index.bash|index.toml   # After entering the page, all content will be displayed.
+    ├── download.bash          # link to download add-on
+    ├── Add-on.bash            # add-on information
+    ├── icon.png (200x200)     # is the icon of the add-on
+    ├── index.bash|index.toml  # After entering the page, all content will be displayed.
     ├── early_start.bash       # The first time the application starts, it will run the shell.
     ├── install.bash           # When the add-on is unzipped, it will run the shell.
     └── uninstall.bash         # remove add-on it will run shell
@@ -23,16 +23,14 @@ file.add
 **Contents of Add-on.bash file**
 
 ```
-# is a shell script file
+# Add-on
 id=test
-name=Test add-on
-author=Kakathic
-description=Short description
-version=1.0
+name="Test add-on"
+author="Kakathic"
+description="Short description"
+version="1.0"
 versionCode=100
-
-# if set to "true" root is required for add-on to work
-root=false
+root=false    # if set to "true" root is required for add-on to work
 ```
 
 **Add-on icon**
@@ -45,4 +43,4 @@ root=false
 
 - There are many things that are difficult to say that can only be found out by yourself.
 
-- [See details](https://Kakathic.github.io/Tool-Tree/website/Toml.html)
+- [See details](https://Kakathic.github.io/Tool-Tree/website/Toml-html.html)
