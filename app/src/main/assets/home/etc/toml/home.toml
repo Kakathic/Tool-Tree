@@ -70,4 +70,4 @@ title = "@plugin_text"
 desc = "@home_text_4"
 icon = "{ICON}/addon.png"
 process = true
-config-sh = "exec $ETC/toml/listaddon.bash $AON"
+config-sh = "exec $ETC/add-on.bash $AON"

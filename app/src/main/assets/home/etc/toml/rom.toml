@@ -56,6 +56,7 @@ handler = '''
   title = "Patch ROM"
   icon-path = "$AON/patch_rom/patch.png"
   config-sh = "$AON/patch_rom/index.bash home"
+  support = "[ -f $AON/patch_rom/index.bash ] && echo 1"
 
   [[menu.items]]
   key = "v1"

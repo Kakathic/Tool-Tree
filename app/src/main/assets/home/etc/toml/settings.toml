@@ -101,4 +101,5 @@ desc = "@home_text_6"
 icon = "{ICON}/shella.png"
 file = "home/usr/run_shella.bash"
 need-input = true
-placeholder = "#!/data/data/com.tool.tree/files/home/bin/bash"
+placeholder = "#bash|sh|python"
+value = "#bash"
