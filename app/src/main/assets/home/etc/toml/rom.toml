@@ -1,0 +1,466 @@
+[[toml]]
+load-key-sh = "langpath"
+
+[[group]]
+[[action]]
+shell = "hidden"
+reload = true
+menu = true
+title = "@projects_text"
+desc-sh = 'echo "@path_text: $PTSD"'
+script = '''
+slog SDH "$SDH"
+if [ ! -d "$SDC/$Name" ] || [ ! -d "$SDH/$Name" ]; then
+  slog PTSD "$SDC/$Name"
+  slog PTSH "$Name"
+  mkdir -p "$SDH/$Name" "$SDC/$Name/out"
+elif [ -d "$SDH/$Name" ]; then
+  slog PTSH "$Name"
+  slog PTSD "$SDC/$Name"
+fi
+'''
+
+  [[action.params]]
+  name = "SDH"
+  title = "@output_folder_text"
+  desc-sh = 'echo "@path_text: $SDH"'
+  type = "folder"
+  value-sh = "glog SDH"
+  path-home = "$HOME"
+  editable = true
+
+  [[action.params]]
+  name = "Name"
+  title = "@setting_text_3"
+  desc = "@config_text_1"
+  label = "@option_text"
+  options-sh = "findfile for $SDH"
+  value-sh = "glog PTSH"
+  editable = true
+
+[[group]]
+[[menu]]
+handler = '''
+  if [ "$menu_id" == "v1" ]; then
+  echo "am:[start -a android.intent.action.SEND -t */* -d content://$PACKAGE_NAME.provider/external_files${PTSD#$SDCARD_PATH}]"
+  elif [ "$menu_id" == "v2" ]; then
+  echo "am:[start -a android.intent.action.SEND -t */* -d content://$PACKAGE_NAME.provider/root$SDH/$PTSH]"
+  fi
+'''
+
+  [[menu.items]]
+  title = "@apex_text"
+  config = "{HOME}/etc/toml/apex.toml"
+
+  [[menu.items]]
+  title = "Patch ROM"
+  icon-path = "$AON/patch_rom/patch.png"
+  config-sh = "$AON/patch_rom/index.bash home"
+
+  [[menu.items]]
+  key = "v1"
+  title = "@open_activity_text ROM"
+  silent = true
+
+  [[menu.items]]
+  key = "v2"
+  title = "@open_activity_text (data-root)"
+  silent = true
+
+[[group]]
+[[action]]
+title = "@convert_text"
+icon = "@urlicon/convert_file.png"
+script = '''
+  slog nen_br "$nen_br"
+  for vinput in $IMAGES; do
+  cover_img -i "$PTSD/$vinput" -o "$PTSD/out" -c $format_img -l $nen_br -d $cboxk
+  done
+  echo "@save_text $PTSD/out"
+  echo
+  checktime
+'''
+
+  [[action.params]]
+  name = "cboxk"
+  label = "@deleted_file_text"
+  type = "checkbox"
+
+  [[action.params]]
+  name = "format_img"
+  label = "@option_text"
+  value = "raw"
+  required = true
+  items = [ "raw|File.img (raw)", "sparse|File.img (sparse)", "dat|File.new.dat", "br|File.new.dat.br", "zstd|File.img.zstd", "zst|File.img.zst", "lzma|File.img.lzma", "lz4|File.img.lz4", "xz|File.img.xz", "gz|File.img.gz" ]
+
+  [[action.params]]
+  name = "nen_br"
+  label = "@builds_text_4"
+  desc = "@convert_text_2"
+  type = "seekbar"
+  min = 0
+  max = 22
+  value-sh = "glog nen_br 4"
+  required = true
+  depend-on = "format_img"
+  depend-value = "raw,sparse,File.new.dat"
+  depend-mode = "hide"
+  depend-readonly = true
+
+  [[action.params]]
+  name = "IMAGES"
+  desc = "@input_file_text: br, dat, zstd, img"
+  options-sh = "findfile 1 $PTSD"
+  required = true
+  multiple = true
+
+[[group]]
+[[action]]
+title = "@decompile_text"
+desc-sh = 'echo "@path_text: ${PTSD/$SDCARD_PATH//sdcard}"'
+icon = "@urlicon/decom.png"
+script = '''
+  for vkl in $IMAGES; do
+  if [ -f "$PTSD/${vkl#*=}" ]; then
+  unpack_img -i "$PTSD/${vkl#*=}" -p "${vkl%%=*}" -o "$SDH/$PTSH" -n $nounpak -d $cboxk -r $xoa_oat_boot -a $vavb -m "$pcvbmeta"
+  else
+  unpack_img -i "$PTSD/$vkl" -o "$SDH/$PTSH" -n $nounpak -d $cboxk -r $xoa_oat_boot -a $vavb -m "$pcvbmeta"
+  fi
+  done
+  checktime
+'''
+
+  [[action.params]]
+  name = "cboxk"
+  label = "@deleted_file_text"
+  type = "checkbox"
+
+  [[action.params]]
+  name = "nounpak"
+  label = "@decode_text_1"
+  type = "switch"
+
+  [[action.params]]
+  name = "xoa_oat_boot"
+  label = "@xoaoat_text_1"
+  type = "switch"
+  depend-on = "nounpak"
+  depend-value = "1"
+  depend-mode = "hide"
+  depend-readonly = true
+
+  [[action.params]]
+  name = "text_oat_boot"
+  type = "text"
+  value = "fsv_meta,oat,vdex,odex,prof,bprof"
+  depend-on = "xoa_oat_boot"
+  depend-value = "1"
+  depend-mode = "show"
+  depend-default = "hide"
+
+  [[action.params]]
+  name = "vavb"
+  label = "@builds_text_8"
+  type = "switch"
+  depend-on = "nounpak"
+  depend-value = "1"
+  depend-mode = "hide"
+  depend-readonly = true
+
+  [[action.params]]
+  name = "box_btn"
+  value = [ "avb", "enc", "recovery" ]
+  multiple = true
+  label = "@option_text"
+  items = [ "avb|@builds_text_81", "enc|@builds_text_82", "recovery|@builds_text_83" ]
+  depend-on = "vavb"
+  depend-value = "1"
+  depend-mode = "show"
+  depend-default = "hide"
+
+  [[action.params]]
+  name = "pcvbmeta"
+  label = "@patch_text vbmeta"
+  items = [ "0|@default_text", "1|@disable_text dm-verity (hex 020)", "2|@disable_text Verification", "3|@disable_text dm-verity (hex 020) + Verification", "4|@disable_text dm-verity (hex 010)", "5|@disable_text dm-verity + Verification (hex 030)" ]
+  depend-on = "nounpak"
+  depend-value = "1"
+  depend-mode = "hide"
+  depend-readonly = true
+
+  [[action.params]]
+  name = "IMAGES"
+  desc = "@input_file_text: br, dat, img, zst, zstd, bin, zip"
+  options-sh = "findfile 2 $PTSD"
+  required = true
+  multiple = true
+  remember = false
+
+[[action]]
+title = "@build_text"
+desc-sh = 'echo "@projects_text: $PTSH"'
+icon = "@urlicon/build.png"
+script = '''
+  slog nen_br "$nen_br"
+  for vkl in $IMAGES; do
+  repack_img -i "$SDH/$PTSH/$vkl" -o "$PTSD/out" -n "$dang_nen" -l "$muc_nen" -k "$dinh_dang" -s "$build_size" -d "$boolbox" -c "$format_imgs" -p "$offfscontex"
+  done
+  echo "@save_text $PTSD/out"
+  echo
+  checktime
+'''
+
+  [[action.params]]
+  name = "boolbox"
+  label = "@deleted_project_text"
+  type = "checkbox"
+
+  [[action.params]]
+  name = "IMAGES"
+  title = "@list_partition_text"
+  desc = "@builds_text_1"
+  options-sh = "findfile 0 $SDH/$PTSH"
+  required = true
+  multiple = true
+  remember = false
+
+  [[action.params]]
+  name = "dinh_dang"
+  label = "@build_text"
+  desc = "@builds_text_2"
+  items = [ "0|@default_text", "1|RO (EROFS)", "2|RW (EXT4)", "3|RO (F2FS)", "4|RW (F2FS)" ]
+  depend-on = "IMAGES"
+  depend-value = "(erofs),(ext),(f2fs)"
+  depend-mode = "show"
+  depend-default = "hide"
+
+  [[action.params]]
+  name = "on_f2fs_nen"
+  label = "@lall_nen_f2fs_text"
+  desc = "@nen_f2fs_text"
+  type = "switch"
+  depend-on = "dinh_dang"
+  depend-value = "(F2FS)"
+  depend-mode = "show"
+  depend-default = "hide"
+
+  [[action.params]]
+  name = "dang_nen"
+  label = "@option_text"
+  desc = "@builds_text_3"
+  value = "lz4hc"
+  items = [ "lz4hc", "lz4", "lzma", "deflate", "zstd" ]
+  depend-on = "dinh_dang|dinh_dang|IMAGES"
+  depend-value = "EROFS|EXT4,F2FS|(erofs)"
+  depend-mode = "show|hide|show"
+  depend-logic = "priority"
+  depend-default = "hide"
+
+  [[action.params]]
+  name = "muc_nen"
+  label = "@builds_text_4"
+  desc = "@builds_text_6: lz4: 0, lz4hc: 0-12, deflate,lzma: 0-9, zstd: 0-22"
+  type = "seekbar"
+  min = 0
+  max = 22
+  value = "8"
+  depend-on = "dang_nen"
+  depend-value = "lz4"
+  depend-mode = "hide"
+  depend-logic = "priority"
+
+  [[action.params]]
+  name = "format_imgs"
+  label = "@convert_text"
+  desc = "@convert_img_text"
+  value = "raw"
+  depend-on = "IMAGES"
+  depend-value = "(erofs),(ext),(f2fs)"
+  depend-mode = "show"
+  depend-readonly = true
+  items = [ "raw|File.img (raw)", "sparse|File.img (sparse)", "zstd|File.img.zstd", "zst|File.img.zst", "dat|File.new.dat", "br|File.new.dat.br" ]
+
+  [[action.params]]
+  name = "nen_br"
+  label = "@builds_text_4"
+  desc = "@convert_text_2"
+  type = "seekbar"
+  min = 0
+  max = 22
+  value-sh = "glog nen_br 4"
+  required = true
+  depend-on = "format_imgs"
+  depend-value = "raw,sparse,File.new.dat"
+  depend-mode = "hide"
+
+  [[action.params]]
+  name = "time_build"
+  label = "@time_text"
+  desc-sh = 'echo "@build_time_text_1: $(date -d "@$(glog build_times 1230768000)")"'
+  type = "number"
+  required = true
+  value-sh = "glog build_times"
+  depend-on = "IMAGES"
+  depend-value = "(erofs),(ext),(f2fs)"
+  depend-mode = "show"
+  depend-readonly = true
+
+  [[action.params]]
+  name = "offfscontex"
+  label = "@patch_text_fscontex"
+  desc = "@patch_text_fsdesc"
+  type = "switch"
+  value = "1"
+  depend-on = "IMAGES"
+  depend-value = "(erofs),(ext),(f2fs)"
+  depend-mode = "show"
+  depend-readonly = true
+
+  [[action.params]]
+  name = "build_size"
+  label = "@sizes_text"
+  desc = "@builds_text_7"
+  type = "number"
+  value = "0"
+  required = true
+  depend-on = "dinh_dang|dinh_dang|IMAGES"
+  depend-value = "EROFS|EXT4,F2FS|(ext),(f2fs)"
+  depend-mode = "hide|show|show"
+  depend-logic = "priority"
+  depend-default = "hide"
+
+[[group]]
+[[action]]
+title = "@build_text Super"
+icon = "@urlicon/build_super.png"
+script = '''
+  repack_super -m "$IMAGES" -g "$super_group" -s "$super_size" -f "$from" -t "$type" -i "$PTSD"
+  echo
+  checktime
+'''
+
+  [[action.params]]
+  name = "type"
+  label = "@super_text_2"
+  value = "VAB"
+  items = [ "A|a_only", "AB|ab", "VAB|virtual_ab" ]
+
+  [[action.params]]
+  name = "from"
+  label = "@super_text_3"
+  value = "raw"
+  items = [ "raw", "sparse" ]
+
+  [[action.params]]
+  name = "super_size"
+  label = "@sizes_text"
+  desc = "@default_text: 8.5GB"
+  type = "number"
+  placeholder = "8.5"
+  value = "8.5"
+  required = true
+
+  [[action.params]]
+  name = "super_group"
+  label = "@super_text_5"
+  desc = "@super_text_6"
+  value = "qti_dynamic_partitions"
+  placeholder = "qti_dynamic_partitions"
+  required = true
+
+  [[action.params]]
+  name = "IMAGES"
+  desc = "@super_text_7"
+  options-sh = "findfile 3 $PTSD"
+  required = true
+  multiple = true
+
+[[group]]
+[[action]]
+title = "@super_split_text_1"
+icon = "@urlicon/super_split.png"
+script = '''
+  echo "@super_split_text_4 ${IMAGES}..."
+  echo
+  if [ $(checktype "$PTSD/$IMAGES") == "sparse" ]; then
+  simg2img "$PTSD/$IMAGES"
+  fi
+  size_super_mb=$(($(stat -c %s "$PTSD/$IMAGES") / 1048576))
+  chunk_size_mb=$((size_super_mb / slipdhhe))
+  echo "${size_super_mb}M ÷ $slipdhhe = ${chunk_size_mb}M"
+  echo
+  chunk_split -s .cache.%02d -B 4K -C "$chunk_size_mb"M "$PTSD/$IMAGES"
+  [ "$khoi_dau_dem" == 1 ] && sonum=1 || sonum=0
+  cd "$PTSD"
+  for vcd in ${IMAGES}.cache.*; do
+  if [ -f "$vcd" ]; then
+  echo "$vcd ➠ ${IMAGES}.$sonum"
+  mv "$vcd" "out/${IMAGES}.$sonum"
+  sonum=$((sonum + 1))
+  fi
+  done
+  echo
+  [ "$cboxk" == 0 ] || rm -fr "$PTSD/$IMAGES"
+  echo "@save_text $PTSD/out"
+  echo
+  checktime
+'''
+
+  [[action.params]]
+  name = "cboxk"
+  label = "@deleted_file_text"
+  type = "checkbox"
+
+  [[action.params]]
+  name = "slipdhhe"
+  label = "@number_text"
+  title = "@split_number_desc"
+  type = "number"
+  min = 2
+  max = 98
+  value = "9"
+  required = true
+
+  [[action.params]]
+  name = "khoi_dau_dem"
+  label = "@split_number_label"
+  type = "switch"
+  value = "0"
+
+  [[action.params]]
+  name = "IMAGES"
+  label = "@option_text"
+  title = "@super_split_text_3"
+  options-sh = "findfile 7 $PTSD"
+  required = true
+
+[[action]]
+title = "@super_merge_text_1"
+icon = "@urlicon/super_merge.png"
+script = '''
+  echo "@super_merge_text_2..."
+  simg2img $MERGE "$PTSD/super.img" || killtree "Error" "$PTSD/super.img"
+  [ "$silence" == 0 ] || rm -fr $MERGE
+  echo
+  echo "@save_text $PTSD/super.img"
+  echo
+  checktime
+'''
+
+  [[action.params]]
+  name = "silence"
+  label = "@deleted_file_text"
+  type = "checkbox"
+  value = "1"
+
+  [[action.params]]
+  name = "MERGE"
+  desc = "@super_merge_text_3"
+  options-sh = "findfile 5 $PTSD | sort -n -t . -k 3"
+  required = true
+  multiple = true
+
+[[group]]
+[[page]]
+title = "@synthetic_text"
+icon = "@urlicon/generate.png"
+config = "{HOME}/etc/toml/generate.toml"

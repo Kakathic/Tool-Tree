@@ -20,7 +20,7 @@ title = "@text_addon_available"
 desc = "@text_addon_available_desc"
 icon = "{ICON}/add_off.png"
 process = true
-config-sh = "$ETC/tool-tree.bash Addon $UPL"
+config-sh = "exec $ETC/toml/listaddon.bash $UPL"
 
 [[group]]
 [[page]]
@@ -28,4 +28,4 @@ title = "@text_addon_online"
 desc = "@text_addon_online_desc"
 icon = "{ICON}/add_online.png"
 process = true
-config-sh = "$ETC/tool-tree.bash Addon $UZE"
+config-sh = "exec $ETC/toml/listaddon.bash $UZE"

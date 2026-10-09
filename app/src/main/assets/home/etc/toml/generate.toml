@@ -1,0 +1,151 @@
+[[toml]]
+load-key-sh = "langpath"
+
+[[group]]
+[[action]]
+shell = "hidden"
+reload = true
+menu = true
+title = "@projects_text"
+desc-sh = 'echo "@path_text: $PTSD"'
+script = '''
+slog SDH "$SDH"
+if [ ! -d "$SDC/$Name" ] || [ ! -d "$SDH/$Name" ]; then
+  slog PTSD "$SDC/$Name"
+  slog PTSH "$Name"
+  mkdir -p "$SDH/$Name" "$SDC/$Name/out"
+elif [ -d "$SDH/$Name" ]; then
+  slog PTSH "$Name"
+  slog PTSD "$SDC/$Name"
+fi
+'''
+
+  [[action.params]]
+  name = "SDH"
+  title = "@output_folder_text"
+  desc-sh = 'echo "@path_text: $SDH"'
+  type = "folder"
+  value-sh = "glog SDH"
+  path-home = "$HOME"
+  editable = true
+
+  [[action.params]]
+  name = "Name"
+  title = "@setting_text_3"
+  desc = "@config_text_1"
+  label = "@option_text"
+  options-sh = "findfile for $SDH"
+  value-sh = "glog PTSH"
+  editable = true
+
+[[group]]
+[[action]]
+title = "@generate_text Payload"
+icon = "@urlicon/build_payload.png"
+script = '''
+  slog sign_payload "$sign_payload"
+  slog payload_switch "$payload_switch"
+  slog payload_super_size "$payload_super_size"
+  slog payload_super_group "$payload_super_group"
+  payload_repack -m "$IMAGES" -i "$PTSD" -s "$sign_payload" -w "$payload_switch" -e "$payload_super_size" -g "$payload_super_group"
+  echo
+  checktime
+'''
+
+  [[action.params]]
+  name = "payload_switch"
+  label = "@payload_text_3"
+  type = "switch"
+
+  [[action.params]]
+  name = "payload_super_size"
+  label = "@sizes_text"
+  desc = "@default_text: 11GB, @payload_text_4"
+  type = "number"
+  value = "11"
+  required = true
+  depend-on = "payload_switch"
+  depend-value = "0"
+  depend-mode = "hide"
+  depend-readonly = true
+
+  [[action.params]]
+  name = "payload_super_group"
+  label = "@super_text_5"
+  desc = "@super_text_6, @payload_text_4"
+  value = "qti_dynamic_partitions"
+  required = true
+  depend-on = "payload_switch"
+  depend-value = "0"
+  depend-mode = "hide"
+  depend-readonly = true
+
+  [[action.params]]
+  name = "sign_payload"
+  label = "@sign_text"
+  value = "testkey"
+  options-sh = 'findfile file $ETC/key/2048 .pem | sed "s|.pem||"'
+
+  [[action.params]]
+  name = "IMAGES"
+  desc = "@payload_text_2"
+  options-sh = "findfile 11 $PTSD"
+  required = true
+  multiple = true
+
+[[group]]
+[[action]]
+title = "@generate_text Amlogic"
+icon = "@urlicon/build_amlogic.png"
+script = '''
+  echo "@apkb_text_1 $PTSD/$FOLDER"
+  echo
+  if [ "$(checktype "$PTSD/$FOLDER/super.img")" == "super" ]; then
+  echo "@unpack_text_0 super(raw) ➠ super(sparse)..."
+  img2simg "$PTSD/$FOLDER/super.img"
+  echo
+  fi
+  if [ -n "$(ls -1d $PTSD/$FOLDER/*.img 2>/dev/null)" ]; then
+  for vv in $PTSD/$FOLDER/*.img; do
+  echo "mv: ${vv##*/} ➠ $(echo "${vv##*/}" | sed "s|\\.img$|.PARTITION|")"
+  mv "$vv" "${vv%.*}.PARTITION"
+  done
+  echo
+  fi
+  ampack pack --verify --out-ver $amlogic_ver --out-align $amlogic_align "$PTSD/$FOLDER" "$PTSD/out/$FOLDER.img" | tee $TMP/amlogic_pack.log
+  [ "$?" == 1 ] && bug_rom=1 || bug_rom=0
+  for vv in $(ls -1d $PTSD/$FOLDER/*.PARTITION 2>/dev/null); do
+  mv "$vv" "${vv%.*}.img"
+  done
+  [ "$bug_rom" == 1 ] && killtree "Log check error: $TMP/amlogic_pack.log"
+  [ "$amlogic_boolbox" == 1 ] && rm -fr "$PTSD/$FOLDER"
+  echo "@unpack_text_2 $TMP/amlogic_pack.log"
+  echo
+  echo "@save_text $PTSD/out/$FOLDER.img"
+  echo
+  checktime
+'''
+
+  [[action.params]]
+  name = "amlogic_boolbox"
+  label = "@deleted_project_text"
+  type = "checkbox"
+
+  [[action.params]]
+  name = "amlogic_ver"
+  label = "@version_text"
+  value = "v2"
+  items = [ "v2", "v1" ]
+
+  [[action.params]]
+  name = "amlogic_align"
+  label = "@alignment_text"
+  value = "8"
+  items = [ "4|4", "8|8 (Android 11+)" ]
+
+  [[action.params]]
+  name = "FOLDER"
+  desc = "@builds_text_1"
+  options-sh = 'findfile file $PTSD platform.conf | sed "s|/platform.conf||"'
+  required = true
+  multiple = true

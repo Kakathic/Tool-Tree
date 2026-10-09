@@ -55,7 +55,7 @@ config = "{HOME}/etc/toml/apkproject.toml"
 title = "@customize_text"
 desc = "@more_text_6"
 icon = "{ICON}/apk_utility.png"
-config-sh = "$ETC/tool-tree.bash Utiliapk"
+config = "{HOME}/etc/toml/apk.toml"
 lock = '[ -f $HOME/check_unpack ] && echo "@boot_text_1" || echo 0'
 
 [[group]]
@@ -71,4 +71,4 @@ title = "@plugin_text"
 desc = "@more_text_8"
 icon = "{ICON}/apk_addon.png"
 process = true
-config-sh = "$ETC/tool-tree.bash Addon $AOK"
+config-sh = "exec $ETC/toml/listaddon.bash $AOK"

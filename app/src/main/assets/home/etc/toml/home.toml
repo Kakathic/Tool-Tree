@@ -55,7 +55,7 @@ config = "{HOME}/etc/toml/project.toml"
 title = "@customize_text"
 desc = "@home_text_2"
 icon = "{ICON}/utilities.png"
-config-sh = "$ETC/tool-tree.bash Utilities"
+config = "{HOME}/etc/toml/rom.toml"
 
 [[group]]
 [[page]]
@@ -70,4 +70,4 @@ title = "@plugin_text"
 desc = "@home_text_4"
 icon = "{ICON}/addon.png"
 process = true
-config-sh = "$ETC/tool-tree.bash Addon $AON"
+config-sh = "exec $ETC/toml/listaddon.bash $AON"

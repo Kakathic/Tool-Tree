@@ -185,4 +185,4 @@ home (){
 title = "@manage_addon_title"
 icon = "add_online.png"
 process = true
-config-sh = "$ETC/tool-tree.bash Addon $UZZ"
+config-sh = "exec $ETC/toml/listaddon.bash $UZZ"

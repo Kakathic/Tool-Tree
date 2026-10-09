@@ -1,0 +1,364 @@
+[[toml]]
+load-key-sh = "langpath"
+
+[[group]]
+[[action]]
+shell = "hidden"
+reload = true
+menu = true
+title = "@projects_text"
+desc-sh = 'echo "@path_text: $PTAD"'
+script = """
+slog APK "$APK"
+if [ ! -d "$SDC/$Name" ] || [ ! -d "$APK/$Name" ]; then
+  slog PTAD "$SDC/$Name"
+  slog PTAH "$Name"
+  mkdir -p "$APK/$Name" "$SDC/$Name/out"
+elif [ -d "$APK/$Name" ]; then
+  slog PTAH "$Name"
+  slog PTAD "$SDC/$Name"
+fi
+"""
+
+  [[action.params]]
+  name = "APK"
+  title = "@output_folder_text"
+  desc-sh = 'echo "@path_text: $APK"'
+  type = "folder"
+  value-sh = "glog APK"
+  path-home = "$HOME"
+  editable = true
+
+  [[action.params]]
+  name = "Name"
+  title = "@setting_text_3"
+  desc = "@config_text_1"
+  label = "@option_text"
+  options-sh = "findfile for $APK"
+  value-sh = "glog PTAH"
+  editable = true
+
+[[group]]
+[[menu]]
+handler = '''
+  if [ "$menu_id" == "b2" ]; then
+  echo "Looking for system apk..."
+  for mm in $(pm list package -s | cut -f2 -d:); do
+  cggdccg="$(pm path $mm | cut -f2 -d:)"
+  [ -f "$cggdccg" ] && apktool if "$cggdccg" 2>/dev/null | sed "/127.apk/d"
+  done
+  rm -fr $HOME/.local/share/apktool/framework/1.apk
+  echo
+  checktime
+  elif [ "$menu_id" == "b4" ]; then
+  echo "@more_text_4 $file"
+  echo
+  apktool if "$file"
+  elif [ "$menu_id" == "v2" ]; then
+  echo "@more_text_4 $file"
+  echo
+  [ "$(unzip -ql "$file" | grep -cm1 ".x509.pem")" == 1 ] || killtree "@more_text_5 .x509.pem"
+  [ "$(unzip -ql "$file" | grep -cm1 ".pk8")" == 1 ] || killtree "@more_text_5 .pk8"
+  unzip -oj "$file" *.x509.pem *.pk8 -d "$ETC/key"
+  elif [ "$menu_id" == "v4" ]; then
+  echo "am:[start -a android.intent.action.SEND -t */* -d content://$PACKAGE_NAME.provider/external_files${PTAD#$SDCARD_PATH}]"
+  elif [ "$menu_id" == "v5" ]; then
+  echo "am:[start -a android.intent.action.SEND -t */* -d content://$PACKAGE_NAME.provider/root$APK/$PTAH]"
+  fi
+'''
+
+  [[menu.items]]
+  key = "b2"
+  type = "default"
+  title = "@framework_auto_text"
+
+  [[menu.items]]
+  key = "v2"
+  type = "file"
+  title = "@more_text_3"
+  suffix = "zip"
+  auto-off = true
+
+  [[menu.items]]
+  key = "b4"
+  type = "file"
+  title = "@more_text_10 framework"
+  suffix = "apk"
+
+  [[menu.items]]
+  key = "v4"
+  type = "default"
+  title = "@open_activity_text APK"
+  silent = true
+
+  [[menu.items]]
+  key = "v5"
+  type = "default"
+  title = "@open_activity_text (data-root)"
+  silent = true
+
+[[group]]
+[[action]]
+title = "@apk_mager_text_2"
+icon = "@urlicon/merge_apk.png"
+warn = "@apk_mager_text_1"
+script = '''
+  IFS=$'\n'
+  for v in $FILE; do
+      echo "@more_text_4 $v"
+      echo
+      apkeditor m -f -i "$PTAD/$v" -o "$PTAD/out/$v" 2>&1 | sed -u -e "1,/__/d"
+      echo
+  done
+  checktime
+'''
+
+  [[action.params]]
+  name = "FILE"
+  options-sh = "findfile 9 $PTAD | grep -E '(apks)|(apkm)|(xapk)'"
+  desc-sh = 'echo "@path_text: ${PTAD/$SDCARD_PATH//sdcard}"'
+  required = true
+  multiple = true
+
+[[group]]
+[[action]]
+title = "@decompile_text"
+desc-sh = 'echo "@path_text: ${PTAD/$SDCARD_PATH//sdcard}"'
+icon = "@urlicon/decom.png"
+warn = "@decom_apk_text_15"
+script = '''
+  IFS=$'\n'
+  for vapk in $FILE; do
+  if [ "$tooldecom" == "apkeditor" ]; then
+  apkeditor_d -i "$PTAD/$vapk" -t "$type_apk" -b "$xoa_debug_info" -d "$dexlib" -o "$APK/$PTAH" -s "$redivdd"
+  else
+  apktool_d -i "$PTAD/$vapk" -r "$mutiresk" -b "$xoa_debug_info" -d "$dexlibk" -o "$APK/$PTAH" -s "$redivdd"
+  fi
+  echo
+  done
+  echo "@save_text $APK/$PTAH"
+  echo
+  checktime
+'''
+
+  [[action.params]]
+  name = "tooldecom"
+  label = "@customize_tools_text"
+  value = "apkeditor"
+  items = [ "apkeditor|Apkeditor", "apktool|Apktool" ]
+
+  [[action.params]]
+  name = "mutiresk"
+  label = "@decom_apk_text_11"
+  value = "1"
+  items = [ "0|@decom_apk_text_3", "1|@default_text", "2|@decom_apk_text_5" ]
+  depend-on = "tooldecom"
+  depend-value = "apkeditor"
+  depend-mode = "hide"
+
+  [[action.params]]
+  name = "type_apk"
+  label = "@decom_apk_text_11"
+  value = "xml"
+  depend-on = "tooldecom"
+  depend-value = "apktool"
+  depend-mode = "hide"
+  items = [ "raw|@decom_apk_text_3", "xml|@default_text", "reso|@decom_apk_text_10" ]
+
+  [[action.params]]
+  name = "dexlibk"
+  label = "@decom_apk_text_12"
+  value = "2"
+  items = [ "0|@decom_apk_text_3", "1|@default_text", "2|Baksmali 3.0.9" ]
+  depend-on = "tooldecom"
+  depend-value = "apkeditor"
+  depend-mode = "hide"
+
+  [[action.params]]
+  name = "dexlib"
+  label = "@decom_apk_text_12"
+  value = "smali"
+  items = [ "nodex|@decom_apk_text_3", "internal|@default_text", "smali|Baksmali 3.0.9" ]
+  depend-on = "tooldecom"
+  depend-value = "apktool"
+  depend-mode = "hide"
+
+  [[action.params]]
+  name = "xoa_debug_info"
+  label = "@decom_apk_text_7"
+  type = "switch"
+  value = "1"
+  depend-on = "dexlib|dexlibk"
+  depend-value = "nodex|0"
+  depend-mode = "hide|hide"
+  depend-cascade = false
+  depend-readonly = true
+
+  [[action.params]]
+  name = "redivdd"
+  label = "@decom_apk_text_14"
+  type = "switch"
+  value = "0"
+  depend-on = "dexlib|dexlibk"
+  depend-value = "internal,jf|1"
+  depend-mode = "hide|hide"
+  depend-cascade = false
+  depend-readonly = true
+
+  [[action.params]]
+  name = "dex_methods"
+  label = "@number_text"
+  type = "number"
+  min = 40000
+  max = 65535
+  value = "64000"
+  depend-on = "redivdd"
+  depend-value = "1"
+  depend-mode = "show"
+  depend-default = "hide"
+
+  [[action.params]]
+  name = "FILE"
+  title = "@decom_apk_text_9"
+  desc = "@input_file_text: apk, apks, apkm, xapk, jar, zip"
+  options-sh = "findfile 9 $PTAD"
+  required = true
+  multiple = true
+
+[[action]]
+title = "@build_text"
+desc-sh = 'echo "@projects_text: $PTAH"'
+icon = "@urlicon/build.png"
+warn = "@build_apk_text_2"
+script = '''
+  IFS=$'\n'
+  for vbapk in $FOLDER; do
+    if [ -f "$APK/$PTAH/$vbapk/archive-info.json" ]; then
+      apkeditor_b -i "$APK/$PTAH/$vbapk" -o "$PTAD/out" -s "$sign" -n "$sstring" -d "$xoatm" -x "$comlib"
+    else
+      apktool_b -i "$APK/$PTAH/$vbapk" -o "$PTAD/out" -c "$copysign" -s "$sign" -n "$sstring" -d "$xoatm" -x "$comlib"
+    fi
+    echo
+  done
+  echo "@save_text $PTAD/out"
+  echo
+  checktime
+'''
+
+  [[action.params]]
+  name = "xoatm"
+  label = "@deleted_project_text"
+  type = "bool"
+  value = "0"
+
+  [[action.params]]
+  name = "sign"
+  label = "@sign_text"
+  value = "default"
+  options-sh = 'findfile file $ETC/key .pk8 | sed "s|.pk8||"'
+
+  [[action.params]]
+  name = "sstring"
+  label = "@build_apk_text_1"
+  type = "switch"
+  value = "1"
+
+  [[action.params]]
+  name = "copysign"
+  label = "@decom_apk_text_13"
+  type = "switch"
+  depend-on = "FOLDER"
+  depend-value = "(apktool)"
+  depend-mode = "show"
+  depend-default = "hide"
+
+  [[action.params]]
+  name = "comlib"
+  label = "@addlang_text_2"
+  desc = "@addlang_text_3"
+  value = "manifest"
+  items = [ "manifest|@default_text", "true|@on_text", "false|@off_text" ]
+
+  [[action.params]]
+  name = "FOLDER"
+  desc = "@builds_text_1"
+  options-sh = "findfile forapk $APK/$PTAH"
+  required = true
+  multiple = true
+
+[[group]]
+[[page]]
+title = "@apex_text"
+icon = "@urlicon/apex.png"
+config = "{HOME}/etc/toml/apex.toml"
+
+[[group]]
+[[action]]
+title = "@distur_apk_text_2"
+icon = "@urlicon/apk_distur.png"
+warn = "@distur_apk_text_1"
+script = '''
+  IFS=$'\n'
+  for v in $FILE; do
+      echo "@more_text_4 $v"
+      echo
+      apkeditor p -skip-manifest -f -i "$PTAD/$v" -o "$PTAD/out/$v" 2>&1 | sed -u -e "1,/__/d"
+      echo
+  done
+  checktime
+'''
+
+  [[action.params]]
+  name = "FILE"
+  options-sh = "findfile 10 $PTAD"
+  desc-sh = 'echo "@path_text: ${PTAD/$SDCARD_PATH//sdcard}"'
+  required = true
+  multiple = true
+
+[[action]]
+title = "@apk_restore_text_2"
+icon = "@urlicon/apk_restore.png"
+warn = "@apk_restore_text_1"
+script = '''
+  IFS=$'\n'
+  for v in $FILE; do
+      echo "@more_text_4 $v"
+      echo
+      apkeditor x -fix-types -f -i "$PTAD/$v" -o "$PTAD/out/$v" 2>&1 | sed -u -e "1,/__/d"
+      echo
+  done
+  checktime
+'''
+
+  [[action.params]]
+  name = "FILE"
+  options-sh = "findfile 10 $PTAD"
+  desc-sh = 'echo "@path_text: ${PTAD/$SDCARD_PATH//sdcard}"'
+  required = true
+  multiple = true
+
+[[group]]
+[[action]]
+title = "@restore_apk_text_3"
+icon = "@urlicon/restore_sign.png"
+warn-sh = 'echo "@path_text: ${PTAD/$SDCARD_PATH//sdcard}"'
+script = '''
+  echo "@more_text_4 $FILE"
+  echo
+  apkeditor d -f -t sig -i "$PTAD/$FILE" -sig "$TMP/signatures_dir" 2>&1
+  echo
+  apkeditor b -f -t sig -i "$PTAD/$FILE2" -sig "$TMP/signatures_dir" -o "$PTAD/out/$FILE2" 2>&1
+  rm -fr "$TMP/signatures_dir"
+'''
+
+  [[action.params]]
+  name = "FILE"
+  title = "@restore_apk_text_1"
+  options-sh = "findfile 10 $PTAD"
+  required = true
+
+  [[action.params]]
+  name = "FILE2"
+  title = "@restore_apk_text_2"
+  options-sh = "findfile 10 $PTAD"
+  required = true

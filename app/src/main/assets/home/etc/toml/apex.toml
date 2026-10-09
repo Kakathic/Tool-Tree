@@ -1,0 +1,100 @@
+[[toml]]
+load-key-sh = "langpath"
+
+[[group]]
+[[action]]
+shell = "hidden"
+reload = true
+menu = true
+title = "@projects_text"
+desc-sh = 'echo "@path_text: $PTAD"'
+script = """
+slog APK "$APK"
+if [ ! -d "$SDC/$Name" ] || [ ! -d "$APK/$Name" ]; then
+  slog PTAD "$SDC/$Name"
+  slog PTAH "$Name"
+  mkdir -p "$APK/$Name" "$SDC/$Name/out"
+elif [ -d "$APK/$Name" ]; then
+  slog PTAH "$Name"
+  slog PTAD "$SDC/$Name"
+fi
+"""
+
+  [[action.params]]
+  name = "APK"
+  title = "@output_folder_text"
+  desc-sh = 'echo "@path_text: $APK"'
+  type = "folder"
+  value-sh = "glog APK"
+  path-home = "$HOME"
+  editable = true
+
+  [[action.params]]
+  name = "Name"
+  title = "@setting_text_3"
+  desc = "@config_text_1"
+  label = "@option_text"
+  options-sh = "findfile for $APK"
+  value-sh = "glog PTAH"
+  editable = true
+
+[[group]]
+[[action]]
+title = "@decompile_text"
+desc-sh = 'echo "@path_text: ${PTAD/#$SDCARD_PATH//sdcard}"'
+icon = "{ICON}/decom.png"
+script = """
+  IFS=$'\\n'
+  for vv in $FILE; do
+      apexeditor d -i "$PTAD/$vv" -o "$APK/$PTAH"
+      echo
+  done
+  echo "@save_text $APK/$PTAH"
+  echo
+  checktime
+"""
+
+  [[action.params]]
+  name = "FILE"
+  desc = "@apex_text_2"
+  options-sh = "findfile 12 $PTAD"
+  required = true
+  multiple = true
+
+[[action]]
+title = "@build_text"
+desc-sh = 'echo "@projects_text: $PTAH"'
+icon = "{ICON}/build.png"
+script = """
+  IFS=$'\\n'
+  for vv in $FILE; do
+      apexeditor b -d "$gobo_apex" -k "$SIGNS" -c "$nen_apex" -i "$APK/$PTAH/$vv" -o "$PTAD/out"
+      echo
+  done
+  checktime
+"""
+
+  [[action.params]]
+  name = "gobo_apex"
+  label = "@deleted_project_text"
+  type = "checkbox"
+
+  [[action.params]]
+  title = "@apex_text_1"
+  name = "nen_apex"
+  label = "@option_text"
+  value = "auto"
+  items = [ "auto|@default_text", "0|@off_text", "1|@on_text" ]
+
+  [[action.params]]
+  name = "SIGNS"
+  label = "@sign_text"
+  value = "testkey"
+  options-sh = 'findfile file $ETC/key/4096 .pem | sed "s|.pem||"'
+
+  [[action.params]]
+  name = "FILE"
+  desc = "@builds_text_1"
+  options-sh = "findfile forapex $APK/$PTAH"
+  required = true
+  multiple = true
