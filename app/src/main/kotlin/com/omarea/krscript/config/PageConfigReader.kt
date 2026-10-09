@@ -10,6 +10,7 @@ import com.omarea.common.model.SelectItem
 import com.omarea.krscript.executor.ExtractAssets
 import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.model.*
+import java.io.File
 import java.io.InputStream
 import java.util.Locale.getDefault
 import androidx.core.graphics.toColorInt
@@ -246,6 +247,14 @@ class PageConfigReader {
             dynamicRowResults.forEach { (rows, text) -> applyDynamicRows(rows, text) }
             resolvePendingStates()
         }
+    }
+
+    private fun resolvePathPlaceholders(path: String): String {
+        var result = path
+        if (result.contains("{HOME}")) {
+            result = result.replace("{HOME}", File(context.filesDir, "home").absolutePath)
+        }
+        return result
     }
 
     private fun rowsShToml(table: TomlTable, rows: ArrayList<TextNode.TextRow>) {
@@ -744,7 +753,7 @@ class PageConfigReader {
             option.suffix = suffix
         }
         tomlGet(table, "mime")?.let { option.mime = it.lowercase(getDefault()) }
-        tomlGet(table, "path-home", "home-path", "pathhome")?.let { option.pathHome = it.trim() }
+        tomlGet(table, "path-home", "home-path", "pathhome")?.let { option.pathHome = resolvePathPlaceholders(it.trim()) }
         tomlGet(table, "multiple")?.let { option.multiple = tomlTruthy(it, "multiple") }
         tomlGet(table, "get", "getstate")?.let {
             when (option.type) {
@@ -963,7 +972,7 @@ class PageConfigReader {
             p.suffix = suffix
         }
         tomlGet(table, "mime")?.let { p.mime = it.lowercase(getDefault()) }
-        tomlGet(table, "path-home", "home-path", "pathhome")?.let { p.pathHome = it.trim() }
+        tomlGet(table, "path-home", "home-path", "pathhome")?.let { p.pathHome = resolvePathPlaceholders(it.trim()) }
         val readonlyRaw = tomlGet(table, "readonly")
         readonlyRaw?.let { raw ->
             val v = raw.trim()

@@ -906,7 +906,7 @@ type = "password"
 <tr><td class="field-name">separator</td><td>-</td><td class="field-type">String</td><td>Value separator (multi). Default <code>\n</code></td></tr>
 <tr><td class="field-name">suffix</td><td>-</td><td class="field-type">String</td><td>File extension filter (e.g. <code>"zip,apk"</code>). Only type=file</td></tr>
 <tr><td class="field-name">mime</td><td>-</td><td class="field-type">String</td><td>MIME type filter. Only type=file</td></tr>
-<tr><td class="field-name">path-home</td><td>home-path, pathhome</td><td class="field-type">String</td><td>Initial directory when opening file picker</td></tr>
+<tr><td class="field-name">path-home</td><td>home-path, pathhome</td><td class="field-type">String</td><td>Initial directory when opening file picker. Accepts <code>{HOME}</code> placeholders</td></tr>
 <tr><td class="field-name">editable</td><td>-</td><td class="field-type">Bool</td><td>Enables direct manual editing for supported chooser fields. For <code>type=file</code>/<code>type=folder</code>, the picker field becomes an editable path input, so the user can type or modify the path directly; the chooser button remains available. For <code>type=spinner</code>/<code>type=single-select</code>, the selected-value field becomes editable so the user can type a value manually or choose one from the options. Default: <code>false</code>.</td></tr>
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>Hide/show the param</td></tr>
 <tr><td class="field-name">sort</td><td>-</td><td class="field-type">Bool</td><td>Move readonly params to the bottom (only effective when <code>readonly</code> is declared)</td></tr>
@@ -1548,7 +1548,7 @@ script = "sh /data/data/com.tool.tree/files/run.sh"
 <tr><td class="field-name">config-sh</td><td>-</td><td class="field-type">String</td><td>Script returning inline toml</td></tr>
 <tr><td class="field-name">suffix</td><td>-</td><td class="field-type">String</td><td>File extension filter (type=file)</td></tr>
 <tr><td class="field-name">mime</td><td>-</td><td class="field-type">String</td><td>MIME filter</td></tr>
-<tr><td class="field-name">path-home</td><td>home-path, pathhome</td><td class="field-type">String</td><td>Initial directory (file picker)</td></tr>
+<tr><td class="field-name">path-home</td><td>home-path, pathhome</td><td class="field-type">String</td><td>Initial directory (file picker). Accepts <code>{HOME}</code> placeholders</td></tr>
 <tr><td class="field-name">multiple</td><td>-</td><td class="field-type">Bool</td><td>Allow multiple file selection</td></tr>
 <tr><td class="field-name">options</td><td>-</td><td class="field-type">Array</td><td>(type=spinner) Choice list</td></tr>
 <tr><td class="field-name">items</td><td>-</td><td class="field-type">Array of String</td><td>(type=spinner) Shorthand choice list - each entry is <code>"value|title"</code> or just <code>"value"</code>. Takes priority over <code>options</code> when both are declared</td></tr>
