@@ -48,7 +48,7 @@ EOF
 title = "@editor_apk"
 desc = "@setting_text_4"
 icon = "{ICON}/project2.png"
-config = "{HOME}/etc/toml/apkproject.toml"
+config = "{HOME}/etc/toml/apkpro.toml"
 
 [[group]]
 [[page]]
