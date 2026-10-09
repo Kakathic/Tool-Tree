@@ -56,7 +56,7 @@ title = "@customize_text"
 desc = "@more_text_6"
 icon = "{ICON}/apk_utility.png"
 config = "{HOME}/etc/toml/apk.toml"
-lock = '[ -f $HOME/check_unpack ] && echo "@boot_text_1" || echo 0'
+lock-sh = '[ -f $HOME/check_unpack ] && echo "@boot_text_1" || echo 0'
 
 [[group]]
 [[page]]

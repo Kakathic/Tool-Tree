@@ -26,7 +26,7 @@ fi
   desc-sh = 'echo "@path_text: $APK"'
   type = "folder"
   value-sh = "glog APK"
-  path-home = "$HOME"
+  path-home = "{HOME}"
   editable = true
 
   [[action.params]]
