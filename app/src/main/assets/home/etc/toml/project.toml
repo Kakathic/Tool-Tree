@@ -13,7 +13,7 @@ shell = "hidden"
 reload = true
 icon = "{ICON}/folder_rom.png"
 title = "@folder_text"
-desc = "@path_text: @SDC"
+desc-sh = 'echo "@path_text: $SDC"'
 script = '''
   if [ ! -d "$FOLDER" ]; then
   slog SDC "$FOLDER"
@@ -119,18 +119,18 @@ for vvsskk in $SDH/$PTSH/*; do
   [[ "$namept" == *config* || "$namept" == *raw* ]] && continue
   cat << EOF
   [[params]]
-  name = "name_$namept"
+  name = "name_${namept}"
   type = "number"
   placeholder = "0"
-  label = "$namept"
-  value-sh = "cat $SDH/$PTSH/config/{$namept}_size.txt 2>/dev/null"
+  label = "${namept}"
+  value-sh = "cat $SDH/$PTSH/config/${namept}_size.txt 2>/dev/null"
   apply = """
-  if [[ -z "$name_$namept" || "$name_$namept" == 0 ]]; then
-  rm -rf $SDH/$PTSH/config/{$namept}_size.txt
+  if [[ -z "\$name_${namept}" || "\$name_${namept}" == 0 ]]; then
+    rm -rf $SDH/$PTSH/config/${namept}_size.txt
   else
-  echo "$name_$namept" > $SDH/$PTSH/config/{$namept}_size.txt
+    echo "\$name_${namept}" > $SDH/$PTSH/config/${namept}_size.txt
   fi
   """
-  EOF
+EOF
 done
 '''

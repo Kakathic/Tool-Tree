@@ -1059,47 +1059,6 @@ show_apkset() {
   '
 }
 
-inforkk() {
-echo '
-  [[group]]
-  [[text.rows]]
-  size = 13
-  text = "'$root_text': {'${ROOT^}'}(#0dbda2)"
-  bold = true
-  icon = "'$urlicon'/1shield.png"
-  line-height = 1.3
-  break = true
-  markdown = true
-  
-  [[text.rows]]
-  text = "'$device_text': {'$ANDROID_BRAND' - '$ANDROID_DEVICE'}(#0dbda2)"
-  break = true
-  size = 13
-  bold = true
-  line-height = 1.3
-  icon = "'$urlicon'/1smart.png"
-  markdown = true
-  
-  [[text.rows]]
-  text = "'$operating_system': {Android '$ANDROID_RELEASE' - '$API'}(#0dbda2)"
-  break = true
-  size = 13
-  bold = true
-  line-height = 1.3
-  icon = "'$urlicon'/1android.png"
-  markdown = true
-  
-  [[text.rows]]
-  text = "'$microprocessors': {'${CPU_ABI^}'}(#0dbda2)"
-  break = true
-  size = 13
-  bold = true
-  line-height = 1.3
-  icon = "'$urlicon'/1cpu.png"
-  markdown = true
-  '
-}
-
 Addon() {
 
   echo '
