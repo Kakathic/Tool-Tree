@@ -8,7 +8,7 @@ reload = true
 menu = true
 title = "@projects_text"
 desc-sh = 'echo "@path_text: $PTAD"'
-script = """
+script = '''
 slog APK "$APK"
 if [ ! -d "$SDC/$Name" ] || [ ! -d "$APK/$Name" ]; then
   slog PTAD "$SDC/$Name"
@@ -18,7 +18,7 @@ elif [ -d "$APK/$Name" ]; then
   slog PTAH "$Name"
   slog PTAD "$SDC/$Name"
 fi
-"""
+'''
 
   [[action.params]]
   name = "APK"
@@ -43,16 +43,16 @@ fi
 title = "@decompile_text"
 desc-sh = 'echo "@path_text: ${PTAD/#$SDCARD_PATH//sdcard}"'
 icon = "{ICON}/decom.png"
-script = """
-  IFS=$'\\n'
+script = '''
+  IFS=$'\n'
   for vv in $FILE; do
-      apexeditor d -i "$PTAD/$vv" -o "$APK/$PTAH"
-      echo
+    apexeditor d -i "$PTAD/$vv" -o "$APK/$PTAH"
+    echo
   done
   echo "@save_text $APK/$PTAH"
   echo
   checktime
-"""
+'''
 
   [[action.params]]
   name = "FILE"
@@ -65,14 +65,14 @@ script = """
 title = "@build_text"
 desc-sh = 'echo "@projects_text: $PTAH"'
 icon = "{ICON}/build.png"
-script = """
-  IFS=$'\\n'
+script = '''
+  IFS=$'\n'
   for vv in $FILE; do
-      apexeditor b -d "$gobo_apex" -k "$SIGNS" -c "$nen_apex" -i "$APK/$PTAH/$vv" -o "$PTAD/out"
-      echo
+    apexeditor b -d "$gobo_apex" -k "$SIGNS" -c "$nen_apex" -i "$APK/$PTAH/$vv" -o "$PTAD/out"
+    echo
   done
   checktime
-"""
+'''
 
   [[action.params]]
   name = "gobo_apex"

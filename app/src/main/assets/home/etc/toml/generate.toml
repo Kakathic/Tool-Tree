@@ -41,7 +41,7 @@ fi
 [[group]]
 [[action]]
 title = "@generate_text Payload"
-icon = "@urlicon/build_payload.png"
+icon = "{ICON}/build_payload.png"
 script = '''
   slog sign_payload "$sign_payload"
   slog payload_switch "$payload_switch"
@@ -96,7 +96,7 @@ script = '''
 [[group]]
 [[action]]
 title = "@generate_text Amlogic"
-icon = "@urlicon/build_amlogic.png"
+icon = "{ICON}/build_amlogic.png"
 script = '''
   echo "@apkb_text_1 $PTSD/$FOLDER"
   echo

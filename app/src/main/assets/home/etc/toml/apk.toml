@@ -100,7 +100,7 @@ handler = '''
 [[group]]
 [[action]]
 title = "@apk_mager_text_2"
-icon = "@urlicon/merge_apk.png"
+icon = "{ICON}/merge_apk.png"
 warn = "@apk_mager_text_1"
 script = '''
   IFS=$'\n'
@@ -124,7 +124,7 @@ script = '''
 [[action]]
 title = "@decompile_text"
 desc-sh = 'echo "@path_text: ${PTAD/$SDCARD_PATH//sdcard}"'
-icon = "@urlicon/decom.png"
+icon = "{ICON}/decom.png"
 warn = "@decom_apk_text_15"
 script = '''
   IFS=$'\n'
@@ -228,7 +228,7 @@ script = '''
 [[action]]
 title = "@build_text"
 desc-sh = 'echo "@projects_text: $PTAH"'
-icon = "@urlicon/build.png"
+icon = "{ICON}/build.png"
 warn = "@build_apk_text_2"
 script = '''
   IFS=$'\n'
@@ -289,13 +289,13 @@ script = '''
 [[group]]
 [[page]]
 title = "@apex_text"
-icon = "@urlicon/apex.png"
+icon = "{ICON}/apex.png"
 config = "{HOME}/etc/toml/apex.toml"
 
 [[group]]
 [[action]]
 title = "@distur_apk_text_2"
-icon = "@urlicon/apk_distur.png"
+icon = "{ICON}/apk_distur.png"
 warn = "@distur_apk_text_1"
 script = '''
   IFS=$'\n'
@@ -317,7 +317,7 @@ script = '''
 
 [[action]]
 title = "@apk_restore_text_2"
-icon = "@urlicon/apk_restore.png"
+icon = "{ICON}/apk_restore.png"
 warn = "@apk_restore_text_1"
 script = '''
   IFS=$'\n'
@@ -340,7 +340,7 @@ script = '''
 [[group]]
 [[action]]
 title = "@restore_apk_text_3"
-icon = "@urlicon/restore_sign.png"
+icon = "{ICON}/restore_sign.png"
 warn-sh = 'echo "@path_text: ${PTAD/$SDCARD_PATH//sdcard}"'
 script = '''
   echo "@more_text_4 $FILE"

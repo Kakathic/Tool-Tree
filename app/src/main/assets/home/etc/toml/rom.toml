@@ -70,7 +70,7 @@ handler = '''
 [[group]]
 [[action]]
 title = "@convert_text"
-icon = "@urlicon/convert_file.png"
+icon = "{ICON}/convert_file.png"
 script = '''
   slog nen_br "$nen_br"
   for vinput in $IMAGES; do
@@ -118,7 +118,7 @@ script = '''
 [[action]]
 title = "@decompile_text"
 desc-sh = 'echo "@path_text: ${PTSD/$SDCARD_PATH//sdcard}"'
-icon = "@urlicon/decom.png"
+icon = "{ICON}/decom.png"
 script = '''
   for vkl in $IMAGES; do
   if [ -f "$PTSD/${vkl#*=}" ]; then
@@ -198,7 +198,7 @@ script = '''
 [[action]]
 title = "@build_text"
 desc-sh = 'echo "@projects_text: $PTSH"'
-icon = "@urlicon/build.png"
+icon = "{ICON}/build.png"
 script = '''
   slog nen_br "$nen_br"
   for vkl in $IMAGES; do
@@ -331,7 +331,7 @@ script = '''
 [[group]]
 [[action]]
 title = "@build_text Super"
-icon = "@urlicon/build_super.png"
+icon = "{ICON}/build_super.png"
 script = '''
   repack_super -m "$IMAGES" -g "$super_group" -s "$super_size" -f "$from" -t "$type" -i "$PTSD"
   echo
@@ -377,7 +377,7 @@ script = '''
 [[group]]
 [[action]]
 title = "@super_split_text_1"
-icon = "@urlicon/super_split.png"
+icon = "{ICON}/super_split.png"
 script = '''
   echo "@super_split_text_4 ${IMAGES}..."
   echo
@@ -435,7 +435,7 @@ script = '''
 
 [[action]]
 title = "@super_merge_text_1"
-icon = "@urlicon/super_merge.png"
+icon = "{ICON}/super_merge.png"
 script = '''
   echo "@super_merge_text_2..."
   simg2img $MERGE "$PTSD/super.img" || killtree "Error" "$PTSD/super.img"
@@ -462,5 +462,5 @@ script = '''
 [[group]]
 [[page]]
 title = "@synthetic_text"
-icon = "@urlicon/generate.png"
+icon = "{ICON}/generate.png"
 config = "{HOME}/etc/toml/generate.toml"
