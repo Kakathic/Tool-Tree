@@ -1,12 +1,12 @@
 package com.tool.tree
 
 import android.annotation.SuppressLint
+import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.StateListDrawable
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -53,17 +53,14 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
 
     private fun dp(value: Int): Int = (value * container.resources.displayMetrics.density).toInt()
 
-    private fun buttonBackground(): StateListDrawable {
-        fun shape(color: Int) = GradientDrawable().apply {
-            setColor(color)
-            cornerRadius = dp(4).toFloat()
-        }
-        return StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_pressed), shape(Color.parseColor("#4A4A4A")))
-            addState(intArrayOf(android.R.attr.state_selected), shape(Color.parseColor("#3F6FD8")))
-            addState(intArrayOf(), shape(Color.parseColor("#1E1E1E")))
-        }
-    }
+    private fun keyTextColors(): ColorStateList = ColorStateList(
+        arrayOf(
+            intArrayOf(android.R.attr.state_selected),
+            intArrayOf(android.R.attr.state_pressed),
+            intArrayOf()
+        ),
+        intArrayOf(Color.parseColor("#6FA8FF"), Color.parseColor("#8A8A8A"), Color.WHITE)
+    )
 
     @SuppressLint("ClickableViewAccessibility")
     private fun build() {
@@ -76,13 +73,11 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
                 val button = TextView(container.context).apply {
                     text = key.label
                     gravity = Gravity.CENTER
-                    setTextColor(Color.WHITE)
+                    setTextColor(keyTextColors())
                     textSize = 14f
                     typeface = android.graphics.Typeface.MONOSPACE
-                    background = buttonBackground()
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
-                        setMargins(dp(1), dp(1), dp(1), dp(1))
-                    }
+                    background = null
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
                 }
                 if (key.id == "CTRL") ctrlButton = button
                 if (key.id == "ALT") altButton = button
@@ -105,6 +100,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     v.isPressed = true
+                    v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     press(key)
                     if (key.repeat) handler.postDelayed(repeater, 400)
                 }
