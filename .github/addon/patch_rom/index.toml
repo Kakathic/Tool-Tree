@@ -127,7 +127,7 @@ remember = false
 
 [[action.params]]
 name = "set_telegram"
-label = "Thêm nhãn tên tác giả"
+label = "@set_telegram_text"
 desc = "@required_files_text: Settings.apk"
 type = "switch"
 depend = "FILE"
@@ -140,8 +140,8 @@ remember = false
 
 [[action.params]]
 name = "name_author"
-label = "Tác giả"
-desc = "Để trống để tắt tính năng này, Ví dụ: Kakathic | OS 4.0"
+label = "@name_author_text_1"
+desc = "$name_author_text_2"
 value = "Kakathic"
 depend = "set_telegram"
 depend-value = "1"
@@ -151,8 +151,8 @@ depend-sort = "true"
 
 [[action.params]]
 name = "name_title"
-label = "Tiêu đề"
-desc = "Để trống để tắt tính năng này, Ví dụ: Kakathic  Telegram @tooltree"
+label = "@name_title_text_1"
+desc = "@name_title_text_2"
 value = "Kakathic"
 depend = "set_telegram"
 depend-value = "1"
@@ -162,8 +162,8 @@ depend-sort = "true"
 
 [[action.params]]
 name = "name_desc"
-label = "Nội dung"
-desc = "Ví dụ: Telegram @tooltree"
+label = "@name_desc_text_1"
+desc = "@name_desc_text_2"
 value = "Telegram @tooltree"
 depend = "set_telegram"
 depend-value = "1"
@@ -173,8 +173,8 @@ depend-sort = "true"
 
 [[action.params]]
 name = "name_web"
-label = "Trang web"
-desc = "Mở liên kết khi nhấn vào, mặc định: Telegram"
+label = "@name_web_text_1"
+desc = "@name_web_text_2"
 value = "tg://resolve?domain=tooltree"
 depend = "set_telegram"
 depend-value = "1"
