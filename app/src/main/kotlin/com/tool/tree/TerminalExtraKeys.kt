@@ -75,11 +75,10 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
         val normal = ColorDrawable(Color.TRANSPARENT)
         val pressed = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            setColor(Color.parseColor("#33FFFFFF")) // Chỉ hiện nền khi đang ấn giữ
-            cornerRadius = dp(4).toFloat()          // Bo góc nhẹ hình chữ nhật
+            setColor(Color.parseColor("#33FFFFFF"))
+            cornerRadius = dp(4).toFloat()
         }
         return StateListDrawable().apply {
-            // Chỉ bắt sự kiện state_pressed, bỏ state_selected để CTRL/ALT không bị dính nền khi bật
             addState(intArrayOf(android.R.attr.state_pressed), pressed)
             addState(intArrayOf(), normal)
         }
@@ -107,11 +106,14 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
                     if (key.isBold) {
                         typeface = android.graphics.Typeface.DEFAULT_BOLD
                     } else {
-                        typeface = android.graphics.Typeface.MONOSPACE
+                        typeface = android.graphics.Typeface.DEFAULT
                     }
 
                     background = keyBackground()
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
+                    val margin = dp(2)
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
+                        setMargins(margin, margin, margin, margin)
+                    }
                 }
                 if (key.id == "CTRL") ctrlButton = button
                 if (key.id == "ALT") altButton = button
