@@ -126,6 +126,30 @@ depend-default = "hide"
 remember = false
 
 [[action.params]]
+name = "set_telegram"
+label = "Thêm nhãn tác giả"
+desc = "@required_files_text: Settings.apk"
+type = "switch"
+depend = "FILE"
+depend-value = "*Settings.apk"
+depend-mode = "show"
+depend-readonly = "true"
+depend-sort = "true"
+depend-default = "hide"
+remember = false
+
+[[action.params]]
+name = "name_author"
+label = "Tác giả"
+desc = "Để trống để tắt tính năng này, Ví dụ: Kakathic | OS 4.0"
+value = "Kakathic"
+depend = "set_telegram"
+depend-value = "1"
+depend-mode = "show"
+depend-default = "hide"
+depend-sort = "true"
+
+[[action.params]]
 name = "settings_infor"
 label = "@global_mod_text_1"
 desc = "@required_files_text: Settings.apk"
@@ -134,8 +158,8 @@ depend = "FILE"
 depend-value = "*Settings.apk"
 depend-mode = "show"
 depend-readonly = "true"
-depend-sort = "true"
 depend-default = "hide"
+depend-sort = "true"
 remember = false
 
 [[action.params]]
@@ -554,27 +578,21 @@ chmod -R 644 "$tep_apk"
 chcon -R $primmsg "$goc_apk" >/dev/null 2>&1
 su -mm -c mount --bind "$goc_apk" "$path_apk"
 pkill -f $package_apk >/dev/null 2>&1
-logcat -c
 [ "$kill_customize" ] && pkill -f $kill_customize >/dev/null 2>&1
 if [ "$open_app_bool" == 1 ]; then
   class_app="$(pm resolve-activity --components $package_apk)"
   if [ "$class_app" != "No activity found" ]; then
-  export CLASSPATH="$ETC/am.apk"
-  [ $API -ge 34 ] && chmod 0400 "$CLASSPATH"
-  /system/bin/app_process -Xnoimage-dex2oat /system/bin com.termux.termuxam.Am start -n $class_app &>/dev/null
+  am --am start -n $class_app &>/dev/null
   fi
 fi
 while [ $dem_giay -gt 0 ]; do
-  echo "@test_app_text_3 ${dem_giay}s"
+  echo -ne "@test_app_text_3 ${dem_giay}s\r"
   sleep 1
   ((dem_giay--))
 done
-echo
 echo "@test_app_text_4"
 su -mm -c umount -l "$path_apk" 2>/dev/null
 killall $package_apk >/dev/null 2>&1
-echo
-logcat -d | grep "$package_apk"
 [ "$kill_customize" ] && killall $kill_customize >/dev/null 2>&1
 [ -d $TMP/app ] && rm -fr $TMP/app
 '''

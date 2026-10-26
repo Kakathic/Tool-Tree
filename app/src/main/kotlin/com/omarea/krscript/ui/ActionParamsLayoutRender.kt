@@ -393,28 +393,62 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
         }
     }
 
+    private fun dependsOnRoot(name: String, rootName: String, visited: HashSet<String> = HashSet()): Boolean {
+        if (!visited.add(name)) return false
+        val info = currentParamInfos.find { it.name == name } ?: return false
+        val parents = info.dependOn?.split("|")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: return false
+        return parents.any { it == rootName || dependsOnRoot(it, rootName, visited) }
+    }
+
     private fun reorderRowGroup(sortableNames: List<String>, isBright: (String) -> Boolean) {
         if (sortableNames.isEmpty()) return
 
-        val desiredGroupOrder = sortableNames.sortedBy { name -> if (isBright(name)) 0 else 1 }
-            .mapNotNull { rowViews[it] }
-        if (desiredGroupOrder.isEmpty()) return
-
-        val sortableViews = sortableNames.mapNotNull { rowViews[it] }.toHashSet()
+        val sortableNameOfView = HashMap<View, String>()
+        for (n in sortableNames) rowViews[n]?.let { sortableNameOfView[it] = n }
+        val nameOfView = HashMap<View, String>()
+        for ((n, v) in rowViews) nameOfView[v] = n
+        if (sortableNameOfView.isEmpty()) return
 
         val currentChildren = ArrayList<View>(linearLayout.childCount)
         for (i in 0 until linearLayout.childCount) {
             currentChildren.add(linearLayout.getChildAt(i))
         }
 
-        var groupCursor = 0
+        val blocks = ArrayList<Pair<String, ArrayList<View>>>()
+        val blockStartIndexes = ArrayList<Int>()
+        var i = 0
+        while (i < currentChildren.size) {
+            val child = currentChildren[i]
+            val rootName = sortableNameOfView[child]
+            if (rootName == null) { i++; continue }
+            val block = arrayListOf(child)
+            var j = i + 1
+            while (j < currentChildren.size) {
+                val next = currentChildren[j]
+                val nextName = nameOfView[next]
+                if (sortableNameOfView.containsKey(next) || nextName == null || !dependsOnRoot(nextName, rootName)) break
+                block.add(next)
+                j++
+            }
+            blocks.add(Pair(rootName, block))
+            blockStartIndexes.add(i)
+            i = j
+        }
+        if (blocks.isEmpty()) return
+
+        val sortedBlocks = blocks.sortedBy { if (isBright(it.first)) 0 else 1 }
+
         val newOrder = ArrayList<View>(currentChildren.size)
-        for (child in currentChildren) {
-            if (sortableViews.contains(child) && groupCursor < desiredGroupOrder.size) {
-                newOrder.add(desiredGroupOrder[groupCursor])
-                groupCursor++
+        var blockCursor = 0
+        i = 0
+        while (i < currentChildren.size) {
+            if (blockCursor < blockStartIndexes.size && i == blockStartIndexes[blockCursor]) {
+                newOrder.addAll(sortedBlocks[blockCursor].second)
+                i += blocks[blockCursor].second.size
+                blockCursor++
             } else {
-                newOrder.add(child)
+                newOrder.add(currentChildren[i])
+                i++
             }
         }
 
