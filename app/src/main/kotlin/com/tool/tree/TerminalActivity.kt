@@ -26,16 +26,18 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         private const val EXTRA_CWD = "cwd"
         private const val EXTRA_CMD = "cmd"
         private const val EXTRA_FONT_SIZE = "font_size"
+        private const val EXTRA_ROOT = "root"
         private const val DEFAULT_FONT_SP = 14
         private const val MIN_FONT_SP = 8
         private const val MAX_FONT_SP = 40
 
-        fun start(context: Context, title: String?, cwd: String?, cmd: String?, fontSize: Int) {
+        fun start(context: Context, title: String?, cwd: String?, cmd: String?, fontSize: Int, root: Int = 0) {
             val intent = Intent(context, TerminalActivity::class.java).apply {
                 putExtra(EXTRA_TITLE, title ?: "")
                 putExtra(EXTRA_CWD, cwd ?: "")
                 putExtra(EXTRA_CMD, cmd ?: "")
                 putExtra(EXTRA_FONT_SIZE, fontSize)
+                putExtra(EXTRA_ROOT, root)
                 if (context !is AppCompatActivity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
@@ -82,14 +84,14 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
             }
         })
 
-        startSession(intent.getStringExtra(EXTRA_CWD).orEmpty(), intent.getStringExtra(EXTRA_CMD).orEmpty())
+        startSession(intent.getStringExtra(EXTRA_CWD).orEmpty(), intent.getStringExtra(EXTRA_CMD).orEmpty(), intent.getIntExtra(EXTRA_ROOT, 0))
     }
 
-    private fun startSession(cwd: String, cmd: String) {
+    private fun startSession(cwd: String, cmd: String, root: Int) {
         val appContext = applicationContext
         Thread {
             val prepared = try {
-                TerminalLauncher.prepare(appContext, cwd, cmd)
+                TerminalLauncher.prepare(appContext, cwd, cmd, root)
             } catch (e: Exception) {
                 runOnUiThread {
                     Toast.makeText(this, e.message ?: "Terminal error", Toast.LENGTH_LONG).show()

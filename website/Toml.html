@@ -1500,6 +1500,7 @@ run = false
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Default</th><th>Description</th></tr>
 <tr><td class="field-name">cwd</td><td>dir</td><td class="field-type">String</td><td>{HOME}</td><td>Start directory. <code>{HOME}</code> is replaced by the toolkit home. Falls back to <code>$HOME</code> if the directory does not exist</td></tr>
 <tr><td class="field-name">cmd</td><td>command</td><td class="field-type">String</td><td>""</td><td>Shell commands run right after the environment is ready (the shell stays open when they finish)</td></tr>
+<tr><td class="field-name">root</td><td>su</td><td class="field-type">Bool</td><td>false</td><td>Start the shell through <code>su</code>. Default <code>false</code>: the shell runs as the app user, even if the device has root (typing <code>su</code> inside the terminal still works). <code>true</code>: start with <code>su</code> if root is available, otherwise run as the app user</td></tr>
 <tr><td class="field-name">font-size</td><td>-</td><td class="field-type">Int</td><td>14</td><td>Initial font size in sp (8-40). Pinch-zoom changes it for the current session only</td></tr>
 <tr><td colspan="5" style="background:var(--bg-soft);font-style:italic;">+ ClickableNode fields (icon, lock, min-sdk...) and NodeInfoBase (title, desc...)</td></tr>
 </table>
@@ -1517,7 +1518,7 @@ font-size = 12
 </code></pre>
 <h3>12a.3. How it runs</h3>
 <ul>
-<li><strong>Permission follows the app</strong>: if the app has root, the shell runs through <code>su</code>; otherwise it runs as the app user. There is no per-node root switch.</li>
+<li><strong>Permission</strong>: runs as the app user by default. Use <code>root = true</code> to start through <code>su</code> when root is available.</li>
 <li><strong>PTY</strong> is created by the bundled <code>busybox script</code>; the window size is applied with <code>stty</code> at start and again (through <code>stty -F</code>) whenever the view is resized or rotated, so a full-screen program may redraw a moment late.</li>
 <li><strong>executor.sh variables</strong>: when the terminal opens, the generated <code>executor.sh</code> (all <code>$ANDROID_ID</code>, <code>$ROOT</code>, <code>$HOME</code>, <code>$BIN</code>, <code>$PATH</code>... variables) is sourced once, before <code>cwd</code>/<code>cmd</code>. <code>COLUMNS</code>/<code>LINES</code> set by executor.sh are unset afterwards so the terminal uses its real size. If the device is not arm64 executor.sh exits and the terminal closes.</li>
 <li>If <code>~/.bashrc</code> exists in the toolkit home it is sourced after executor.sh. The prompt is <code>$ </code>.</li>
@@ -2078,7 +2079,7 @@ script = "sh $state"
 <li>Added <code>load-toml</code> / <code>load-toml-sh</code> directives (§2.7): merge a TOML fragment (file or shell output) into the document before parsing, in the same step as <code>load-key</code>, so <code>@name</code> substitution also applies to it.</li>
 <li>Added <code>load-text</code> / <code>load-text-sh</code> directives (§2.7): inline key text (<code>"""..."""</code> block or script output) applied after <code>load-key</code>, so it adds missing keys and overrides same-name ones; several lines allowed.</li>
 <li>Added <code>fab-spin</code> for <code>[[fab.items]]</code>: the FAB icon spins only when it is true — while the item's script runs or the page reloads (<code>refresh</code>/<code>reload</code>/<code>reload-page</code>). The old automatic spin on page reload is removed.</li>
-<li>Added the <code>[[terminal]]</code> node (§12a): full-screen bash with a real PTY, Termux-style UI; fields <code>cwd</code>, <code>cmd</code>, <code>font-size</code>. executor.sh variables are sourced once when the terminal opens; permission follows the app (root if available).</li>
+<li>Added the <code>[[terminal]]</code> node (§12a): full-screen bash with a real PTY, Termux-style UI; fields <code>cwd</code>, <code>cmd</code>, <code>font-size</code>, <code>root</code>. executor.sh variables are sourced once when the terminal opens; the shell starts without <code>su</code> unless <code>root = true</code>.</li>
 </ul>
 </section>
 </main>

@@ -26,7 +26,7 @@ class TerminalLauncher private constructor(
 
         private fun q(s: String): String = "'" + s.replace("'", "'\\''") + "'"
 
-        fun prepare(context: Context, cwdArg: String, cmd: String): TerminalLauncher {
+        fun prepare(context: Context, cwdArg: String, cmd: String, root: Int = 0): TerminalLauncher {
             val spf = context.getSharedPreferences("kr-script-config", Context.MODE_PRIVATE)
             val executor = spf.getString("executor", "root/executor.sh") ?: "root/executor.sh"
             val toolkit = spf.getString("toolkitDir", "home") ?: "home"
@@ -72,7 +72,9 @@ class TerminalLauncher private constructor(
             }
             rcFile.writeText(rc.toString())
 
-            return TerminalLauncher(ScriptEnvironmen.isRooted(), home, bash.absolutePath, busybox.absolutePath, rcFile, ttyFile, pidFile)
+            // root = 1: mở shell bằng su nếu máy có root; còn lại chạy quyền app (gõ su trong terminal vẫn dùng được)
+            val useRoot = root == 1 && ScriptEnvironmen.isRooted()
+            return TerminalLauncher(useRoot, home, bash.absolutePath, busybox.absolutePath, rcFile, ttyFile, pidFile)
         }
     }
 
