@@ -219,7 +219,7 @@ If you agree, press the confirm button to continue."</string>
     <string name="terminal_paste">Paste</string>
     <string name="terminal_share">Share</string>
     <string name="terminal_close_confirm">Close terminal? The running shell will be killed.</string>
-    <string name="terminal_sessions">Sessions</string>
+    <string name="terminal_sessions">Running sessions</string>
     <string name="terminal_new_session">New session</string>
     <string name="terminal_notif_sessions">Sessions running: %d</string>
     <string name="terminal_notif_open">Open</string>

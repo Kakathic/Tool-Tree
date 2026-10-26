@@ -195,7 +195,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="terminal_paste">Pegar</string>
     <string name="terminal_share">Compartir</string>
     <string name="terminal_close_confirm">¿Cerrar el terminal? La shell en ejecución se detendrá.</string>
-    <string name="terminal_sessions">Sesiones</string>
+    <string name="terminal_sessions">Sesiones en ejecución</string>
     <string name="terminal_new_session">Nueva sesión</string>
     <string name="terminal_notif_sessions">Sesiones en ejecución: %d</string>
     <string name="terminal_notif_open">Abrir</string>

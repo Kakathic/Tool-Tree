@@ -135,11 +135,6 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
             }
         )
         drawer.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
-            override fun onDrawerOpened(drawerView: View) {
-                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.hideSoftInputFromWindow(terminalView.windowToken, 0)
-            }
-
             override fun onDrawerClosed(drawerView: View) {
                 terminalView.requestFocus()
             }

@@ -38,7 +38,7 @@
         android:layout_gravity="start"
         android:background="#1B1B1B"
         android:clickable="true"
-        android:focusable="true"
+        android:focusable="false"
         android:orientation="vertical">
 
         <TextView
