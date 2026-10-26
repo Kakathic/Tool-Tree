@@ -98,6 +98,7 @@ title = "@home_text_5"
 desc = "@home_text_6"
 icon = "{ICON}/shella.png"
 cwd = "{HOME}"
+root = true
 cmd = '''echo 'Welcome to Tool-Tree
 
 Type the command:
@@ -108,4 +109,4 @@ Type the command:
 
 See more in bin and termux/bin.'
 '''
-font-size = 12
+font-size = 14
