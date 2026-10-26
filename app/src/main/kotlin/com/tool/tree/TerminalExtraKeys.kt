@@ -19,7 +19,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
     private class Key(val id: String, val label: String, val repeat: Boolean = false, val size: Float = 14f)
 
     private companion object {
-        const val ARROW_SIZE = 26f
+        const val ARROW_SIZE = 20f
         const val ROW_HEIGHT_DP = 34
     }
 

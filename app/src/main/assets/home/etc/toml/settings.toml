@@ -94,10 +94,18 @@ required = true
 
 [[group]]
 [[terminal]]
-title = "Terminal"
+title = "@home_text_5"
+desc = "@home_text_6"
 icon = "{ICON}/shella.png"
 cwd = "{HOME}"
 cmd = '''echo 'Welcome to Tool-Tree
-Type the command: `env` to understand the available variables.'
+
+Type the command:
+
+- env
+- java
+- python
+
+See more in bin and termux/bin.'
 '''
 font-size = 12
