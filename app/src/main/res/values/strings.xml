@@ -215,4 +215,9 @@ If you agree, press the confirm button to continue."</string>
     <string name="online_fullscreen">Fullscreen</string>
     <string name="online_fullscreen_hint">Press Back to exit fullscreen</string>
     
+    <string name="terminal_copy_text">Copy</string>
+    <string name="terminal_paste_text">Paste</string>
+    <string name="terminal_text_selection_more">More…</string>
+    <string name="terminal_default_title">Terminal</string>
+    <string name="terminal_close_confirm">Close terminal? The running shell will be killed.</string>
 </resources>

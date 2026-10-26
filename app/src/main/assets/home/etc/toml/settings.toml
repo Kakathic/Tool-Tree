@@ -103,3 +103,11 @@ need-input = true
 placeholder = "#bash|sh|python"
 value = """# bash
 """
+
+[[group]]
+[[terminal]]
+title = "Terminal"
+icon = "{ICON}/shella.png"
+cwd = "{HOME}"
+cmd = "ip addr"
+font-size = 14

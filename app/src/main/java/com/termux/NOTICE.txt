@@ -1,0 +1,5 @@
+Source in com/termux/terminal and com/termux/view comes from termux/termux-app v0.118.3
+(terminal-emulator and terminal-view libraries), licensed under Apache License 2.0
+(derived from jackpal/Android-Terminal-Emulator).
+Changes: JNI removed; TerminalSession now runs a java.lang.Process through TerminalSession.ProcessFactory;
+resource names renamed to terminal_*; R import points to com.tool.tree.R.

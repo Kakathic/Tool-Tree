@@ -415,7 +415,7 @@ class PageConfigReader {
         }
     }
 
-    private val tomlNodeTypeOrder = listOf("group", "end", "text", "switch", "picker", "action", "page", "download", "editor", "resource", "menu", "fab")
+    private val tomlNodeTypeOrder = listOf("group", "end", "text", "switch", "picker", "action", "page", "download", "editor", "terminal", "resource", "menu", "fab")
 
     private val collectedMenuOptions = ArrayList<PageMenuOption>()
 
@@ -707,6 +707,7 @@ class PageConfigReader {
             "download" -> downloadNodeToml(table)
             "text" -> textNodeToml(table)
             "editor" -> editorNodeToml(table)
+            "terminal" -> terminalNodeToml(table)
             "resource" -> {
                 resourceNodeToml(table)
                 null
@@ -1348,6 +1349,14 @@ class PageConfigReader {
         rowsShToml(table, editor.rows)
 
         return editor
+    }
+
+    private fun terminalNodeToml(table: TomlTable): TerminalNode? {
+        val terminal = clickableNodeToml(TerminalNode(pageConfigAbsPath), table) as TerminalNode? ?: return null
+        tomlGet(table, "cwd", "dir")?.let { terminal.cwd = it.trim() }
+        tomlGet(table, "cmd", "command")?.let { terminal.cmd = it }
+        tomlGet(table, "font-size")?.let { terminal.fontSize = parseIntOr(it, 0) }
+        return terminal
     }
 
     private fun resourceNodeToml(table: TomlTable) {

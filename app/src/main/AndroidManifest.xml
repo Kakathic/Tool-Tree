@@ -111,6 +111,13 @@
             android:windowSoftInputMode="adjustResize"
             android:configChanges="keyboardHidden|orientation|layoutDirection|screenLayout|colorMode|fontScale|smallestScreenSize|density|keyboard|screenSize|touchscreen" />
         <activity
+            android:name=".TerminalActivity"
+            android:exported="false"
+            android:label="@string/terminal_default_title"
+            android:theme="@style/AppThemeDark"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="keyboardHidden|orientation|layoutDirection|screenLayout|colorMode|fontScale|smallestScreenSize|density|keyboard|screenSize|touchscreen" />
+        <activity
             android:theme="@style/AppThemeDark"
             android:name=".CrashLogActivity"
             android:exported="false"

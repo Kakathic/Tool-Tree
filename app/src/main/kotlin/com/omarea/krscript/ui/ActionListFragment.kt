@@ -324,6 +324,15 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         }
     }
 
+    override fun onTerminalClick(item: TerminalNode, onCompleted: Runnable) {
+        if (!checkAndLockClick()) return
+        nodeUnlockedAsync(item) {
+            val context = context ?: return@nodeUnlockedAsync
+            com.tool.tree.TerminalActivity.start(context, item.title, item.cwd, item.cmd, item.fontSize)
+            onCompleted.run()
+        }
+    }
+
     override fun onPickerClick(item: PickerNode, onCompleted: Runnable) {
         if (!checkAndLockClick()) return
         nodeUnlockedAsync(item) {

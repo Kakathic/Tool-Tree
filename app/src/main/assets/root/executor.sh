@@ -66,7 +66,7 @@ export PTSH="$(glog PTSH ROM)"; # $SDH/$PTSH
 export PTAH="$(glog PTAH APK)"; # $APK/$PTAH
 
 # Không giới hạn ngang
-[ "$(glog scroll_ngang)" == 1 ] || export COLUMNS=47
+# [ "$(glog scroll_ngang)" == 1 ] || export COLUMNS=47
 
 # User Web
 export WEBS="User-Agent: Mozilla/5.0 (Linux; Android $ANDROID_RELEASE; $ANDROID_MODEL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
