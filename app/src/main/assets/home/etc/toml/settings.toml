@@ -62,7 +62,7 @@ title = "Models Gemini"
 editable = true
 label = "Models"
 items = [ "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" ]
-value-sh = "glog models_genmini gemini-3.6-flash"
+value-sh = "glog models_genmini gemini-3.5-flash-lite"
 
 [[action.params]]
 name = "models_thinking"
