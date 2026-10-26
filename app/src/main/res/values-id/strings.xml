@@ -187,4 +187,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="debug_text_quit">Aplikasi tidak memenuhi langkah pemeriksaan, akan berhenti beroperasi.</string>
     <string name="check_time">Total waktu</string>
 
+    <string name="terminal_paste">Tempel</string>
+    <string name="terminal_share">Bagikan</string>
+    <string name="terminal_close_confirm">Tutup terminal? Shell yang sedang berjalan akan dihentikan.</string>
 </resources>

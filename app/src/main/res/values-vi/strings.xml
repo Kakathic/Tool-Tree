@@ -202,9 +202,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="online_fullscreen">Toàn màn hình</string>
     <string name="online_fullscreen_hint">Nhấn Back để thoát toàn màn hình</string>
     
-    <string name="terminal_copy_text">Sao chép</string>
-    <string name="terminal_paste_text">Dán</string>
-    <string name="terminal_text_selection_more">Thêm…</string>
-    <string name="terminal_default_title">Terminal</string>
+    <string name="terminal_paste">Dán</string>
+    <string name="terminal_share">Chia sẻ</string>
     <string name="terminal_close_confirm">Đóng terminal? Shell đang chạy sẽ bị dừng.</string>
 </resources>

@@ -187,4 +187,7 @@
     <string name="debug_text_quit">Если приложение не пройдёт этапы тестирования, оно перестанет работать.</string>
     <string name="check_time">Общее время</string>
     
+    <string name="terminal_paste">Вставить</string>
+    <string name="terminal_share">Поделиться</string>
+    <string name="terminal_close_confirm">Закрыть терминал? Запущенная оболочка будет остановлена.</string>
 </resources>

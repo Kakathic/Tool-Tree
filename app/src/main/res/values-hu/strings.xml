@@ -187,4 +187,7 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="update_text">Frissítés</string>
     <string name="wakelock_service_running">A WakeLock szolgáltatás fut</string>
     <string name="warning_root_text">A funkció használatához root jogosultság szükséges!</string>
+    <string name="terminal_paste">Beillesztés</string>
+    <string name="terminal_share">Megosztás</string>
+    <string name="terminal_close_confirm">Bezárja a terminált? A futó shell leáll.</string>
 </resources>

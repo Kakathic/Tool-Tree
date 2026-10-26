@@ -20,6 +20,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
 
     private companion object {
         const val ARROW_SIZE = 26f
+        const val ROW_HEIGHT_DP = 34
     }
 
     private val layout = listOf(
@@ -71,12 +72,14 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
         for (rowKeys in layout) {
             val row = LinearLayout(container.context).apply {
                 orientation = LinearLayout.HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44))
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ROW_HEIGHT_DP))
             }
             for (key in rowKeys) {
                 val button = TextView(container.context).apply {
                     text = key.label
                     gravity = Gravity.CENTER
+                    includeFontPadding = false
+                    setPadding(0, 0, 0, 0)
                     setTextColor(keyTextColors())
                     textSize = key.size
                     typeface = android.graphics.Typeface.MONOSPACE

@@ -3,6 +3,7 @@ package com.termux.view.textselection;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Rect;
 import android.text.TextUtils;
 import android.view.ActionMode;
@@ -115,9 +116,9 @@ public class TextSelectionCursorController implements CursorController {
                 int show = MenuItem.SHOW_AS_ACTION_IF_ROOM | MenuItem.SHOW_AS_ACTION_WITH_TEXT;
 
                 ClipboardManager clipboard = (ClipboardManager) terminalView.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-                menu.add(Menu.NONE, ACTION_COPY, Menu.NONE, R.string.terminal_copy_text).setShowAsAction(show);
-                menu.add(Menu.NONE, ACTION_PASTE, Menu.NONE, R.string.terminal_paste_text).setEnabled(clipboard != null && clipboard.hasPrimaryClip()).setShowAsAction(show);
-                menu.add(Menu.NONE, ACTION_MORE, Menu.NONE, R.string.terminal_text_selection_more);
+                menu.add(Menu.NONE, ACTION_COPY, Menu.NONE, R.string.btn_copy_output).setShowAsAction(show);
+                menu.add(Menu.NONE, ACTION_PASTE, Menu.NONE, R.string.terminal_paste).setEnabled(clipboard != null && clipboard.hasPrimaryClip()).setShowAsAction(show);
+                menu.add(Menu.NONE, ACTION_MORE, Menu.NONE, R.string.terminal_share);
                 return true;
             }
 
@@ -144,14 +145,20 @@ public class TextSelectionCursorController implements CursorController {
                         terminalView.mTermSession.onPasteTextFromClipboard();
                         break;
                     case ACTION_MORE:
-                        // We first store the selected text in case TerminalViewClient needs the
-                        // selected text before MORE button was pressed since we are going to
-                        // stop selection mode
-                        mStoredSelectedText = getSelectedText();
-                        // The text selection needs to be stopped before showing context menu,
-                        // otherwise handles will show above popup
+                        // Chia sẻ toàn bộ nội dung terminal (lệnh đã gõ và kết quả, gồm cả phần cuộn lên)
+                        String transcript = terminalView.mEmulator.getScreen().getTranscriptText();
                         terminalView.stopTextSelectionMode();
-                        terminalView.showContextMenu();
+                        if (transcript != null && !transcript.isEmpty()) {
+                            if (transcript.length() > 200000) {
+                                transcript = transcript.substring(transcript.length() - 200000);
+                            }
+                            Intent share = new Intent(Intent.ACTION_SEND);
+                            share.setType("text/plain");
+                            share.putExtra(Intent.EXTRA_TEXT, transcript);
+                            Intent chooser = Intent.createChooser(share, null);
+                            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            terminalView.getContext().startActivity(chooser);
+                        }
                         break;
                 }
 

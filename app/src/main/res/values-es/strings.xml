@@ -192,4 +192,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="check_time">Tiempo total</string>
     <string name="editor_toggle_monospace">Monoespaciado</string>
     
+    <string name="terminal_paste">Pegar</string>
+    <string name="terminal_share">Compartir</string>
+    <string name="terminal_close_confirm">¿Cerrar el terminal? La shell en ejecución se detendrá.</string>
 </resources>
