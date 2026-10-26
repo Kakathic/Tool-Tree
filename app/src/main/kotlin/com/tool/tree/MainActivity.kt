@@ -46,6 +46,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : AppCompatActivity() {
 
@@ -56,6 +57,11 @@ class MainActivity : AppCompatActivity() {
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
     
     private var pendingUpdateInfo: AppUpdateInfo? = null
+
+    companion object {
+        private var updateChecked = false
+        private var cachedUpdateInfo: AppUpdateInfo? = null
+    }
     private lateinit var toolbar: Toolbar
 
     private val ACTION_FILE_PATH_CHOOSER = 65400
@@ -106,12 +112,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPendingUpdateIfAny() {
-        @Suppress("DEPRECATION")
-        val updateInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            intent.getSerializableExtra("pendingUpdate", AppUpdateInfo::class.java)
-        else
-            intent.getSerializableExtra("pendingUpdate") as? AppUpdateInfo
+        if (updateChecked) {
+            applyUpdateInfo(cachedUpdateInfo)
+            return
+        }
+        binding.root.post {
+            if (isFinishing || isDestroyed) return@post
+            lifecycleScope.launch(Dispatchers.IO) {
+                val info = withTimeoutOrNull(8000) { AppUpdateChecker.fetchUpdateInfo(this@MainActivity) }
+                withContext(Dispatchers.Main) {
+                    if (isFinishing || isDestroyed) return@withContext
+                    updateChecked = true
+                    cachedUpdateInfo = info
+                    applyUpdateInfo(info)
+                }
+            }
+        }
+    }
 
+    private fun applyUpdateInfo(updateInfo: AppUpdateInfo?) {
         pendingUpdateInfo = updateInfo
         invalidateOptionsMenu()
 

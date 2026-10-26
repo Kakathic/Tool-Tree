@@ -222,10 +222,6 @@ class SplashActivity : AppCompatActivity() {
             val config = KrScriptConfig()
             config.init(this@SplashActivity)
 
-            val updateInfoDeferred = async {
-                withTimeoutOrNull(8000) { AppUpdateChecker.fetchUpdateInfo(this@SplashActivity) }
-            }
-
             val favorites = getItems(config.getFavoriteConfig())
             val pages = getItems(config.getPageListConfig())
             val tab3Items = getItems(config.getCustomTab3Config())
@@ -234,20 +230,14 @@ class SplashActivity : AppCompatActivity() {
             if (!isActive) return@launch
 
             val preloaded = MainTabsPreloadedData(favorites, pages, tab3Items, tab4Items)
-            val updateInfo = try {
-                updateInfoDeferred.await()
-            } catch (_: Exception) {
-                null
-            }
-
             withContext(Dispatchers.Main) {
                 if (!isActive || isFinishing || isDestroyed) return@withContext
-                gotoHome(preloaded, updateInfo)
+                gotoHome(preloaded)
             }
         }
     }
 
-    private fun gotoHome(preloadedTabs: MainTabsPreloadedData? = null, updateInfo: AppUpdateInfo? = null) {
+    private fun gotoHome(preloadedTabs: MainTabsPreloadedData? = null) {
         logoAnimator?.cancel()
         logoAnimator = null
 
@@ -257,7 +247,6 @@ class SplashActivity : AppCompatActivity() {
             else
                 Intent(this, MainActivity::class.java).apply {
                     if (preloadedTabs != null) putExtra("preloadedTabs", preloadedTabs)
-                    if (updateInfo != null) putExtra("pendingUpdate", updateInfo)
                 }
         startActivity(targetIntent)
         finish()
