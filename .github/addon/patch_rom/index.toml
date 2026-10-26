@@ -67,18 +67,18 @@ depend-sort = "true"
 depend-default = "hide"
 remember = false
 
-[[action.params]]
-name = "tool_box"
-label = "@label_fix_toolbox"
-desc = "@required_files_text: framework.jar, services.jar"
-type = "bool"
-depend = "FILE"
-depend-value = "*framework.jar,*services.jar"
-depend-mode = "show"
-depend-readonly = "true"
-depend-sort = "true"
-depend-default = "hide"
-remember = false
+# [[action.params]]
+# name = "tool_box"
+# label = "@label_fix_toolbox"
+# desc = "@required_files_text: framework.jar, services.jar"
+# type = "bool"
+# depend = "FILE"
+# depend-value = "*framework.jar,*services.jar"
+# depend-mode = "show"
+# depend-readonly = "true"
+# depend-sort = "true"
+# depend-default = "hide"
+# remember = false
 
 [[action.params]]
 name = "fix_enforce"
@@ -557,7 +557,11 @@ pkill -f $package_apk >/dev/null 2>&1
 [ "$kill_customize" ] && pkill -f $kill_customize >/dev/null 2>&1
 if [ "$open_app_bool" == 1 ]; then
   class_app="$(pm resolve-activity --components $package_apk)"
-  [ "$class_app" == "No activity found" ] || am start -n $class_app &>/dev/null
+  if [ "$class_app" != "No activity found" ]; then
+  export CLASSPATH="$ETC/am.apk"
+  [ $API -ge 34 ] && chmod 0400 "$CLASSPATH"
+  /system/bin/app_process -Xnoimage-dex2oat /system/bin com.termux.termuxam.Am start -n $class_app &>/dev/null
+  fi
 fi
 while [ $dem_giay -gt 0 ]; do
   echo "@test_app_text_3 ${dem_giay}s"

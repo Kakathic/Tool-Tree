@@ -1,10 +1,13 @@
 
-if [ "$UID" != "0" ] && [ "$UID" != "1000" ] && [ "$UID" != "2000" ]; then
-export CLASSPATH="$ETC/am.apk"
+if [ "$1" = "-a" ] || [ "$1" = "--am" ]; then
+  shift
+  FORCE=1
+fi
 
-[ $API -ge 34 ] && chmod 0400 "$CLASSPATH"
-exec /system/bin/app_process -Xnoimage-dex2oat \
-                       /system/bin com.termux.termuxam.Am "$@"
+if [ "$UID" != "0" ] && [ "$UID" != "1000" ] && [ "$UID" != "2000" ] || [ "$FORCE" = "1" ]; then
+    export CLASSPATH="$ETC/am.apk"
+    [ "${API:-0}" -ge 34 ] && chmod 0400 "$CLASSPATH"
+    exec /system/bin/app_process -Xnoimage-dex2oat /system/bin com.termux.termuxam.Am "$@"
 else
     exec /system/bin/am "$@"
 fi

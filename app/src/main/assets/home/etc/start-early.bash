@@ -14,24 +14,26 @@ rm -fr $TEMP/documents $TEMP/kr_download_* $START_DIR/icons/*
 {
 # Tự động cập nhật add-on
 taiveadd(){
-local urlgitv1="https://github.com/Kakathic/Tool-Tree/releases/download/V1"
-local shum_add="$(get_shum 'V1' "$1")"
-if [[ -n "$shum_add" ]] && \
-[[ "$shum_add" != "$(glog "shum_add_${1%.*}")" ]]; then
-taive -s "$urlgitv1/$1" "$TMP/$1"
-for vv in $2/*/nodelete; do
-[ -f "$vv" ] && rm -fr "${vv%/*}"
-done
-unzip -o "$TMP/$1" -d "$2" && slog "shum_add_${1%.*}" "$shum_add"
-rm -fr "$TMP/$1"
-fi
+  urlgitv1="https://github.com/Kakathic/Tool-Tree/releases/download/V1"
+  local shum_add="$(get_shum 'V1' "$1")"
+  if [[ -n "$shum_add" ]] && \
+  [[ "$shum_add" != "$(glog "shum_add_${1%.*}")" ]]; then
+  taive -s "$urlgitv1/$1" "$TMP/$1"
+  for vv in $2/*/nodelete; do
+  [ -f "$vv" ] && rm -fr "${vv%/*}"
+  done
+  unzip -o "$TMP/$1" -d "$2" && slog "shum_add_${1%.*}" "$shum_add"
+  rm -fr "$TMP/$1"
+  fi
 }
-taiveadd AOK.zip "$AOK"
-taiveadd AON.zip "$AON"
-taiveadd UPL.zip "$UPL"
-taiveadd UZE.zip "$UZE"
-# Cấp quyền 755 tự động
-set_permis $AON/*/* $AOK/*/* $UPL/*/* $UZE/*/* $UZZ/*/* &>/dev/null
+if [ "$(glog Tset)" != 2 ]; then
+  taiveadd AOK.zip "$AOK"
+  taiveadd AON.zip "$AON"
+  taiveadd UPL.zip "$UPL"
+  taiveadd UZE.zip "$UZE"
+  # Cấp quyền 755 tự động
+  set_permis $AON/*/* $AOK/*/* $UPL/*/* $UZE/*/* $UZZ/*/* &>/dev/null
+fi
 } &
 
 {
@@ -70,9 +72,6 @@ cmd appops set $PACKAGE_NAME QUERY_ALL_PACKAGES allow
 
 # Phím tắt màn hình chính
 cmd appops set $PACKAGE_NAME 10017 allow
-
-# Loaded sẵn danh sách img
-search_image &>/dev/null
 } &
 
 # Dọn bộ đếm

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<permissions>
+    <privapp-permissions package="com.kousei.kaorios">
+    <!-- Have full network access -->
+    <permission name="android.permission.INTERNET" />
+    <!-- View network connections -->
+    <permission name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- View Wi-Fi connections -->
+    <permission name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Show notifications -->
+    <permission name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Read phone status and identity -->
+    <permission name="android.permission.READ_PHONE_STATE" />
+    <permission name="android.permission.READ_PRIVILEGED_PHONE_STATE" />
+    <permission name="android.permission.READ_DEVICE_IDENTIFIERS" />
+    <!-- Modify system settings -->
+    <permission name="android.permission.WRITE_SETTINGS" />
+    <!-- Read and write system sensitive settings -->
+    <permission name="android.permission.WRITE_SECURE_SETTINGS" />
+    <permission name="android.permission.WRITE_GLOBAL_SETTINGS" />
+    <permission name="android.permission.READ_SECURE_SETTINGS" />
+    <permission name="android.permission.READ_GLOBAL_SETTINGS" />
+    <!-- Toggle sync on and off -->
+    <permission name="android.permission.WRITE_SYNC_SETTINGS" />
+    <!-- Read sync settings -->
+    <permission name="android.permission.READ_SYNC_SETTINGS" />
+    <permission name="android.permission.SET_PROPERTY" />
+    <!-- Read image files from shared storage -->
+    <permission name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Read video files from shared storage -->
+    <permission name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- Read audio files from shared storage -->
+    <permission name="android.permission.READ_MEDIA_AUDIO" />
+    <!-- Allow access to manage all files -->
+    <permission name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <!-- Modify or delete the contents of your shared storage -->
+    <permission name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Read the contents of your shared storage -->
+    <permission name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- Read locations from your media collection -->
+    <permission name="android.permission.ACCESS_MEDIA_LOCATION" />
+    <permission name="android.permission.DELETE_EXTERNAL_STORAGE_FILES" />
+    <!-- Read user selected image and video files from shared storage -->
+    <permission name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <!-- Allows an application to modify and delete media files -->
+    <permission name="android.permission.MANAGE_MEDIA" />
+    <permission name="android.permission.ACCESS_ALL_MEDIA" />
+    <!-- Query all packages -->
+    <permission name="android.permission.QUERY_ALL_PACKAGES" />
+    <!-- Close other apps -->
+    <permission name="android.permission.KILL_BACKGROUND_PROCESSES" />
+    <permission name="android.permission.FORCE_STOP_PACKAGES" />
+    <!-- Change component state -->
+    <permission name="android.permission.CHANGE_COMPONENT_ENABLED_STATE" />
+    <!-- Allows an application to collect component usage statistics -->
+    <permission name="android.permission.PACKAGE_USAGE_STATS" />
+    <!-- Install application -->
+    <permission name="android.permission.INSTALL_PACKAGES" />
+    <!-- Delete application -->
+    <permission name="android.permission.DELETE_PACKAGES" />
+    <!-- Uninstall shortcuts -->
+    <permission name="com.android.launcher.permission.UNINSTALL_SHORTCUT" />
+    <!-- Request delete packages -->
+    <permission name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <permission name="android.permission.CHANGE_PACKAGE_INSTALLATION_STATE" />
+    <!-- Clear application cache -->
+    <permission name="android.permission.CLEAR_APP_CACHE" />
+    <!-- Clear user data -->
+    <permission name="android.permission.CLEAR_APP_USER_DATA" />
+    <!-- Measure app storage space -->
+    <permission name="android.permission.GET_PACKAGE_SIZE" />
+    <permission name="android.permission.WRITE_PACKAGE_VERIFICATION" />
+    <permission name="android.permission.READ_APP_SPECIFIC_LOCALES" />
+    <permission name="android.permission.CHANGE_APP_SPECIFIC_LOCALES" />
+    <permission name="android.permission.GET_TOP_ACTIVITY_INFO" />
+    <permission name="android.permission.START_ACTIVITIES_FROM_BACKGROUND" />
+    <permission name="android.permission.START_FOREGROUND_SERVICES_FROM_BACKGROUND" />
+    <!-- Run foreground service -->
+    <permission name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Run foreground service with the type "dataSync" -->
+    <permission name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Read system logs -->
+    <permission name="android.permission.READ_LOGS" />
+    <!-- Dump system information -->
+    <permission name="android.permission.DUMP" />
+    <permission name="android.permission.ACCESS_ALL_EXTERNAL_STORAGE" />
+    <!-- This app can appear on top of other apps -->
+    <permission name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Reboot device -->
+    <permission name="android.permission.REBOOT" />
+    <!-- Power management -->
+    <permission name="android.permission.DEVICE_POWER" />
+    <permission name="android.permission.RECOVERY" />
+    <permission name="android.permission.WRITE_MEDIA_STORAGE"/>
+    <permission name="android.permission.ACCESS_NOTIFICATIONS"/>
+    </privapp-permissions>
+</permissions>
+        
