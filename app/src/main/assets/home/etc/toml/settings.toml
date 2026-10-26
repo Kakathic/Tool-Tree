@@ -97,8 +97,7 @@ required = true
 title = "Terminal"
 icon = "{ICON}/shella.png"
 cwd = "{HOME}"
-cmd = '''echo "Welcome to Tool-Tree
-
-Type the command: `env` to understand the available variables."
+cmd = '''echo 'Welcome to Tool-Tree
+Type the command: `env` to understand the available variables.'
 '''
 font-size = 12
