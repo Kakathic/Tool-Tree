@@ -60,6 +60,10 @@ class TerminalLauncher private constructor(
                 }
                 append("unset COLUMNS LINES\n")
                 append("cd ").append(q(cwd)).append(" 2>/dev/null || cd \"\$HOME\"\n")
+                append("export HISTFILE=\"\$HOME/.bash_history\"\n")
+                append("export HISTSIZE=5000 HISTFILESIZE=5000\n")
+                append("shopt -s histappend\n")
+                append("PROMPT_COMMAND=\"history -a\${PROMPT_COMMAND:+;\$PROMPT_COMMAND}\"\n")
                 append("PS1='\\$ '\n")
                 append("clear() { printf '\\033[H\\033[2J\\033[3J'; }\n")
                 append("bind '\"\\C-l\": clear-display' 2>/dev/null\n")
