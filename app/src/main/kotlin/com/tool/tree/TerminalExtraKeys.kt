@@ -7,7 +7,6 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
-import android.graphics.drawable.InsetDrawable
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -74,24 +73,21 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
 
     private fun keyBackground(): Drawable {
         val normal = ColorDrawable(Color.TRANSPARENT)
-        val pressedOrSelected = GradientDrawable().apply {
+        val pressed = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            setColor(Color.parseColor("#33FFFFFF")) // Màu nền khi nhấn hoặc chọn
-            cornerRadius = dp(6).toFloat()          // Bo góc hình chữ nhật
+            setColor(Color.parseColor("#33FFFFFF")) // Chỉ hiện nền khi đang ấn giữ
+            cornerRadius = dp(4).toFloat()          // Bo góc nhẹ hình chữ nhật
         }
-        // Dùng InsetDrawable để co khung nền lại một chút, tạo khoảng cách hở giữa các phím
-        val insetDrawable = InsetDrawable(pressedOrSelected, dp(2), dp(2), dp(2), dp(2))
-
         return StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_selected), insetDrawable)
-            addState(intArrayOf(android.R.attr.state_pressed), insetDrawable)
+            // Chỉ bắt sự kiện state_pressed, bỏ state_selected để CTRL/ALT không bị dính nền khi bật
+            addState(intArrayOf(android.R.attr.state_pressed), pressed)
             addState(intArrayOf(), normal)
         }
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun build() {
-        // Nâng khung phím lên và tạo khoảng hở ở đáy
+        // Tạo khoảng hở ở đáy
         container.setPadding(container.paddingLeft, container.paddingTop, container.paddingRight, dp(8))
 
         for (rowKeys in layout) {
@@ -115,11 +111,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
                     }
 
                     background = keyBackground()
-                    
-                    val margin = dp(1)
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
-                        setMargins(margin, margin, margin, margin)
-                    }
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
                 }
                 if (key.id == "CTRL") ctrlButton = button
                 if (key.id == "ALT") altButton = button
