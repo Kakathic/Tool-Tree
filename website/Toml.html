@@ -1501,7 +1501,7 @@ run = false
 <tr><td class="field-name">cwd</td><td>dir</td><td class="field-type">String</td><td>{HOME}</td><td>Start directory. <code>{HOME}</code> is replaced by the toolkit home. Falls back to <code>$HOME</code> if the directory does not exist</td></tr>
 <tr><td class="field-name">cmd</td><td>command</td><td class="field-type">String</td><td>""</td><td>Shell commands run right after the environment is ready (the shell stays open when they finish)</td></tr>
 <tr><td class="field-name">root</td><td>su</td><td class="field-type">Bool</td><td>false</td><td>Start the shell through <code>su</code>. Default <code>false</code>: the shell runs as the app user, even if the device has root (typing <code>su</code> inside the terminal still works). <code>true</code>: start with <code>su</code> if root is available, otherwise run as the app user</td></tr>
-<tr><td class="field-name">font-size</td><td>-</td><td class="field-type">Int</td><td>14</td><td>Initial font size in sp (8-40). Pinch-zoom changes it for the current session only</td></tr>
+<tr><td class="field-name">font-size</td><td>-</td><td class="field-type">Int</td><td>14</td><td>Initial font size in sp (8-40), used until the user pinch-zooms. After zooming, the last size is remembered (shared by all terminals) and takes priority over this field</td></tr>
 <tr><td colspan="5" style="background:var(--bg-soft);font-style:italic;">+ ClickableNode fields (icon, lock, min-sdk...) and NodeInfoBase (title, desc...)</td></tr>
 </table>
 </div>

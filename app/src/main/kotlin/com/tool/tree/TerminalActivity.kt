@@ -27,6 +27,8 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         private const val EXTRA_CMD = "cmd"
         private const val EXTRA_FONT_SIZE = "font_size"
         private const val EXTRA_ROOT = "root"
+        private const val PREFS_NAME = "terminal"
+        private const val PREF_FONT_SP = "font_sp"
         private const val DEFAULT_FONT_SP = 14
         private const val MIN_FONT_SP = 8
         private const val MAX_FONT_SP = 40
@@ -59,8 +61,11 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         setTitle(title.ifEmpty { getString(R.string.terminal_default_title) })
 
+        // Cỡ chữ đã chỉnh (zoom) được nhớ và ưu tiên hơn font-size trong TOML
+        val savedFont = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(PREF_FONT_SP, 0)
         val customFont = intent.getIntExtra(EXTRA_FONT_SIZE, 0)
-        if (customFont > 0) fontSizeSp = customFont.coerceIn(MIN_FONT_SP, MAX_FONT_SP)
+        if (savedFont > 0) fontSizeSp = savedFont.coerceIn(MIN_FONT_SP, MAX_FONT_SP)
+        else if (customFont > 0) fontSizeSp = customFont.coerceIn(MIN_FONT_SP, MAX_FONT_SP)
 
         terminalView = findViewById(R.id.terminal_view)
         terminalView.setTerminalViewClient(this)
@@ -120,6 +125,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
     private fun changeFontSize(increase: Boolean) {
         fontSizeSp = (fontSizeSp + if (increase) 1 else -1).coerceIn(MIN_FONT_SP, MAX_FONT_SP)
         applyFontSize()
+        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(PREF_FONT_SP, fontSizeSp).apply()
     }
 
     override fun onResume() {

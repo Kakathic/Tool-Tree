@@ -16,11 +16,15 @@ import com.termux.terminal.KeyHandler
 import com.termux.view.TerminalView
 
 class TerminalExtraKeys(private val container: LinearLayout, private val terminalView: TerminalView) {
-    private class Key(val id: String, val label: String, val repeat: Boolean = false)
+    private class Key(val id: String, val label: String, val repeat: Boolean = false, val size: Float = 14f)
+
+    private companion object {
+        const val ARROW_SIZE = 26f
+    }
 
     private val layout = listOf(
-        listOf(Key("ESC", "ESC"), Key("/", "/"), Key("-", "-"), Key("HOME", "HOME"), Key("UP", "↑", true), Key("END", "END"), Key("PGUP", "PGUP", true)),
-        listOf(Key("TAB", "TAB"), Key("CTRL", "CTRL"), Key("ALT", "ALT"), Key("LEFT", "←", true), Key("DOWN", "↓", true), Key("RIGHT", "→", true), Key("PGDN", "PGDN", true))
+        listOf(Key("ESC", "ESC"), Key("/", "/"), Key("-", "-"), Key("HOME", "HOME"), Key("UP", "↑", true, ARROW_SIZE), Key("END", "END"), Key("PGUP", "PGUP", true)),
+        listOf(Key("TAB", "TAB"), Key("CTRL", "CTRL"), Key("ALT", "ALT"), Key("LEFT", "←", true, ARROW_SIZE), Key("DOWN", "↓", true, ARROW_SIZE), Key("RIGHT", "→", true, ARROW_SIZE), Key("PGDN", "PGDN", true))
     )
 
     private val handler = Handler(Looper.getMainLooper())
@@ -74,7 +78,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
                     text = key.label
                     gravity = Gravity.CENTER
                     setTextColor(keyTextColors())
-                    textSize = 14f
+                    textSize = key.size
                     typeface = android.graphics.Typeface.MONOSPACE
                     background = null
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
