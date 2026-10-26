@@ -127,7 +127,7 @@ remember = false
 
 [[action.params]]
 name = "set_telegram"
-label = "Thêm nhãn tác giả"
+label = "Thêm nhãn tên tác giả"
 desc = "@required_files_text: Settings.apk"
 type = "switch"
 depend = "FILE"
@@ -143,6 +143,39 @@ name = "name_author"
 label = "Tác giả"
 desc = "Để trống để tắt tính năng này, Ví dụ: Kakathic | OS 4.0"
 value = "Kakathic"
+depend = "set_telegram"
+depend-value = "1"
+depend-mode = "show"
+depend-default = "hide"
+depend-sort = "true"
+
+[[action.params]]
+name = "name_title"
+label = "Tiêu đề"
+desc = "Để trống để tắt tính năng này, Ví dụ: Kakathic  Telegram @tooltree"
+value = "Kakathic"
+depend = "set_telegram"
+depend-value = "1"
+depend-mode = "show"
+depend-default = "hide"
+depend-sort = "true"
+
+[[action.params]]
+name = "name_desc"
+label = "Nội dung"
+desc = "Ví dụ: Telegram @tooltree"
+value = "Telegram @tooltree"
+depend = "set_telegram"
+depend-value = "1"
+depend-mode = "show"
+depend-default = "hide"
+depend-sort = "true"
+
+[[action.params]]
+name = "name_web"
+label = "Trang web"
+desc = "Mở liên kết khi nhấn vào, mặc định: Telegram"
+value = "tg://resolve?domain=tooltree"
 depend = "set_telegram"
 depend-value = "1"
 depend-mode = "show"
@@ -586,10 +619,15 @@ if [ "$open_app_bool" == 1 ]; then
   fi
 fi
 while [ $dem_giay -gt 0 ]; do
-  echo -ne "@test_app_text_3 ${dem_giay}s\r"
+  if [ $dem_giay -le 5 ]; then
+    echo "@test_app_text_3 ${dem_giay}s"
+  else
+    echo -ne "@test_app_text_3 ${dem_giay}s\r"
+  fi
   sleep 1
   ((dem_giay--))
 done
+echo
 echo "@test_app_text_4"
 su -mm -c umount -l "$path_apk" 2>/dev/null
 killall $package_apk >/dev/null 2>&1

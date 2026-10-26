@@ -23,8 +23,14 @@ class DialogItemChooser(
         }),
         darkMode
 ) {
+    var fadeAnimation = false
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        if (fadeAnimation) {
+            dialog?.window?.setWindowAnimations(R.style.windowAnim2)
+        }
 
         val absListView = view.findViewById<AbsListView>(R.id.item_list)
         setup(absListView)

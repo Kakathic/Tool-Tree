@@ -191,7 +191,7 @@ class ParamsSingleSelect(
                     onValueChanged?.invoke()
                 }
             }
-        }).show(context.supportFragmentManager, "params-single-select")
+        }).apply { fadeAnimation = true }.show(context.supportFragmentManager, "params-single-select")
     }
 
     private fun renderEditable(): View {
@@ -320,6 +320,6 @@ class ParamsSingleSelect(
                     onValueChanged?.invoke()
                 }
             }
-        }).show(context.supportFragmentManager, "params-single-select-edit")
+        }).apply { fadeAnimation = true }.show(context.supportFragmentManager, "params-single-select-edit")
     }
 }

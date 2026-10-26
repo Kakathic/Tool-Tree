@@ -133,7 +133,7 @@ class ParamsMultipleSelect(
                     setView(textView, valueView, countView)
                     onValueChanged?.invoke()
                 }
-            }).show(context.supportFragmentManager, dialogTag)
+            }).apply { fadeAnimation = true }.show(context.supportFragmentManager, dialogTag)
         }
     }
 }
