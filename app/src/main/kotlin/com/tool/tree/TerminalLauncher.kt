@@ -64,7 +64,7 @@ class TerminalLauncher private constructor(
                 append("export HISTSIZE=5000 HISTFILESIZE=5000\n")
                 append("shopt -s histappend\n")
                 append("PROMPT_COMMAND=\"history -a\${PROMPT_COMMAND:+;\$PROMPT_COMMAND}\"\n")
-                append("PS1='\\$ '\n")
+                append("PS1='\\['\"\\033[0;32m\"'\\]\\w\\['\"\\033[0m\"'\\] \\['\"\\033[0;97m\"'\\]\\$\\['\"\\033[0m\"'\\] '\n")
                 append("clear() { printf '\\033[H\\033[2J\\033[3J'; }\n")
                 append("bind '\"\\C-l\": clear-display' 2>/dev/null\n")
                 append("[ -f \"\$HOME/.bashrc\" ] && . \"\$HOME/.bashrc\"\n")
