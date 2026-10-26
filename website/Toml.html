@@ -1522,6 +1522,8 @@ font-size = 12
 <li><strong>PTY</strong> is created by the bundled <code>busybox script</code>; the window size is applied with <code>stty</code> at start and again (through <code>stty -F</code>) whenever the view is resized or rotated, so a full-screen program may redraw a moment late.</li>
 <li><strong>executor.sh variables</strong>: when the terminal opens, the generated <code>executor.sh</code> (all <code>$ANDROID_ID</code>, <code>$ROOT</code>, <code>$HOME</code>, <code>$BIN</code>, <code>$PATH</code>... variables) is sourced once, before <code>cwd</code>/<code>cmd</code>. <code>COLUMNS</code>/<code>LINES</code> set by executor.sh are unset afterwards so the terminal uses its real size. If the device is not arm64 executor.sh exits and the terminal closes.</li>
 <li>If <code>~/.bashrc</code> exists in the toolkit home it is sourced after executor.sh. The prompt is <code>$ </code>.</li>
+<li><strong>Hide / reopen</strong>: Back hides the terminal; the shell keeps running in a foreground service with a notification (<em>Open</em> / <em>Exit all</em>). Tapping the same <code>[[terminal]]</code> item again reopens its most recent running session; a new one is created only if none is running.</li>
+<li><strong>Multiple sessions</strong>: swipe from the left edge to open the session list, tap <em>New session</em> to start another one with the same <code>cwd</code>/<code>cmd</code>/<code>root</code>, tap ✕ to close one. <code>exit</code> or Ctrl+D closes that session and switches to another one (or closes the screen when none is left).</li>
 </ul>
 <div class="callout warn">Back asks for confirmation while the shell is running and kills it when the screen closes. After the shell exits, press Enter to close.</div>
 </section>
@@ -2079,6 +2081,7 @@ script = "sh $state"
 <li>Added <code>load-toml</code> / <code>load-toml-sh</code> directives (§2.7): merge a TOML fragment (file or shell output) into the document before parsing, in the same step as <code>load-key</code>, so <code>@name</code> substitution also applies to it.</li>
 <li>Added <code>load-text</code> / <code>load-text-sh</code> directives (§2.7): inline key text (<code>"""..."""</code> block or script output) applied after <code>load-key</code>, so it adds missing keys and overrides same-name ones; several lines allowed.</li>
 <li>Added <code>fab-spin</code> for <code>[[fab.items]]</code>: the FAB icon spins only when it is true — while the item's script runs or the page reloads (<code>refresh</code>/<code>reload</code>/<code>reload-page</code>). The old automatic spin on page reload is removed.</li>
+<li><code>[[terminal]]</code>: sessions now survive hiding the screen (foreground service + notification) and several sessions can run at once (left-edge drawer).</li>
 <li>Added the <code>[[terminal]]</code> node (§12a): full-screen bash with a real PTY, Termux-style UI; fields <code>cwd</code>, <code>cmd</code>, <code>font-size</code>, <code>root</code>. executor.sh variables are sourced once when the terminal opens; the shell starts without <code>su</code> unless <code>root = true</code>.</li>
 </ul>
 </section>

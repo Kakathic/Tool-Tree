@@ -205,4 +205,9 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="terminal_paste">Dán</string>
     <string name="terminal_share">Chia sẻ</string>
     <string name="terminal_close_confirm">Đóng terminal? Shell đang chạy sẽ bị dừng.</string>
+    <string name="terminal_sessions">Phiên</string>
+    <string name="terminal_new_session">Phiên mới</string>
+    <string name="terminal_notif_sessions">Số phiên đang chạy: %d</string>
+    <string name="terminal_notif_open">Mở</string>
+    <string name="terminal_notif_exit_all">Thoát tất cả</string>
 </resources>

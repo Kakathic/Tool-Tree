@@ -113,6 +113,7 @@
         <activity
             android:name=".TerminalActivity"
             android:exported="false"
+            android:launchMode="singleTask"
             android:label="@string/terminal_default_title"
             android:theme="@style/AppThemeDark"
             android:windowSoftInputMode="adjustResize"
@@ -183,5 +184,8 @@
         <service
             android:name=".DownloadService"
             android:exported="true"/>
+        <service
+            android:name=".TerminalService"
+            android:exported="false" />
     </application>
 </manifest>

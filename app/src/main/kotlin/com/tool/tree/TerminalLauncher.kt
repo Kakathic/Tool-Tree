@@ -21,6 +21,9 @@ class TerminalLauncher private constructor(
     private val resizeThread = HandlerThread("terminal-resize").also { it.start() }
     private val resizeHandler = Handler(resizeThread.looper)
 
+    @Volatile
+    private var killing = false
+
     companion object {
         private const val ASSETS_FILE = "file:///android_asset/"
 
@@ -42,6 +45,9 @@ class TerminalLauncher private constructor(
             }
 
             val tmp = File(home, "tmp").apply { mkdirs() }
+            // Dọn file phiên cũ còn sót (tiến trình bị kill đột ngột)
+            val staleBefore = System.currentTimeMillis() - 24 * 3600 * 1000L
+            tmp.listFiles()?.filter { it.name.startsWith(".term_") && it.lastModified() < staleBefore }?.forEach { it.delete() }
             val id = System.currentTimeMillis().toString()
             val rcFile = File(tmp, ".term_$id.rc")
             val ttyFile = File(tmp, ".term_$id.tty")
@@ -111,9 +117,11 @@ class TerminalLauncher private constructor(
     }
 
     override fun kill(process: Process) {
+        killing = true
         val pidPath = q(pidFile.absolutePath)
         Thread {
             runShell("kill -HUP \$(cat $pidPath) 2>/dev/null; sleep 0.2; kill -9 \$(cat $pidPath) 2>/dev/null")
+            deleteFiles()
         }.start()
     }
 
@@ -130,6 +138,11 @@ class TerminalLauncher private constructor(
 
     fun cleanup() {
         resizeThread.quitSafely()
+        // Đang kill thì để luồng kill tự xoá file sau khi đọc xong pid
+        if (!killing) deleteFiles()
+    }
+
+    private fun deleteFiles() {
         rcFile.delete()
         ttyFile.delete()
         pidFile.delete()

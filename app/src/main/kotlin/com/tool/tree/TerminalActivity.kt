@@ -1,28 +1,33 @@
 package com.tool.tree
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.Rect
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import com.omarea.common.ui.DialogHelper
 import com.termux.terminal.TerminalSession
-import com.termux.terminal.TerminalSessionClient
 import com.termux.view.TerminalView
 import com.termux.view.TerminalViewClient
 
-class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessionClient {
+class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessionStore.Listener {
     companion object {
+        const val ACTION_OPEN = "com.tool.tree.TERMINAL_OPEN"
+        private const val EXTRA_HAS_REQUEST = "has_request"
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_CWD = "cwd"
         private const val EXTRA_CMD = "cmd"
@@ -37,6 +42,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
 
         fun start(context: Context, title: String?, cwd: String?, cmd: String?, fontSize: Int, root: Int = 0) {
             val intent = Intent(context, TerminalActivity::class.java).apply {
+                putExtra(EXTRA_HAS_REQUEST, true)
                 putExtra(EXTRA_TITLE, title ?: "")
                 putExtra(EXTRA_CWD, cwd ?: "")
                 putExtra(EXTRA_CMD, cmd ?: "")
@@ -46,23 +52,38 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
             }
             context.startActivity(intent)
         }
+
+        /** Mở lại màn hình terminal với phiên dùng gần nhất (từ thông báo) */
+        fun openIntent(context: Context): Intent =
+            Intent(context, TerminalActivity::class.java).apply {
+                action = ACTION_OPEN
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
     }
 
     private lateinit var terminalView: TerminalView
     private lateinit var extraKeys: TerminalExtraKeys
-    private var session: TerminalSession? = null
-    private var launcher: TerminalLauncher? = null
+    private lateinit var drawer: DrawerLayout
+    private lateinit var sessionDrawer: TerminalSessionDrawer
+    private var current: TerminalSessionStore.Entry? = null
+    private var pendingCreates = 0
     private var fontSizeSp = DEFAULT_FONT_SP
-    private var sessionStartTime = 0L
+
+    private val sessionUi = object : TerminalSessionStore.Ui {
+        override fun onScreenUpdated() {
+            terminalView.onScreenUpdated()
+        }
+
+        override fun onColorsChanged() {
+            terminalView.invalidate()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
         setContentView(R.layout.activity_terminal)
-
-        val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
-        setTitle(title.ifEmpty { getString(R.string.terminal_default_title) })
 
         // Cỡ chữ đã chỉnh (zoom) được nhớ và ưu tiên hơn font-size trong TOML
         val savedFont = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(PREF_FONT_SP, 0)
@@ -75,51 +96,157 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         applyFontSize()
         extraKeys = TerminalExtraKeys(findViewById<LinearLayout>(R.id.terminal_extra_keys), terminalView)
 
+        setupDrawer()
+
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                val current = session
-                if (current != null && current.isRunning) {
-                    DialogHelper.confirm(
-                        this@TerminalActivity,
-                        getString(R.string.terminal_default_title),
-                        getString(R.string.terminal_close_confirm),
-                        Runnable { finish() },
-                        null
-                    )
+                if (drawer.isDrawerOpen(GravityCompat.START)) {
+                    drawer.closeDrawer(GravityCompat.START)
                 } else {
+                    // Ẩn: phiên vẫn chạy trong TerminalService
                     finish()
                 }
             }
         })
 
-        startSession(intent.getStringExtra(EXTRA_CWD).orEmpty(), intent.getStringExtra(EXTRA_CMD).orEmpty(), intent.getIntExtra(EXTRA_ROOT, 0))
+        TerminalSessionStore.addListener(this)
+        handleIntent(intent)
     }
 
-    private fun startSession(cwd: String, cmd: String, root: Int) {
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun setupDrawer() {
+        drawer = findViewById(R.id.terminal_drawer)
+        sessionDrawer = TerminalSessionDrawer(
+            findViewById(R.id.terminal_session_list),
+            findViewById<TextView>(R.id.terminal_new_session),
+            onSelect = { entry ->
+                switchTo(entry)
+                drawer.closeDrawer(GravityCompat.START)
+            },
+            onClose = { entry -> confirmClose(entry) },
+            onNew = {
+                current?.let { createSession(it.request) }
+                drawer.closeDrawer(GravityCompat.START)
+            }
+        )
+        drawer.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
+            override fun onDrawerOpened(drawerView: View) {
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(terminalView.windowToken, 0)
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                terminalView.requestFocus()
+            }
+        })
+
+        // Android 10+ dùng vuốt mép trái để Back: nhường một dải mép trái cho ngăn kéo
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val density = resources.displayMetrics.density
+            drawer.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
+                val height = minOf(v.height, (200 * density).toInt())
+                val top = (v.height - height) / 2
+                v.setSystemGestureExclusionRects(listOf(Rect(0, top, (24 * density).toInt(), top + height)))
+            }
+        }
+    }
+
+    private fun handleIntent(intent: Intent) {
+        if (intent.getBooleanExtra(EXTRA_HAS_REQUEST, false)) {
+            val request = TerminalSessionStore.Request(
+                intent.getStringExtra(EXTRA_TITLE).orEmpty(),
+                intent.getStringExtra(EXTRA_CWD).orEmpty(),
+                intent.getStringExtra(EXTRA_CMD).orEmpty(),
+                intent.getIntExtra(EXTRA_ROOT, 0)
+            )
+            // Mở lại phiên đang ẩn gần nhất của item này, chưa có mới tạo
+            val existing = TerminalSessionStore.latestForRequest(request)
+            if (existing != null) switchTo(existing) else createSession(request)
+        } else {
+            val target = TerminalSessionStore.latest()
+            if (target != null) switchTo(target) else if (current == null && pendingCreates == 0) finish()
+        }
+    }
+
+    private fun createSession(request: TerminalSessionStore.Request) {
         val appContext = applicationContext
+        pendingCreates++
         Thread {
             val prepared = try {
-                TerminalLauncher.prepare(appContext, cwd, cmd, root)
+                TerminalLauncher.prepare(appContext, request.cwd, request.cmd, request.root)
             } catch (e: Exception) {
                 runOnUiThread {
+                    pendingCreates--
                     Toast.makeText(this, e.message ?: "Terminal error", Toast.LENGTH_LONG).show()
-                    finish()
+                    if (current == null && TerminalSessionStore.all().isEmpty()) finish()
                 }
                 return@Thread
             }
             runOnUiThread {
+                pendingCreates--
                 if (isFinishing || isDestroyed) {
                     prepared.cleanup()
                     return@runOnUiThread
                 }
-                launcher = prepared
-                val newSession = TerminalSession(prepared, 2000, this)
-                session = newSession
-                sessionStartTime = SystemClock.elapsedRealtime()
-                terminalView.attachSession(newSession)
-                terminalView.requestFocus()
+                switchTo(TerminalSessionStore.create(appContext, request, prepared))
             }
         }.start()
+    }
+
+    private fun switchTo(entry: TerminalSessionStore.Entry) {
+        val previous = current
+        previous?.let { if (it !== entry) it.ui = null }
+        current = entry
+        entry.ui = sessionUi
+        entry.lastActive = SystemClock.elapsedRealtime()
+        title = entry.label
+        terminalView.attachSession(entry.session)
+        terminalView.onScreenUpdated()
+        terminalView.requestFocus()
+        sessionDrawer.refresh(TerminalSessionStore.all(), current)
+        // Phiên cũ đã chết (đang giữ lại để đọc lỗi) thì bỏ khi chuyển đi
+        if (previous != null && previous !== entry && previous.finished) TerminalSessionStore.remove(previous)
+    }
+
+    private fun confirmClose(entry: TerminalSessionStore.Entry) {
+        if (entry.session.isRunning) {
+            DialogHelper.confirm(
+                this,
+                entry.label,
+                getString(R.string.terminal_close_confirm),
+                Runnable { closeSession(entry) },
+                null
+            )
+        } else {
+            closeSession(entry)
+        }
+    }
+
+    private fun closeSession(entry: TerminalSessionStore.Entry) {
+        val wasCurrent = entry === current
+        if (wasCurrent) current = null
+        TerminalSessionStore.remove(entry)
+        if (wasCurrent) {
+            val next = TerminalSessionStore.latest()
+            if (next != null) switchTo(next) else finish()
+        }
+    }
+
+    override fun onSessionsChanged() {
+        sessionDrawer.refresh(TerminalSessionStore.all(), current)
+        if (TerminalSessionStore.all().isEmpty() && pendingCreates == 0) finish()
+    }
+
+    override fun onSessionFinished(entry: TerminalSessionStore.Entry) {
+        if (entry !== current) return
+        // exit / Ctrl+D: đóng phiên luôn. Nếu shell chết ngay lúc mở với mã lỗi thì giữ màn hình để đọc lỗi (Enter để đóng)
+        val diedAtStartup = SystemClock.elapsedRealtime() - entry.createdAt < STARTUP_FAIL_WINDOW_MS && entry.session.exitStatus != 0
+        if (diedAtStartup) terminalView.onScreenUpdated() else closeSession(entry)
     }
 
     private fun applyFontSize() {
@@ -138,8 +265,12 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
     }
 
     override fun onDestroy() {
-        if (isFinishing) session?.finishIfRunning()
-        launcher?.cleanup()
+        // Không kill phiên ở đây: phiên sống tiếp trong TerminalService để mở lại
+        TerminalSessionStore.removeListener(this)
+        current?.let {
+            it.ui = null
+            if (it.finished) TerminalSessionStore.remove(it)
+        }
         super.onDestroy()
     }
 
@@ -168,7 +299,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
 
     override fun onKeyDown(keyCode: Int, e: KeyEvent, session: TerminalSession): Boolean {
         if (keyCode == KeyEvent.KEYCODE_ENTER && !session.isRunning) {
-            finish()
+            current?.let { closeSession(it) }
             return true
         }
         return false
@@ -189,44 +320,6 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
     override fun onCodePoint(codePoint: Int, ctrlDown: Boolean, session: TerminalSession): Boolean = false
 
     override fun onEmulatorSet() {}
-
-    override fun onTextChanged(changedSession: TerminalSession) {
-        terminalView.onScreenUpdated()
-    }
-
-    override fun onTitleChanged(changedSession: TerminalSession) {}
-
-    override fun onSessionFinished(finishedSession: TerminalSession) {
-        // exit / Ctrl+D: đóng luôn. Nếu shell chết ngay lúc mở với mã lỗi thì giữ màn hình để đọc lỗi (Enter để đóng)
-        val diedAtStartup = SystemClock.elapsedRealtime() - sessionStartTime < STARTUP_FAIL_WINDOW_MS && finishedSession.exitStatus != 0
-        if (diedAtStartup) {
-            terminalView.onScreenUpdated()
-        } else if (!isFinishing) {
-            finish()
-        }
-    }
-
-    override fun onCopyTextToClipboard(session: TerminalSession, text: String?) {
-        if (text.isNullOrEmpty()) return
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("terminal", text))
-    }
-
-    override fun onPasteTextFromClipboard(session: TerminalSession?) {
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val text = clipboard.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
-        if (!text.isNullOrEmpty()) session?.emulator?.paste(text)
-    }
-
-    override fun onBell(session: TerminalSession) {}
-
-    override fun onColorsChanged(session: TerminalSession) {
-        terminalView.invalidate()
-    }
-
-    override fun onTerminalCursorStateChange(state: Boolean) {}
-
-    override fun getTerminalCursorStyle(): Int? = null
 
     override fun logError(tag: String?, message: String?) { Log.e(tag, message ?: "") }
 
