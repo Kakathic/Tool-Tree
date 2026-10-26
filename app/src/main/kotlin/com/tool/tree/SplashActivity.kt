@@ -222,10 +222,15 @@ class SplashActivity : AppCompatActivity() {
             val config = KrScriptConfig()
             config.init(this@SplashActivity)
 
-            val favorites = getItems(config.getFavoriteConfig())
-            val pages = getItems(config.getPageListConfig())
-            val tab3Items = getItems(config.getCustomTab3Config())
-            val tab4Items = getItems(config.getCustomTab4Config())
+            val favoritesDeferred = async { getItems(config.getFavoriteConfig()) }
+            val pagesDeferred = async { getItems(config.getPageListConfig()) }
+            val tab3Deferred = async { getItems(config.getCustomTab3Config()) }
+            val tab4Deferred = async { getItems(config.getCustomTab4Config()) }
+
+            val favorites = favoritesDeferred.await()
+            val pages = pagesDeferred.await()
+            val tab3Items = tab3Deferred.await()
+            val tab4Items = tab4Deferred.await()
 
             if (!isActive) return@launch
 
