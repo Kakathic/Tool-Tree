@@ -2,6 +2,7 @@
 
 **Version: 1.6.1 (12-10-2026)**
 
++ Add terminal page [NEW]
 + Update suggestion
 + Delete all data when updating to this version
 + Update layout changes
