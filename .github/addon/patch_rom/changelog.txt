@@ -1,4 +1,2 @@
 Update log:
-- Change storage location
-- Add a backup of the original .bak file
-- Speed up APK patching
+- Separate label information features
