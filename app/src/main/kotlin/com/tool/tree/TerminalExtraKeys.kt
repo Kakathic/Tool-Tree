@@ -7,6 +7,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
+import android.graphics.drawable.InsetDrawable
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -23,7 +24,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
     private class Key(val id: String, val label: String, val repeat: Boolean = false, val size: Float = 14f, val isBold: Boolean = false)
 
     private companion object {
-        const val ARROW_SIZE = 22f
+        const val ARROW_SIZE = 14f
         const val ROW_HEIGHT_DP = 30
     }
 
@@ -75,12 +76,15 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
         val normal = ColorDrawable(Color.TRANSPARENT)
         val pressedOrSelected = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            setColor(Color.parseColor("#33FFFFFF")) // Màu nền khi nhấn hoặc chọn (trắng mờ)
-            cornerRadius = dp(4).toFloat()          // Bo góc nhẹ hình chữ nhật (4dp)
+            setColor(Color.parseColor("#33FFFFFF")) // Màu nền khi nhấn hoặc chọn
+            cornerRadius = dp(6).toFloat()          // Bo góc hình chữ nhật
         }
+        // Dùng InsetDrawable để co khung nền lại một chút, tạo khoảng cách hở giữa các phím
+        val insetDrawable = InsetDrawable(pressedOrSelected, dp(2), dp(2), dp(2), dp(2))
+
         return StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_selected), pressedOrSelected)
-            addState(intArrayOf(android.R.attr.state_pressed), pressedOrSelected)
+            addState(intArrayOf(android.R.attr.state_selected), insetDrawable)
+            addState(intArrayOf(android.R.attr.state_pressed), insetDrawable)
             addState(intArrayOf(), normal)
         }
     }
@@ -88,7 +92,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
     @SuppressLint("ClickableViewAccessibility")
     private fun build() {
         // Nâng khung phím lên và tạo khoảng hở ở đáy
-        container.setPadding(container.paddingLeft, container.paddingTop, container.paddingRight, dp(12))
+        container.setPadding(container.paddingLeft, container.paddingTop, container.paddingRight, dp(8))
 
         for (rowKeys in layout) {
             val row = LinearLayout(container.context).apply {
@@ -110,8 +114,12 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
                         typeface = android.graphics.Typeface.MONOSPACE
                     }
 
-                    background = keyBackground() // Áp dụng hiệu ứng nền bo góc khi nhấn/chọn
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
+                    background = keyBackground()
+                    
+                    val margin = dp(1)
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
+                        setMargins(margin, margin, margin, margin)
+                    }
                 }
                 if (key.id == "CTRL") ctrlButton = button
                 if (key.id == "ALT") altButton = button
