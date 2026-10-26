@@ -93,25 +93,12 @@ type = "text"
 required = true
 
 [[group]]
-[[editor]]
-id = "shella"
-title = "@home_text_5"
-desc = "@home_text_6"
-icon = "{ICON}/shella.png"
-file = "{HOME}/usr/run_shella.bash"
-need-input = true
-placeholder = "#bash|sh|python"
-value = """# bash
-"""
-
-[[group]]
 [[terminal]]
 title = "Terminal"
 icon = "{ICON}/shella.png"
 cwd = "{HOME}"
 cmd = '''echo "Welcome to Tool-Tree
 
-Type the command: `env` to understand the available variables.
-"
+Type the command: `env` to understand the available variables."
 '''
-font-size = 14
+font-size = 12
