@@ -81,7 +81,6 @@
             android:id="@+id/item_list"
             android:scrollbarSize="0dp"
             android:divider="@null"
-            android:fastScrollEnabled="true"
             android:scrollbarStyle="insideOverlay"
             android:requiresFadingEdge="vertical"
             android:smoothScrollbar="true"
