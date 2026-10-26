@@ -3,6 +3,10 @@ package com.tool.tree
 import android.annotation.SuppressLint
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -16,16 +20,16 @@ import com.termux.terminal.KeyHandler
 import com.termux.view.TerminalView
 
 class TerminalExtraKeys(private val container: LinearLayout, private val terminalView: TerminalView) {
-    private class Key(val id: String, val label: String, val repeat: Boolean = false, val size: Float = 14f)
+    private class Key(val id: String, val label: String, val repeat: Boolean = false, val size: Float = 14f, val isBold: Boolean = false)
 
     private companion object {
-        const val ARROW_SIZE = 20f
-        const val ROW_HEIGHT_DP = 34
+        const val ARROW_SIZE = 22f
+        const val ROW_HEIGHT_DP = 30
     }
 
     private val layout = listOf(
-        listOf(Key("ESC", "ESC"), Key("/", "/"), Key("-", "-"), Key("HOME", "HOME"), Key("UP", "↑", true, ARROW_SIZE), Key("END", "END"), Key("PGUP", "PGUP", true)),
-        listOf(Key("TAB", "TAB"), Key("CTRL", "CTRL"), Key("ALT", "ALT"), Key("LEFT", "←", true, ARROW_SIZE), Key("DOWN", "↓", true, ARROW_SIZE), Key("RIGHT", "→", true, ARROW_SIZE), Key("PGDN", "PGDN", true))
+        listOf(Key("ESC", "ESC"), Key("/", "/"), Key("-", "-"), Key("HOME", "HOME"), Key("UP", "↑", true, ARROW_SIZE, true), Key("END", "END"), Key("PGUP", "PGUP", true)),
+        listOf(Key("TAB", "TAB"), Key("CTRL", "CTRL"), Key("ALT", "ALT"), Key("LEFT", "←", true, ARROW_SIZE, true), Key("DOWN", "↓", true, ARROW_SIZE, true), Key("RIGHT", "→", true, ARROW_SIZE, true), Key("PGDN", "PGDN", true))
     )
 
     private val handler = Handler(Looper.getMainLooper())
@@ -67,8 +71,25 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
         intArrayOf(Color.parseColor("#6FA8FF"), Color.parseColor("#8A8A8A"), Color.WHITE)
     )
 
+    private fun keyBackground(): Drawable {
+        val normal = ColorDrawable(Color.TRANSPARENT)
+        val pressedOrSelected = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(Color.parseColor("#33FFFFFF")) // Màu nền khi nhấn hoặc chọn (trắng mờ)
+            cornerRadius = dp(4).toFloat()          // Bo góc nhẹ hình chữ nhật (4dp)
+        }
+        return StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_selected), pressedOrSelected)
+            addState(intArrayOf(android.R.attr.state_pressed), pressedOrSelected)
+            addState(intArrayOf(), normal)
+        }
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private fun build() {
+        // Nâng khung phím lên và tạo khoảng hở ở đáy
+        container.setPadding(container.paddingLeft, container.paddingTop, container.paddingRight, dp(12))
+
         for (rowKeys in layout) {
             val row = LinearLayout(container.context).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -82,8 +103,14 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
                     setPadding(0, 0, 0, 0)
                     setTextColor(keyTextColors())
                     textSize = key.size
-                    typeface = android.graphics.Typeface.MONOSPACE
-                    background = null
+                    
+                    if (key.isBold) {
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    } else {
+                        typeface = android.graphics.Typeface.MONOSPACE
+                    }
+
+                    background = keyBackground() // Áp dụng hiệu ứng nền bo góc khi nhấn/chọn
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
                 }
                 if (key.id == "CTRL") ctrlButton = button
