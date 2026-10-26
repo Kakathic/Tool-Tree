@@ -29,7 +29,7 @@
                 android:src="@drawable/ic_settings"
                 android:scaleType="centerInside"/>
         </FrameLayout>
-
+        
         <TextView
             android:id="@+id/fullscreen_content"
             android:layout_width="wrap_content"
@@ -37,9 +37,10 @@
             android:text="@string/pio_starting"
             android:textSize="35sp"
             android:textStyle="bold"
+            android:fontFamily="monospace"
             android:gravity="center"
             android:layout_marginTop="20dp"/>
-
+        
         <TextView
             android:id="@+id/start_state_text"
             android:layout_width="wrap_content"

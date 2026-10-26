@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -28,6 +29,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         private const val EXTRA_FONT_SIZE = "font_size"
         private const val EXTRA_ROOT = "root"
         private const val PREFS_NAME = "terminal"
+        private const val STARTUP_FAIL_WINDOW_MS = 3000L
         private const val PREF_FONT_SP = "font_sp"
         private const val DEFAULT_FONT_SP = 14
         private const val MIN_FONT_SP = 8
@@ -51,6 +53,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
     private var session: TerminalSession? = null
     private var launcher: TerminalLauncher? = null
     private var fontSizeSp = DEFAULT_FONT_SP
+    private var sessionStartTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,6 +115,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
                 launcher = prepared
                 val newSession = TerminalSession(prepared, 2000, this)
                 session = newSession
+                sessionStartTime = SystemClock.elapsedRealtime()
                 terminalView.attachSession(newSession)
                 terminalView.requestFocus()
             }
@@ -193,7 +197,13 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
     override fun onTitleChanged(changedSession: TerminalSession) {}
 
     override fun onSessionFinished(finishedSession: TerminalSession) {
-        terminalView.onScreenUpdated()
+        // exit / Ctrl+D: đóng luôn. Nếu shell chết ngay lúc mở với mã lỗi thì giữ màn hình để đọc lỗi (Enter để đóng)
+        val diedAtStartup = SystemClock.elapsedRealtime() - sessionStartTime < STARTUP_FAIL_WINDOW_MS && finishedSession.exitStatus != 0
+        if (diedAtStartup) {
+            terminalView.onScreenUpdated()
+        } else if (!isFinishing) {
+            finish()
+        }
     }
 
     override fun onCopyTextToClipboard(session: TerminalSession, text: String?) {
