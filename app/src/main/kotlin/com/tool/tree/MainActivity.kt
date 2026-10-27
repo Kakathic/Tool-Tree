@@ -57,6 +57,7 @@ class MainActivity : AppCompatActivity() {
     private var fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface? = null
     
     private var pendingUpdateInfo: AppUpdateInfo? = null
+    private var deferredUpdateInfo: AppUpdateInfo? = null
 
     companion object {
         private var updateChecked = false
@@ -147,7 +148,7 @@ class MainActivity : AppCompatActivity() {
         if (supportFragmentManager.findFragmentByTag("app_update") != null) return
         var loadedInfo: AppUpdateInfo? = null
         BlurEngine.runWhenBlurReady {
-            if (isFinishing || isDestroyed) return@runWhenBlurReady
+            if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return@runWhenBlurReady
             val dialog = DialogAppUpdate(
                 darkMode = ThemeModeState.isDarkMode(),
                 apkUrl = "",
@@ -184,7 +185,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResumeFragments() {
+        super.onResumeFragments()
+        val info = deferredUpdateInfo ?: return
+        deferredUpdateInfo = null
+        if (supportFragmentManager.findFragmentByTag("app_update") == null) {
+            BlurEngine.runWhenBlurReady {
+                if (!isFinishing && !isDestroyed) showUpdateDialog(info)
+            }
+        }
+    }
+
     private fun showUpdateDialog(updateInfo: AppUpdateInfo) {
+        if (supportFragmentManager.isStateSaved) {
+            deferredUpdateInfo = updateInfo
+            return
+        }
         DialogAppUpdate(
             darkMode = ThemeModeState.isDarkMode(),
             apkUrl = updateInfo.apkUrl,
