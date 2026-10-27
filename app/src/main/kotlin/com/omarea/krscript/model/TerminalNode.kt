@@ -5,4 +5,5 @@ class TerminalNode(currentConfigXml: String) : ClickableNode(currentConfigXml) {
     var cmd: String = ""
     var fontSize: Int = 0
     var root: Int = 1
+    var exitOnBack: Boolean = false
 }

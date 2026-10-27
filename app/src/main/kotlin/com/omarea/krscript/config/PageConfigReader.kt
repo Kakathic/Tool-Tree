@@ -1356,6 +1356,9 @@ class PageConfigReader {
         tomlGet(table, "cwd", "dir")?.let { terminal.cwd = it.trim() }
         tomlGet(table, "cmd", "command")?.let { terminal.cmd = it }
         tomlGet(table, "font-size")?.let { terminal.fontSize = parseIntOr(it, 0) }
+        tomlGet(table, "exit-on-back", "back-exit")?.let {
+            terminal.exitOnBack = it.trim().lowercase().let { v -> v == "true" || v == "1" }
+        }
         tomlGet(table, "root", "su")?.let {
             terminal.root = when (it.trim().lowercase()) {
                 "true", "1" -> 1

@@ -34,6 +34,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         private const val EXTRA_FONT_SIZE = "font_size"
         private const val EXTRA_ROOT = "root"
         private const val EXTRA_PAGE_PATH = "page_path"
+        private const val EXTRA_EXIT_ON_BACK = "exit_on_back"
         private const val PREFS_NAME = "terminal"
         private const val STARTUP_FAIL_WINDOW_MS = 3000L
         private const val PREF_FONT_SP = "font_sp"
@@ -41,7 +42,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         private const val MIN_FONT_SP = 8
         private const val MAX_FONT_SP = 40
 
-        fun start(context: Context, title: String?, cwd: String?, cmd: String?, fontSize: Int, root: Int = 0, pagePath: String? = null) {
+        fun start(context: Context, title: String?, cwd: String?, cmd: String?, fontSize: Int, root: Int = 0, pagePath: String? = null, exitOnBack: Boolean = false) {
             val intent = Intent(context, TerminalActivity::class.java).apply {
                 putExtra(EXTRA_HAS_REQUEST, true)
                 putExtra(EXTRA_TITLE, title ?: "")
@@ -50,6 +51,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
                 putExtra(EXTRA_FONT_SIZE, fontSize)
                 putExtra(EXTRA_ROOT, root)
                 putExtra(EXTRA_PAGE_PATH, pagePath ?: "")
+                putExtra(EXTRA_EXIT_ON_BACK, exitOnBack)
                 if (context !is AppCompatActivity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
@@ -105,8 +107,14 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
                 if (drawer.isDrawerOpen(GravityCompat.START)) {
                     drawer.closeDrawer(GravityCompat.START)
                 } else {
-                    // Ẩn: phiên vẫn chạy trong TerminalService
-                    finish()
+                    val session = current
+                    if (session != null && session.request.exitOnBack) {
+                        // exit-on-back: dừng hẳn phiên đang xem, còn phiên khác thì chuyển sang phiên đó
+                        closeSession(session)
+                    } else {
+                        // Ẩn: phiên vẫn chạy trong TerminalService
+                        finish()
+                    }
                 }
             }
         })
@@ -160,7 +168,8 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
                 intent.getStringExtra(EXTRA_CWD).orEmpty(),
                 intent.getStringExtra(EXTRA_CMD).orEmpty(),
                 intent.getIntExtra(EXTRA_ROOT, 0),
-                intent.getStringExtra(EXTRA_PAGE_PATH).orEmpty()
+                intent.getStringExtra(EXTRA_PAGE_PATH).orEmpty(),
+                intent.getBooleanExtra(EXTRA_EXIT_ON_BACK, false)
             )
             // Mở lại phiên đang ẩn gần nhất của item này, chưa có mới tạo
             val existing = TerminalSessionStore.latestForRequest(request)

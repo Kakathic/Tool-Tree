@@ -14,8 +14,8 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Mọi thao tác phải gọi trên main thread.
  */
 object TerminalSessionStore {
-    class Request(val title: String, val cwd: String, val cmd: String, val root: Int, val pagePath: String = "") {
-        val key: String get() = "$title\u0000$cwd\u0000$cmd\u0000$root\u0000$pagePath"
+    class Request(val title: String, val cwd: String, val cmd: String, val root: Int, val pagePath: String = "", val exitOnBack: Boolean = false) {
+        val key: String get() = "$title\u0000$cwd\u0000$cmd\u0000$root\u0000$pagePath\u0000$exitOnBack"
     }
 
     interface Ui {
