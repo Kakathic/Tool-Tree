@@ -45,32 +45,24 @@
                 android:orientation="horizontal"
                 android:paddingBottom="8dp">
 
-                <TextView
-                    android:id="@+id/terminal_input_back"
-                    android:layout_width="44dp"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:text="⌨"
-                    android:textColor="#8A8A8A"
-                    android:textSize="20sp" />
-
                 <EditText
                     android:id="@+id/terminal_input_edit"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:layout_marginStart="2dp"
+                    android:layout_marginStart="12dp"
                     android:layout_marginTop="4dp"
-                    android:layout_marginEnd="6dp"
+                    android:layout_marginEnd="12dp"
                     android:layout_marginBottom="4dp"
                     android:layout_weight="1"
-                    android:background="@drawable/terminal_input_bg"
+                    android:background="@drawable/terminal_input_line"
                     android:hint="@string/terminal_input_hint"
                     android:imeOptions="actionSend|flagNoExtractUi"
                     android:importantForAutofill="no"
                     android:inputType="text"
                     android:maxLines="1"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
+                    android:gravity="center_vertical"
+                    android:paddingStart="2dp"
+                    android:paddingEnd="2dp"
                     android:textColor="#FFFFFF"
                     android:textColorHint="#6A6A6A"
                     android:textSize="14sp" />

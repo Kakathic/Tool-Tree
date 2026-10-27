@@ -2,20 +2,17 @@ package com.tool.tree
 
 import android.content.Context
 import android.view.KeyEvent
-import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import com.termux.view.TerminalView
 
 class TerminalInputBar(
-    private val pager: TerminalSwipePager,
+    pager: TerminalSwipePager,
     private val edit: EditText,
-    back: View,
     private val terminalView: TerminalView
 ) {
     init {
-        pager.dragBlocker = edit
         edit.setOnEditorActionListener { _, actionId, event ->
             val isSend = actionId == EditorInfo.IME_ACTION_SEND ||
                 (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
@@ -26,7 +23,6 @@ class TerminalInputBar(
                 false
             }
         }
-        back.setOnClickListener { pager.setPage(0, true) }
         pager.onPageChanged = { page ->
             if (page == 1) focusInput() else terminalView.requestFocus()
         }

@@ -97,7 +97,6 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         inputBar = TerminalInputBar(
             findViewById(R.id.terminal_toolbar_pager),
             findViewById(R.id.terminal_input_edit),
-            findViewById(R.id.terminal_input_back),
             terminalView
         )
 

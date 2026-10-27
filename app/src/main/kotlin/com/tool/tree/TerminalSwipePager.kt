@@ -2,7 +2,6 @@ package com.tool.tree
 
 import android.animation.ValueAnimator
 import android.content.Context
-import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.VelocityTracker
@@ -18,7 +17,6 @@ class TerminalSwipePager @JvmOverloads constructor(
 ) : FrameLayout(context, attrs) {
 
     var onPageChanged: ((Int) -> Unit)? = null
-    var dragBlocker: View? = null
     var page = 0
         private set
 
@@ -30,7 +28,6 @@ class TerminalSwipePager @JvmOverloads constructor(
     private var downY = 0f
     private var startOffset = 0f
     private var dragging = false
-    private var blocked = false
     private var tracker: VelocityTracker? = null
     private var animator: ValueAnimator? = null
 
@@ -92,16 +89,8 @@ class TerminalSwipePager @JvmOverloads constructor(
         }
     }
 
-    private fun startedOnBlocker(ev: MotionEvent): Boolean {
-        if (page != 1) return false
-        val view = dragBlocker ?: return false
-        val rect = Rect()
-        if (!view.getGlobalVisibleRect(rect)) return false
-        return rect.contains(ev.rawX.toInt(), ev.rawY.toInt())
-    }
-
     private fun maybeStartDrag(ev: MotionEvent) {
-        if (dragging || blocked) return
+        if (dragging) return
         val dx = ev.x - downX
         val dy = ev.y - downY
         val towardNext = page == 0 && dx < 0
@@ -122,7 +111,6 @@ class TerminalSwipePager @JvmOverloads constructor(
                 downX = ev.x
                 downY = ev.y
                 dragging = false
-                blocked = startedOnBlocker(ev)
                 animator?.cancel()
                 animator = null
                 offset = page * width.toFloat()
@@ -131,7 +119,6 @@ class TerminalSwipePager @JvmOverloads constructor(
             MotionEvent.ACTION_MOVE -> maybeStartDrag(ev)
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 dragging = false
-                blocked = false
             }
         }
         tracker?.addMovement(ev)
