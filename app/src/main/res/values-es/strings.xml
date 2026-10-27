@@ -200,4 +200,14 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="terminal_notif_sessions">Sesiones en ejecución: %d</string>
     <string name="terminal_notif_open">Abrir</string>
     <string name="terminal_notif_exit_all">Salir de todas</string>
+    <string name="app_update_title">Nueva actualización</string>
+    <string name="app_update_desc">Hay una nueva versión disponible, ¿quieres actualizar la aplicación?</string>
+    <string name="app_update_btn_install">Instalar</string>
+    <string name="app_update_install_success">Instalado correctamente</string>
+    <string name="app_update_download_fail">Error al descargar la actualización</string>
+    <string name="app_update_download_cancelled">Descarga de la actualización cancelada</string>
+    <string name="app_update_changelog_fail">No se pudieron cargar los detalles de la actualización</string>
+    <string name="app_update_checking">Buscando actualizaciones...</string>
+    <string name="app_update_latest">Estás usando la última versión</string>
+    <string name="app_update_check_fail">No se pudo buscar actualizaciones</string>
 </resources>

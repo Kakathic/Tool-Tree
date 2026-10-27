@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_update_title">新版本</string>
+    <string name="app_update_desc">发现新版本，是否更新应用？</string>
+    <string name="app_update_btn_install">安装</string>
+    <string name="app_update_install_success">安装成功</string>
+    <string name="app_update_download_fail">下载更新失败</string>
+    <string name="app_update_download_cancelled">已取消下载更新</string>
+    <string name="app_update_changelog_fail">无法加载更新详情</string>
+    <string name="app_update_checking">正在检查更新...</string>
+    <string name="app_update_latest">当前已是最新版本</string>
+    <string name="app_update_check_fail">无法检查更新</string>
+</resources>

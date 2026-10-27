@@ -143,6 +143,47 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showUpdateCheckDialog() {
+        if (supportFragmentManager.findFragmentByTag("app_update") != null) return
+        var loadedInfo: AppUpdateInfo? = null
+        BlurEngine.runWhenBlurReady {
+            if (isFinishing || isDestroyed) return@runWhenBlurReady
+            val dialog = DialogAppUpdate(
+                darkMode = ThemeModeState.isDarkMode(),
+                apkUrl = "",
+                changelogText = null,
+                fileName = AppUpdateChecker.APK_FILE_NAME,
+                onCancel = { loadedInfo?.let { AppUpdateConfig(this).setDismissedSha256(it.sha256) } },
+                startLoading = true
+            )
+            dialog.show(supportFragmentManager, "app_update")
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                val result = AppUpdateChecker.check(this@MainActivity)
+                withContext(Dispatchers.Main) {
+                    if (isFinishing || isDestroyed) return@withContext
+                    when (result) {
+                        is AppUpdateCheckResult.Available -> {
+                            loadedInfo = result.info
+                            updateChecked = true
+                            cachedUpdateInfo = result.info
+                            pendingUpdateInfo = result.info
+                            invalidateOptionsMenu()
+                        }
+                        is AppUpdateCheckResult.UpToDate -> {
+                            updateChecked = true
+                            cachedUpdateInfo = null
+                            pendingUpdateInfo = null
+                            invalidateOptionsMenu()
+                        }
+                        is AppUpdateCheckResult.Failed -> {}
+                    }
+                    dialog.showResult(result)
+                }
+            }
+        }
+    }
+
     private fun showUpdateDialog(updateInfo: AppUpdateInfo) {
         DialogAppUpdate(
             darkMode = ThemeModeState.isDarkMode(),
@@ -497,17 +538,23 @@ class MainActivity : AppCompatActivity() {
         val rebootItem = menu.findItem(R.id.option_menu_reboot)
         rebootItem?.isEnabled = hasRoot
         rebootItem?.icon?.alpha = if (hasRoot) 255 else 97
-        menu.findItem(R.id.option_menu_update)?.isVisible = pendingUpdateInfo != null
+        menu.findItem(R.id.option_menu_update)?.let {
+            it.isVisible = true
+            it.setIcon(if (pendingUpdateInfo != null) R.drawable.ic_update_badge else R.drawable.ic_update)
+        }
         return super.onPrepareOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.option_menu_update -> {
-                pendingUpdateInfo?.let { info ->
+                val info = pendingUpdateInfo
+                if (info != null) {
                     BlurEngine.runWhenBlurReady {
                         if (!isFinishing && !isDestroyed) showUpdateDialog(info)
                     }
+                } else {
+                    showUpdateCheckDialog()
                 }
                 true
             }

@@ -195,4 +195,14 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="terminal_notif_sessions">Futó munkamenetek: %d</string>
     <string name="terminal_notif_open">Megnyitás</string>
     <string name="terminal_notif_exit_all">Kilépés mindből</string>
+    <string name="app_update_title">Új frissítés</string>
+    <string name="app_update_desc">Új verzió érhető el, szeretné frissíteni az alkalmazást?</string>
+    <string name="app_update_btn_install">Telepítés</string>
+    <string name="app_update_install_success">Sikeresen telepítve</string>
+    <string name="app_update_download_fail">A frissítés letöltése sikertelen</string>
+    <string name="app_update_download_cancelled">A frissítés letöltése megszakítva</string>
+    <string name="app_update_changelog_fail">A frissítés részleteinek betöltése sikertelen</string>
+    <string name="app_update_checking">Frissítések keresése...</string>
+    <string name="app_update_latest">A legújabb verziót használja</string>
+    <string name="app_update_check_fail">Nem sikerült frissítéseket keresni</string>
 </resources>

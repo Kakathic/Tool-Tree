@@ -13,6 +13,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.text.HtmlCompat
 import com.omarea.common.shell.KeepShellPublic
+import com.tool.tree.AppUpdateCheckResult
 import com.tool.tree.OpenFileActivity
 import com.tool.tree.R
 import java.io.File
@@ -22,11 +23,12 @@ import java.net.URL
 
 class DialogAppUpdate(
     darkMode: Boolean,
-    private val apkUrl: String,
-    private val changelogText: String?,
-    private val fileName: String,
-    private val apkSize: Long? = null,
-    private val onCancel: (() -> Unit)? = null
+    private var apkUrl: String,
+    private var changelogText: String?,
+    private var fileName: String,
+    private var apkSize: Long? = null,
+    private val onCancel: (() -> Unit)? = null,
+    private val startLoading: Boolean = false
 ) : DialogFullScreen(R.layout.dialog_app_update, darkMode) {
 
     private class DownloadState {
@@ -50,6 +52,9 @@ class DialogAppUpdate(
     private lateinit var btnCancel: Button
     private lateinit var btnConfirm: Button
     private lateinit var titleText: TextView
+    private lateinit var descText: TextView
+    private var viewReady = false
+    private var pendingResult: AppUpdateCheckResult? = null
 
     private var activeDownload: DownloadState? = null
     private var readyToInstall = false
@@ -67,22 +72,22 @@ class DialogAppUpdate(
         btnCancel = view.findViewById(R.id.btn_cancel)
         btnConfirm = view.findViewById(R.id.btn_confirm)
         titleText = view.findViewById(R.id.update_title)
-
-        if (apkSize != null && apkSize > 0) {
-            titleText.text = activity.getString(R.string.app_name) + " | " + formatFileSize(apkSize)
-        }
+        descText = view.findViewById(R.id.update_desc)
 
         destFile = File(activity.cacheDir, fileName)
 
-        contentText.text = if (changelogText != null) {
-            HtmlCompat.fromHtml(markdownToHtml(changelogText), HtmlCompat.FROM_HTML_MODE_LEGACY)
+        if (startLoading) {
+            titleText.text = activity.getString(R.string.app_name)
+            descText.text = activity.getString(R.string.app_update_checking)
+            contentText.text = ""
+            btnConfirm.visibility = View.GONE
         } else {
-            activity.getString(R.string.app_update_changelog_fail)
-        }
-
-        if (destFile.exists() && destFile.length() > 0) {
-            readyToInstall = true
-            btnConfirm.text = activity.getString(R.string.app_update_btn_install)
+            val size = apkSize
+            if (size != null && size > 0) {
+                titleText.text = activity.getString(R.string.app_name) + " | " + formatFileSize(size)
+            }
+            renderChangelog(activity)
+            checkCachedApk(activity)
         }
 
         btnConfirm.setOnClickListener {
@@ -164,6 +169,75 @@ class DialogAppUpdate(
                 ).show()
             } else {
                 dismiss()
+            }
+        }
+
+        viewReady = true
+        pendingResult?.let {
+            pendingResult = null
+            applyResult(it)
+        }
+    }
+
+    override fun onDestroyView() {
+        viewReady = false
+        super.onDestroyView()
+    }
+
+    fun showResult(result: AppUpdateCheckResult) {
+        if (!viewReady) {
+            pendingResult = result
+            return
+        }
+        if (isAdded) applyResult(result)
+    }
+
+    private fun renderChangelog(activity: android.app.Activity) {
+        val text = changelogText
+        contentText.text = if (text != null) {
+            HtmlCompat.fromHtml(markdownToHtml(text), HtmlCompat.FROM_HTML_MODE_LEGACY)
+        } else {
+            activity.getString(R.string.app_update_changelog_fail)
+        }
+    }
+
+    private fun checkCachedApk(activity: android.app.Activity) {
+        if (destFile.exists() && destFile.length() > 0) {
+            readyToInstall = true
+            btnConfirm.text = activity.getString(R.string.app_update_btn_install)
+        }
+    }
+
+    private fun applyResult(result: AppUpdateCheckResult) {
+        val activity = activity ?: return
+        val appName = activity.getString(R.string.app_name)
+        when (result) {
+            is AppUpdateCheckResult.Available -> {
+                val info = result.info
+                apkUrl = info.apkUrl
+                fileName = info.apkFileName
+                apkSize = info.apkSize
+                changelogText = info.changelogText
+                destFile = File(activity.cacheDir, fileName)
+
+                titleText.text = if (info.apkSize > 0) appName + " | " + formatFileSize(info.apkSize) else appName
+                descText.text = activity.getString(R.string.app_update_desc)
+                renderChangelog(activity)
+                checkCachedApk(activity)
+                btnConfirm.visibility = View.VISIBLE
+            }
+            is AppUpdateCheckResult.UpToDate -> {
+                titleText.text = appName
+                descText.text = activity.getString(R.string.app_update_latest)
+                changelogText = result.changelogText
+                renderChangelog(activity)
+                btnConfirm.visibility = View.GONE
+            }
+            is AppUpdateCheckResult.Failed -> {
+                titleText.text = appName
+                descText.text = activity.getString(R.string.app_update_check_fail)
+                contentText.text = ""
+                btnConfirm.visibility = View.GONE
             }
         }
     }

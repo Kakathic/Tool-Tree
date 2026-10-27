@@ -12,24 +12,25 @@ object AppUpdateChecker {
     private const val API_BETA = "https://api.github.com/repos/Kakathic/Tool-Tree/releases/tags/beta"
     private const val ASSET_BETA_FLAG = "beta"
     private const val CHANGELOG_URL = "https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/Version.md"
-    private const val APK_FILE_NAME = "Tool-Tree.apk"
+    const val APK_FILE_NAME = "Tool-Tree.apk"
 
     fun fetchUpdateInfo(activity: Activity): AppUpdateInfo? {
+        return (check(activity) as? AppUpdateCheckResult.Available)?.info
+    }
+
+    fun check(activity: Activity): AppUpdateCheckResult {
         return try {
             val apiUrl = if (isBetaBuild(activity)) API_BETA else API_LATEST
-            val release = fetchJson(apiUrl) ?: return null
+            val release = fetchJson(apiUrl) ?: return AppUpdateCheckResult.Failed
+            val changelogText = fetchText(CHANGELOG_URL)
 
             val assets = release.optJSONArray("assets")
-            if (assets == null || assets.length() == 0) return null
-            val firstAsset = assets.getJSONObject(0)
-
-            val apkUrl = firstAsset.optString("browser_download_url")
-                .takeIf { it.isNotEmpty() } ?: return null
-            val remoteSha256 = firstAsset.optString("digest")
-                .substringAfter(":", "")
-                .takeIf { it.isNotEmpty() } ?: return null
-            val changelogUrl = CHANGELOG_URL
-            val changelogText = fetchText(changelogUrl)
+            val firstAsset = if (assets != null && assets.length() > 0) assets.getJSONObject(0) else null
+            val apkUrl = firstAsset?.optString("browser_download_url")?.takeIf { it.isNotEmpty() }
+            val remoteSha256 = firstAsset?.optString("digest")?.substringAfter(":", "")?.takeIf { it.isNotEmpty() }
+            if (firstAsset == null || apkUrl == null || remoteSha256 == null) {
+                return AppUpdateCheckResult.UpToDate(changelogText)
+            }
             val apkSize = firstAsset.optLong("size", -1)
 
             val currentApk = File(activity.applicationInfo.sourceDir)
@@ -38,7 +39,7 @@ object AppUpdateChecker {
 
             if (localSha256 != null && localSha256.equals(remoteSha256, ignoreCase = true)) {
                 if (cachedApk.exists()) cachedApk.delete()
-                return null
+                return AppUpdateCheckResult.UpToDate(changelogText)
             }
 
             if (cachedApk.exists()) {
@@ -48,9 +49,11 @@ object AppUpdateChecker {
                 }
             }
 
-            AppUpdateInfo(apkUrl, changelogUrl, remoteSha256, apkSize, APK_FILE_NAME, changelogText)
+            AppUpdateCheckResult.Available(
+                AppUpdateInfo(apkUrl, CHANGELOG_URL, remoteSha256, apkSize, APK_FILE_NAME, changelogText)
+            )
         } catch (_: Exception) {
-            null
+            AppUpdateCheckResult.Failed
         }
     }
 

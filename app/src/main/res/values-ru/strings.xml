@@ -195,4 +195,14 @@
     <string name="terminal_notif_sessions">Запущено сеансов: %d</string>
     <string name="terminal_notif_open">Открыть</string>
     <string name="terminal_notif_exit_all">Выйти из всех</string>
+    <string name="app_update_title">Новое обновление</string>
+    <string name="app_update_desc">Доступна новая версия. Хотите обновить приложение?</string>
+    <string name="app_update_btn_install">Установить</string>
+    <string name="app_update_install_success">Успешно установлено</string>
+    <string name="app_update_download_fail">Не удалось скачать обновление</string>
+    <string name="app_update_download_cancelled">Загрузка обновления отменена</string>
+    <string name="app_update_changelog_fail">Не удалось загрузить сведения об обновлении</string>
+    <string name="app_update_checking">Проверка обновлений...</string>
+    <string name="app_update_latest">Установлена последняя версия</string>
+    <string name="app_update_check_fail">Не удалось проверить обновления</string>
 </resources>

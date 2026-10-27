@@ -88,6 +88,9 @@ If you agree, press the confirm button to continue."</string>
     <string name="app_update_download_fail">Failed to download the update</string>
     <string name="app_update_download_cancelled">Update download cancelled</string>
     <string name="app_update_changelog_fail">Failed to load update details</string>
+    <string name="app_update_checking">Checking for updates...</string>
+    <string name="app_update_latest">You are using the latest version</string>
+    <string name="app_update_check_fail">Could not check for updates</string>
     <string name="onloading">Loading data…</string>
     <string name="kr_shell_completed">Script execution completed</string>
     <string name="kr_shell_finish_error">Execution finished, but errors occurred</string>

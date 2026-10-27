@@ -76,6 +76,9 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="app_update_download_fail">Tải bản cập nhật thất bại</string>
     <string name="app_update_download_cancelled">Đã hủy tải bản cập nhật</string>
     <string name="app_update_changelog_fail">Không tải được nội dung cập nhật</string>
+    <string name="app_update_checking">Đang kiểm tra cập nhật...</string>
+    <string name="app_update_latest">Bạn đang dùng phiên bản mới nhất</string>
+    <string name="app_update_check_fail">Không kiểm tra được cập nhật</string>
     <string name="onloading">Đang tải dữ liệu…</string>
     <string name="kr_shell_completed">Thực thi script hoàn tất</string>
     <string name="kr_shell_finish_error">Thực thi đã kết thúc, phát hiện lỗi</string>

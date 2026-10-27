@@ -3,10 +3,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/option_menu_update"
-        android:icon="@drawable/ic_update_badge"
+        android:icon="@drawable/ic_update"
         android:orderInCategory="90"
         android:title=""
-        android:visible="false"
+        android:visible="true"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/option_menu_reboot"
