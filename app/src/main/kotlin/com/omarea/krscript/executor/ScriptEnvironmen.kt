@@ -176,6 +176,23 @@ object ScriptEnvironmen {
     }
 
     @JvmStatic
+    fun getPageVariables(context: Context, currentPageConfigPath: String): LinkedHashMap<String, String> {
+        val vars = LinkedHashMap<String, String>()
+        if (currentPageConfigPath.isEmpty()) return vars
+
+        val parentDir = NodeInfoBase(currentPageConfigPath).pageConfigDir
+        vars["PAGE_CONFIG_DIR"] = parentDir
+        vars["PAGE_CONFIG_FILE"] = currentPageConfigPath
+
+        val isAsset = currentPageConfigPath.startsWith(ASSETS_FILE)
+        val workDir = if (isAsset) ExtractAssets(context).getExtractPath(parentDir) else parentDir
+        val workFile = if (isAsset) ExtractAssets(context).getExtractPath(currentPageConfigPath) else currentPageConfigPath
+        if (!workDir.isNullOrEmpty()) vars["PAGE_WORK_DIR"] = workDir
+        if (!workFile.isNullOrEmpty()) vars["PAGE_WORK_FILE"] = workFile
+        return vars
+    }
+
+    @JvmStatic
     @JvmOverloads
     fun executeResultRoot(context: Context, script: String?, nodeInfoBase: NodeInfoBase?, extraParams: HashMap<String, String>? = null): String {
         if (!inited) init(context)

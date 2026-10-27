@@ -29,7 +29,7 @@ class TerminalLauncher private constructor(
 
         private fun q(s: String): String = "'" + s.replace("'", "'\\''") + "'"
 
-        fun prepare(context: Context, cwdArg: String, cmd: String, root: Int = 0): TerminalLauncher {
+        fun prepare(context: Context, cwdArg: String, cmd: String, root: Int = 0, pagePath: String = ""): TerminalLauncher {
             val spf = context.getSharedPreferences("kr-script-config", Context.MODE_PRIVATE)
             val executor = spf.getString("executor", "root/executor.sh") ?: "root/executor.sh"
             val toolkit = spf.getString("toolkitDir", "home") ?: "home"
@@ -53,7 +53,10 @@ class TerminalLauncher private constructor(
             val ttyFile = File(tmp, ".term_$id.tty")
             val pidFile = File(tmp, ".term_$id.pid")
 
-            val cwd = cwdArg.trim().replace("{HOME}", home.absolutePath).ifEmpty { home.absolutePath }
+            val pageVars = ScriptEnvironmen.getPageVariables(context, pagePath)
+            var cwd = cwdArg.trim().replace("{HOME}", home.absolutePath)
+            for ((k, v) in pageVars) cwd = cwd.replace("{$k}", v)
+            if (cwd.isEmpty()) cwd = home.absolutePath
 
             val rc = StringBuilder().apply {
                 append("export TERM=xterm-256color\n")
@@ -64,6 +67,7 @@ class TerminalLauncher private constructor(
                 } else {
                     append("echo ").append(q("executor.sh not ready: $executorPath")).append("\n")
                 }
+                for ((k, v) in pageVars) append("export ").append(k).append("=").append(q(v)).append("\n")
                 append("unset COLUMNS LINES\n")
                 append("cd ").append(q(cwd)).append(" 2>/dev/null || cd \"\$HOME\"\n")
                 append("export HISTFILE=\"\$HOME/.bash_history\"\n")
