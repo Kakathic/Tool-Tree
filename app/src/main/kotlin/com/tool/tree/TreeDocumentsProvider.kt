@@ -13,6 +13,7 @@ import android.provider.DocumentsContract.Root
 import android.provider.DocumentsProvider
 import android.system.ErrnoException
 import android.system.Os
+import android.util.Log
 import android.webkit.MimeTypeMap
 import java.io.File
 import java.io.FileNotFoundException
@@ -312,19 +313,26 @@ class TreeDocumentsProvider : DocumentsProvider() {
         row.add(COLUMN_MT_PATH, file.absolutePath)
 
         if (addExtras) {
-            try {
-                val stat = Os.lstat(path)
+            val stat = try {
+                Os.lstat(path)
+            } catch (e: Exception) {
+                Log.w(TAG, "lstat failed: $path", e)
+                null
+            }
+            if (stat != null) {
                 val sb = StringBuilder()
                 sb.append(stat.st_mode).append("|").append(stat.st_uid).append("|").append(stat.st_gid)
-                if ((stat.st_mode and 0b1111000000000000) == 0b1010000000000000) sb.append("|").append(Os.readlink(path))
+                if ((stat.st_mode and 0b1111000000000000) == 0b1010000000000000) {
+                    val target = readLinkTarget(path)
+                    if (target != null) sb.append("|").append(target)
+                }
                 row.add(COLUMN_MT_EXTRAS, sb.toString())
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
     }
 
     companion object {
+        private const val TAG = "TreeDocumentsProvider"
         const val COLUMN_MT_EXTRAS = "mt_extras"
         const val COLUMN_MT_PATH = "mt_path"
         const val METHOD_SET_LAST_MODIFIED = "mt:setLastModified"
@@ -369,6 +377,20 @@ class TreeDocumentsProvider : DocumentsProvider() {
                 if (children != null) for (child in children) if (!deleteFile(child)) return false
             }
             return file.delete()
+        }
+
+        private fun readLinkTarget(path: String): String? {
+            try {
+                return Os.readlink(path)
+            } catch (e: Exception) {
+                Log.w(TAG, "readlink failed: $path", e)
+            }
+            return try {
+                val canonical = File(path).canonicalPath
+                if (canonical != path) canonical else null
+            } catch (e: Exception) {
+                null
+            }
         }
 
         private fun isSymbolicLink(file: File): Boolean {
