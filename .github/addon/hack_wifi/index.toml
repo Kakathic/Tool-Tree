@@ -77,7 +77,7 @@ python main.py -i wlan0 -K
 python main.py --help
 "
 '''
-font-size = 14
+font-size = 12
 exit-on-back = true
 
 [[group]]
