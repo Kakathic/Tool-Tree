@@ -55,7 +55,7 @@ class TerminalLauncher private constructor(
 
             val pageVars = ScriptEnvironmen.getPageVariables(context, pagePath)
             var cwd = cwdArg.trim().replace("{HOME}", home.absolutePath)
-            for ((k, v) in pageVars) cwd = cwd.replace("{$k}", v)
+            for (k in listOf("PAGE_CONFIG_DIR", "PAGE_WORK_DIR")) pageVars[k]?.let { cwd = cwd.replace("{$k}", it) }
             if (cwd.isEmpty()) cwd = home.absolutePath
 
             val rc = StringBuilder().apply {
