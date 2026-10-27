@@ -205,4 +205,5 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="app_update_checking">Memeriksa pembaruan...</string>
     <string name="app_update_latest">Anda menggunakan versi terbaru</string>
     <string name="app_update_check_fail">Tidak dapat memeriksa pembaruan</string>
+    <string name="terminal_input_hint">Ketik perintah...</string>
 </resources>

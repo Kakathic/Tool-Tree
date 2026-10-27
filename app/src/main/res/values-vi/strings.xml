@@ -213,4 +213,5 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="terminal_notif_sessions">Số phiên đang chạy: %d</string>
     <string name="terminal_notif_open">Mở</string>
     <string name="terminal_notif_exit_all">Thoát tất cả</string>
+    <string name="terminal_input_hint">Nhập lệnh...</string>
 </resources>

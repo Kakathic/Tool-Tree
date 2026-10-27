@@ -67,6 +67,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
 
     private lateinit var terminalView: TerminalView
     private lateinit var extraKeys: TerminalExtraKeys
+    private lateinit var inputBar: TerminalInputBar
     private lateinit var drawer: DrawerLayout
     private lateinit var sessionDrawer: TerminalSessionDrawer
     private var current: TerminalSessionStore.Entry? = null
@@ -93,6 +94,12 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         terminalView.setTerminalViewClient(this)
         applyFontSize()
         extraKeys = TerminalExtraKeys(findViewById<LinearLayout>(R.id.terminal_extra_keys), terminalView)
+        inputBar = TerminalInputBar(
+            findViewById(R.id.terminal_toolbar_pager),
+            findViewById(R.id.terminal_input_edit),
+            findViewById(R.id.terminal_input_back),
+            terminalView
+        )
 
         setupDrawer()
 
