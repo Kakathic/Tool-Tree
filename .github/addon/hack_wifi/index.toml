@@ -61,6 +61,26 @@ fi
 """
 
 [[group]]
+[[terminal]]
+title = "Terminal"
+cwd = "{PAGE_CONFIG_DIR}"
+root = true
+cmd = '''
+echo "WI-FI hacking tool
+
+Basic commands:
+
+# Attack
+python main.py -i wlan0 -K
+
+# See help
+python main.py --help
+"
+'''
+font-size = 14
+exit-on-back = true
+
+[[group]]
 [[action]]
 title = "@STR_ADVANCED_CUSTOM"
 reload = true
