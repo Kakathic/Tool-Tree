@@ -37,7 +37,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         private const val EXTRA_EXIT_ON_BACK = "exit_on_back"
         private const val PREFS_NAME = "terminal"
         private const val STARTUP_FAIL_WINDOW_MS = 3000L
-        private const val PREF_FONT_SP = "font_sp"
+        private const val PREF_FONT_SP_PREFIX = "font_sp_"
         private const val DEFAULT_FONT_SP = 14
         private const val MIN_FONT_SP = 8
         private const val MAX_FONT_SP = 40
@@ -88,12 +88,6 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
         setContentView(R.layout.activity_terminal)
-
-        // Cỡ chữ đã chỉnh (zoom) được nhớ và ưu tiên hơn font-size trong TOML
-        val savedFont = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(PREF_FONT_SP, 0)
-        val customFont = intent.getIntExtra(EXTRA_FONT_SIZE, 0)
-        if (savedFont > 0) fontSizeSp = savedFont.coerceIn(MIN_FONT_SP, MAX_FONT_SP)
-        else if (customFont > 0) fontSizeSp = customFont.coerceIn(MIN_FONT_SP, MAX_FONT_SP)
 
         terminalView = findViewById(R.id.terminal_view)
         terminalView.setTerminalViewClient(this)
@@ -169,7 +163,8 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
                 intent.getStringExtra(EXTRA_CMD).orEmpty(),
                 intent.getIntExtra(EXTRA_ROOT, 0),
                 intent.getStringExtra(EXTRA_PAGE_PATH).orEmpty(),
-                intent.getBooleanExtra(EXTRA_EXIT_ON_BACK, false)
+                intent.getBooleanExtra(EXTRA_EXIT_ON_BACK, false),
+                intent.getIntExtra(EXTRA_FONT_SIZE, 0)
             )
             // Mở lại phiên đang ẩn gần nhất của item này, chưa có mới tạo
             val existing = TerminalSessionStore.latestForRequest(request)
@@ -212,6 +207,11 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         entry.ui = sessionUi
         entry.lastActive = SystemClock.elapsedRealtime()
         title = entry.label
+        val entryFont = resolveFontSp(entry.request)
+        if (entryFont != fontSizeSp) {
+            fontSizeSp = entryFont
+            applyFontSize()
+        }
         terminalView.attachSession(entry.session)
         terminalView.onScreenUpdated()
         terminalView.requestFocus()
@@ -260,10 +260,27 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         terminalView.setTextSize((fontSizeSp * resources.displayMetrics.density).toInt())
     }
 
+    // Mỗi [[terminal]] nhớ cỡ chữ riêng (nhận diện theo page + title + cwd + cmd)
+    private fun fontPrefKey(request: TerminalSessionStore.Request): String =
+        PREF_FONT_SP_PREFIX + Integer.toHexString("${request.pagePath}\u0000${request.title}\u0000${request.cwd}\u0000${request.cmd}".hashCode())
+
+    // Đã zoom thì dùng cỡ zoom; chưa zoom lần nào thì dùng font-size trong TOML, không có thì mặc định
+    private fun resolveFontSp(request: TerminalSessionStore.Request): Int {
+        val saved = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(fontPrefKey(request), 0)
+        val sp = when {
+            saved > 0 -> saved
+            request.fontSize > 0 -> request.fontSize
+            else -> DEFAULT_FONT_SP
+        }
+        return sp.coerceIn(MIN_FONT_SP, MAX_FONT_SP)
+    }
+
     private fun changeFontSize(increase: Boolean) {
         fontSizeSp = (fontSizeSp + if (increase) 1 else -1).coerceIn(MIN_FONT_SP, MAX_FONT_SP)
         applyFontSize()
-        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(PREF_FONT_SP, fontSizeSp).apply()
+        current?.let {
+            getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(fontPrefKey(it.request), fontSizeSp).apply()
+        }
     }
 
     override fun onResume() {
