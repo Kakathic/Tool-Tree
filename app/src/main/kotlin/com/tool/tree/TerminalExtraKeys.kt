@@ -129,6 +129,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
         var repeating = false
         val repeater = object : Runnable {
             override fun run() {
+                if (!repeating) button.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 repeating = true
                 press(key)
                 handler.postDelayed(this, 80)
@@ -142,7 +143,6 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
                 MotionEvent.ACTION_DOWN -> {
                     repeating = false
                     v.isPressed = true
-                    v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     if (key.repeat) handler.postDelayed(repeater, 400)
                 }
                 MotionEvent.ACTION_MOVE -> v.isPressed = isInside(v, event)
@@ -150,6 +150,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
                     v.isPressed = false
                     handler.removeCallbacks(repeater)
                     if (!repeating && isInside(v, event)) {
+                        v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         press(key)
                         v.performClick()
                     }
