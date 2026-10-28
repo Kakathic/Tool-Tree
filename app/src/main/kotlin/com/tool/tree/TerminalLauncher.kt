@@ -104,13 +104,13 @@ class TerminalLauncher private constructor(
     }
 
     override fun start(columns: Int, rows: Int): Process {
-        val inner = "${q(busybox)} stty rows $rows cols $columns -ixon; " +
+        val inner = ": ${q(tag)}; ${q(busybox)} stty rows $rows cols $columns -ixon; " +
                 "echo \$\$ > ${q(pidFile.absolutePath)}; " +
                 "${q(busybox)} readlink /proc/\$\$/fd/0 > ${q(ttyFile.absolutePath)}; " +
                 "exec ${q(bash)} --rcfile ${q(rcFile.absolutePath)} -i"
 
         return if (useRoot) {
-            val full = "shell_progres=${q(tag)} SHELL=${q(bash)} ${q(busybox)} script -qc ${q(inner)} /dev/null"
+            val full = "SHELL=${q(bash)} ${q(busybox)} script -qc ${q(inner)} /dev/null"
             ProcessBuilder("su", "-c", full).redirectErrorStream(true).start()
         } else {
             val pb = ProcessBuilder(busybox, "script", "-qc", inner, "/dev/null")
@@ -119,7 +119,6 @@ class TerminalLauncher private constructor(
                 put("SHELL", bash)
                 put("HOME", home.absolutePath)
                 put("TERM", "xterm-256color")
-                put("shell_progres", tag)
             }
             pb.redirectErrorStream(true).start()
         }
