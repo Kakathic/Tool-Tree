@@ -37,6 +37,14 @@
     <color name="banner_success">#43A047</color>
     <color name="banner_warning">#FFB300</color>
     <color name="banner_error">#cf4e4c</color>
+    <color name="banner_info_start">#12cdb0</color>
+    <color name="banner_info_end">#0a9d88</color>
+    <color name="banner_success_start">#4fb353</color>
+    <color name="banner_success_end">#2f8c3b</color>
+    <color name="banner_warning_start">#f0a000</color>
+    <color name="banner_warning_end">#cc7000</color>
+    <color name="banner_error_start">#e5655f</color>
+    <color name="banner_error_end">#bf3d3b</color>
     
     <color name="color_load_low">#02d98d</color>
     <color name="color_load_mid">#87cb00</color>

@@ -27,6 +27,8 @@
 
 # org.tomlj & dontwarn
 -keep class org.tomlj.** { *; }
--dontwarn org.tomlj.**
--dontwarn com.google.errorprone.**
--dontwarn com.google.common.**
+
+# -dontwarn org.tomlj.**
+# -dontwarn com.google.errorprone.**
+# -dontwarn com.google.common.**
+-dontwarn **
