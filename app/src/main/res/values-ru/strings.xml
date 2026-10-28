@@ -206,4 +206,6 @@
     <string name="app_update_latest">Установлена последняя версия</string>
     <string name="app_update_check_fail">Не удалось проверить обновления</string>
     <string name="terminal_input_hint">Введите команду...</string>
+    <string name="log_share_fail">Не удалось поделиться журналом</string>
+    <string name="log_share_empty">Пока нет журнала для отправки</string>
 </resources>

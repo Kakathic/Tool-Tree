@@ -206,4 +206,6 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="app_update_latest">A legújabb verziót használja</string>
     <string name="app_update_check_fail">Nem sikerült frissítéseket keresni</string>
     <string name="terminal_input_hint">Írjon be egy parancsot...</string>
+    <string name="log_share_fail">A napló megosztása sikertelen</string>
+    <string name="log_share_empty">Még nincs megosztható napló</string>
 </resources>

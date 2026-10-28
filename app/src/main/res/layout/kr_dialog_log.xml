@@ -162,10 +162,10 @@
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/btn_copy"
+            android:id="@+id/btn_share"
             style="@style/dialogCancelBtn"
             android:layout_weight="1"
-            android:text="@string/btn_copy_output" />
+            android:text="@string/terminal_share" />
 
         <Button
             android:id="@+id/btn_cancel"

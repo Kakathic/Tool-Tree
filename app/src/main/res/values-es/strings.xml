@@ -211,4 +211,6 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="app_update_latest">Estás usando la última versión</string>
     <string name="app_update_check_fail">No se pudo buscar actualizaciones</string>
     <string name="terminal_input_hint">Escribe un comando...</string>
+    <string name="log_share_fail">No se pudo compartir el registro</string>
+    <string name="log_share_empty">Aún no hay registro para compartir</string>
 </resources>
