@@ -23,7 +23,6 @@ required = true
 title = "@quick_custom_text"
 summary = "Xiaomi"
 warn = "@warn_delete_gms"
-reload = true
 script = "$PAGE_CONFIG_DIR/patch-rom custom_patch"
 
 [[action.params]]
@@ -31,7 +30,6 @@ name = "device_features"
 label = "@label_device_features"
 desc = "@string_text_2: product"
 type = "bool"
-value-sh = "$PAGE_CONFIG_DIR/patch-rom get_patch_1"
 readonly = "$PAGE_CONFIG_DIR/patch-rom get_patch_1"
 
 [[action.params]]
@@ -39,15 +37,13 @@ name = "delete_gms"
 label = "@label_delete_gms"
 desc = "@string_text_2: product"
 type = "bool"
-value-sh = "$PAGE_CONFIG_DIR/patch-rom get_patch_2"
-readonly = "$PAGE_CONFIG_DIR/patch-rom get_patch_2"
+readonly = "$PAGE_CONFIG_DIR/patch-rom get_patch_1"
 
 [[action.params]]
 name = "xeu_toolbox"
 label = "@label_xeu_toolbox"
 desc = "@string_text_2: system_ext"
 type = "bool"
-value-sh = "$PAGE_CONFIG_DIR/patch-rom check_xeu"
 readonly = "$PAGE_CONFIG_DIR/patch-rom check_xeu"
 
 [[group]]
