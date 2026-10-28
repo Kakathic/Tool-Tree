@@ -7,7 +7,6 @@ import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Outline
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.RadialGradient
 import android.graphics.Rect
@@ -23,7 +22,6 @@ class BannerBackgroundDrawable(
 ) : Drawable() {
 
     private val rect = RectF()
-    private val clipPath = Path()
     private val matrix = Matrix()
 
     private val basePaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -44,8 +42,6 @@ class BannerBackgroundDrawable(
 
     override fun onBoundsChange(bounds: Rect) {
         rect.set(bounds)
-        clipPath.reset()
-        clipPath.addRoundRect(rect, radiusPx, radiusPx, Path.Direction.CW)
         basePaint.shader = LinearGradient(
             rect.left, rect.top, rect.right, rect.bottom,
             startColor, endColor, Shader.TileMode.CLAMP
@@ -59,8 +55,6 @@ class BannerBackgroundDrawable(
 
     override fun draw(canvas: Canvas) {
         if (rect.isEmpty) return
-        val save = canvas.save()
-        canvas.clipPath(clipPath)
         canvas.drawRect(rect, basePaint)
         canvas.drawRect(rect, glowPaint)
 
@@ -70,7 +64,6 @@ class BannerBackgroundDrawable(
         canvas.drawCircle(rect.right - 92f * density, rect.bottom - 4f * density, 24f * density, bubblePaint)
         bubblePaint.color = Color.argb(14, 255, 255, 255)
         canvas.drawCircle(rect.left + 36f * density, rect.bottom + 10f * density, 34f * density, bubblePaint)
-        canvas.restoreToCount(save)
 
         val half = strokePaint.strokeWidth / 2f
         canvas.drawRoundRect(

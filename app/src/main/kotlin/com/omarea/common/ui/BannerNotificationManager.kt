@@ -28,11 +28,9 @@ object BannerNotificationManager {
 
     private const val FALLBACK_DURATION_MS = 3500L
 
-    private const val ENTRANCE_DURATION_MS = 420L
+    private const val ENTRANCE_DURATION_MS = 360L
     private const val EXIT_DURATION_MS = 340L
     private const val SLIDE_FACTOR = 1.12f
-    private const val SHADOW_DURATION_MS = 160L
-    private const val WARMUP_ALPHA = 0.01f
 
     private data class BannerRequest(
         val title: String?,
@@ -287,6 +285,10 @@ object BannerNotificationManager {
     private fun applyBannerBackground(bannerRoot: View, startColor: Int, endColor: Int) {
         val density = bannerRoot.resources.displayMetrics.density
         bannerRoot.background = BannerBackgroundDrawable(startColor, endColor, 12f * density, density)
+        bannerRoot.clipToOutline = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            bannerRoot.forceHasOverlappingRendering(false)
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             bannerRoot.outlineSpotShadowColor = endColor
             bannerRoot.outlineAmbientShadowColor = endColor
@@ -298,8 +300,6 @@ object BannerNotificationManager {
         bannerRoot.animate()
             .translationX(distance)
             .alpha(0f)
-            .translationZ(0f)
-            .withLayer()
             .setDuration(EXIT_DURATION_MS)
             .setInterpolator(AccelerateInterpolator())
             .withEndAction { onEnd() }
@@ -307,30 +307,17 @@ object BannerNotificationManager {
     }
 
     private fun playEntranceAnimation(bannerRoot: View) {
-        val restingElevation = bannerRoot.elevation
-        bannerRoot.elevation = 0f
-        bannerRoot.alpha = WARMUP_ALPHA
         bannerRoot.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
             override fun onPreDraw(): Boolean {
                 bannerRoot.viewTreeObserver.removeOnPreDrawListener(this)
-                bannerRoot.postOnAnimation {
-                    if (!bannerRoot.isAttachedToWindow) return@postOnAnimation
-                    bannerRoot.translationX = -bannerRoot.width * SLIDE_FACTOR
-                    bannerRoot.alpha = 0f
-                    bannerRoot.animate()
-                        .translationX(0f)
-                        .alpha(1f)
-                        .withLayer()
-                        .setDuration(ENTRANCE_DURATION_MS)
-                        .setInterpolator(DecelerateInterpolator())
-                        .withEndAction {
-                            bannerRoot.animate()
-                                .translationZ(restingElevation)
-                                .setDuration(SHADOW_DURATION_MS)
-                                .start()
-                        }
-                        .start()
-                }
+                bannerRoot.translationX = -bannerRoot.width * SLIDE_FACTOR
+                bannerRoot.alpha = 0f
+                bannerRoot.animate()
+                    .translationX(0f)
+                    .alpha(1f)
+                    .setDuration(ENTRANCE_DURATION_MS)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
                 return true
             }
         })
