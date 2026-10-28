@@ -6,7 +6,7 @@ if [ "$1" == '-h' ] || [ "$1" == '--help' ] || [ -z "$1" ]; then
 fi
 
 if [ -f "$(which curl)" ]; then
-curl -sS --connect-timeout 20 --speed-time 15 --speed-limit 1000 --retry 2 --retry-delay 2 -G -L -H "$WEBS" "$@"
+curl -sS --connect-timeout 20 --speed-time 15 --speed-limit 1000 --retry 2 --retry-delay 2 -G -L "$@"
 else
-wget -q --no-check-certificate -O - -T 20 --header "$WEBS" "$@"
+wget -q --no-check-certificate -O - -T 20 "$@"
 fi

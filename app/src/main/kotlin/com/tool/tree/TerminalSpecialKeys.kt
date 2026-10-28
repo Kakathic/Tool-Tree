@@ -7,6 +7,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.termux.view.TerminalView
@@ -64,6 +65,7 @@ class TerminalSpecialKeys(
                         setMargins(margin, margin, margin, margin)
                     }
                     setOnClickListener {
+                        it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         terminalView.inputCodePoint(ch.codePointAt(0), false, false)
                     }
                 }
