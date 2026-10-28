@@ -49,7 +49,7 @@ if [ "$google_text" ] || [ "$transai" == "true" ]; then
   slog transai_text_'$id' 0
   rm -fr "'$1'/lang/auto.bash" 2>/dev/null
   else
-  [[ -n "$(glog api_genmini)" ]] && slog transai_text_'$id' 1 || showdialog -t "Gemini" -m "'$warn_gemini_text'" -g 15 -e "'$ETC'/toml/feature.toml"
+  [[ -n "$(glog api_genmini)" ]] && slog transai_text_'$id' 1 || showdialog -t "Gemini" -m "'$warn_gemini_text'" --id "gemini_api" -g 15 -e "'$ETC'/toml/feature.toml"
   fi
   """
   [[end]]

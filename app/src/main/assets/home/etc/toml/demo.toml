@@ -33,3 +33,15 @@ icon = "{ICON}/test_addon.png"
 lock-sh = """
 [ -f $ETC/toml/test.toml ] && echo 0 || echo "@lock_msg"
 """
+
+[[group]]
+[[editor]]
+id = "shella"
+title = "@home_text_5"
+desc = "@home_text_6"
+icon = "{ICON}/shella.png"
+file = "{HOME}/usr/run_shella.bash"
+need-input = true
+placeholder = "#bash|sh|python"
+value = """# bash
+"""

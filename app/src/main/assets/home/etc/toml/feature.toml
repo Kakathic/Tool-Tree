@@ -103,9 +103,11 @@ text = "@note_genmini_text:"
 line = true
 
 [[action.params-rows]]
+id = "gemini_api"
 text = "@generate_text Gemini API"
 link = "https://aistudio.google.com/api-keys"
 underline = true
+allow-shortcut = false
 
   [[action.params]]
   name = "api_genmini"

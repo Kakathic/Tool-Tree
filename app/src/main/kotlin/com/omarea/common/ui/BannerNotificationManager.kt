@@ -3,8 +3,6 @@ package com.omarea.common.ui
 import android.app.Activity
 import android.graphics.Color
 import android.graphics.PixelFormat
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -188,8 +186,8 @@ object BannerNotificationManager {
         val script = req.script
         if (!script.isNullOrEmpty() || req.onConfirm != null) {
             actionsRow.visibility = View.VISIBLE
-            cancelBtn.text = if (!req.cancelText.isNullOrEmpty()) req.cancelText else activity.getString(R.string.kr_banner_cancel)
-            val confirmLabel = if (!req.confirmText.isNullOrEmpty()) req.confirmText else activity.getString(R.string.kr_banner_confirm)
+            val cancelLabel = if (!req.cancelText.isNullOrEmpty()) req.cancelText else activity.getString(R.string.kr_banner_cancel)
+            confirmBtn.text = if (!req.confirmText.isNullOrEmpty()) req.confirmText else activity.getString(R.string.kr_banner_confirm)
 
             if (!reuseDeadline) {
                 deadlineElapsedMs = if (req.countdownSeconds > 0) {
@@ -204,11 +202,16 @@ object BannerNotificationManager {
                 val ms = deadline - SystemClock.elapsedRealtime()
                 return if (ms > 0) ((ms + 999) / 1000).toInt() else 0
             }
-            fun updateConfirmLabel() {
+            fun updateCancelLabel() {
                 val remaining = remainingSeconds()
-                confirmBtn.text = if (remaining > 0) "$confirmLabel (${remaining}s)" else confirmLabel
+                cancelBtn.text = if (remaining > 0) "$cancelLabel (${remaining}s)" else cancelLabel
             }
-            updateConfirmLabel()
+            cancelBtn.gravity = Gravity.CENTER
+            if (req.countdownSeconds > 0) {
+                val widest = cancelBtn.paint.measureText("$cancelLabel (${req.countdownSeconds}s)")
+                cancelBtn.minWidth = (widest + cancelBtn.paddingStart + cancelBtn.paddingEnd).toInt()
+            }
+            updateCancelLabel()
 
             if (deadlineElapsedMs != null) {
                 val tick = object : Runnable {
@@ -219,7 +222,7 @@ object BannerNotificationManager {
                                 showNext()
                             }
                         } else {
-                            updateConfirmLabel()
+                            updateCancelLabel()
                             mainHandler.postDelayed(this, 1000L)
                         }
                     }
@@ -280,10 +283,8 @@ object BannerNotificationManager {
     }
 
     private fun applyBannerBackground(bannerRoot: View, startColor: Int, endColor: Int) {
-        val layers = bannerRoot.background?.mutate() as? LayerDrawable
-        val base = layers?.findDrawableByLayerId(R.id.banner_bg_base) as? GradientDrawable
-        base?.orientation = GradientDrawable.Orientation.TL_BR
-        base?.colors = intArrayOf(startColor, endColor)
+        val density = bannerRoot.resources.displayMetrics.density
+        bannerRoot.background = BannerBackgroundDrawable(startColor, endColor, 12f * density, density)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             bannerRoot.outlineSpotShadowColor = endColor
             bannerRoot.outlineAmbientShadowColor = endColor
@@ -295,6 +296,7 @@ object BannerNotificationManager {
         bannerRoot.animate()
             .translationX(distance)
             .alpha(0f)
+            .withLayer()
             .setDuration(EXIT_DURATION_MS)
             .setInterpolator(AccelerateInterpolator())
             .withEndAction { onEnd() }
@@ -310,6 +312,7 @@ object BannerNotificationManager {
                 bannerRoot.animate()
                     .translationX(0f)
                     .alpha(1f)
+                    .withLayer()
                     .setDuration(ENTRANCE_DURATION_MS)
                     .setInterpolator(DecelerateInterpolator())
                     .start()
