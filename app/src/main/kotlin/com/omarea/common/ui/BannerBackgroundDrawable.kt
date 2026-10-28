@@ -67,7 +67,7 @@ class BannerBackgroundDrawable(
         bubblePaint.color = Color.argb(28, 255, 255, 255)
         canvas.drawCircle(rect.right - 30f * density, rect.top + 14f * density, 60f * density, bubblePaint)
         bubblePaint.color = Color.argb(20, 255, 255, 255)
-        canvas.drawCircle(rect.right - 92f * density, rect.bottom - 4f * density, 24f * density, bubblePaint)
+        canvas.drawCircle(rect.right - 130f * density, rect.bottom - 4f * density, 24f * density, bubblePaint)
         bubblePaint.color = Color.argb(14, 255, 255, 255)
         canvas.drawCircle(rect.left + 36f * density, rect.bottom + 10f * density, 34f * density, bubblePaint)
         canvas.restoreToCount(save)
