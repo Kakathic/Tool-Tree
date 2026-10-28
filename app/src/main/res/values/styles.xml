@@ -416,4 +416,10 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
+    
+    <style name="BannerWindowAnimation">
+        <item name="android:windowEnterAnimation">@anim/banner_window_enter</item>
+        <item name="android:windowExitAnimation">@anim/banner_window_exit</item>
+    </style>
+    
 </resources>

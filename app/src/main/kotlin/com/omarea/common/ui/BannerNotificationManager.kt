@@ -11,8 +11,6 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
-import android.view.animation.AccelerateInterpolator
-import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import com.omarea.krscript.NotiShellTaskLauncher
@@ -28,9 +26,7 @@ object BannerNotificationManager {
 
     private const val FALLBACK_DURATION_MS = 3500L
 
-    private const val ENTRANCE_DURATION_MS = 420L
-    private const val EXIT_DURATION_MS = 340L
-    private const val SLIDE_FACTOR = 1.12f
+    private const val EXIT_GAP_MS = 320L
 
     private data class BannerRequest(
         val title: String?,
@@ -165,6 +161,7 @@ object BannerNotificationManager {
         )
         val anchorWindow = TopWindowHolder.current() ?: activity.window
         layoutParams.token = anchorWindow.decorView.windowToken
+        layoutParams.windowAnimations = R.style.BannerWindowAnimation
         when (req.position) {
             BannerPosition.TOP -> {
                 layoutParams.gravity = Gravity.TOP
@@ -181,7 +178,6 @@ object BannerNotificationManager {
         activeRequest = req
         activeActivity = WeakReference(activity)
         windowManager.addView(view, layoutParams)
-        playEntranceAnimation(bannerRoot)
 
         val script = req.script
         if (!script.isNullOrEmpty() || req.onConfirm != null) {
@@ -217,10 +213,8 @@ object BannerNotificationManager {
                 val tick = object : Runnable {
                     override fun run() {
                         if (remainingSeconds() <= 0) {
-                            animateAutoDismiss(bannerRoot) {
-                                dismissCurrent()
-                                showNext()
-                            }
+                            dismissCurrent()
+                            mainHandler.postDelayed({ showNext() }, EXIT_GAP_MS)
                         } else {
                             updateCancelLabel()
                             mainHandler.postDelayed(this, 1000L)
@@ -249,10 +243,8 @@ object BannerNotificationManager {
             }
             val delay = (deadlineElapsedMs!! - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
             val dismiss = Runnable {
-                animateAutoDismiss(bannerRoot) {
-                    dismissCurrent()
-                    showNext()
-                }
+                dismissCurrent()
+                mainHandler.postDelayed({ showNext() }, EXIT_GAP_MS)
             }
             pendingRunnable = dismiss
             mainHandler.postDelayed(dismiss, delay)
@@ -285,40 +277,14 @@ object BannerNotificationManager {
     private fun applyBannerBackground(bannerRoot: View, startColor: Int, endColor: Int) {
         val density = bannerRoot.resources.displayMetrics.density
         bannerRoot.background = BannerBackgroundDrawable(startColor, endColor, 12f * density, density)
+        bannerRoot.clipToOutline = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            bannerRoot.forceHasOverlappingRendering(false)
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             bannerRoot.outlineSpotShadowColor = endColor
             bannerRoot.outlineAmbientShadowColor = endColor
         }
-    }
-
-    private fun animateAutoDismiss(bannerRoot: View, onEnd: () -> Unit) {
-        val distance = bannerRoot.width * SLIDE_FACTOR
-        bannerRoot.animate()
-            .translationX(distance)
-            .alpha(0f)
-            .withLayer()
-            .setDuration(EXIT_DURATION_MS)
-            .setInterpolator(AccelerateInterpolator())
-            .withEndAction { onEnd() }
-            .start()
-    }
-
-    private fun playEntranceAnimation(bannerRoot: View) {
-        bannerRoot.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
-            override fun onPreDraw(): Boolean {
-                bannerRoot.viewTreeObserver.removeOnPreDrawListener(this)
-                bannerRoot.translationX = -bannerRoot.width * SLIDE_FACTOR
-                bannerRoot.alpha = 0f
-                bannerRoot.animate()
-                    .translationX(0f)
-                    .alpha(1f)
-                    .withLayer()
-                    .setDuration(ENTRANCE_DURATION_MS)
-                    .setInterpolator(DecelerateInterpolator())
-                    .start()
-                return true
-            }
-        })
     }
 
     private fun dismissCurrent() {
