@@ -55,8 +55,6 @@ readonly = "$PAGE_CONFIG_DIR/patch-rom check_xeu"
 title = "@label_rw_rom"
 summary = "Xiaomi"
 warn = "@warn_delete_gms"
-reload = true
-auto-off = true
 script = "$PAGE_CONFIG_DIR/patch-rom rw_rom_ext"
 
 [[action.params]]
@@ -64,7 +62,6 @@ name = "diss_ovelsy"
 label = "@diss_ovelsy_text"
 desc = "@string_text_2: vendor"
 type = "bool"
-value-sh = "$PAGE_CONFIG_DIR/patch-rom get_rw_rom_1"
 readonly = "$PAGE_CONFIG_DIR/patch-rom get_rw_rom_1"
 
 [[action.params]]
@@ -72,7 +69,6 @@ name = "diss_ovelsy_boot"
 label = "@diss_ovelsy_text"
 desc = "@string_text_2: vendor_boot"
 type = "bool"
-value-sh = "$PAGE_CONFIG_DIR/patch-rom get_rw_rom_2"
 readonly = "$PAGE_CONFIG_DIR/patch-rom get_rw_rom_2"
 
 [[action.params]]
@@ -80,7 +76,6 @@ name = "move_pangu"
 label = "@move_pangu_text"
 desc = "@string_text_2: product, system"
 type = "bool"
-value-sh = "$PAGE_CONFIG_DIR/patch-rom get_rw_rom_3"
 readonly = "$PAGE_CONFIG_DIR/patch-rom get_rw_rom_3"
 
 [[action.params]]
@@ -88,7 +83,6 @@ name = "move_miext"
 label = "@move_miext_text"
 desc = "@string_text_2: mi_ext, system, product, system_ext"
 type = "bool"
-value-sh = "$PAGE_CONFIG_DIR/patch-rom get_rw_rom_4"
 readonly = "$PAGE_CONFIG_DIR/patch-rom get_rw_rom_4"
 
 [[group]]
