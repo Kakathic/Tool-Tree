@@ -1,8 +1,11 @@
 package com.omarea.common.ui
 
 import android.app.Activity
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -10,6 +13,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
+import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
@@ -26,7 +30,9 @@ object BannerNotificationManager {
 
     private const val FALLBACK_DURATION_MS = 3500L
 
-    private const val ENTRANCE_DURATION_MS = 260L
+    private const val ENTRANCE_DURATION_MS = 420L
+    private const val EXIT_DURATION_MS = 340L
+    private const val SLIDE_FACTOR = 1.12f
 
     private data class BannerRequest(
         val title: String?,
@@ -123,16 +129,18 @@ object BannerNotificationManager {
                 null
             }
         }
-        val resolvedColor = customColor ?: run {
-            val colorRes = when (req.type) {
-                BannerType.INFO -> R.color.banner_info
-                BannerType.SUCCESS -> R.color.banner_success
-                BannerType.WARNING -> R.color.banner_warning
-                BannerType.ERROR -> R.color.banner_error
+        val gradientColors: Pair<Int, Int> = if (customColor != null) {
+            Pair(blend(customColor, Color.WHITE, 0.10f), blend(customColor, Color.BLACK, 0.14f))
+        } else {
+            val (startRes, endRes) = when (req.type) {
+                BannerType.INFO -> Pair(R.color.banner_info_start, R.color.banner_info_end)
+                BannerType.SUCCESS -> Pair(R.color.banner_success_start, R.color.banner_success_end)
+                BannerType.WARNING -> Pair(R.color.banner_warning_start, R.color.banner_warning_end)
+                BannerType.ERROR -> Pair(R.color.banner_error_start, R.color.banner_error_end)
             }
-            activity.resources.getColor(colorRes, activity.theme)
+            Pair(activity.resources.getColor(startRes, activity.theme), activity.resources.getColor(endRes, activity.theme))
         }
-        (bannerRoot.background?.mutate() as? GradientDrawable)?.setColor(resolvedColor)
+        applyBannerBackground(bannerRoot, gradientColors.first, gradientColors.second)
         icon.setImageDrawable(resolveIcon(activity, req.icon))
 
         BannerSwipeDismissHelper(activity, bannerRoot) {
@@ -261,14 +269,34 @@ object BannerNotificationManager {
         }
     }
 
+    private fun blend(from: Int, to: Int, ratio: Float): Int {
+        val inv = 1f - ratio
+        return Color.argb(
+            Color.alpha(from),
+            (Color.red(from) * inv + Color.red(to) * ratio).toInt(),
+            (Color.green(from) * inv + Color.green(to) * ratio).toInt(),
+            (Color.blue(from) * inv + Color.blue(to) * ratio).toInt()
+        )
+    }
+
+    private fun applyBannerBackground(bannerRoot: View, startColor: Int, endColor: Int) {
+        val layers = bannerRoot.background?.mutate() as? LayerDrawable
+        val base = layers?.findDrawableByLayerId(R.id.banner_bg_base) as? GradientDrawable
+        base?.orientation = GradientDrawable.Orientation.TL_BR
+        base?.colors = intArrayOf(startColor, endColor)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            bannerRoot.outlineSpotShadowColor = endColor
+            bannerRoot.outlineAmbientShadowColor = endColor
+        }
+    }
+
     private fun animateAutoDismiss(bannerRoot: View, onEnd: () -> Unit) {
-        val screenWidthPx = bannerRoot.resources.displayMetrics.widthPixels
-        val distance = (bannerRoot.width + screenWidthPx).toFloat()
+        val distance = bannerRoot.width * SLIDE_FACTOR
         bannerRoot.animate()
             .translationX(distance)
             .alpha(0f)
-            .setDuration(180L)
-            .setInterpolator(DecelerateInterpolator())
+            .setDuration(EXIT_DURATION_MS)
+            .setInterpolator(AccelerateInterpolator())
             .withEndAction { onEnd() }
             .start()
     }
@@ -277,11 +305,11 @@ object BannerNotificationManager {
         bannerRoot.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
             override fun onPreDraw(): Boolean {
                 bannerRoot.viewTreeObserver.removeOnPreDrawListener(this)
-                val screenWidthPx = bannerRoot.resources.displayMetrics.widthPixels
-                val startDistance = (bannerRoot.width + screenWidthPx).toFloat()
-                bannerRoot.translationX = -startDistance
+                bannerRoot.translationX = -bannerRoot.width * SLIDE_FACTOR
+                bannerRoot.alpha = 0f
                 bannerRoot.animate()
                     .translationX(0f)
+                    .alpha(1f)
                     .setDuration(ENTRANCE_DURATION_MS)
                     .setInterpolator(DecelerateInterpolator())
                     .start()
