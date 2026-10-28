@@ -126,24 +126,39 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
 
     @SuppressLint("ClickableViewAccessibility")
     private fun attachTouch(button: TextView, key: Key) {
+        var repeating = false
         val repeater = object : Runnable {
             override fun run() {
+                repeating = true
                 press(key)
                 handler.postDelayed(this, 80)
             }
         }
+        fun isInside(v: View, event: MotionEvent): Boolean =
+            event.x >= 0 && event.x <= v.width && event.y >= 0 && event.y <= v.height
+
         button.setOnTouchListener { v, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    repeating = false
                     v.isPressed = true
                     v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                    press(key)
                     if (key.repeat) handler.postDelayed(repeater, 400)
                 }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                MotionEvent.ACTION_MOVE -> v.isPressed = isInside(v, event)
+                MotionEvent.ACTION_UP -> {
                     v.isPressed = false
                     handler.removeCallbacks(repeater)
-                    if (event.actionMasked == MotionEvent.ACTION_UP) v.performClick()
+                    if (!repeating && isInside(v, event)) {
+                        press(key)
+                        v.performClick()
+                    }
+                    repeating = false
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    v.isPressed = false
+                    handler.removeCallbacks(repeater)
+                    repeating = false
                 }
             }
             true
