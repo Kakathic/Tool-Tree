@@ -31,7 +31,7 @@ class TerminalLauncher private constructor(
 
         private fun q(s: String): String = "'" + s.replace("'", "'\\''") + "'"
 
-        fun prepare(context: Context, cwdArg: String, cmd: String, root: Int = 0, pagePath: String = ""): TerminalLauncher {
+        fun prepare(context: Context, cwdArg: String, cmd: String, root: Int = 0, pagePath: String = "", closeOnExit: Boolean = false): TerminalLauncher {
             val spf = context.getSharedPreferences("kr-script-config", Context.MODE_PRIVATE)
             val executor = spf.getString("executor", "root/executor.sh") ?: "root/executor.sh"
             val toolkit = spf.getString("toolkitDir", "home") ?: "home"
@@ -61,6 +61,8 @@ class TerminalLauncher private constructor(
             if (cwd.isEmpty()) cwd = home.absolutePath
 
             val rc = StringBuilder().apply {
+                append("export HOME=").append(q(home.absolutePath)).append("\n")
+                append("umask 022\n")
                 append("export TERM=xterm-256color\n")
                 append("export COLORTERM=truecolor\n")
                 append("export SHELL=").append(q(bash.absolutePath)).append("\n")
@@ -88,7 +90,10 @@ class TerminalLauncher private constructor(
                 append("bind '\"\\eOA\": history-search-backward' 2>/dev/null\n")
                 append("bind '\"\\eOB\": history-search-forward' 2>/dev/null\n")
                 append("[ -f \"\$HOME/.bashrc\" ] && . \"\$HOME/.bashrc\"\n")
-                if (cmd.isNotBlank()) append(cmd).append("\n")
+                if (cmd.isNotBlank()) {
+                    append(cmd).append("\n")
+                    if (closeOnExit) append("exit \$?\n")
+                }
             }
             rcFile.writeText(rc.toString())
 

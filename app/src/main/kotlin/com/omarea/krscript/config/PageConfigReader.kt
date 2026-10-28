@@ -1359,6 +1359,9 @@ class PageConfigReader {
         tomlGet(table, "exit-on-back", "back-exit")?.let {
             terminal.exitOnBack = it.trim().lowercase().let { v -> v == "true" || v == "1" }
         }
+        tomlGet(table, "close-on-exit", "auto-close")?.let {
+            terminal.closeOnExit = it.trim().lowercase().let { v -> v == "true" || v == "1" }
+        }
         tomlGet(table, "root", "su")?.let {
             terminal.root = when (it.trim().lowercase()) {
                 "true", "1" -> 1

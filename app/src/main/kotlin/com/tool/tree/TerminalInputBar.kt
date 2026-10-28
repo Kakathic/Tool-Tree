@@ -24,7 +24,7 @@ class TerminalInputBar(
             }
         }
         pager.onPageChanged = { page ->
-            if (page == 1) focusInput() else terminalView.requestFocus()
+            if (page == TerminalSwipePager.PAGE_INPUT) focusInput() else terminalView.requestFocus()
         }
     }
 

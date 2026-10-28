@@ -1,5 +1,7 @@
 package com.tool.tree
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
 import android.util.AttributeSet
@@ -10,11 +12,18 @@ import android.view.ViewConfiguration
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 class TerminalSwipePager @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : FrameLayout(context, attrs) {
+
+    companion object {
+        const val PAGE_SPECIAL = 0
+        const val PAGE_KEYS = 1
+        const val PAGE_INPUT = 2
+    }
 
     var onPageChanged: ((Int) -> Unit)? = null
     var page = 0
@@ -31,6 +40,8 @@ class TerminalSwipePager @JvmOverloads constructor(
     private var tracker: VelocityTracker? = null
     private var animator: ValueAnimator? = null
 
+    private val lastPage: Int get() = (childCount - 1).coerceAtLeast(0)
+
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         super.onLayout(changed, left, top, right, bottom)
         if (animator == null && !dragging) offset = page * width.toFloat()
@@ -38,18 +49,17 @@ class TerminalSwipePager @JvmOverloads constructor(
     }
 
     private fun applyOffset() {
-        if (childCount < 2) return
         val w = width.toFloat()
-        val first = getChildAt(0)
-        val second = getChildAt(1)
-        first.translationX = -offset
-        second.translationX = w - offset
-        first.visibility = if (offset >= w && w > 0f) View.INVISIBLE else View.VISIBLE
-        second.visibility = if (offset <= 0f) View.INVISIBLE else View.VISIBLE
+        for (i in 0 until childCount) {
+            val child = getChildAt(i)
+            val tx = i * w - offset
+            child.translationX = tx
+            child.visibility = if (w > 0f && abs(tx) >= w) View.INVISIBLE else View.VISIBLE
+        }
     }
 
     fun setPage(index: Int, animate: Boolean) {
-        settle(index.coerceIn(0, 1), animate)
+        settle(index.coerceIn(0, lastPage), animate)
     }
 
     private fun settle(target: Int, animate: Boolean = true) {
@@ -70,13 +80,13 @@ class TerminalSwipePager @JvmOverloads constructor(
                 offset = it.animatedValue as Float
                 applyOffset()
             }
-            addListener(object : android.animation.AnimatorListenerAdapter() {
+            addListener(object : AnimatorListenerAdapter() {
                 private var cancelled = false
-                override fun onAnimationCancel(animation: android.animation.Animator) {
+                override fun onAnimationCancel(animation: Animator) {
                     cancelled = true
                 }
 
-                override fun onAnimationEnd(animation: android.animation.Animator) {
+                override fun onAnimationEnd(animation: Animator) {
                     if (cancelled) return
                     animator = null
                     offset = to
@@ -93,8 +103,8 @@ class TerminalSwipePager @JvmOverloads constructor(
         if (dragging) return
         val dx = ev.x - downX
         val dy = ev.y - downY
-        val towardNext = page == 0 && dx < 0
-        val towardPrev = page == 1 && dx > 0
+        val towardNext = page < lastPage && dx < 0
+        val towardPrev = page > 0 && dx > 0
         if (abs(dx) > touchSlop && abs(dx) > abs(dy) && (towardNext || towardPrev)) {
             dragging = true
             startOffset = offset
@@ -131,7 +141,10 @@ class TerminalSwipePager @JvmOverloads constructor(
             MotionEvent.ACTION_MOVE -> {
                 maybeStartDrag(ev)
                 if (dragging) {
-                    offset = (startOffset - (ev.x - downX)).coerceIn(0f, width.toFloat())
+                    val w = width.toFloat()
+                    val minOffset = (page - 1).coerceAtLeast(0) * w
+                    val maxOffset = (page + 1).coerceAtMost(lastPage) * w
+                    offset = (startOffset - (ev.x - downX)).coerceIn(minOffset, maxOffset)
                     applyOffset()
                 }
             }
@@ -141,9 +154,10 @@ class TerminalSwipePager @JvmOverloads constructor(
                     val vx = tracker?.xVelocity ?: 0f
                     val target = when {
                         ev.actionMasked == MotionEvent.ACTION_CANCEL -> page
-                        abs(vx) > flingVelocity -> if (vx < 0) 1 else 0
-                        else -> if (offset > width / 2f) 1 else 0
-                    }
+                        abs(vx) > flingVelocity -> if (vx < 0) page + 1 else page - 1
+                        width > 0 -> (offset / width).roundToInt()
+                        else -> page
+                    }.coerceIn((page - 1).coerceAtLeast(0), (page + 1).coerceAtMost(lastPage))
                     dragging = false
                     settle(target)
                 }

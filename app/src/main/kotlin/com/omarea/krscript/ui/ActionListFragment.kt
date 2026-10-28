@@ -328,7 +328,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         if (!checkAndLockClick()) return
         nodeUnlockedAsync(item) {
             val context = context ?: return@nodeUnlockedAsync
-            com.tool.tree.TerminalActivity.start(context, item.title, item.cwd, item.cmd, item.fontSize, item.root, item.currentPageConfigPath, item.exitOnBack)
+            com.tool.tree.TerminalActivity.start(context, item.title, item.cwd, item.cmd, item.fontSize, item.root, item.currentPageConfigPath, item.exitOnBack, item.closeOnExit)
             onCompleted.run()
         }
     }

@@ -7,10 +7,13 @@ import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -35,6 +38,8 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         private const val EXTRA_ROOT = "root"
         private const val EXTRA_PAGE_PATH = "page_path"
         private const val EXTRA_EXIT_ON_BACK = "exit_on_back"
+        private const val EXTRA_CLOSE_ON_EXIT = "close_on_exit"
+        private const val BELL_MIN_INTERVAL_MS = 300L
         private const val PREFS_NAME = "terminal"
         private const val STARTUP_FAIL_WINDOW_MS = 3000L
         private const val PREF_FONT_SP_PREFIX = "font_sp_"
@@ -42,7 +47,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         private const val MIN_FONT_SP = 8
         private const val MAX_FONT_SP = 40
 
-        fun start(context: Context, title: String?, cwd: String?, cmd: String?, fontSize: Int, root: Int = 0, pagePath: String? = null, exitOnBack: Boolean = false) {
+        fun start(context: Context, title: String?, cwd: String?, cmd: String?, fontSize: Int, root: Int = 0, pagePath: String? = null, exitOnBack: Boolean = false, closeOnExit: Boolean = false) {
             val intent = Intent(context, TerminalActivity::class.java).apply {
                 putExtra(EXTRA_HAS_REQUEST, true)
                 putExtra(EXTRA_TITLE, title ?: "")
@@ -52,6 +57,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
                 putExtra(EXTRA_ROOT, root)
                 putExtra(EXTRA_PAGE_PATH, pagePath ?: "")
                 putExtra(EXTRA_EXIT_ON_BACK, exitOnBack)
+                putExtra(EXTRA_CLOSE_ON_EXIT, closeOnExit)
                 if (context !is AppCompatActivity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
@@ -68,6 +74,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
     private lateinit var terminalView: TerminalView
     private lateinit var extraKeys: TerminalExtraKeys
     private lateinit var inputBar: TerminalInputBar
+    private lateinit var specialKeys: TerminalSpecialKeys
     private lateinit var drawer: DrawerLayout
     private lateinit var sessionDrawer: TerminalSessionDrawer
     private var current: TerminalSessionStore.Entry? = null
@@ -82,6 +89,42 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         override fun onColorsChanged() {
             terminalView.invalidate()
         }
+
+        override fun onBell() {
+            vibrateOnBell()
+        }
+    }
+
+    private var lastBellAt = 0L
+
+    @Suppress("DEPRECATION")
+    private fun vibrateOnBell() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastBellAt < BELL_MIN_INTERVAL_MS) return
+        lastBellAt = now
+        try {
+            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(40, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                vibrator.vibrate(40)
+            }
+        } catch (ignored: Exception) {
+        }
+    }
+
+    private fun updateKeepScreenOn() {
+        val running = TerminalSessionStore.all().any { !it.finished && it.session.isRunning }
+        if (running) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) return true
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,11 +137,14 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         terminalView.setTerminalViewClient(this)
         applyFontSize()
         extraKeys = TerminalExtraKeys(findViewById<LinearLayout>(R.id.terminal_extra_keys), terminalView)
+        val toolbarPager = findViewById<TerminalSwipePager>(R.id.terminal_toolbar_pager)
+        specialKeys = TerminalSpecialKeys(findViewById<LinearLayout>(R.id.terminal_special_keys), terminalView)
         inputBar = TerminalInputBar(
-            findViewById(R.id.terminal_toolbar_pager),
+            toolbarPager,
             findViewById(R.id.terminal_input_edit),
             terminalView
         )
+        toolbarPager.setPage(TerminalSwipePager.PAGE_KEYS, false)
 
         setupDrawer()
 
@@ -170,7 +216,8 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
                 intent.getIntExtra(EXTRA_ROOT, 0),
                 intent.getStringExtra(EXTRA_PAGE_PATH).orEmpty(),
                 intent.getBooleanExtra(EXTRA_EXIT_ON_BACK, false),
-                intent.getIntExtra(EXTRA_FONT_SIZE, 0)
+                intent.getIntExtra(EXTRA_FONT_SIZE, 0),
+                intent.getBooleanExtra(EXTRA_CLOSE_ON_EXIT, false)
             )
             // Mở lại phiên đang ẩn gần nhất của item này, chưa có mới tạo
             val existing = TerminalSessionStore.latestForRequest(request)
@@ -186,7 +233,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         pendingCreates++
         Thread {
             val prepared = try {
-                TerminalLauncher.prepare(appContext, request.cwd, request.cmd, request.root, request.pagePath)
+                TerminalLauncher.prepare(appContext, request.cwd, request.cmd, request.root, request.pagePath, request.closeOnExit)
             } catch (e: Exception) {
                 runOnUiThread {
                     pendingCreates--
@@ -252,14 +299,17 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
 
     override fun onSessionsChanged() {
         sessionDrawer.refresh(TerminalSessionStore.all(), current)
+        updateKeepScreenOn()
         if (TerminalSessionStore.all().isEmpty() && pendingCreates == 0) finish()
     }
 
     override fun onSessionFinished(entry: TerminalSessionStore.Entry) {
+        updateKeepScreenOn()
         if (entry !== current) return
         // exit / Ctrl+D: đóng phiên luôn. Nếu shell chết ngay lúc mở với mã lỗi thì giữ màn hình để đọc lỗi (Enter để đóng)
         val diedAtStartup = SystemClock.elapsedRealtime() - entry.createdAt < STARTUP_FAIL_WINDOW_MS && entry.session.exitStatus != 0
-        if (diedAtStartup) terminalView.onScreenUpdated() else closeSession(entry)
+        val failedOneShot = entry.request.closeOnExit && entry.session.exitStatus != 0
+        if (diedAtStartup || failedOneShot) terminalView.onScreenUpdated() else closeSession(entry)
     }
 
     private fun applyFontSize() {
@@ -291,6 +341,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
 
     override fun onResume() {
         super.onResume()
+        updateKeepScreenOn()
         terminalView.onScreenUpdated()
     }
 

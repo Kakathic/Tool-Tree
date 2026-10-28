@@ -30,6 +30,13 @@
             android:background="#000000">
 
             <LinearLayout
+                android:id="@+id/terminal_special_keys"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#000000"
+                android:orientation="vertical" />
+
+            <LinearLayout
                 android:id="@+id/terminal_extra_keys"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

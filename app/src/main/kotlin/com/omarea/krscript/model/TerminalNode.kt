@@ -6,4 +6,5 @@ class TerminalNode(currentConfigXml: String) : ClickableNode(currentConfigXml) {
     var fontSize: Int = 0
     var root: Int = 1
     var exitOnBack: Boolean = false
+    var closeOnExit: Boolean = false
 }

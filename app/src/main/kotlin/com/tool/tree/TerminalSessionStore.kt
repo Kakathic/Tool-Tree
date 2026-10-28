@@ -14,13 +14,14 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Mọi thao tác phải gọi trên main thread.
  */
 object TerminalSessionStore {
-    class Request(val title: String, val cwd: String, val cmd: String, val root: Int, val pagePath: String = "", val exitOnBack: Boolean = false, val fontSize: Int = 0) {
-        val key: String get() = "$title\u0000$cwd\u0000$cmd\u0000$root\u0000$pagePath\u0000$exitOnBack"
+    class Request(val title: String, val cwd: String, val cmd: String, val root: Int, val pagePath: String = "", val exitOnBack: Boolean = false, val fontSize: Int = 0, val closeOnExit: Boolean = false) {
+        val key: String get() = "$title\u0000$cwd\u0000$cmd\u0000$root\u0000$pagePath\u0000$exitOnBack\u0000$closeOnExit"
     }
 
     interface Ui {
         fun onScreenUpdated()
         fun onColorsChanged()
+        fun onBell()
     }
 
     interface Listener {
@@ -68,7 +69,9 @@ object TerminalSessionStore {
             if (!text.isNullOrEmpty()) session?.emulator?.paste(text)
         }
 
-        override fun onBell(session: TerminalSession) {}
+        override fun onBell(session: TerminalSession) {
+            entry.ui?.onBell()
+        }
 
         override fun onColorsChanged(session: TerminalSession) {
             entry.ui?.onColorsChanged()
