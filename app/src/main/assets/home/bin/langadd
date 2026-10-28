@@ -2,8 +2,6 @@
 # Kakathic
 
 fileprop="$1/Add-on.bash"
-
-# Thoát
 if [ -d "$1" ] && [ -f "$fileprop" ]; then
   source "$fileprop" 2>/dev/null
   google_text=
@@ -16,8 +14,11 @@ if [ "$(glog "transai_text_$id")" == 1 ]; then
   stringlg="$(sed -n '/# default/,/# other languages/{ /# default/d; /# other languages/q; p; }' "$fileprop")"
   sum_mm="$(checksum "$fileprop")"
   if [ "$sum_mm" != "$(glog "sum_$id")" ] || [ ! -f "$1/auto.bash" ]; then
-  transai "$stringlg" > "$1/auto.bash"
-  slog "sum_$id" "$sum_mm"
+  check_trans="$(transai "$stringlg")"
+    if [[ "$check_trans" ]]; then
+    echo "$check_trans" > "$1/auto.bash"
+    slog "sum_$id" "$sum_mm"
+    fi
   fi
   [ -f "$1/auto.bash" ] && source "$1/auto.bash"
 fi

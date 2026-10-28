@@ -1,2 +1,4 @@
 # Kakathic
-xem "https://api.github.com/repos/Kakathic/Tool-Tree/releases/tags/$1" | jq -r --arg name "$2" '.assets[]? | select(.name == $name and .digest != null) | .digest // empty' | cut -d: -f2
+url="$1"
+[[ "$url" != http* ]] && url="https://api.github.com/repos/Kakathic/Tool-Tree/releases/tags/$1"
+xem "$url" | jq -r --arg name "$2" '.assets[]? | select((.name | startswith($name)) and .digest != null) | .digest' | cut -d: -f2

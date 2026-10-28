@@ -4,7 +4,7 @@ source "$1/download.bash"
 
 if [ ! -f "$1/update" ] && [ ! -f "$1/zcheck" ]; then
     sumcek="$(get_shum 'V1.0.2' "${url##*/}")"
-    if [[ "$sumcek" != "$(glog "sumcek_$id")" ]] && [[ -n "$sumcek" ]]; then
+    if [[ "$sumcek" != "$(glog "sumcek_$id")" ]] && [[ "$sumcek" ]]; then
     echo "$url" > "$1/update"
     echo 1
     fi

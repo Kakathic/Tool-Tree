@@ -28,10 +28,13 @@ fi
 
 if [ "$google_text" ] || [ "$transai" == "true" ]; then
   if [ "$(glog "transai_text_$id")" == 1 ] && [ "$transai" == "true" ]; then
-    sum_mm="$(checksum "$1/lang/default.bash")"
-    if [ "$sum_mm" != "$(glog "sum_$id")" ] || [ ! -f "$1/lang/auto.bash" ]; then
-    cat "$1/lang/default.bash" | transai > "$1/lang/auto.bash" 2>/dev/null
-    slog "sum_$id" "$sum_mm"
+    summ="$(checksum "$1/lang/default.bash")"
+    if [ "$summ" != "$(glog "sum_$id")" ] || [ ! -f "$1/lang/auto.bash" ]; then
+      check_trans="$(transai < "$1/lang/default.bash")"
+      if [[ "$check_trans" ]]; then
+      echo "$check_trans" > "$1/lang/auto.bash" 2>/dev/null
+      slog "sum_$id" "$summ"
+      fi
     fi
   fi
   echo '

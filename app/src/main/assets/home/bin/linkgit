@@ -1,2 +1,4 @@
 # Kakathic
-xem "$1" | jq -r '.assets[]? | select(.name | contains("'$2'")) | .browser_download_url // empty'
+url="$1"
+[[ "$url" != http* ]] && url="https://api.github.com/repos/Kakathic/Tool-Tree/releases/tags/$1"
+xem "$url" | jq -r --arg q "$2" '.assets[]? | select(.name | contains($q)) | .browser_download_url // empty'
