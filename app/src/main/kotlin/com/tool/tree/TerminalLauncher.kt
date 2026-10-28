@@ -9,6 +9,8 @@ import com.termux.terminal.TerminalSession
 import java.io.File
 
 class TerminalLauncher private constructor(
+    private val appContext: Context,
+    private val tag: String,
     private val useRoot: Boolean,
     private val home: File,
     private val bash: String,
@@ -72,12 +74,19 @@ class TerminalLauncher private constructor(
                 append("cd ").append(q(cwd)).append(" 2>/dev/null || cd \"\$HOME\"\n")
                 append("export HISTFILE=\"\$HOME/.bash_history\"\n")
                 append("export HISTSIZE=5000 HISTFILESIZE=5000\n")
+                append("export HISTCONTROL=ignoreboth\n")
                 append("shopt -s histappend\n")
                 append("PROMPT_COMMAND=\"history -a\${PROMPT_COMMAND:+;\$PROMPT_COMMAND}\"\n")
                 append("PS1='\\['\"\\033[0;32m\"'\\]\\w\\['\"\\033[0m\"'\\] \\['\"\\033[0;97m\"'\\]\\$\\['\"\\033[0m\"'\\] '\n")
                 append("clear() { printf '\\033[H\\033[2J\\033[3J'; }\n")
                 append("bind '\"\\C-l\": clear-display' 2>/dev/null\n")
                 append("bind 'set enable-bracketed-paste on' 2>/dev/null\n")
+                append("bind 'set completion-ignore-case on' 2>/dev/null\n")
+                append("bind 'set show-all-if-ambiguous on' 2>/dev/null\n")
+                append("bind '\"\\e[A\": history-search-backward' 2>/dev/null\n")
+                append("bind '\"\\e[B\": history-search-forward' 2>/dev/null\n")
+                append("bind '\"\\eOA\": history-search-backward' 2>/dev/null\n")
+                append("bind '\"\\eOB\": history-search-forward' 2>/dev/null\n")
                 append("[ -f \"\$HOME/.bashrc\" ] && . \"\$HOME/.bashrc\"\n")
                 if (cmd.isNotBlank()) append(cmd).append("\n")
             }
@@ -85,18 +94,18 @@ class TerminalLauncher private constructor(
 
             // root = 1: mở shell bằng su nếu máy có root; còn lại chạy quyền app (gõ su trong terminal vẫn dùng được)
             val useRoot = root == 1 && ScriptEnvironmen.isRooted()
-            return TerminalLauncher(useRoot, home, bash.absolutePath, busybox.absolutePath, rcFile, ttyFile, pidFile)
+            return TerminalLauncher(context.applicationContext, "term_$id", useRoot, home, bash.absolutePath, busybox.absolutePath, rcFile, ttyFile, pidFile)
         }
     }
 
     override fun start(columns: Int, rows: Int): Process {
-        val inner = "${q(busybox)} stty rows $rows cols $columns; " +
+        val inner = "${q(busybox)} stty rows $rows cols $columns -ixon; " +
                 "echo \$\$ > ${q(pidFile.absolutePath)}; " +
                 "${q(busybox)} readlink /proc/\$\$/fd/0 > ${q(ttyFile.absolutePath)}; " +
                 "exec ${q(bash)} --rcfile ${q(rcFile.absolutePath)} -i"
 
         return if (useRoot) {
-            val full = "SHELL=${q(bash)} ${q(busybox)} script -qc ${q(inner)} /dev/null"
+            val full = "shell_progres=${q(tag)} SHELL=${q(bash)} ${q(busybox)} script -qc ${q(inner)} /dev/null"
             ProcessBuilder("su", "-c", full).redirectErrorStream(true).start()
         } else {
             val pb = ProcessBuilder(busybox, "script", "-qc", inner, "/dev/null")
@@ -105,6 +114,7 @@ class TerminalLauncher private constructor(
                 put("SHELL", bash)
                 put("HOME", home.absolutePath)
                 put("TERM", "xterm-256color")
+                put("shell_progres", tag)
             }
             pb.redirectErrorStream(true).start()
         }
@@ -125,6 +135,10 @@ class TerminalLauncher private constructor(
         killing = true
         val pidPath = q(pidFile.absolutePath)
         Thread {
+            try {
+                ScriptEnvironmen.executeResultRoot(appContext, "shell_progres='$tag' killtree", null)
+            } catch (ignored: Exception) {
+            }
             runShell("kill -HUP \$(cat $pidPath) 2>/dev/null; sleep 0.2; kill -9 \$(cat $pidPath) 2>/dev/null")
             deleteFiles()
         }.start()

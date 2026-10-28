@@ -28,7 +28,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
     }
 
     private val layout = listOf(
-        listOf(Key("ESC", "ESC"), Key("/", "/"), Key("-", "-"), Key("HOME", "HOME"), Key("UP", "↑", true, ARROW_SIZE, true), Key("END", "END"), Key("PGUP", "PGUP", true)),
+        listOf(Key("ESC", "ESC"), Key("/", "/"), Key("$", "$"), Key("HOME", "HOME"), Key("UP", "↑", true, ARROW_SIZE, true), Key("END", "END"), Key("PGUP", "PGUP", true)),
         listOf(Key("TAB", "TAB"), Key("CTRL", "CTRL"), Key("ALT", "ALT"), Key("LEFT", "←", true, ARROW_SIZE, true), Key("DOWN", "↓", true, ARROW_SIZE, true), Key("RIGHT", "→", true, ARROW_SIZE, true), Key("PGDN", "PGDN", true))
     )
 
@@ -160,7 +160,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
                 altActive = !altActive
                 altButton?.isSelected = altActive
             }
-            "/", "-" -> terminalView.inputCodePoint(key.id[0].code, false, false)
+            "/", "$" -> terminalView.inputCodePoint(key.id[0].code, false, false)
             else -> {
                 val keyCode = when (key.id) {
                     "ESC" -> KeyEvent.KEYCODE_ESCAPE
