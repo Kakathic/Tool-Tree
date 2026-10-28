@@ -7,8 +7,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
@@ -48,6 +46,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import com.omarea.common.shared.ShareFileHelper
 import androidx.fragment.app.DialogFragment
 import androidx.transition.ChangeBounds
 import androidx.transition.TransitionManager
@@ -344,8 +343,8 @@ class DialogLogFragment : DialogFragment() {
             }
         }
 
-        binding.btnCopy.setOnClickListener {
-            copyLogToClipboard()
+        binding.btnShare.setOnClickListener {
+            shareLogAsFile()
         }
 
         if (nodeInterruptable) {
@@ -380,17 +379,22 @@ class DialogLogFragment : DialogFragment() {
         }
     }
 
-    private fun copyLogToClipboard() {
-        runCatching {
-            val text = currentHandler?.getLogText(excludeFinishLine = true)
-                ?: binding.shellOutput.text.toString()
-            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("text", text)
-            clipboard.setPrimaryClip(clip)
-            Toast.makeText(requireContext(), getString(R.string.copy_success), Toast.LENGTH_SHORT).show()
-        }.onFailure {
-            Toast.makeText(requireContext(), getString(R.string.copy_fail), Toast.LENGTH_SHORT).show()
+    private fun shareLogAsFile() {
+        val act = activity ?: return
+        val text = currentHandler?.getLogText(excludeFinishLine = true)
+            ?: binding.shellOutput.text.toString()
+        if (text.isBlank()) {
+            Toast.makeText(act, getString(R.string.log_share_empty), Toast.LENGTH_SHORT).show()
+            return
         }
+        ShareFileHelper.shareTextAsFile(
+            act,
+            text,
+            nodeInfo.title,
+            "Tool-Tree_log",
+            getString(R.string.terminal_share),
+            getString(R.string.log_share_fail)
+        )
     }
 
     private fun applyWrapState() {

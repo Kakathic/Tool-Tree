@@ -4,6 +4,5 @@
     android:overScrollMode="never"
     android:scrollbarSize="0dp"
     android:clipToPadding="false"
-    android:paddingBottom="88dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent" />

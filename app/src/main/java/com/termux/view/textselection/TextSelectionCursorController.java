@@ -18,6 +18,7 @@ import androidx.annotation.Nullable;
 import com.termux.terminal.TerminalBuffer;
 import com.termux.terminal.WcWidth;
 import com.tool.tree.R;
+import com.tool.tree.TerminalShare;
 import com.termux.view.TerminalView;
 
 public class TextSelectionCursorController implements CursorController {
@@ -148,17 +149,7 @@ public class TextSelectionCursorController implements CursorController {
                         // Chia sẻ toàn bộ nội dung terminal (lệnh đã gõ và kết quả, gồm cả phần cuộn lên)
                         String transcript = terminalView.mEmulator.getScreen().getTranscriptText();
                         terminalView.stopTextSelectionMode();
-                        if (transcript != null && !transcript.isEmpty()) {
-                            if (transcript.length() > 200000) {
-                                transcript = transcript.substring(transcript.length() - 200000);
-                            }
-                            Intent share = new Intent(Intent.ACTION_SEND);
-                            share.setType("text/plain");
-                            share.putExtra(Intent.EXTRA_TEXT, transcript);
-                            Intent chooser = Intent.createChooser(share, null);
-                            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            terminalView.getContext().startActivity(chooser);
-                        }
+                        TerminalShare.shareTranscript(terminalView.getContext(), terminalView.mTermSession, transcript);
                         break;
                 }
 

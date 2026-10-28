@@ -454,7 +454,7 @@ class MainActivity : AppCompatActivity() {
                     component = ComponentName(applicationContext, ActionPage::class.java)
                     addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or Intent.FLAG_ACTIVITY_NO_HISTORY)
                     putExtra("page", page)
-                    if (clickableNode is RunnableNode) putExtra("autoRunItemId", clickableNode.key)
+                    if (clickableNode is RunnableNode || clickableNode is TerminalNode || clickableNode is EditorNode) putExtra("autoRunItemId", clickableNode.key)
                 }
                 addToFavoritesHandler.onAddToFavorites(clickableNode, intent)
             }

@@ -236,7 +236,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             val intent = Intent(applicationContext, ActionPage::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or Intent.FLAG_ACTIVITY_NO_HISTORY)
                 putExtra("page", page)
-                if (clickableNode is RunnableNode) putExtra("autoRunItemId", clickableNode.key)
+                if (clickableNode is RunnableNode || clickableNode is TerminalNode || clickableNode is EditorNode) putExtra("autoRunItemId", clickableNode.key)
             }
             addToFavoritesHandler.onAddToFavorites(clickableNode, intent)
         }
@@ -287,6 +287,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         } else {
             fabRunSpinResume()
         }
+        updateListBottomInset()
 
         handler.post { scheduleCheckboxRefresh() }
 
@@ -550,9 +551,34 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
         supportFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
             override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
-                if (f is ActionListFragment) applyListTopInset(v)
+                if (f is ActionListFragment) {
+                    applyListTopInset(v)
+                    applyListBottomInset(v)
+                }
             }
         }, false)
+    }
+
+    private var listBottomInset = 0
+
+    private fun updateListBottomInset() {
+        val hasFab = binding.actionPageFab.visibility == View.VISIBLE
+        listBottomInset = if (hasFab) (88 * resources.displayMetrics.density).toInt() else 0
+        applyListBottomInset(null)
+    }
+
+    private fun applyListBottomInset(target: View?) {
+        val apply = { v: View ->
+            if (v.paddingBottom != listBottomInset) v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, listBottomInset)
+        }
+        if (target != null) {
+            apply(target)
+            return
+        }
+        for (i in 0 until binding.mainList.childCount) {
+            val child = binding.mainList.getChildAt(i)
+            if (child.id == R.id.kr_content) apply(child)
+        }
     }
 
     private fun applyListTopInset(target: View?) {
