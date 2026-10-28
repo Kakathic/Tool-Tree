@@ -95,7 +95,7 @@ required = true
 [[group]]
 [[terminal]]
 id = "terminal"
-title = "@home_text_5"
+title = "Terminal"
 desc = "@home_text_6"
 icon = "{ICON}/shella.png"
 cwd = "{HOME}"
