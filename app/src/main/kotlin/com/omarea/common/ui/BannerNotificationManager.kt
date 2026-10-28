@@ -1,9 +1,8 @@
 package com.omarea.common.ui
 
 import android.app.Activity
-import android.graphics.Color
 import android.graphics.PixelFormat
-import android.os.Build
+import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -11,7 +10,6 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
-import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
@@ -28,9 +26,7 @@ object BannerNotificationManager {
 
     private const val FALLBACK_DURATION_MS = 3500L
 
-    private const val ENTRANCE_DURATION_MS = 360L
-    private const val EXIT_DURATION_MS = 340L
-    private const val SLIDE_FACTOR = 1.12f
+    private const val ENTRANCE_DURATION_MS = 260L
 
     private data class BannerRequest(
         val title: String?,
@@ -42,8 +38,7 @@ object BannerNotificationManager {
         val confirmText: String?,
         val cancelText: String?,
         val countdownSeconds: Int,
-        val colorHex: String?,
-        val onConfirm: ((Activity) -> Unit)?
+        val colorHex: String?
     )
 
     private val queue = ArrayDeque<BannerRequest>()
@@ -75,7 +70,6 @@ object BannerNotificationManager {
         cancelText: String? = null,
         countdownSeconds: Int = 5,
         colorHex: String? = null,
-        onConfirm: ((Activity) -> Unit)? = null,
         onNoActivity: (() -> Unit)? = null
     ) {
         if (CurrentActivityHolder.get() == null) {
@@ -84,7 +78,7 @@ object BannerNotificationManager {
         }
         mainHandler.post {
             queue.addLast(
-                BannerRequest(title, message, type, position, icon, script, confirmText, cancelText, countdownSeconds, colorHex, onConfirm)
+                BannerRequest(title, message, type, position, icon, script, confirmText, cancelText, countdownSeconds, colorHex)
             )
             if (!isShowing) showNext()
         }
@@ -127,18 +121,16 @@ object BannerNotificationManager {
                 null
             }
         }
-        val gradientColors: Pair<Int, Int> = if (customColor != null) {
-            Pair(blend(customColor, Color.WHITE, 0.10f), blend(customColor, Color.BLACK, 0.14f))
-        } else {
-            val (startRes, endRes) = when (req.type) {
-                BannerType.INFO -> Pair(R.color.banner_info_start, R.color.banner_info_end)
-                BannerType.SUCCESS -> Pair(R.color.banner_success_start, R.color.banner_success_end)
-                BannerType.WARNING -> Pair(R.color.banner_warning_start, R.color.banner_warning_end)
-                BannerType.ERROR -> Pair(R.color.banner_error_start, R.color.banner_error_end)
+        val resolvedColor = customColor ?: run {
+            val colorRes = when (req.type) {
+                BannerType.INFO -> R.color.banner_info
+                BannerType.SUCCESS -> R.color.banner_success
+                BannerType.WARNING -> R.color.banner_warning
+                BannerType.ERROR -> R.color.banner_error
             }
-            Pair(activity.resources.getColor(startRes, activity.theme), activity.resources.getColor(endRes, activity.theme))
+            activity.resources.getColor(colorRes, activity.theme)
         }
-        applyBannerBackground(bannerRoot, gradientColors.first, gradientColors.second)
+        (bannerRoot.background?.mutate() as? GradientDrawable)?.setColor(resolvedColor)
         icon.setImageDrawable(resolveIcon(activity, req.icon))
 
         BannerSwipeDismissHelper(activity, bannerRoot) {
@@ -184,10 +176,10 @@ object BannerNotificationManager {
         playEntranceAnimation(bannerRoot)
 
         val script = req.script
-        if (!script.isNullOrEmpty() || req.onConfirm != null) {
+        if (!script.isNullOrEmpty()) {
             actionsRow.visibility = View.VISIBLE
-            val cancelLabel = if (!req.cancelText.isNullOrEmpty()) req.cancelText else activity.getString(R.string.kr_banner_cancel)
-            confirmBtn.text = if (!req.confirmText.isNullOrEmpty()) req.confirmText else activity.getString(R.string.kr_banner_confirm)
+            cancelBtn.text = if (!req.cancelText.isNullOrEmpty()) req.cancelText else activity.getString(R.string.kr_banner_cancel)
+            val confirmLabel = if (!req.confirmText.isNullOrEmpty()) req.confirmText else activity.getString(R.string.kr_banner_confirm)
 
             if (!reuseDeadline) {
                 deadlineElapsedMs = if (req.countdownSeconds > 0) {
@@ -202,16 +194,11 @@ object BannerNotificationManager {
                 val ms = deadline - SystemClock.elapsedRealtime()
                 return if (ms > 0) ((ms + 999) / 1000).toInt() else 0
             }
-            fun updateCancelLabel() {
+            fun updateConfirmLabel() {
                 val remaining = remainingSeconds()
-                cancelBtn.text = if (remaining > 0) "$cancelLabel (${remaining}s)" else cancelLabel
+                confirmBtn.text = if (remaining > 0) "$confirmLabel (${remaining}s)" else confirmLabel
             }
-            cancelBtn.gravity = Gravity.CENTER
-            if (req.countdownSeconds > 0) {
-                val widest = cancelBtn.paint.measureText("$cancelLabel (${req.countdownSeconds}s)")
-                cancelBtn.minWidth = (widest + cancelBtn.paddingStart + cancelBtn.paddingEnd).toInt()
-            }
-            updateCancelLabel()
+            updateConfirmLabel()
 
             if (deadlineElapsedMs != null) {
                 val tick = object : Runnable {
@@ -222,7 +209,7 @@ object BannerNotificationManager {
                                 showNext()
                             }
                         } else {
-                            updateCancelLabel()
+                            updateConfirmLabel()
                             mainHandler.postDelayed(this, 1000L)
                         }
                     }
@@ -233,8 +220,7 @@ object BannerNotificationManager {
 
             confirmBtn.setOnClickListener {
                 dismissCurrent()
-                if (!script.isNullOrEmpty()) runScript(activity, req, script)
-                req.onConfirm?.invoke(activity)
+                runScript(activity, req, script)
                 showNext()
             }
             cancelBtn.setOnClickListener {
@@ -272,36 +258,14 @@ object BannerNotificationManager {
         }
     }
 
-    private fun blend(from: Int, to: Int, ratio: Float): Int {
-        val inv = 1f - ratio
-        return Color.argb(
-            Color.alpha(from),
-            (Color.red(from) * inv + Color.red(to) * ratio).toInt(),
-            (Color.green(from) * inv + Color.green(to) * ratio).toInt(),
-            (Color.blue(from) * inv + Color.blue(to) * ratio).toInt()
-        )
-    }
-
-    private fun applyBannerBackground(bannerRoot: View, startColor: Int, endColor: Int) {
-        val density = bannerRoot.resources.displayMetrics.density
-        bannerRoot.background = BannerBackgroundDrawable(startColor, endColor, 12f * density, density)
-        bannerRoot.clipToOutline = true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            bannerRoot.forceHasOverlappingRendering(false)
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            bannerRoot.outlineSpotShadowColor = endColor
-            bannerRoot.outlineAmbientShadowColor = endColor
-        }
-    }
-
     private fun animateAutoDismiss(bannerRoot: View, onEnd: () -> Unit) {
-        val distance = bannerRoot.width * SLIDE_FACTOR
+        val screenWidthPx = bannerRoot.resources.displayMetrics.widthPixels
+        val distance = (bannerRoot.width + screenWidthPx).toFloat()
         bannerRoot.animate()
             .translationX(distance)
             .alpha(0f)
-            .setDuration(EXIT_DURATION_MS)
-            .setInterpolator(AccelerateInterpolator())
+            .setDuration(180L)
+            .setInterpolator(DecelerateInterpolator())
             .withEndAction { onEnd() }
             .start()
     }
@@ -310,11 +274,11 @@ object BannerNotificationManager {
         bannerRoot.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
             override fun onPreDraw(): Boolean {
                 bannerRoot.viewTreeObserver.removeOnPreDrawListener(this)
-                bannerRoot.translationX = -bannerRoot.width * SLIDE_FACTOR
-                bannerRoot.alpha = 0f
+                val screenWidthPx = bannerRoot.resources.displayMetrics.widthPixels
+                val startDistance = (bannerRoot.width + screenWidthPx).toFloat()
+                bannerRoot.translationX = -startDistance
                 bannerRoot.animate()
                     .translationX(0f)
-                    .alpha(1f)
                     .setDuration(ENTRANCE_DURATION_MS)
                     .setInterpolator(DecelerateInterpolator())
                     .start()
