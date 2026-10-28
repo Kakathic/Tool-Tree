@@ -7,6 +7,9 @@ echo "-y|--type: info, warning, success, error"
 echo "-i|--icon: path/icon.png, kr_shortcut_logo"
 echo "-p|--position: top, bottom"
 echo "-s|--script: 'echo 1'"
+echo "-o|--config: config file path for the page to open when Confirm is tapped"
+echo "-e|--config-sh: command that generates the config for the page to open when Confirm is tapped"
+echo "-d|--id: item id in the config page to open/run right after the page opens"
 echo "-c|--confirm: confirm"
 echo "-n|--cancel: cancel"
 echo "-g|--countdown: 5"
@@ -18,7 +21,7 @@ exit 1
 fi
 
 TYPE= ICON= TITLE= MESSAGE= POSITION= AMON=
-SCRIPT= CONFIRM= CANCEL= COUNTDOWN=5
+SCRIPT= CONFIG= CONFIGSH= ITEMID= CONFIRM= CANCEL= COUNTDOWN=5
 while [ $# -gt 0 ]; do
   case "$1" in
     -y|--type)
@@ -43,6 +46,18 @@ while [ $# -gt 0 ]; do
       ;;
     -s|--script)
       SCRIPT="$2"
+      shift 2
+      ;;
+    -o|--config)
+      CONFIG="$2"
+      shift 2
+      ;;
+    -e|--config-sh)
+      CONFIGSH="$2"
+      shift 2
+      ;;
+    -d|--id)
+      ITEMID="$2"
       shift 2
       ;;
     -c|--confirm)
@@ -80,6 +95,9 @@ CMDs="broadcast -n com.tool.tree/com.tool.tree.BannerReceiver -a com.tool.tree.b
 [ "$TITLE" ] && CMDs+="--es title \"$TITLE\" "
 [ "$MESSAGE" ] && CMDs+="--es text \"$MESSAGE\" "
 [ "$SCRIPT" ] && CMDs+="--es script \"$SCRIPT\" "
+[ "$CONFIG" ] && CMDs+="--es config \"$CONFIG\" "
+[ "$CONFIGSH" ] && CMDs+="--es config-sh \"$CONFIGSH\" "
+[ "$ITEMID" ] && CMDs+="--es id \"$ITEMID\" "
 [ "$CONFIRM" ] && CMDs+="--es confirm \"$CONFIRM\" "
 [ "$CANCEL" ] && CMDs+="--es cancel \"$CANCEL\" "
 [ "$COUNTDOWN" ] && CMDs+="--ei countdown \"$COUNTDOWN\" "

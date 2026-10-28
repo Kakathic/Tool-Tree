@@ -17,6 +17,23 @@ import com.omarea.krscript.model.RunnableNode
 import java.io.File
 
 class ShowDialogReceiver : BroadcastReceiver() {
+    companion object {
+        fun openConfigPage(activity: Activity, config: String?, configSh: String?, itemId: String?) {
+            val pageNode = PageNode("")
+            if (!config.isNullOrEmpty() && File(config).isFile) {
+                pageNode.pageConfigPath = config
+            } else if (!configSh.isNullOrEmpty()) {
+                pageNode.pageConfigSh = configSh
+            } else {
+                return
+            }
+            activity.startActivity(Intent(activity, ActionPage::class.java).apply {
+                putExtra("page", pageNode)
+                if (!itemId.isNullOrEmpty()) putExtra("autoRunItemId", itemId)
+            })
+        }
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
         val rawDesc = intent.getStringExtra("desc") ?: intent.getStringExtra("text") ?: ""
         val message = StringResRef.resolve(context, rawDesc)
@@ -44,6 +61,7 @@ class ShowDialogReceiver : BroadcastReceiver() {
         val script = intent.getStringExtra("script")
         val config = intent.getStringExtra("config")
         val configSh = intent.getStringExtra("config-sh")
+        val itemId = intent.getStringExtra("id")
         val countdownSeconds = intent.getIntExtra("countdown", 0)
         val force = intent.getBooleanExtra("force", false)
 
@@ -63,7 +81,7 @@ class ShowDialogReceiver : BroadcastReceiver() {
                 if (!script.isNullOrEmpty()) {
                     runConfirmScript(activity, title, script)
                 }
-                openConfigPageIfAny(activity, config, configSh)
+                openConfigPage(activity, config, configSh, itemId)
             })
             val onCancel = DialogHelper.DialogButton(cancelText, Runnable {
                 countdownRunnable?.let { handler.removeCallbacks(it) }
@@ -109,19 +127,5 @@ class ShowDialogReceiver : BroadcastReceiver() {
             interruptable = true
         }
         NotiShellTaskLauncher.startTask(activity.applicationContext, script, nodeInfo)
-    }
-
-    private fun openConfigPageIfAny(activity: Activity, config: String?, configSh: String?) {
-        val pageNode = PageNode("")
-        if (!config.isNullOrEmpty() && File(config).isFile) {
-            pageNode.pageConfigPath = config
-        } else if (!configSh.isNullOrEmpty()) {
-            pageNode.pageConfigSh = configSh
-        } else {
-            return
-        }
-        activity.startActivity(Intent(activity, ActionPage::class.java).apply {
-            putExtra("page", pageNode)
-        })
     }
 }

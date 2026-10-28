@@ -7,6 +7,7 @@ echo "-m|--message: description text (required)"
 echo "-s|--script: script to run when Confirm is tapped, e.g. 'echo 1'"
 echo "-o|--config: config file path for the page to open when Confirm is tapped"
 echo "-e|--config-sh: command that generates the config for the page to open when Confirm is tapped"
+echo "-i|--id: item id in the config page to open/run right after the page opens"
 echo "-c|--confirm: confirm button label"
 echo "-n|--cancel: cancel button label"
 echo "-g|--countdown: seconds before the dialog auto-closes, default 5"
@@ -17,7 +18,7 @@ if [[ $# -eq 0 || "$1" != -* ]]; then
 show_help >&2
 exit 1
 fi
-TITLE= MESSAGE= SCRIPT= CONFIG= CONFIGSH= CONFIRM= CANCEL= COUNTDOWN=5 FORCE= AMON=
+TITLE= MESSAGE= SCRIPT= CONFIG= CONFIGSH= ITEMID= CONFIRM= CANCEL= COUNTDOWN=5 FORCE= AMON=
 while [ $# -gt 0 ]; do
   case "$1" in
     -t|--title)
@@ -38,6 +39,10 @@ while [ $# -gt 0 ]; do
       ;;
     -e|--config-sh)
       CONFIGSH="$2"
+      shift 2
+      ;;
+    -i|--id)
+      ITEMID="$2"
       shift 2
       ;;
     -c|--confirm)
@@ -76,6 +81,7 @@ CMDs="broadcast -n com.tool.tree/com.tool.tree.ShowDialogReceiver -a com.tool.tr
 [ "$SCRIPT" ] && CMDs+="--es script \"$SCRIPT\" "
 [ "$CONFIG" ] && CMDs+="--es config \"$CONFIG\" "
 [ "$CONFIGSH" ] && CMDs+="--es config-sh \"$CONFIGSH\" "
+[ "$ITEMID" ] && CMDs+="--es id \"$ITEMID\" "
 [ "$CONFIRM" ] && CMDs+="--es confirm \"$CONFIRM\" "
 [ "$CANCEL" ] && CMDs+="--es cancel \"$CANCEL\" "
 [ "$COUNTDOWN" ] && CMDs+="--ei countdown \"$COUNTDOWN\" "

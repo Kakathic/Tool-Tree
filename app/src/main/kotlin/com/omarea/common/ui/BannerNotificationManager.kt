@@ -38,7 +38,8 @@ object BannerNotificationManager {
         val confirmText: String?,
         val cancelText: String?,
         val countdownSeconds: Int,
-        val colorHex: String?
+        val colorHex: String?,
+        val onConfirm: ((Activity) -> Unit)?
     )
 
     private val queue = ArrayDeque<BannerRequest>()
@@ -70,6 +71,7 @@ object BannerNotificationManager {
         cancelText: String? = null,
         countdownSeconds: Int = 5,
         colorHex: String? = null,
+        onConfirm: ((Activity) -> Unit)? = null,
         onNoActivity: (() -> Unit)? = null
     ) {
         if (CurrentActivityHolder.get() == null) {
@@ -78,7 +80,7 @@ object BannerNotificationManager {
         }
         mainHandler.post {
             queue.addLast(
-                BannerRequest(title, message, type, position, icon, script, confirmText, cancelText, countdownSeconds, colorHex)
+                BannerRequest(title, message, type, position, icon, script, confirmText, cancelText, countdownSeconds, colorHex, onConfirm)
             )
             if (!isShowing) showNext()
         }
@@ -176,7 +178,7 @@ object BannerNotificationManager {
         playEntranceAnimation(bannerRoot)
 
         val script = req.script
-        if (!script.isNullOrEmpty()) {
+        if (!script.isNullOrEmpty() || req.onConfirm != null) {
             actionsRow.visibility = View.VISIBLE
             cancelBtn.text = if (!req.cancelText.isNullOrEmpty()) req.cancelText else activity.getString(R.string.kr_banner_cancel)
             val confirmLabel = if (!req.confirmText.isNullOrEmpty()) req.confirmText else activity.getString(R.string.kr_banner_confirm)
@@ -220,7 +222,8 @@ object BannerNotificationManager {
 
             confirmBtn.setOnClickListener {
                 dismissCurrent()
-                runScript(activity, req, script)
+                if (!script.isNullOrEmpty()) runScript(activity, req, script)
+                req.onConfirm?.invoke(activity)
                 showNext()
             }
             cancelBtn.setOnClickListener {
