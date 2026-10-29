@@ -98,10 +98,6 @@
             android:exported="true">
         </activity>
         <activity
-            android:name=".ShortcutLaunchActivity"
-            android:exported="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-        <activity
             android:name=".NotificationCopyLogActivity"
             android:exported="false"
             android:excludeFromRecents="true"

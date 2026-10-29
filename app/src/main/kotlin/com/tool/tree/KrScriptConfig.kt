@@ -13,53 +13,45 @@ class KrScriptConfig {
     private val CUSTOM_TAB4_DEFAULT = "file:///android_asset/root/tab4.toml"
     private val BEFORE_START_SH_DEFAULT = ""
 
-    private fun readConfigInfo(context: Context): HashMap<String, String> {
-        val info = HashMap<String, String>()
-        info[EXECUTOR_CORE] = EXECUTOR_CORE_DEFAULT
-        info[PAGE_LIST_CONFIG] = PAGE_LIST_CONFIG_DEFAULT
-        info[FAVORITE_CONFIG] = FAVORITE_CONFIG_DEFAULT
-        info[CUSTOM_TAB3_CONFIG] = CUSTOM_TAB3_DEFAULT
-        info[CUSTOM_TAB4_CONFIG] = CUSTOM_TAB4_DEFAULT
-        info[TOOLKIT_DIR] = TOOLKIT_DIR_DEFAULT
-        info[BEFORE_START_SH] = BEFORE_START_SH_DEFAULT
-
-        try {
-            var fileName = context.getString(R.string.kr_script_config)
-            if (fileName.startsWith(ASSETS_FILE)) {
-                fileName = fileName.substring(ASSETS_FILE.length)
-            }
-            val inputStream = context.assets.open(fileName)
-            val bytes = ByteArray(inputStream.available())
-            inputStream.read(bytes)
-            val rows = String(bytes, Charset.defaultCharset()).split("\n")
-            for (row in rows) {
-                val rowText = row.trim()
-                if (!rowText.startsWith("#") && rowText.contains("=")) {
-                    val separator = rowText.indexOf("=")
-                    val key = rowText.substring(0, separator).trim()
-                    val value = rowText.substring(separator + 2, rowText.length - 1).trim()
-                    info.remove(key)
-                    info[key] = value
-                }
-            }
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-        }
-        return info
-    }
-
     fun init(context: Context): KrScriptConfig {
         if (configInfo == null) {
-            configInfo = readConfigInfo(context)
+            val info = HashMap<String, String>()
+            info[EXECUTOR_CORE] = EXECUTOR_CORE_DEFAULT
+            info[PAGE_LIST_CONFIG] = PAGE_LIST_CONFIG_DEFAULT
+            info[FAVORITE_CONFIG] = FAVORITE_CONFIG_DEFAULT
+            info[CUSTOM_TAB3_CONFIG] = CUSTOM_TAB3_DEFAULT
+            info[CUSTOM_TAB4_CONFIG] = CUSTOM_TAB4_DEFAULT
+            info[TOOLKIT_DIR] = TOOLKIT_DIR_DEFAULT
+            info[BEFORE_START_SH] = BEFORE_START_SH_DEFAULT
+            configInfo = info
+
+            try {
+                var fileName = context.getString(R.string.kr_script_config)
+                if (fileName.startsWith(ASSETS_FILE)) {
+                    fileName = fileName.substring(ASSETS_FILE.length)
+                }
+                val inputStream = context.assets.open(fileName)
+                val bytes = ByteArray(inputStream.available())
+                inputStream.read(bytes)
+                val rows = String(bytes, Charset.defaultCharset()).split("\n")
+                for (row in rows) {
+                    val rowText = row.trim()
+                    if (!rowText.startsWith("#") && rowText.contains("=")) {
+                        val separator = rowText.indexOf("=")
+                        val key = rowText.substring(0, separator).trim()
+                        val value = rowText.substring(separator + 2, rowText.length - 1).trim()
+                        info.remove(key)
+                        info[key] = value
+                    }
+                }
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+            }
+
             ScriptEnvironmen.init(context, getExecutorCore(), getToolkitDir())
         }
 
         return this
-    }
-
-    fun peekBeforeStartSh(context: Context): String {
-        val info = configInfo ?: readConfigInfo(context)
-        return info[BEFORE_START_SH] ?: BEFORE_START_SH_DEFAULT
     }
 
     fun getVariables(): HashMap<String, String>? {
