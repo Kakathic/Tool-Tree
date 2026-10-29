@@ -12,8 +12,13 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.omarea.common.shared.ObjectStorage
+import com.omarea.krscript.model.ClickableNode
+import com.omarea.krscript.model.EditorNode
 import com.omarea.krscript.model.NodeInfoBase
 import com.omarea.krscript.model.PageNode
+import com.omarea.krscript.model.TerminalNode
+import com.tool.tree.ShortcutLaunchActivity
+import java.io.Serializable
 
 class ActionShortcutManager(private val context: Context) {
 
@@ -36,6 +41,13 @@ class ActionShortcutManager(private val context: Context) {
             setClassName(context.packageName, intent.component!!.className)
             putExtras(intent)
             flags = Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+        }
+
+        val fastId = pickFastNode(config)?.let { saveFastTarget(it) }
+        if (fastId != null) {
+            shortcutIntent.setClassName(context.packageName, ShortcutLaunchActivity::class.java.name)
+            shortcutIntent.putExtra(ShortcutLaunchActivity.EXTRA_FAST_ID, fastId)
+            shortcutIntent.flags = 0
         }
 
         val bitmap = drawableToBitmap(drawable)
@@ -80,6 +92,24 @@ class ActionShortcutManager(private val context: Context) {
         val id = System.currentTimeMillis().toString()
         ObjectStorage<PageNode>(context).save(pageNode, id)
         return id
+    }
+
+    private fun pickFastNode(config: NodeInfoBase): ClickableNode? {
+        val node: ClickableNode = when (config) {
+            is TerminalNode -> config
+            is EditorNode -> if (config.file.isNotEmpty()) config else return null
+            else -> return null
+        }
+        return if (!node.locked && node.lockShell.isEmpty()) node else null
+    }
+
+    private fun saveFastTarget(node: ClickableNode): String? {
+        val id = "fast_" + System.currentTimeMillis()
+        return if (ObjectStorage<Serializable>(context).save(node, id)) id else null
+    }
+
+    fun getFastTarget(fastId: String): ClickableNode? {
+        return ObjectStorage<Serializable>(context).load(fastId) as? ClickableNode
     }
 
     fun getShortcutTarget(shortcutId: String): PageNode? {
