@@ -52,7 +52,7 @@ lock-sh = '[ -z $(glog api_genmini) ] && echo "@warn_gemini_text" || echo 0'
 script = """
 slog models_genmini "$models_genmini"
 [ "$models_thinking" -gt 0 ] && thingkk="-t $models_thinking"
-transai -m "$chatai" -l "$chatai_lang" $thingkk
+gemini --lang "$chatai_lang" --model "$models_genmini" --thinking "$models_thinking" --instruction "$chatai_nextrule"
 """
 
 [[action.params]]
@@ -68,8 +68,8 @@ value-sh = "glog models_genmini gemini-3.5-flash-lite"
 name = "models_thinking"
 title = "@chatai_think_text"
 label = "@option_text"
-items = [ "-1|@default_text", "1024", "2048", "4096" ]
-value = "-1"
+items = [ "auto|@default_text", "low", "medium", "high" ]
+value = "auto"
 
 [[action.params]]
 name = "chatai_lang"

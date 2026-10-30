@@ -97,7 +97,7 @@ icon = "{ICON}/apikey.png"
 shell = "hidden"
 script = """
 slog models_genmini "$models_genmini"
-transai -c
+gemini -c
 """
 
 [[action.params-rows]]
@@ -114,7 +114,7 @@ underline = true
   title = "Gemini API"
   placeholder = "*******************"
   type = "password"
-  desc-sh = "transai -c 2>&1"
+  desc-sh = "gemini -c 2>&1"
   remember = false
   
   [[action.params]]
