@@ -1080,6 +1080,7 @@ class PageConfigReader {
 
         tomlGet(table, "menu")?.let { action.menu = tomlTruthy(it, "menu") }
         tomlGet(table, "show")?.let { action.show = resolveBoolOrShell(it, "show") }
+        tomlGet(table, "keep-dialog")?.let { action.keepParamsDialog = tomlTruthy(it) }
 
         resourceNodeToml(table)
         return action
@@ -1138,6 +1139,7 @@ class PageConfigReader {
         tomlGet(table, "maxlength")?.let { p.maxLength = parseIntOr(it, p.maxLength) }
         tomlGet(table, "min")?.let { p.min = parseIntOr(it, p.min) }
         tomlGet(table, "max")?.let { p.max = parseIntOr(it, p.max) }
+        tomlGet(table, "max-lines")?.let { p.maxLines = parseIntOr(it, p.maxLines).coerceAtLeast(1) }
         tomlGet(table, "required")?.let { p.required = tomlTruthy(it, "required") }
         tomlGet(table, "remember", "remember-value")?.let { p.remember = tomlTruthy(it, "remember") }
         tomlGet(table, *TomlKeys.VALUE_SH)?.let { p.valueShell = it }

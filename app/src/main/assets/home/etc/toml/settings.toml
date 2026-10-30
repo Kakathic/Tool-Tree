@@ -44,6 +44,7 @@ fi
   
 [[group]]
 [[action]]
+keep-dialog = true
 id = "chatgemini"
 title = "Chat Gemini"
 desc = "@chat_gemini_text"
@@ -51,8 +52,7 @@ icon = "{ICON}/chatai.png"
 lock-sh = '[ -z $(glog api_genmini) ] && echo "@warn_gemini_text" || echo 0'
 script = """
 slog models_genmini "$models_genmini"
-[ "$models_thinking" -gt 0 ] && thingkk="-t $models_thinking"
-gemini --lang "$chatai_lang" --model "$models_genmini" --thinking "$models_thinking" --instruction "$chatai_nextrule"
+gemini --lang "$chatai_lang" --model "$models_genmini" --thinking "$models_thinking" --instruction "$chatai_nextrule" -p "$chatai"
 """
 
 [[action.params]]
@@ -84,6 +84,7 @@ name = "chatai_nextrule"
 title = "@chatai_rule_text"
 placeholder = "- Always return text in uppercase"
 type = "text"
+max-lines = 4
 
 [[action.params]]
 name = "chatai"
@@ -91,6 +92,7 @@ title = "@doc_text"
 placeholder = "Hello Gemini"
 type = "text"
 required = true
+max-lines = 8
 
 [[group]]
 [[terminal]]

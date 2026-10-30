@@ -33,6 +33,7 @@ class ParamsEditText(private var actionParamInfo: ActionParamInfo, private var c
                 setText(actionParamInfo.value)
             }
             filters = arrayOf(paramFilter)
+            if (!isNumber) maxLines = actionParamInfo.maxLines
             
             if (isNumber) {
                 inputType = if (actionParamInfo.type == "int") {

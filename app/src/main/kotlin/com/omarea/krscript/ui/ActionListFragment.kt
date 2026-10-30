@@ -651,7 +651,11 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                 ActionParamMemory.save(requireContext(), action, actionParamInfos, paramsValue)
                                 if (isAutoShow) ActionShowMemory.markConfirmed(requireContext(), action)
                                 actionExecute(action, ParamsApplyScript.merge(script, actionParamInfos, render), onExit, paramsValue)
-                                dialog?.dismiss()
+                                val shellMode = resolveShellBy(action, paramsValue)
+                                val keepOpen = action.keepParamsDialog &&
+                                    shellMode != RunnableNode.shellModeBgTask &&
+                                    shellMode != RunnableNode.shellModeHidden
+                                if (!keepOpen) dialog?.dismiss()
                             } catch (ex: Exception) {
                                 Toast.makeText(requireContext(), "" + ex.message, Toast.LENGTH_LONG).show()
                             }

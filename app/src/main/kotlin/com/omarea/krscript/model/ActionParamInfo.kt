@@ -36,6 +36,7 @@ class ActionParamInfo : Serializable {
     var multiple: Boolean = false
     var supported: Boolean = true
     var placeholder: String = ""
+    var maxLines: Int = 2
     var placeholderSh: String? = null
     var mime: String = ""
     var suffix: String = ""

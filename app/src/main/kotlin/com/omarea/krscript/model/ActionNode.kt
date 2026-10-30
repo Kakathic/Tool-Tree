@@ -12,6 +12,8 @@ class ActionNode(currentConfigXml: String) : RunnableNode(currentConfigXml){
 
     var show: Boolean = false
 
+    var keepParamsDialog: Boolean = false
+
     var shellBy: List<String> = emptyList()
     var shellValue: List<String> = emptyList()
     var shellMode: List<String> = emptyList()
