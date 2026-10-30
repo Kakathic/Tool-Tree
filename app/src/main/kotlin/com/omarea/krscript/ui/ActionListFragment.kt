@@ -333,6 +333,15 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         }
     }
 
+    override fun onChatClick(item: ChatNode, onCompleted: Runnable) {
+        if (!checkAndLockClick()) return
+        nodeUnlockedAsync(item) {
+            val context = context ?: return@nodeUnlockedAsync
+            com.tool.tree.ChatActivity.start(context, item)
+            onCompleted.run()
+        }
+    }
+
     override fun onPickerClick(item: PickerNode, onCompleted: Runnable) {
         if (!checkAndLockClick()) return
         nodeUnlockedAsync(item) {

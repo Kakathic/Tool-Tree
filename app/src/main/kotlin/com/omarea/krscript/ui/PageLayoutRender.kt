@@ -26,6 +26,7 @@ class PageLayoutRender(private val mContext: Context,
         fun onPickerClick(item: PickerNode, onCompleted: Runnable)
         fun onEditorClick(item: EditorNode, onCompleted: Runnable)
         fun onTerminalClick(item: TerminalNode, onCompleted: Runnable) {}
+        fun onChatClick(item: ChatNode, onCompleted: Runnable) {}
         fun onDownloadClick(item: DownloadNode, listItemView: ListItemDownload, onCompleted: Runnable)
         fun onItemLongClick(clickableNode: ClickableNode)
     }
@@ -65,6 +66,7 @@ class PageLayoutRender(private val mContext: Context,
             is SwitchNode -> clickListener.onSwitchClick(item, getCommonOnExitRunnable(item, listItemView))
             is EditorNode -> clickListener.onEditorClick(item, getCommonOnExitRunnable(item, listItemView))
             is TerminalNode -> clickListener.onTerminalClick(item, getCommonOnExitRunnable(item, listItemView))
+            is ChatNode -> clickListener.onChatClick(item, getCommonOnExitRunnable(item, listItemView))
             is DownloadNode -> clickListener.onDownloadClick(item, listItemView as ListItemDownload, getCommonOnExitRunnable(item, listItemView))
         }
     }
@@ -133,6 +135,8 @@ class PageLayoutRender(private val mContext: Context,
                 uiRender = createEditorItem(it)
             } else if (it is TerminalNode) {
                 uiRender = ListItemTerminal(mContext, it)
+            } else if (it is ChatNode) {
+                uiRender = ListItemChat(mContext, it)
             } else if (it is GroupNode) {
                 val subGroup = createItemGroup(it)
                 groupViewMap[it] = subGroup

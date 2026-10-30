@@ -490,6 +490,7 @@ footer {
 <a href="#text-rows">11. [[text.rows]]</a>
 <a href="#editor">12. [[editor]]</a>
 <a href="#terminal">12a. [[terminal]]</a>
+<a href="#chat">12b. [[chat]]</a>
 <a href="#download">13. [[download]]</a>
 <a href="#resource">14. [[resource]]</a>
 <a href="#menu-fab">15. [[menu]] / [[fab]]</a>
@@ -1540,6 +1541,46 @@ exit-on-back = true
 <li><strong>Multiple sessions</strong>: swipe from the left edge to open the session list, tap <em>New session</em> to start another one with the same <code>cwd</code>/<code>cmd</code>/<code>root</code>, tap ✕ to close one. <code>exit</code> or Ctrl+D closes that session and switches to another one (or closes the screen when none is left).</li>
 </ul>
 <div class="callout warn">Back does not kill the shell unless <code>exit-on-back = true</code>. Closing a session from the session list asks for confirmation while the shell is running. After the shell exits, press Enter to close.</div>
+</section>
+
+<section id="chat">
+<h2>12b. [[chat]] - Chat-style page</h2>
+<p><code>[[chat]]</code> opens a full-screen chat page (<code>ChatActivity</code>): type a message, press send, the <code>script</code> runs with the text in <code>$MSG</code> and its live output appears in a reply bubble. A <strong>Stop</strong> button replaces Send while the script is running. History lives only while the page is open.</p>
+<h3>12b.1. Chat fields</h3>
+<table>
+<tr><th>Field</th><th>Alias</th><th>Type</th><th>Default</th><th>Description</th></tr>
+<tr><td class="field-name">script</td><td>set, setstate</td><td class="field-type">Shell</td><td>-</td><td>Runs on every send. The sent text is exported as env <code>$MSG</code> (no quoting problems). Output (stdout + stderr) streams into the reply bubble</td></tr>
+<tr><td class="field-name">desc</td><td>-</td><td class="field-type">String</td><td>-</td><td>Also shown as the first (greeting) bubble when the page opens</td></tr>
+<tr><td class="field-name">placeholder</td><td>hint</td><td class="field-type">String</td><td>-</td><td>Hint of the input box</td></tr>
+<tr><td class="field-name">max-lines</td><td>-</td><td class="field-type">Int</td><td>6</td><td>The input box grows with the text up to this many lines</td></tr>
+</table>
+<p>All common fields of RunnableNode (<code>title</code>, <code>icon</code>, <code>lock</code>, <code>interruptable</code>, ...) work as well.</p>
+<h3>12b.2. Toolbar menus</h3>
+<p>Entries placed <strong>right after</strong> <code>[[chat]]</code> (until the next <code>[[group]]</code>, <code>[[end]]</code> or any other node) belong to that chat page:</p>
+<ul>
+<li><code>[[action]]</code> with <code>menu = true</code>: shown as an icon on the toolbar; tapping it runs the action exactly like a normal <code>[[action]]</code> (params dialog, <code>keep-dialog</code>, log dialog).</li>
+<li><code>[[menu]]</code> (<code>[[menu.items]]</code>): shown in the 3-dot popup. Supported: script items (log dialog, or <code>silent</code>), <code>type = "exit" | "finish" | "close"</code> (close page) and <code>type = "clear"</code> (clear the history). Not supported in chat and hidden: <code>file</code>, <code>folder</code>, <code>spinner</code>, <code>checkbox</code>, <code>refresh</code>, <code>reload</code>, <code>restart</code>, <code>killapp</code>, links and pages. <code>[[fab]]</code> is not used by chat.</li>
+</ul>
+<p>Entries not directly after <code>[[chat]]</code> keep their normal page-level behavior. File-chooser params inside a chat toolbar action are not supported.</p>
+<h3>12b.3. Example</h3>
+<pre><code>[[chat]]
+title = "Assistant"
+desc = "Type a command name"
+script = 'echo "You said: $MSG"; "$MSG" 2&gt;&amp;1'
+max-lines = 6
+
+[[action]]
+title = "Settings"
+menu = true
+[[action.params]]
+name = "mode"
+type = "text"
+
+[[menu]]
+[[menu.items]]
+title = "Clear history"
+type = "clear"
+</code></pre>
 </section>
 <section id="download">
 <h2>13. [[download]] - Download a file via HTTP</h2>

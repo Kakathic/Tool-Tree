@@ -216,4 +216,9 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="terminal_input_hint">Nhập lệnh...</string>
     <string name="log_share_fail">Chia sẻ nhật ký thất bại</string>
     <string name="log_share_empty">Chưa có nhật ký để chia sẻ</string>
+    <string name="chat_default_title">Trò chuyện</string>
+    <string name="chat_input_hint">Nhập tin nhắn…</string>
+    <string name="chat_copied">Đã sao chép</string>
+    <string name="chat_script_empty">Trang chat chưa cấu hình script</string>
+    <string name="chat_cleared_stop">Đang dừng script rồi xoá lịch sử</string>
 </resources>

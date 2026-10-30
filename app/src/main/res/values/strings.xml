@@ -230,4 +230,9 @@ If you agree, press the confirm button to continue."</string>
     <string name="terminal_input_hint">Type a command...</string>
     <string name="log_share_fail">Failed to share the log</string>
     <string name="log_share_empty">No log to share yet</string>
+    <string name="chat_default_title">Chat</string>
+    <string name="chat_input_hint">Type a message…</string>
+    <string name="chat_copied">Copied</string>
+    <string name="chat_script_empty">This chat has no script configured</string>
+    <string name="chat_cleared_stop">Stopping the running script, then clearing</string>
 </resources>

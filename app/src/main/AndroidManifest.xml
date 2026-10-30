@@ -111,6 +111,12 @@
             android:windowSoftInputMode="adjustResize"
             android:configChanges="keyboardHidden|orientation|layoutDirection|screenLayout|colorMode|fontScale|smallestScreenSize|density|keyboard|screenSize|touchscreen" />
         <activity
+            android:name=".ChatActivity"
+            android:exported="false"
+            android:label="@string/chat_default_title"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="keyboardHidden|orientation|layoutDirection|screenLayout|colorMode|fontScale|smallestScreenSize|density|keyboard|screenSize|touchscreen" />
+        <activity
             android:name=".TerminalActivity"
             android:exported="false"
             android:launchMode="singleTask"

@@ -415,7 +415,7 @@ class PageConfigReader {
         }
     }
 
-    private val tomlNodeTypeOrder = listOf("group", "end", "text", "switch", "picker", "action", "page", "download", "editor", "terminal", "resource", "menu", "fab")
+    private val tomlNodeTypeOrder = listOf("group", "end", "text", "switch", "picker", "action", "page", "download", "editor", "terminal", "chat", "resource", "menu", "fab")
 
     private val collectedMenuOptions = ArrayList<PageMenuOption>()
 
@@ -615,6 +615,7 @@ class PageConfigReader {
         val result = ArrayList<NodeInfoBase>()
         var currentGroup: GroupNode? = null
         var groupHidden = false
+        var activeChat: ChatNode? = null
 
         fun closeCurrentGroup(doneNow: Int) {
             currentGroup?.let { onNodeReady?.invoke(it, doneNow, total) }
@@ -622,6 +623,7 @@ class PageConfigReader {
 
         for (entry in sortedEntries) {
             if (entry.type == "end") {
+                activeChat = null
                 closeCurrentGroup(done)
                 done++
                 currentGroup = null
@@ -630,6 +632,7 @@ class PageConfigReader {
                 continue
             }
             if (entry.type == "group") {
+                activeChat = null
                 closeCurrentGroup(done)
                 val group = groupNodeToml(entry.table)
                 done++
@@ -650,13 +653,16 @@ class PageConfigReader {
                 onNodeReady?.invoke(null, done, total)
                 continue
             }
-            if (isLoadAfter(entry.table)) {
+            val isChatChild = activeChat != null && isChatChildEntry(entry.type, entry.table)
+            if (!isChatChild) activeChat = null
+            if (!isChatChild && isLoadAfter(entry.table)) {
                 val targetList = currentGroup?.children ?: result
                 deferredEntries.add(DeferredEntry(entry.type, entry.table, currentGroup, targetList.size))
                 onNodeReady?.invoke(null, done, total)
                 continue
             }
-            val node = tomlBuildNode(entry.type, entry.table)
+            val node = tomlBuildNode(entry.type, entry.table, if (isChatChild) activeChat else null)
+            if (entry.type == "chat") activeChat = node as? ChatNode
             if (currentGroup != null) {
                 node?.let { currentGroup!!.children.add(it) }
                 onNodeReady?.invoke(null, done, total)
@@ -684,7 +690,12 @@ class PageConfigReader {
         return builtResults
     }
 
-    private fun tomlBuildNode(type: String, table: TomlTable): NodeInfoBase? {
+    private fun isChatChildEntry(type: String, table: TomlTable): Boolean {
+        if (type == "menu") return true
+        return type == "action" && tomlGet(table, "menu")?.let { tomlTruthy(it, "menu") } == true
+    }
+
+    private fun tomlBuildNode(type: String, table: TomlTable, chat: ChatNode? = null): NodeInfoBase? {
         return when (type) {
             "page" -> pageNodeToml(table)
             "action" -> {
@@ -693,7 +704,7 @@ class PageConfigReader {
                     if (action.show) collectedAutoShowActions.add(action)
                     if (action.menu) {
                         if (action.key.isEmpty()) action.key = action.title
-                        collectedHeaderActions.add(action)
+                        (chat?.headerActions ?: collectedHeaderActions).add(action)
                         null
                     } else {
                         action
@@ -708,12 +719,13 @@ class PageConfigReader {
             "text" -> textNodeToml(table)
             "editor" -> editorNodeToml(table)
             "terminal" -> terminalNodeToml(table)
+            "chat" -> chatNodeToml(table)
             "resource" -> {
                 resourceNodeToml(table)
                 null
             }
             "menu" -> {
-                collectedMenuOptions.addAll(menuGroupOptionsToml(table, isFab = false))
+                (chat?.menuOptions ?: collectedMenuOptions).addAll(menuGroupOptionsToml(table, isFab = false))
                 null
             }
             "fab" -> {
@@ -1044,6 +1056,14 @@ class PageConfigReader {
         rowsShToml(table, node.rows)
 
         return node
+    }
+
+    private fun chatNodeToml(table: TomlTable): ChatNode? {
+        val chat = runnableNodeToml(ChatNode(pageConfigAbsPath), table) as ChatNode? ?: return null
+        tomlGet(table, *TomlKeys.SCRIPT)?.let { chat.script = it }
+        tomlGet(table, "placeholder", "hint")?.let { chat.placeholder = StringResRef.resolve(context, it) }
+        tomlGet(table, "max-lines")?.let { chat.maxLines = parseIntOr(it, chat.maxLines).coerceAtLeast(1) }
+        return chat
     }
 
     private fun actionNodeToml(table: TomlTable): ActionNode? {
