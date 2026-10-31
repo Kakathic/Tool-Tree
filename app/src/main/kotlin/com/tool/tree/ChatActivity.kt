@@ -22,6 +22,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ListPopupWindow
@@ -568,10 +569,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 setColor(if (fromUser) (activity.accentColor() and 0x00FFFFFF) or 0x40000000 else 0x26808080)
             }
             bubble.background = bg
-            column.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
-            bubble.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
-            tv.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
-            tv.maxWidth = Int.MAX_VALUE
+            tv.maxWidth = parent.resources.displayMetrics.widthPixels - (24 * density).toInt()
+            (column.layoutParams as FrameLayout.LayoutParams).gravity = if (fromUser) Gravity.END else Gravity.START
             if (fromUser) {
                 (title.layoutParams as LinearLayout.LayoutParams).apply {
                     gravity = Gravity.END
