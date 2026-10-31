@@ -22,8 +22,8 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.ListPopupWindow
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -218,7 +218,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             return
         }
         inputView.setText("")
-        adapter.add(ChatMessage(true, text))
+        adapter.add(ChatMessage(true, text).apply { title = node.userTitle.ifEmpty { null } })
         val reply = ChatMessage(false, "").apply {
             running = true
             title = node.chatTitle.ifEmpty { null }
@@ -568,8 +568,17 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 setColor(if (fromUser) (activity.accentColor() and 0x00FFFFFF) or 0x40000000 else 0x26808080)
             }
             bubble.background = bg
-            tv.maxWidth = (parent.resources.displayMetrics.widthPixels * 0.82f).toInt()
-            (column.layoutParams as FrameLayout.LayoutParams).gravity = if (fromUser) Gravity.END else Gravity.START
+            column.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+            bubble.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+            tv.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+            tv.maxWidth = Int.MAX_VALUE
+            if (fromUser) {
+                (title.layoutParams as LinearLayout.LayoutParams).apply {
+                    gravity = Gravity.END
+                    marginStart = 0
+                    marginEnd = (8 * density).toInt()
+                }
+            }
             return VH(view, bubble, title, tv, progress)
         }
 
