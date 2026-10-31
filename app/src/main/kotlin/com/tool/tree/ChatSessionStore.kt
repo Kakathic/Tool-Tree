@@ -5,7 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
-class ChatSessionStore(context: Context, pageKey: String) {
+class ChatSessionStore(context: Context, pageKey: String, val emptyName: String) {
     class Stored(val fromUser: Boolean, val text: String)
 
     class Info(val id: String, val name: String, val updated: Long)
@@ -13,7 +13,6 @@ class ChatSessionStore(context: Context, pageKey: String) {
     companion object {
         private const val MAX_SESSIONS = 50
         private const val NAME_LIMIT = 40
-        const val EMPTY_NAME = "Phiên mới"
     }
 
     private val dir = File(context.filesDir, "chat/" + Integer.toHexString(pageKey.hashCode())).apply { mkdirs() }
@@ -27,11 +26,11 @@ class ChatSessionStore(context: Context, pageKey: String) {
         return files.mapNotNull { f ->
             try {
                 val messages = JSONObject(f.readText(Charsets.UTF_8)).getJSONArray("messages")
-                var name = EMPTY_NAME
+                var name = emptyName
                 for (i in 0 until messages.length()) {
                     val m = messages.getJSONObject(i)
                     if (m.getBoolean("u")) {
-                        name = m.getString("t").replace('\n', ' ').trim().take(NAME_LIMIT).ifEmpty { EMPTY_NAME }
+                        name = m.getString("t").replace('\n', ' ').trim().take(NAME_LIMIT).ifEmpty { emptyName }
                         break
                     }
                 }

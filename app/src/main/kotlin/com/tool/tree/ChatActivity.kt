@@ -139,7 +139,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         listView.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
             if (bottom - top < oldBottom - oldTop) scrollToEnd()
         }
-        store = ChatSessionStore(this, node.currentPageConfigPath + "\u0000" + node.title)
+        store = ChatSessionStore(this, node.currentPageConfigPath + "\u0000" + node.title, node.title.ifEmpty { getString(R.string.chat_default_title) })
         val latest = store.list().firstOrNull()
         session = if (latest != null) openStored(latest.id) else newEmptySession()
         adapter.bind(session.messages)
@@ -248,7 +248,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
     private fun refreshSessionList() {
         val infos = store.list().toMutableList()
-        if (infos.none { it.id == session.id }) infos.add(0, ChatSessionStore.Info(session.id, ChatSessionStore.EMPTY_NAME, 0))
+        if (infos.none { it.id == session.id }) infos.add(0, ChatSessionStore.Info(session.id, store.emptyName, 0))
         sessionDrawer.refresh(infos, session.id)
     }
 
