@@ -64,7 +64,9 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private const val SESSION_MAX_CHARS = 60000
         private const val SESSION_COLS = 160
         private const val SESSION_ROWS = 24
-        private const val PROMPT_IDLE_MS = 500L
+        private const val LEARN_IDLE_MS = 700L
+        private const val PROMPT_IDLE_MS = 300L
+        private const val FALLBACK_IDLE_MS = 1500L
         private const val SESSION_DEFAULT_HINT = "shell~$ "
         private const val REFRESH_DELAY_MS = 60L
         private val CLOSE_TYPES = setOf("exit", "finish", "close")
@@ -102,7 +104,10 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private var sessionAlive = false
     private var sessionBusy = false
     private val sessionExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private var learnedPrompt = ""
+    private var skipEcho = false
     private val promptCheck = Runnable { onPromptIdle() }
+    private val fallbackCheck = Runnable { onFallbackIdle() }
 
     @Suppress("DEPRECATION")
     private fun readNode(): ChatNode? = intent?.extras?.getSerializable(EXTRA_CHAT) as? ChatNode
@@ -245,14 +250,12 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         val gen = ++sessionGen
         sessionAlive = true
         sessionBusy = true
+        learnedPrompt = ""
+        skipEcho = false
         AnsiColorParser.reset()
         inputView.hint = sessionHint()
-        val message = sessionMessage ?: ChatMessage(false, "").also {
-            sessionMessage = it
-            adapter.add(it)
-        }
-        if (message.text.isNotEmpty() && message.text.last() != '\n') message.text.append('\n')
-        sessionWriter = OutputWriter(message, SESSION_MAX_CHARS)
+        closeReply()
+        openReply()
         updateSendButton()
         val appContext = applicationContext
         val cmd = buildSessionCmd()
@@ -309,6 +312,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private fun stopSession() {
         sessionGen++
         uiHandler.removeCallbacks(promptCheck)
+        uiHandler.removeCallbacks(fallbackCheck)
         val launcher = sessionLauncher
         val process = sessionProcess
         sessionLauncher = null
@@ -344,18 +348,65 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         }
     }
 
+    private fun openReply(): ChatMessage {
+        val message = ChatMessage(false, "").apply { running = true }
+        sessionMessage = message
+        sessionWriter = OutputWriter(message, SESSION_MAX_CHARS)
+        adapter.add(message)
+        scrollToEnd()
+        return message
+    }
+
+    private fun trimBubble(message: ChatMessage) {
+        val buf = message.text
+        while (buf.isNotEmpty() && (buf.last() == '\n' || buf.last() == '\r')) buf.delete(buf.length - 1, buf.length)
+        while (buf.isNotEmpty() && (buf.first() == '\n' || buf.first() == '\r')) buf.delete(0, 1)
+        message.running = false
+        if (buf.isBlank()) adapter.remove(message) else refreshNow(message)
+    }
+
+    private fun closeReply() {
+        val message = sessionMessage ?: return
+        sessionMessage = null
+        sessionWriter = null
+        trimBubble(message)
+    }
+
+    private fun trailingLine(message: ChatMessage): String {
+        val buf = message.text
+        return buf.substring(buf.lastIndexOf('\n') + 1).filter { it >= ' ' }
+    }
+
+    private fun matchesPrompt(line: String): Boolean {
+        if (line == learnedPrompt) return true
+        val shellLike = learnedPrompt.endsWith("$ ") || learnedPrompt.endsWith("# ")
+        return shellLike && (line.endsWith("$ ") || line.endsWith("# "))
+    }
+
     private fun sendSession() {
-        val line = inputView.text?.toString().orEmpty().replace("\r", "").replace('\n', ' ')
+        val line = inputView.text?.toString().orEmpty().replace("\r", "").replace('\n', ' ').trim()
         inputView.setText("")
+        uiHandler.removeCallbacks(promptCheck)
+        uiHandler.removeCallbacks(fallbackCheck)
+        closeReply()
+        if (line.isNotEmpty()) adapter.add(ChatMessage(true, line))
+        openReply()
+        skipEcho = true
         sessionBusy = true
         updateSendButton()
         writeSession((line + "\n").toByteArray(Charsets.UTF_8))
     }
 
     private fun onSessionOutput(chunk: String) {
-        val message = sessionMessage ?: return
-        val writer = sessionWriter ?: return
         var text = chunk
+        if (skipEcho) {
+            val nl = text.indexOf('\n')
+            if (nl < 0) return
+            skipEcho = false
+            text = text.substring(nl + 1)
+        }
+        val message = sessionMessage ?: openReply()
+        val writer = sessionWriter ?: return
         val cut = maxOf(text.lastIndexOf("\u001B[2J"), text.lastIndexOf("\u001B[3J"))
         if (cut >= 0) {
             message.text.clear()
@@ -363,37 +414,58 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             text = text.substring(cut + 4)
         }
         if (text.isNotEmpty()) writer.append(AnsiColorParser.parse(text))
+        if (!sessionBusy) {
+            sessionBusy = true
+            updateSendButton()
+        }
         scheduleRefresh(message)
         uiHandler.removeCallbacks(promptCheck)
-        uiHandler.postDelayed(promptCheck, PROMPT_IDLE_MS)
+        uiHandler.removeCallbacks(fallbackCheck)
+        uiHandler.postDelayed(promptCheck, if (learnedPrompt.isEmpty()) LEARN_IDLE_MS else PROMPT_IDLE_MS)
+        uiHandler.postDelayed(fallbackCheck, FALLBACK_IDLE_MS)
     }
 
     private fun onPromptIdle() {
         val message = sessionMessage ?: return
         if (!sessionAlive) return
+        val line = trailingLine(message)
+        if (line.isEmpty()) return
+        if (learnedPrompt.isEmpty()) learnedPrompt = line else if (!matchesPrompt(line)) return
         val buf = message.text
-        if (buf.isEmpty() || buf.last() == '\n') return
+        buf.delete(buf.lastIndexOf('\n') + 1, buf.length)
+        uiHandler.removeCallbacks(fallbackCheck)
+        sessionMessage = null
+        sessionWriter = null
+        trimBubble(message)
         sessionBusy = false
         updateSendButton()
-        if (node.placeholder.isEmpty()) {
-            val line = buf.substring(buf.lastIndexOf('\n') + 1).filter { it >= ' ' }
-            if (line.isNotBlank()) inputView.hint = line.takeLast(60)
-        }
+        if (node.placeholder.isEmpty()) inputView.hint = line.takeLast(60)
+    }
+
+    private fun onFallbackIdle() {
+        val message = sessionMessage ?: return
+        if (!sessionAlive || !sessionBusy) return
+        val line = trailingLine(message)
+        if (line.isBlank()) return
+        sessionBusy = false
+        updateSendButton()
+        if (node.placeholder.isEmpty()) inputView.hint = line.takeLast(60)
     }
 
     private fun onSessionEnded(note: String) {
-        val message = sessionMessage ?: return
         sessionAlive = false
         sessionBusy = false
         uiHandler.removeCallbacks(promptCheck)
-        val buf = message.text
-        val start = buf.length
-        buf.append(if (buf.isEmpty() || buf.last() == '\n') "" else "\n").append("[").append(note).append("]")
-        buf.setSpan(ForegroundColorSpan(Color.RED), start, buf.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        uiHandler.removeCallbacks(fallbackCheck)
+        closeReply()
+        val message = ChatMessage(false, "")
+        message.text.append("[").append(note).append("]")
+        message.text.setSpan(ForegroundColorSpan(Color.RED), 0, message.text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        adapter.add(message)
         sessionLauncher = null
         sessionProcess = null
         updateSendButton()
-        refreshNow(message)
+        scrollToEnd()
     }
 
     private fun scrollToEnd() {
@@ -470,12 +542,16 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
     private fun clearChat() {
         if (node.session) {
-            sessionMessage?.let {
-                it.text.clear()
-                sessionWriter?.reset()
-                adapter.changed(it)
+            adapter.clear()
+            sessionMessage = null
+            sessionWriter = null
+            if (sessionAlive) {
+                openReply()
+                skipEcho = true
+                sessionBusy = true
+                updateSendButton()
+                writeSession("\n".toByteArray())
             }
-            if (sessionAlive) writeSession("\n".toByteArray())
             return
         }
         if (running) {
@@ -758,6 +834,14 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             if (index >= 0) notifyItemChanged(index)
         }
 
+        fun remove(message: ChatMessage) {
+            val index = items.indexOf(message)
+            if (index >= 0) {
+                items.removeAt(index)
+                notifyItemRemoved(index)
+            }
+        }
+
         @android.annotation.SuppressLint("NotifyDataSetChanged")
         fun clear() {
             items.clear()
@@ -779,8 +863,15 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 setColor(if (fromUser) (activity.accentColor() and 0x00FFFFFF) or 0x40000000 else 0x26808080)
             }
             bubble.background = bg
-            tv.maxWidth = (parent.resources.displayMetrics.widthPixels * 0.82f).toInt()
-            (bubble.layoutParams as FrameLayout.LayoutParams).gravity = if (fromUser) Gravity.END else Gravity.START
+            val bubbleParams = bubble.layoutParams as FrameLayout.LayoutParams
+            if (activity.node.session && !fromUser) {
+                bubbleParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+                tv.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+                tv.maxWidth = Int.MAX_VALUE
+            } else {
+                tv.maxWidth = (parent.resources.displayMetrics.widthPixels * 0.82f).toInt()
+            }
+            bubbleParams.gravity = if (fromUser) Gravity.END else Gravity.START
             return VH(view, bubble, tv, progress)
         }
 
