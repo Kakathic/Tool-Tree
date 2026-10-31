@@ -715,6 +715,12 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             if (index >= 0) notifyItemChanged(index)
         }
 
+        private fun visibleText(text: SpannableStringBuilder): CharSequence {
+            var end = text.length
+            while (end > 0 && (text[end - 1] == '\n' || text[end - 1] == '\r')) end--
+            return if (end == text.length) text else text.subSequence(0, end)
+        }
+
         override fun getItemCount() = items.size
         override fun getItemViewType(position: Int) = if (items[position].fromUser) 1 else 0
 
@@ -749,7 +755,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             val label = m.title
             holder.title.visibility = if (label != null) View.VISIBLE else View.GONE
             holder.title.text = label
-            holder.text.text = if (m.text.isEmpty() && m.running) "…" else m.text
+            val visible = visibleText(m.text)
+            holder.text.text = if (visible.isEmpty() && m.running) "…" else visible
             if (m.running && m.progressTotal != 0) {
                 holder.progress.visibility = View.VISIBLE
                 holder.progress.isIndeterminate = m.progressTotal < 0
