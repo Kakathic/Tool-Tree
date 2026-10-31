@@ -7,10 +7,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -161,7 +164,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
             bar.setPadding(bar.paddingLeft, bar.paddingTop, bar.paddingRight, basePadBottom + maxOf(sys.bottom, ime.bottom))
-            panel.setPadding(0, sys.top, 0, sys.bottom)
+            panel.setPadding(0, sys.top, 0, maxOf(sys.bottom, ime.bottom))
             insets
         }
 
@@ -234,16 +237,22 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             onDelete = { info -> confirmDelete(info) },
             onNew = { startNewSession() }
         )
-        drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END)
         drawer.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
-            override fun onDrawerOpened(drawerView: View) {
-                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.END)
-            }
-
-            override fun onDrawerClosed(drawerView: View) {
-                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END)
+            override fun onDrawerStateChanged(newState: Int) {
+                // Vuốt từ mép phải: nạp danh sách ngay khi bắt đầu kéo
+                if (newState == DrawerLayout.STATE_DRAGGING && !drawer.isDrawerOpen(GravityCompat.END)) prepareSessionList()
             }
         })
+
+        // Android 10+ dùng vuốt mép để Back: nhường dải mép phải cho ngăn kéo
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val density = resources.displayMetrics.density
+            drawer.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
+                val height = minOf(v.height, (200 * density).toInt())
+                val top = (v.height - height) / 2
+                v.setSystemGestureExclusionRects(listOf(Rect(v.width - (24 * density).toInt(), top, v.width, top + height)))
+            }
+        }
     }
 
     private fun refreshSessionList() {
@@ -252,12 +261,16 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         sessionDrawer.refresh(infos, session.id)
     }
 
+    private fun prepareSessionList() {
+        saveSession(session)
+        ioExecutor.execute { uiHandler.post { refreshSessionList() } }
+    }
+
     private fun toggleDrawer() {
         if (drawer.isDrawerOpen(GravityCompat.END)) {
             drawer.closeDrawer(GravityCompat.END)
         } else {
-            saveSession(session)
-            ioExecutor.execute { uiHandler.post { refreshSessionList() } }
+            prepareSessionList()
             drawer.openDrawer(GravityCompat.END)
         }
     }
@@ -703,7 +716,9 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             notifyDataSetChanged()
         }
 
-        class VH(view: View, val bubble: View, val title: TextView, val text: TextView, val progress: ProgressBar) : RecyclerView.ViewHolder(view)
+        class VH(view: View, val bubble: View, val title: TextView, val text: TextView, val progress: ProgressBar) : RecyclerView.ViewHolder(view) {
+            var dots: Runnable? = null
+        }
 
         fun add(message: ChatMessage) {
             items.add(message)
@@ -719,6 +734,41 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             var end = text.length
             while (end > 0 && (text[end - 1] == '\n' || text[end - 1] == '\r')) end--
             return if (end == text.length) text else text.subSequence(0, end)
+        }
+
+        private fun stopDots(holder: VH) {
+            holder.dots?.let { holder.text.removeCallbacks(it) }
+            holder.dots = null
+        }
+
+        // Ba chấm chờ phản hồi: chấm sáng chạy lần lượt, độ rộng cố định nên bong bóng không giật
+        private fun startDots(holder: VH) {
+            val tv = holder.text
+            val base = tv.currentTextColor and 0x00FFFFFF
+            var phase = 0
+            val step = object : Runnable {
+                override fun run() {
+                    val dots = SpannableString("•••")
+                    for (i in 0..2) {
+                        val alpha = when ((i - phase + 3) % 3) {
+                            0 -> 255
+                            1 -> 140
+                            else -> 60
+                        }
+                        dots.setSpan(ForegroundColorSpan(base or (alpha shl 24)), i, i + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                    tv.text = dots
+                    phase = (phase + 1) % 3
+                    tv.postDelayed(this, 350)
+                }
+            }
+            holder.dots = step
+            step.run()
+        }
+
+        override fun onViewRecycled(holder: VH) {
+            stopDots(holder)
+            super.onViewRecycled(holder)
         }
 
         override fun getItemCount() = items.size
@@ -756,7 +806,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             holder.title.visibility = if (label != null) View.VISIBLE else View.GONE
             holder.title.text = label
             val visible = visibleText(m.text)
-            holder.text.text = if (visible.isEmpty() && m.running) "…" else visible
+            stopDots(holder)
+            if (visible.isEmpty() && m.running) startDots(holder) else holder.text.text = visible
             if (m.running && m.progressTotal != 0) {
                 holder.progress.visibility = View.VISIBLE
                 holder.progress.isIndeterminate = m.progressTotal < 0
