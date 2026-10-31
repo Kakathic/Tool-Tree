@@ -28,7 +28,6 @@
             android:layout_weight="1"
             android:requiresFadingEdge="vertical"
             android:clipToPadding="false"
-            android:fadingEdgeLength="32dp"
             android:paddingTop="8dp"
             android:paddingBottom="8dp" />
 

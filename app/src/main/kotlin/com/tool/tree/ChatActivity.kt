@@ -455,6 +455,12 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         menu ?: return false
         menu.clear()
 
+        val sessionsButton = toolbarButton(R.drawable.ic_chat_sessions, "Phiên chat")
+        sessionsButton.setOnClickListener { toggleDrawer() }
+        val sessionsItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, "Phiên chat")
+        sessionsItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        sessionsItem.actionView = sessionsButton
+
         val options = node.menuOptions.filter { isSupported(it) }
         if (options.isNotEmpty()) {
             val button = toolbarButton(R.drawable.ic_more_vert, getString(R.string.kr_more_options))
@@ -463,12 +469,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             item.actionView = button
         }
-
-        val sessionsButton = toolbarButton(R.drawable.ic_chat_sessions, "Phiên chat")
-        sessionsButton.setOnClickListener { toggleDrawer() }
-        val sessionsItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, "Phiên chat")
-        sessionsItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-        sessionsItem.actionView = sessionsButton
         return true
     }
 
@@ -502,7 +502,9 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         popup.anchorView = anchor
         popup.setAdapter(adapter)
         popup.setBackgroundDrawable(background)
-        popup.isModal = true
+        // Không lấy focus để bàn phím đang mở không bị tắt
+        popup.isModal = false
+        popup.inputMethodMode = ListPopupWindow.INPUT_METHOD_NOT_NEEDED
         popup.setOnItemClickListener { _, _, position, _ ->
             popup.dismiss()
             rows.getOrNull(position)?.onClick?.invoke()
