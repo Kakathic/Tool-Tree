@@ -29,13 +29,19 @@ import android.widget.ListPopupWindow
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.omarea.common.ui.DialogHelper
 import com.omarea.krscript.config.IconPathAnalysis
 import com.omarea.krscript.config.ActionParamMemory
 import com.omarea.krscript.executor.ScriptEnvironmen
@@ -87,6 +93,13 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private var refreshPending = false
     private var refreshTarget: ChatMessage? = null
 
+    private lateinit var store: ChatSessionStore
+    private lateinit var session: ChatSession
+    private lateinit var drawer: DrawerLayout
+    private lateinit var sessionDrawer: ChatSessionDrawer
+    private val ioExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val deletedIds = HashSet<String>()
+
     @Suppress("DEPRECATION")
     private fun readNode(): ChatNode? = intent?.extras?.getSerializable(EXTRA_CHAT) as? ChatNode
 
@@ -126,7 +139,11 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         listView.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
             if (bottom - top < oldBottom - oldTop) scrollToEnd()
         }
-        addGreeting()
+        store = ChatSessionStore(this, node.currentPageConfigPath + "\u0000" + node.title)
+        val latest = store.list().firstOrNull()
+        session = if (latest != null) openStored(latest.id) else newEmptySession()
+        adapter.bind(session.messages)
+        scrollToEnd()
 
         inputView = findViewById(R.id.chat_input)
         inputView.hint = node.placeholder.ifEmpty { getString(R.string.chat_input_hint) }
@@ -135,21 +152,148 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         sendButton.setOnClickListener { if (running) stopRunning() else send() }
         updateSendButton()
         setupOptionsButton()
+        setupDrawer()
 
         val bar = findViewById<View>(R.id.chat_input_bar)
+        val panel = findViewById<View>(R.id.chat_drawer_panel)
         val basePadBottom = bar.paddingBottom
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.chat_root)) { _, insets ->
             val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
             bar.setPadding(bar.paddingLeft, bar.paddingTop, bar.paddingRight, basePadBottom + maxOf(sys.bottom, ime.bottom))
+            panel.setPadding(0, sys.top, 0, sys.bottom)
             insets
         }
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (drawer.isDrawerOpen(GravityCompat.END)) {
+                    drawer.closeDrawer(GravityCompat.END)
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (::session.isInitialized) saveSession(session)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         uiHandler.removeCallbacksAndMessages(null)
         if (running) stopRunnable?.run()
+        if (::session.isInitialized) saveSession(session)
+        ioExecutor.shutdown()
+    }
+
+    private fun newSession(id: String): ChatSession {
+        val s = ChatSession(id)
+        if (node.greeting.isNotEmpty()) s.messages.add(ChatMessage(false, node.greeting).apply { transient = true })
+        return s
+    }
+
+    private fun newEmptySession(): ChatSession = newSession(store.newId())
+
+    private fun openStored(id: String): ChatSession {
+        val s = newSession(id)
+        for (m in store.load(id)) {
+            s.messages.add(
+                ChatMessage(m.fromUser, m.text).apply {
+                    title = (if (m.fromUser) node.userTitle else node.chatTitle).ifEmpty { null }
+                }
+            )
+        }
+        return s
+    }
+
+    private fun saveSession(target: ChatSession) {
+        val id = target.id
+        if (id in deletedIds) return
+        val snapshot = target.messages
+            .filter { !it.transient && (it.fromUser || it.text.isNotEmpty()) }
+            .map { ChatSessionStore.Stored(it.fromUser, it.text.toString()) }
+        try {
+            ioExecutor.execute { store.save(id, snapshot) }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun setupDrawer() {
+        drawer = findViewById(R.id.chat_drawer)
+        findViewById<TextView>(R.id.chat_drawer_title).text = "Phiên chat"
+        val newButton = findViewById<TextView>(R.id.chat_new_session)
+        newButton.text = "Phiên mới"
+        sessionDrawer = ChatSessionDrawer(
+            findViewById(R.id.chat_session_list),
+            newButton,
+            onSelect = { info -> if (info.id != session.id) switchTo(openStored(info.id)) else drawer.closeDrawer(GravityCompat.END) },
+            onDelete = { info -> confirmDelete(info) },
+            onNew = { startNewSession() }
+        )
+        drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END)
+        drawer.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
+            override fun onDrawerOpened(drawerView: View) {
+                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.END)
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END)
+            }
+        })
+    }
+
+    private fun refreshSessionList() {
+        val infos = store.list().toMutableList()
+        if (infos.none { it.id == session.id }) infos.add(0, ChatSessionStore.Info(session.id, ChatSessionStore.EMPTY_NAME, 0))
+        sessionDrawer.refresh(infos, session.id)
+    }
+
+    private fun toggleDrawer() {
+        if (drawer.isDrawerOpen(GravityCompat.END)) {
+            drawer.closeDrawer(GravityCompat.END)
+        } else {
+            saveSession(session)
+            ioExecutor.execute { uiHandler.post { refreshSessionList() } }
+            drawer.openDrawer(GravityCompat.END)
+        }
+    }
+
+    private fun switchTo(target: ChatSession) {
+        if (running) stopRunning()
+        session = target
+        adapter.bind(target.messages)
+        scrollToEnd()
+        drawer.closeDrawer(GravityCompat.END)
+    }
+
+    private fun startNewSession() {
+        if (session.messages.none { !it.transient }) {
+            drawer.closeDrawer(GravityCompat.END)
+            return
+        }
+        saveSession(session)
+        switchTo(newEmptySession())
+    }
+
+    private fun confirmDelete(info: ChatSessionStore.Info) {
+        DialogHelper.confirm(this, info.name, "Xoá phiên này?", Runnable {
+            deletedIds.add(info.id)
+            ioExecutor.execute {
+                store.delete(info.id)
+                uiHandler.post {
+                    if (info.id == session.id) {
+                        val next = store.list().firstOrNull()
+                        switchTo(if (next != null) openStored(next.id) else newEmptySession())
+                        drawer.openDrawer(GravityCompat.END)
+                    }
+                    refreshSessionList()
+                }
+            }
+        }, null)
     }
 
     private fun setupParams(paramsNode: com.omarea.krscript.model.ActionNode) {
@@ -185,10 +329,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         }
     }
 
-    private fun addGreeting() {
-        if (node.greeting.isNotEmpty()) adapter.add(ChatMessage(false, node.greeting))
-    }
-
     private fun accentColor(): Int {
         val tv = TypedValue()
         return if (theme.resolveAttribute(androidx.appcompat.R.attr.colorAccent, tv, true)) tv.data else Color.GRAY
@@ -219,6 +359,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             return
         }
         inputView.setText("")
+        val owner = session
         adapter.add(ChatMessage(true, text).apply { title = node.userTitle.ifEmpty { null } })
         val reply = ChatMessage(false, "").apply {
             running = true
@@ -226,10 +367,11 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         }
         adapter.add(reply)
         scrollToEnd()
-        runScript(text, reply)
+        saveSession(owner)
+        runScript(text, reply, owner)
     }
 
-    private fun runScript(text: String, reply: ChatMessage) {
+    private fun runScript(text: String, reply: ChatMessage, owner: ChatSession) {
         running = true
         updateSendButton()
         AnsiColorParser.reset()
@@ -245,10 +387,15 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 reply.running = false
                 refreshNow(reply)
                 updateSendButton()
+                saveSession(owner)
             }
         )
         currentHandler = handler
-        val process = ShellExecutor().execute(this, node, node.script, null, HashMap(chatParams).apply { put("MSG", text) }, handler)
+        val params = HashMap(chatParams).apply {
+            put("MSG", text)
+            put("CHAT_ID", owner.id)
+        }
+        val process = ShellExecutor().execute(this, node, node.script, null, params, handler)
         if (process == null) handler.finishNow(-1)
     }
 
@@ -279,8 +426,9 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             stopRunning()
             Toast.makeText(this, R.string.chat_cleared_stop, Toast.LENGTH_SHORT).show()
         }
-        adapter.clear()
-        addGreeting()
+        session.messages.removeAll { !it.transient }
+        adapter.bind(session.messages)
+        saveSession(session)
     }
 
     private fun isSupported(o: PageMenuOption): Boolean {
@@ -296,26 +444,36 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
         val options = node.menuOptions.filter { isSupported(it) }
         if (options.isNotEmpty()) {
-            val density = resources.displayMetrics.density
-            val button = ImageButton(this).apply {
-                val size = (48 * density).toInt()
-                layoutParams = ViewGroup.LayoutParams(size, size)
-                val tv = TypedValue()
-                if (theme.resolveAttribute(androidx.appcompat.R.attr.actionBarItemBackground, tv, true)) {
-                    setBackgroundResource(tv.resourceId)
-                } else {
-                    background = null
-                }
-                scaleType = android.widget.ImageView.ScaleType.CENTER
-                contentDescription = getString(R.string.kr_more_options)
-                setImageResource(R.drawable.ic_more_vert)
-                setOnClickListener { anchor -> showOptionsPopup(anchor, options) }
-            }
+            val button = toolbarButton(R.drawable.ic_more_vert, getString(R.string.kr_more_options))
+            button.setOnClickListener { anchor -> showOptionsPopup(anchor, options) }
             val item = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getString(R.string.kr_more_options))
             item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             item.actionView = button
         }
+
+        val sessionsButton = toolbarButton(R.drawable.ic_chat_sessions, "Phiên chat")
+        sessionsButton.setOnClickListener { toggleDrawer() }
+        val sessionsItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, "Phiên chat")
+        sessionsItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        sessionsItem.actionView = sessionsButton
         return true
+    }
+
+    private fun toolbarButton(iconRes: Int, description: String): ImageButton {
+        val density = resources.displayMetrics.density
+        return ImageButton(this).apply {
+            val size = (48 * density).toInt()
+            layoutParams = ViewGroup.LayoutParams(size, size)
+            val tv = TypedValue()
+            if (theme.resolveAttribute(androidx.appcompat.R.attr.actionBarItemBackground, tv, true)) {
+                setBackgroundResource(tv.resourceId)
+            } else {
+                background = null
+            }
+            scaleType = android.widget.ImageView.ScaleType.CENTER
+            contentDescription = description
+            setImageResource(iconRes)
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -410,9 +568,14 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     override fun addToFavorites(clickableNode: ClickableNode, addToFavoritesHandler: KrScriptActionHandler.AddToFavoritesHandler) {
     }
 
+    private class ChatSession(val id: String) {
+        val messages = ArrayList<ChatMessage>()
+    }
+
     private class ChatMessage(val fromUser: Boolean, initial: CharSequence) {
         val text = SpannableStringBuilder(initial)
         var title: CharSequence? = null
+        var transient = false
         var running = false
         var progressCur = 0
         var progressTotal = 0
@@ -532,7 +695,13 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private val activity: ChatActivity,
         private val onCopy: (CharSequence) -> Unit
     ) : RecyclerView.Adapter<ChatAdapter.VH>() {
-        private val items = ArrayList<ChatMessage>()
+        private var items = ArrayList<ChatMessage>()
+
+        @android.annotation.SuppressLint("NotifyDataSetChanged")
+        fun bind(list: ArrayList<ChatMessage>) {
+            items = list
+            notifyDataSetChanged()
+        }
 
         class VH(view: View, val bubble: View, val title: TextView, val text: TextView, val progress: ProgressBar) : RecyclerView.ViewHolder(view)
 
@@ -544,12 +713,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         fun changed(message: ChatMessage) {
             val index = items.indexOf(message)
             if (index >= 0) notifyItemChanged(index)
-        }
-
-        @android.annotation.SuppressLint("NotifyDataSetChanged")
-        fun clear() {
-            items.clear()
-            notifyDataSetChanged()
         }
 
         override fun getItemCount() = items.size
