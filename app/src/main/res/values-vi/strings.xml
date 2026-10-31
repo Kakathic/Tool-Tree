@@ -41,9 +41,6 @@ Yêu cầu các quyền sau:
 
 Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="permission_dialog_title">Điều khoản sử dụng ứng dụng</string>
-    <string name="notification_ui">Thông báo giữ nền</string>
-    <string name="wakelock_service_running">Dịch vụ WakeLock đang chạy</string>
-    <string name="service_active_with_wakelock">Đang giữ ứng dụng trong nền</string>
     <string name="stop">Dừng</string>
     <string name="turn_off_wakelock">Tắt WakeLock</string>
     <string name="turn_on_wakelock">Bật WakeLock</string>

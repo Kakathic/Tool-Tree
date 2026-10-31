@@ -179,12 +179,6 @@
                 <action android:name="${applicationId}.broadcast.SHOWDIALOG" />
             </intent-filter>
         </receiver>
-        <service
-            android:name=".WakeLockService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="dataSync"
-            android:stopWithTask="true" />
         <service android:name=".NotiService"
             android:exported="true"/>
         <service

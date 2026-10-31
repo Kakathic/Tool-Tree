@@ -39,9 +39,6 @@ Memerlukan izin berikut:
 
 Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="permission_dialog_title">Syarat Penggunaan Aplikasi</string>
-    <string name="notification_ui">Notifikasi</string>
-    <string name="wakelock_service_running">Layanan WakeLock sedang berjalan</string>
-    <string name="service_active_with_wakelock">Menjaga aplikasi di latar belakang</string>
     <string name="stop">Hentikan</string>
     <string name="turn_off_wakelock">Matikan WakeLock</string>
     <string name="turn_on_wakelock">Aktifkan WakeLock</string>

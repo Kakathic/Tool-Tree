@@ -53,9 +53,6 @@ Required Permissions:
 
 If you agree, press the confirm button to continue."</string>
     <string name="permission_dialog_title">Application Terms of Use</string>
-    <string name="notification_ui">Notification</string>
-    <string name="wakelock_service_running">WakeLock Service Running</string>
-    <string name="service_active_with_wakelock">Running in the background</string>
     <string name="stop">Stop</string>
     <string name="turn_off_wakelock">Turn off WakeLock</string>
     <string name="turn_on_wakelock">Turn on WakeLock</string>

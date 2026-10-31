@@ -20,24 +20,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/about_title" />
-            <LinearLayout
-                android:gravity="end"
-                android:orientation="horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-                <CheckBox
-                    android:textSize="12sp"
-                    android:gravity="center_vertical"
-                    android:id="@+id/notification_ui"
-                    android:focusable="true"
-                    android:clickable="true"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:button="@null"
-                    android:text="@string/notification_ui"
-                    android:alpha="0.6"
-                    android:drawableEnd="?android:attr/listChoiceIndicatorMultiple" />
-            </LinearLayout>
         </LinearLayout>
         <TextView
             android:textSize="12sp"

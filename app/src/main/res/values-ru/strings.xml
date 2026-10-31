@@ -47,9 +47,6 @@
 
 Если вы согласны, нажмите кнопку подтверждения, чтобы продолжить."</string>
     <string name="permission_dialog_title">Условия использования приложения</string>
-    <string name="notification_ui">Уведомление</string>
-    <string name="wakelock_service_running">Служба WakeLock запущена</string>
-    <string name="service_active_with_wakelock">Работает в фоновом режиме</string>
     <string name="stop">Остановить</string>
     <string name="turn_off_wakelock">Выключить WakeLock</string>
     <string name="turn_on_wakelock">Включить WakeLock</string>

@@ -16,7 +16,6 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.MotionEvent
 import android.widget.ArrayAdapter
-import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.addCallback
@@ -81,17 +80,10 @@ class MainActivity : AppCompatActivity() {
         val versionName = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "1.0.0"
         setAppTitleWithVersion(versionName)
 
-        if (ThemeConfig(this).getAllowNotificationUI()) {
-            WakeLockService.startService(applicationContext)
-        }
-
         initAdapter()
         loadTabs()
 
         onBackPressedDispatcher.addCallback(this) {
-            startService(Intent(this@MainActivity, WakeLockService::class.java).apply {
-                action = WakeLockService.ACTION_END_WAKELOCK
-            })
             finish()
         }
 
@@ -440,9 +432,6 @@ class MainActivity : AppCompatActivity() {
                     runnableNode.reloadPage -> reloadTabs()
                     runnableNode.autoRestart -> restartApp()
                     runnableNode.autoKill -> {
-                        startService(Intent(this@MainActivity, WakeLockService::class.java).apply {
-                            action = WakeLockService.ACTION_END_WAKELOCK
-                        })
                         finishAffinity()
                     }
                 }
@@ -617,14 +606,6 @@ class MainActivity : AppCompatActivity() {
             )
             popup.show()
             SpinnerPopupHelper.applyRoundedClip(popup, resources.getDimension(R.dimen.kr_spinner_popup_radius))
-        }
-
-        layout.findViewById<CheckBox>(R.id.notification_ui).apply {
-            text = "$text "
-            isChecked = themeConfig.getAllowNotificationUI()
-            setOnCheckedChangeListener { _, isChecked ->
-                themeConfig.setAllowNotificationUI(isChecked)
-            }
         }
 
         layout.findViewById<TextView>(R.id.appliction_authorText).setOnClickListener {

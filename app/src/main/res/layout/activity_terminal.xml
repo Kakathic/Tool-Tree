@@ -107,6 +107,18 @@
                 android:orientation="vertical" />
         </ScrollView>
 
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/terminal_keep_screen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingTop="14dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="14dp"
+            android:text="Giữ màn hình sáng"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp" />
+
         <TextView
             android:id="@+id/terminal_new_session"
             android:layout_width="match_parent"

@@ -14,6 +14,9 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Mọi thao tác phải gọi trên main thread.
  */
 object TerminalSessionStore {
+    /** Giữ màn hình sáng khi xem terminal; dùng chung mọi phiên, tắt mặc định */
+    var keepScreenOn = false
+
     class Request(val title: String, val cwd: String, val cmd: String, val root: Int, val pagePath: String = "", val exitOnBack: Boolean = false, val fontSize: Int = 0, val closeOnExit: Boolean = false) {
         val key: String get() = "$title\u0000$cwd\u0000$cmd\u0000$root\u0000$pagePath\u0000$exitOnBack\u0000$closeOnExit"
     }

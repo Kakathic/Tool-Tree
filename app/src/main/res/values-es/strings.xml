@@ -42,9 +42,6 @@ Permisos necesarios:
 
 Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="permission_dialog_title">Condiciones de uso de la aplicación</string>
-    <string name="notification_ui">Notificación</string>
-    <string name="wakelock_service_running">Servicio WakeLock en ejecución</string>
-    <string name="service_active_with_wakelock">Ejecutándose en segundo plano</string>
     <string name="stop">Detener</string>
     <string name="turn_off_wakelock">Desactivar WakeLock</string>
     <string name="turn_on_wakelock">Activar WakeLock</string>

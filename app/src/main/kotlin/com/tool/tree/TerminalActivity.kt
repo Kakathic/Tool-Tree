@@ -20,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.omarea.common.ui.DialogHelper
@@ -39,6 +40,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         private const val EXTRA_PAGE_PATH = "page_path"
         private const val EXTRA_EXIT_ON_BACK = "exit_on_back"
         private const val EXTRA_CLOSE_ON_EXIT = "close_on_exit"
+        private const val EXTRA_KEEP_SCREEN_ON = "keep_screen_on"
         private const val BELL_MIN_INTERVAL_MS = 300L
         private const val PREFS_NAME = "terminal"
         private const val STARTUP_FAIL_WINDOW_MS = 3000L
@@ -47,7 +49,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         private const val MIN_FONT_SP = 8
         private const val MAX_FONT_SP = 40
 
-        fun start(context: Context, title: String?, cwd: String?, cmd: String?, fontSize: Int, root: Int = 0, pagePath: String? = null, exitOnBack: Boolean = false, closeOnExit: Boolean = false) {
+        fun start(context: Context, title: String?, cwd: String?, cmd: String?, fontSize: Int, root: Int = 0, pagePath: String? = null, exitOnBack: Boolean = false, closeOnExit: Boolean = false, keepScreenOn: Boolean = false) {
             val intent = Intent(context, TerminalActivity::class.java).apply {
                 putExtra(EXTRA_HAS_REQUEST, true)
                 putExtra(EXTRA_TITLE, title ?: "")
@@ -58,6 +60,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
                 putExtra(EXTRA_PAGE_PATH, pagePath ?: "")
                 putExtra(EXTRA_EXIT_ON_BACK, exitOnBack)
                 putExtra(EXTRA_CLOSE_ON_EXIT, closeOnExit)
+                putExtra(EXTRA_KEEP_SCREEN_ON, keepScreenOn)
                 if (context !is AppCompatActivity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
@@ -114,8 +117,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
     }
 
     private fun updateKeepScreenOn() {
-        val running = TerminalSessionStore.all().any { !it.finished && it.session.isRunning }
-        if (running) {
+        if (TerminalSessionStore.keepScreenOn) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -190,6 +192,13 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
                 drawer.closeDrawer(GravityCompat.START)
             }
         )
+        findViewById<SwitchCompat>(R.id.terminal_keep_screen).apply {
+            isChecked = TerminalSessionStore.keepScreenOn
+            setOnCheckedChangeListener { _, checked ->
+                TerminalSessionStore.keepScreenOn = checked
+                updateKeepScreenOn()
+            }
+        }
         drawer.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
             override fun onDrawerClosed(drawerView: View) {
                 terminalView.requestFocus()
@@ -209,6 +218,11 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
 
     private fun handleIntent(intent: Intent) {
         if (intent.getBooleanExtra(EXTRA_HAS_REQUEST, false)) {
+            if (intent.getBooleanExtra(EXTRA_KEEP_SCREEN_ON, false)) {
+                TerminalSessionStore.keepScreenOn = true
+                findViewById<SwitchCompat>(R.id.terminal_keep_screen).isChecked = true
+                updateKeepScreenOn()
+            }
             val request = TerminalSessionStore.Request(
                 intent.getStringExtra(EXTRA_TITLE).orEmpty(),
                 intent.getStringExtra(EXTRA_CWD).orEmpty(),

@@ -124,7 +124,6 @@
     <string name="msg_nothing_selected">Kérjük, válasszon ki legalább egy elemet</string>
     <string name="msg_path_home_not_found">A mappa nem található: %1$s. Helyette a /sdcard jelenik meg</string>
     <string name="no_files_in_directory">A mappa üres és nem tartalmaz fájlokat!</string>
-    <string name="notification_ui">Értesítés</string>
     <string name="onloading">Adatok betöltése…</string>
     <string name="open_in_browser">Megnyitás böngészővel</string>
     <string name="options_text">Beállítások</string>
@@ -157,7 +156,6 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="script_losted">Hiányzó szkript erőforrás
 </string>
     <string name="select_all">Összes kijelölése</string>
-    <string name="service_active_with_wakelock">Háttérben fut</string>
     <string name="shell_executor">Szkript végrehajtó</string>
     <string name="stop">Leállítás</string>
     <string name="tab_favorites">Kedvencek</string>
@@ -185,7 +183,6 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="turn_off_wakelock">WakeLock kikapcsolása</string>
     <string name="turn_on_wakelock">WakeLock bekapcsolása</string>
     <string name="update_text">Frissítés</string>
-    <string name="wakelock_service_running">A WakeLock szolgáltatás fut</string>
     <string name="warning_root_text">A funkció használatához root jogosultság szükséges!</string>
     <string name="terminal_paste">Beillesztés</string>
     <string name="terminal_share">Megosztás</string>

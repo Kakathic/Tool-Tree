@@ -1,9 +1,6 @@
 package com.tool.tree
 
 import android.Manifest
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -147,33 +144,7 @@ class SplashActivity : AppCompatActivity() {
     }
 
     private fun checkPermissionsNextStep() {
-        startWakeLockServiceOnce()
         checkRootAndStart()
-    }
-
-    private fun startWakeLockServiceOnce() {
-        val prefs = getSharedPreferences("kr-script-config", MODE_PRIVATE)
-        if (!prefs.getBoolean("wakelock_service_started_once", false)) {
-            createNotificationChannel()
-            prefs.edit().putBoolean("wakelock_service_started_once", true).apply()
-        }
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                "WakeLockServiceChannel",
-                getString(R.string.wakelock_service_running),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                setSound(null, null)
-                enableLights(false)
-                enableVibration(false)
-                lockscreenVisibility = Notification.VISIBILITY_SECRET
-            }
-            val manager = getSystemService(NotificationManager::class.java)
-            manager?.createNotificationChannel(channel)
-        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

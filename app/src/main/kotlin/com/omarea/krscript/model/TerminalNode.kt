@@ -7,4 +7,5 @@ class TerminalNode(currentConfigXml: String) : ClickableNode(currentConfigXml) {
     var root: Int = 1
     var exitOnBack: Boolean = false
     var closeOnExit: Boolean = false
+    var keepScreenOn: Boolean = false
 }

@@ -1109,9 +1109,6 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     }
 
     private fun killApp() {
-        startService(Intent(this, WakeLockService::class.java).apply {
-            action = WakeLockService.ACTION_END_WAKELOCK
-        })
         finishAffinity()
         System.exit(0)
     }

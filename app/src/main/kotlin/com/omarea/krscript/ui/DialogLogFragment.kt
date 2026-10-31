@@ -58,7 +58,6 @@ import com.omarea.krscript.model.ShellHandlerBase
 import com.tool.tree.AnsiColorParser
 import com.tool.tree.NotificationCopyLogActivity
 import com.tool.tree.R
-import com.tool.tree.WakeLockService
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executors
@@ -882,13 +881,6 @@ class DialogLogFragment : DialogFragment() {
         }
 
         override fun onKillRequest() {
-            try {
-                context.startService(Intent(context, WakeLockService::class.java).apply {
-                    action = WakeLockService.ACTION_END_WAKELOCK
-                })
-            } catch (ignored: Exception) {
-            }
-
             try {
                 val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
                 activityManager?.appTasks?.forEach { task -> task.finishAndRemoveTask() }

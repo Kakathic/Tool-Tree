@@ -10,7 +10,6 @@ class ThemeConfig(private val context: Context) {
 
     companion object {
         const val KEY_THEME_MODE = "ThemeMode"
-        const val KEY_NOTIFICATION_UI = "NotificationUI"
     }
 
     fun getThemeMode(): Int {
@@ -24,22 +23,6 @@ class ThemeConfig(private val context: Context) {
             if (context is Activity) {
                 context.recreate()
             }
-        }
-    }
-
-    fun getAllowNotificationUI(): Boolean {
-        return config.getBoolean(KEY_NOTIFICATION_UI, false)
-    }
-
-    fun setAllowNotificationUI(allow: Boolean) {
-        val current = getAllowNotificationUI()
-        if (current == allow) return
-        config.edit { putBoolean(KEY_NOTIFICATION_UI, allow) }
-        val appContext = context.applicationContext
-        if (allow) {
-            WakeLockService.startService(appContext)
-        } else {
-            WakeLockService.stopService(appContext)
         }
     }
 }
