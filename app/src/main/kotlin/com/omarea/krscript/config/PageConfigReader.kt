@@ -1054,6 +1054,17 @@ class PageConfigReader {
         tomlGet(table, "greeting", "welcome")?.let { chat.greeting = StringResRef.resolve(context, it) }
         tomlGet(table, "placeholder", "hint")?.let { chat.placeholder = StringResRef.resolve(context, it) }
         tomlGet(table, "max-lines")?.let { chat.maxLines = parseIntOr(it, chat.maxLines).coerceAtLeast(1) }
+        tomlGet(table, "session")?.let {
+            chat.session = it.trim().lowercase().let { v -> v == "true" || v == "1" }
+        }
+        tomlGet(table, "init", "start")?.let { chat.init = it }
+        tomlGet(table, "cwd", "dir")?.let { chat.cwd = it.trim() }
+        tomlGet(table, "root", "su")?.let {
+            chat.root = when (it.trim().lowercase()) {
+                "true", "1" -> 1
+                else -> 0
+            }
+        }
 
         for (menuTable in tomlEntries(table, "menu")) {
             val option = pageMenuOptionToml(menuTable) ?: continue

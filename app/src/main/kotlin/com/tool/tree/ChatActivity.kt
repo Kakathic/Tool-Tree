@@ -28,6 +28,9 @@ import android.widget.ListPopupWindow
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import java.io.InputStreamReader
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
@@ -58,6 +61,11 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     companion object {
         private const val EXTRA_CHAT = "chat"
         private const val MAX_REPLY_CHARS = 20000
+        private const val SESSION_MAX_CHARS = 60000
+        private const val SESSION_COLS = 160
+        private const val SESSION_ROWS = 24
+        private const val PROMPT_IDLE_MS = 500L
+        private const val SESSION_DEFAULT_HINT = "shell~$ "
         private const val REFRESH_DELAY_MS = 60L
         private val CLOSE_TYPES = setOf("exit", "finish", "close")
         private val UNSUPPORTED_TYPES = setOf("file", "folder", "spinner", "checkbox", "refresh", "reload", "restart", "killapp")
@@ -85,6 +93,16 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private var currentHandler: ChatShellHandler? = null
     private var refreshPending = false
     private var refreshTarget: ChatMessage? = null
+
+    private var sessionMessage: ChatMessage? = null
+    private var sessionWriter: OutputWriter? = null
+    private var sessionLauncher: TerminalLauncher? = null
+    private var sessionProcess: Process? = null
+    private var sessionGen = 0
+    private var sessionAlive = false
+    private var sessionBusy = false
+    private val sessionExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val promptCheck = Runnable { onPromptIdle() }
 
     @Suppress("DEPRECATION")
     private fun readNode(): ChatNode? = intent?.extras?.getSerializable(EXTRA_CHAT) as? ChatNode
@@ -128,12 +146,19 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         addGreeting()
 
         inputView = findViewById(R.id.chat_input)
-        inputView.hint = node.placeholder.ifEmpty { getString(R.string.chat_input_hint) }
+        inputView.hint = if (node.session) sessionHint() else node.placeholder.ifEmpty { getString(R.string.chat_input_hint) }
         inputView.maxLines = node.maxLines
         sendButton = findViewById(R.id.chat_send)
-        sendButton.setOnClickListener { if (running) stopRunning() else send() }
+        sendButton.setOnClickListener {
+            when {
+                node.session -> onSessionButton()
+                running -> stopRunning()
+                else -> send()
+            }
+        }
         updateSendButton()
         setupOptionsButton()
+        if (node.session) startSession()
 
         val bar = findViewById<View>(R.id.chat_input_bar)
         val basePadBottom = bar.paddingBottom
@@ -149,6 +174,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         super.onDestroy()
         uiHandler.removeCallbacksAndMessages(null)
         if (running) stopRunnable?.run()
+        stopSession()
+        sessionExecutor.shutdown()
     }
 
     private fun setupParams(paramsNode: com.omarea.krscript.model.ActionNode) {
@@ -161,6 +188,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         paramsNode.onParamsConfirmed = { values ->
             chatParams.clear()
             chatParams.putAll(values)
+            if (node.session) uiHandler.post { restartSession() }
         }
     }
 
@@ -194,8 +222,178 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     }
 
     private fun updateSendButton() {
-        sendButton.setImageResource(if (running) R.drawable.ic_chat_stop else R.drawable.ic_chat_send)
+        val busy = if (node.session) sessionAlive && sessionBusy else running
+        sendButton.setImageResource(if (busy) R.drawable.ic_chat_stop else R.drawable.ic_chat_send)
         sendButton.imageTintList = ColorStateList.valueOf(Color.WHITE)
+    }
+
+    private fun sessionHint() = node.placeholder.ifEmpty { SESSION_DEFAULT_HINT }
+
+    private fun shellQuote(s: String) = "'" + s.replace("'", "'\\''") + "'"
+
+    private fun buildSessionCmd(): String {
+        val sb = StringBuilder()
+        val validName = Regex("[A-Za-z_][A-Za-z0-9_]*")
+        for ((k, v) in chatParams) {
+            if (validName.matches(k)) sb.append("export ").append(k).append('=').append(shellQuote(v)).append('\n')
+        }
+        sb.append(node.init)
+        return sb.toString()
+    }
+
+    private fun startSession() {
+        val gen = ++sessionGen
+        sessionAlive = true
+        sessionBusy = true
+        AnsiColorParser.reset()
+        inputView.hint = sessionHint()
+        val message = sessionMessage ?: ChatMessage(false, "").also {
+            sessionMessage = it
+            adapter.add(it)
+        }
+        if (message.text.isNotEmpty() && message.text.last() != '\n') message.text.append('\n')
+        sessionWriter = OutputWriter(message, SESSION_MAX_CHARS)
+        updateSendButton()
+        val appContext = applicationContext
+        val cmd = buildSessionCmd()
+        Thread {
+            val started = try {
+                val l = TerminalLauncher.prepare(appContext, node.cwd, cmd, node.root, node.currentPageConfigPath, false)
+                Pair(l, l.start(SESSION_COLS, SESSION_ROWS))
+            } catch (e: Exception) {
+                uiHandler.post { if (gen == sessionGen) onSessionEnded("Cannot start shell: " + (e.message ?: e.toString())) }
+                return@Thread
+            }
+            val launcher = started.first
+            val process = started.second
+            uiHandler.post {
+                if (gen == sessionGen) {
+                    sessionLauncher = launcher
+                    sessionProcess = process
+                } else {
+                    teardown(launcher, process)
+                }
+            }
+            val reader = InputStreamReader(process.inputStream, Charsets.UTF_8)
+            val buf = CharArray(4096)
+            try {
+                while (true) {
+                    val n = reader.read(buf)
+                    if (n < 0) break
+                    val chunk = String(buf, 0, n)
+                    uiHandler.post { if (gen == sessionGen) onSessionOutput(chunk) }
+                }
+            } catch (_: Exception) {
+            }
+            val code = try {
+                process.waitFor()
+            } catch (_: Exception) {
+                -1
+            }
+            uiHandler.post { if (gen == sessionGen) onSessionEnded("Session ended (code $code). Press send to restart.") }
+        }.start()
+    }
+
+    private fun teardown(launcher: TerminalLauncher, process: Process) {
+        try {
+            launcher.kill(process)
+        } catch (_: Exception) {
+        }
+        try {
+            process.destroy()
+        } catch (_: Exception) {
+        }
+        launcher.cleanup()
+    }
+
+    private fun stopSession() {
+        sessionGen++
+        uiHandler.removeCallbacks(promptCheck)
+        val launcher = sessionLauncher
+        val process = sessionProcess
+        sessionLauncher = null
+        sessionProcess = null
+        sessionAlive = false
+        if (launcher != null && process != null) teardown(launcher, process)
+    }
+
+    private fun restartSession() {
+        stopSession()
+        startSession()
+    }
+
+    private fun writeSession(bytes: ByteArray) {
+        val process = sessionProcess ?: return
+        try {
+            sessionExecutor.execute {
+                try {
+                    process.outputStream.write(bytes)
+                    process.outputStream.flush()
+                } catch (_: Exception) {
+                }
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun onSessionButton() {
+        when {
+            !sessionAlive -> restartSession()
+            sessionBusy -> writeSession(byteArrayOf(3))
+            else -> sendSession()
+        }
+    }
+
+    private fun sendSession() {
+        val line = inputView.text?.toString().orEmpty().replace("\r", "").replace('\n', ' ')
+        inputView.setText("")
+        sessionBusy = true
+        updateSendButton()
+        writeSession((line + "\n").toByteArray(Charsets.UTF_8))
+    }
+
+    private fun onSessionOutput(chunk: String) {
+        val message = sessionMessage ?: return
+        val writer = sessionWriter ?: return
+        var text = chunk
+        val cut = maxOf(text.lastIndexOf("\u001B[2J"), text.lastIndexOf("\u001B[3J"))
+        if (cut >= 0) {
+            message.text.clear()
+            writer.reset()
+            text = text.substring(cut + 4)
+        }
+        if (text.isNotEmpty()) writer.append(AnsiColorParser.parse(text))
+        scheduleRefresh(message)
+        uiHandler.removeCallbacks(promptCheck)
+        uiHandler.postDelayed(promptCheck, PROMPT_IDLE_MS)
+    }
+
+    private fun onPromptIdle() {
+        val message = sessionMessage ?: return
+        if (!sessionAlive) return
+        val buf = message.text
+        if (buf.isEmpty() || buf.last() == '\n') return
+        sessionBusy = false
+        updateSendButton()
+        if (node.placeholder.isEmpty()) {
+            val line = buf.substring(buf.lastIndexOf('\n') + 1).filter { it >= ' ' }
+            if (line.isNotBlank()) inputView.hint = line.takeLast(60)
+        }
+    }
+
+    private fun onSessionEnded(note: String) {
+        val message = sessionMessage ?: return
+        sessionAlive = false
+        sessionBusy = false
+        uiHandler.removeCallbacks(promptCheck)
+        val buf = message.text
+        val start = buf.length
+        buf.append(if (buf.isEmpty() || buf.last() == '\n') "" else "\n").append("[").append(note).append("]")
+        buf.setSpan(ForegroundColorSpan(Color.RED), start, buf.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        sessionLauncher = null
+        sessionProcess = null
+        updateSendButton()
+        refreshNow(message)
     }
 
     private fun scrollToEnd() {
@@ -271,6 +469,15 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     }
 
     private fun clearChat() {
+        if (node.session) {
+            sessionMessage?.let {
+                it.text.clear()
+                sessionWriter?.reset()
+                adapter.changed(it)
+            }
+            if (sessionAlive) writeSession("\n".toByteArray())
+            return
+        }
         if (running) {
             stopRunning()
             Toast.makeText(this, R.string.chat_cleared_stop, Toast.LENGTH_SHORT).show()
@@ -420,9 +627,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private val onForceStop: (Runnable?) -> Unit,
         private val onFinished: () -> Unit
     ) : SilentShellOutputHandler(context) {
-        private var lineStart = 0
-        private var pendingOverwrite = false
-        private var prevEndedWithCr = false
+        private val writer = OutputWriter(message, MAX_REPLY_CHARS)
         private var finished = false
 
         override fun onStart(forceStop: Runnable?) {
@@ -477,13 +682,25 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                     setSpan(ForegroundColorSpan(forcedColor), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
-            append(parsed)
+            writer.append(parsed)
             onChanged()
         }
+    }
 
-        // Same carriage-return rules as the shell log dialog: "\r" rewinds to the start of the line,
-        // the next text overwrites it, "\n" commits the line.
-        private fun append(text: CharSequence) {
+    // Carriage-return rules as in the shell log dialog: "\r" rewinds to the start of the line,
+    // the next text overwrites it, "\n" commits the line.
+    private class OutputWriter(private val message: ChatMessage, private val maxChars: Int) {
+        private var lineStart = message.text.length
+        private var pendingOverwrite = false
+        private var prevEndedWithCr = false
+
+        fun reset() {
+            lineStart = 0
+            pendingOverwrite = false
+            prevEndedWithCr = false
+        }
+
+        fun append(text: CharSequence) {
             val buf = message.text
             val len = text.length
             if (prevEndedWithCr && len > 0 && text[0] == '\n') pendingOverwrite = false
@@ -515,8 +732,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 i = j
             }
             prevEndedWithCr = len > 0 && text[len - 1] == '\r'
-            if (buf.length > MAX_REPLY_CHARS) {
-                val cut = buf.length - MAX_REPLY_CHARS
+            if (buf.length > maxChars) {
+                val cut = buf.length - maxChars
                 buf.delete(0, cut)
                 lineStart = (lineStart - cut).coerceAtLeast(0)
             }

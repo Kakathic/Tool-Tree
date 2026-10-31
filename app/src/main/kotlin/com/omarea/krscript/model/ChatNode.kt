@@ -6,6 +6,10 @@ class ChatNode(currentConfigXml: String) : RunnableNode(currentConfigXml) {
     var greeting: String = ""
     var placeholder: String = ""
     var maxLines: Int = 6
+    var session: Boolean = false
+    var init: String = ""
+    var cwd: String = ""
+    var root: Int = 0
     var menuOptions: ArrayList<PageMenuOption> = ArrayList()
     var paramsNode: ActionNode? = null
 }
