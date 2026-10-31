@@ -743,29 +743,23 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             holder.dots = null
         }
 
-        // Ba chấm chờ phản hồi: chấm sáng chạy lần lượt, độ rộng cố định nên bong bóng không giật
+        // Ba chấm chờ phản hồi: nhảy nhẹ lần lượt (TypingDotsSpan), mỗi khung hình chỉ invalidate TextView
         private fun startDots(holder: VH) {
             val tv = holder.text
-            val base = tv.currentTextColor and 0x00FFFFFF
-            var phase = 0
-            val step = object : Runnable {
+            val dots = SpannableString(".")
+            dots.setSpan(
+                TypingDotsSpan(tv.currentTextColor, tv.resources.displayMetrics.density),
+                0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            tv.text = dots
+            val frame = object : Runnable {
                 override fun run() {
-                    val dots = SpannableString("•••")
-                    for (i in 0..2) {
-                        val alpha = when ((i - phase + 3) % 3) {
-                            0 -> 255
-                            1 -> 140
-                            else -> 60
-                        }
-                        dots.setSpan(ForegroundColorSpan(base or (alpha shl 24)), i, i + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    }
-                    tv.text = dots
-                    phase = (phase + 1) % 3
-                    tv.postDelayed(this, 350)
+                    tv.invalidate()
+                    tv.postOnAnimation(this)
                 }
             }
-            holder.dots = step
-            step.run()
+            holder.dots = frame
+            tv.postOnAnimation(frame)
         }
 
         override fun onViewRecycled(holder: VH) {
@@ -791,6 +785,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             }
             bubble.background = bg
             tv.maxWidth = parent.resources.displayMetrics.widthPixels - (24 * density).toInt()
+            tv.setTextIsSelectable(true)
             (column.layoutParams as FrameLayout.LayoutParams).gravity = if (fromUser) Gravity.END else Gravity.START
             if (fromUser) {
                 (title.layoutParams as LinearLayout.LayoutParams).apply {
@@ -809,7 +804,10 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             holder.title.text = label
             val visible = visibleText(m.text)
             stopDots(holder)
-            if (visible.isEmpty() && m.running) startDots(holder) else holder.text.text = visible
+            val renderMd = activity.node.markdown && !m.fromUser
+            if (renderMd) holder.text.movementMethod = ChatMarkdown.SelectableLinkMovement
+            if (visible.isEmpty() && m.running) startDots(holder)
+            else holder.text.text = if (renderMd) ChatMarkdown.render(holder.text.context, visible) else visible
             if (m.running && m.progressTotal != 0) {
                 holder.progress.visibility = View.VISIBLE
                 holder.progress.isIndeterminate = m.progressTotal < 0
@@ -819,10 +817,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 }
             } else {
                 holder.progress.visibility = View.GONE
-            }
-            holder.text.setOnLongClickListener {
-                if (m.text.isNotEmpty()) onCopy(m.text.toString())
-                true
             }
         }
     }

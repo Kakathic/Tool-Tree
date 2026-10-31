@@ -1055,6 +1055,7 @@ class PageConfigReader {
         tomlGet(table, "greeting", "welcome")?.let { chat.greeting = StringResRef.resolve(context, it) }
         tomlGet(table, "placeholder", "hint")?.let { chat.placeholder = StringResRef.resolve(context, it) }
         tomlGet(table, "max-lines")?.let { chat.maxLines = parseIntOr(it, chat.maxLines).coerceAtLeast(1) }
+        tomlGet(table, "markdown", "md")?.let { chat.markdown = tomlTruthy(it) }
 
         for (menuTable in tomlEntries(table, "menu")) {
             val option = pageMenuOptionToml(menuTable) ?: continue

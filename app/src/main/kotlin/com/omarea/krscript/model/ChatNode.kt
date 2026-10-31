@@ -7,6 +7,7 @@ class ChatNode(currentConfigXml: String) : RunnableNode(currentConfigXml) {
     var greeting: String = ""
     var placeholder: String = ""
     var maxLines: Int = 6
+    var markdown: Boolean = false
     var menuOptions: ArrayList<PageMenuOption> = ArrayList()
     var paramsNode: ActionNode? = null
 }
