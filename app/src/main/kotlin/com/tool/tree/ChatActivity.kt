@@ -126,7 +126,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        title = node.chatTitle.ifEmpty { node.title }.ifEmpty { getString(R.string.chat_default_title) }
+        title = node.title.ifEmpty { getString(R.string.chat_default_title) }
         supportActionBar?.apply {
             setHomeButtonEnabled(true)
             setDisplayHomeAsUpEnabled(true)
@@ -348,8 +348,11 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         }
     }
 
-    private fun openReply(): ChatMessage {
-        val message = ChatMessage(false, "").apply { running = true }
+    private fun openReply(label: CharSequence? = null): ChatMessage {
+        val message = ChatMessage(false, "").apply {
+            running = true
+            title = label
+        }
         sessionMessage = message
         sessionWriter = OutputWriter(message, SESSION_MAX_CHARS)
         adapter.add(message)
@@ -390,7 +393,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         uiHandler.removeCallbacks(fallbackCheck)
         closeReply()
         if (line.isNotEmpty()) adapter.add(ChatMessage(true, line))
-        openReply()
+        openReply(node.chatTitle.takeIf { line.isNotEmpty() && it.isNotEmpty() })
         skipEcho = true
         sessionBusy = true
         updateSendButton()
@@ -489,7 +492,10 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         }
         inputView.setText("")
         adapter.add(ChatMessage(true, text))
-        val reply = ChatMessage(false, "").apply { running = true }
+        val reply = ChatMessage(false, "").apply {
+            running = true
+            title = node.chatTitle.ifEmpty { null }
+        }
         adapter.add(reply)
         scrollToEnd()
         runScript(text, reply)
@@ -691,6 +697,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
     private class ChatMessage(val fromUser: Boolean, initial: CharSequence) {
         val text = SpannableStringBuilder(initial)
+        var title: CharSequence? = null
         var running = false
         var progressCur = 0
         var progressTotal = 0
@@ -880,19 +887,10 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val m = items[position]
-            var body: CharSequence = m.text
-            var label: CharSequence? = null
-            if (activity.node.session && !m.fromUser) {
-                val mark = m.text.indexOf('❯')
-                val firstBreak = m.text.indexOf('\n')
-                if (mark in 1..40 && (firstBreak < 0 || firstBreak > mark)) {
-                    label = m.text.subSequence(0, mark + 1).trim()
-                    body = m.text.subSequence(mark + 1, m.text.length).trimStart()
-                }
-            }
+            val label = m.title
             holder.title.visibility = if (label != null) View.VISIBLE else View.GONE
             holder.title.text = label
-            holder.text.text = if (body.isEmpty() && m.running) "…" else body
+            holder.text.text = if (m.text.isEmpty() && m.running) "…" else m.text
             if (m.running && m.progressTotal != 0) {
                 holder.progress.visibility = View.VISIBLE
                 holder.progress.isIndeterminate = m.progressTotal < 0
