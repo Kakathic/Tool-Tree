@@ -36,28 +36,47 @@
         android:paddingEnd="12dp"
         android:paddingBottom="8dp">
 
-        <EditText
-            android:id="@+id/chat_input"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:id="@+id/chat_input_box"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:background="@drawable/chat_input_bg"
-            android:importantForAutofill="no"
-            android:inputType="textMultiLine|textCapSentences"
-            android:minHeight="44dp"
-            android:paddingStart="16dp"
-            android:paddingTop="10dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="10dp"
-            android:textSize="15sp" />
+            android:gravity="bottom"
+            android:orientation="horizontal">
 
-        <ImageButton
-            android:id="@+id/chat_send"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/chat_input_bg"
-            android:contentDescription="@null"
-            android:scaleType="center" />
+            <ImageButton
+                android:id="@+id/chat_options"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/chat_options_bg"
+                android:contentDescription="@null"
+                android:scaleType="center"
+                android:visibility="gone" />
+
+            <EditText
+                android:id="@+id/chat_input"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@null"
+                android:importantForAutofill="no"
+                android:inputType="textMultiLine|textCapSentences"
+                android:minHeight="44dp"
+                android:paddingStart="8dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="4dp"
+                android:paddingBottom="10dp"
+                android:textSize="15sp" />
+
+            <ImageButton
+                android:id="@+id/chat_send"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/chat_send_bg"
+                android:contentDescription="@null"
+                android:scaleType="center" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

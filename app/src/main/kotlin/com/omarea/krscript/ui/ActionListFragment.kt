@@ -659,6 +659,11 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                 val paramsValue = render.readParamsValue(actionParamInfos)
                                 ActionParamMemory.save(requireContext(), action, actionParamInfos, paramsValue)
                                 if (isAutoShow) ActionShowMemory.markConfirmed(requireContext(), action)
+                                action.onParamsConfirmed?.invoke(paramsValue)
+                                if (action.paramsOnly) {
+                                    dialog?.dismiss()
+                                    return@setOnClickListener
+                                }
                                 actionExecute(action, ParamsApplyScript.merge(script, actionParamInfos, render), onExit, paramsValue)
                                 val shellMode = resolveShellBy(action, paramsValue)
                                 val keepOpen = action.keepParamsDialog &&

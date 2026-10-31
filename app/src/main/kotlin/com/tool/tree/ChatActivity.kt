@@ -25,20 +25,20 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ListPopupWindow
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
-import androidx.core.view.MenuItemCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.omarea.krscript.config.IconPathAnalysis
+import com.omarea.krscript.config.ActionParamMemory
 import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.executor.ShellExecutor
-import com.omarea.krscript.model.ActionNode
 import com.omarea.krscript.model.ChatNode
 import com.omarea.krscript.model.ClickableNode
 import com.omarea.krscript.model.KrScriptActionHandler
@@ -61,7 +61,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private const val REFRESH_DELAY_MS = 60L
         private val CLOSE_TYPES = setOf("exit", "finish", "close")
         private val UNSUPPORTED_TYPES = setOf("file", "folder", "spinner", "checkbox", "refresh", "reload", "restart", "killapp")
-        private val ANSI_REGEX = Regex("\u001B\\[[;\\d]*[ -/]*[@-~]")
 
         fun start(context: Context, node: ChatNode) {
             val intent = Intent(context, ChatActivity::class.java).apply {
@@ -80,20 +79,12 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private var actionHost: ActionListFragment? = null
     private val uiHandler = Handler(Looper.getMainLooper())
 
+    private val chatParams = HashMap<String, String>()
     private var running = false
     private var stopRunnable: Runnable? = null
     private var currentHandler: ChatShellHandler? = null
     private var refreshPending = false
     private var refreshTarget: ChatMessage? = null
-
-    private val toolbarIconTint: ColorStateList? by lazy {
-        val a = theme.obtainStyledAttributes(intArrayOf(R.attr.toolbarIconTint))
-        try {
-            if (a.hasValue(0)) a.getColorStateList(0) else null
-        } finally {
-            a.recycle()
-        }
-    }
 
     @Suppress("DEPRECATION")
     private fun readNode(): ChatNode? = intent?.extras?.getSerializable(EXTRA_CHAT) as? ChatNode
@@ -112,13 +103,15 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        title = node.title.ifEmpty { getString(R.string.chat_default_title) }
+        title = node.chatTitle.ifEmpty { node.title }.ifEmpty { getString(R.string.chat_default_title) }
         supportActionBar?.apply {
             setHomeButtonEnabled(true)
             setDisplayHomeAsUpEnabled(true)
             setHomeAsUpIndicator(R.drawable.ic_arrow_back)
         }
         toolbar.setNavigationOnClickListener { finish() }
+
+        node.paramsNode?.let { setupParams(it) }
 
         val fragment = ActionListFragment.create(ArrayList(), this, null, ThemeModeState.getThemeMode())
         supportFragmentManager.beginTransaction().replace(R.id.chat_action_host, fragment).commitNowAllowingStateLoss()
@@ -140,6 +133,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         sendButton = findViewById(R.id.chat_send)
         sendButton.setOnClickListener { if (running) stopRunning() else send() }
         updateSendButton()
+        setupOptionsButton()
 
         val bar = findViewById<View>(R.id.chat_input_bar)
         val basePadBottom = bar.paddingBottom
@@ -157,8 +151,41 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         if (running) stopRunnable?.run()
     }
 
+    private fun setupParams(paramsNode: com.omarea.krscript.model.ActionNode) {
+        if (paramsNode.title.isEmpty()) paramsNode.title = getString(R.string.chat_params_title)
+        paramsNode.params?.forEach { p ->
+            val name = p.name ?: return@forEach
+            val v = ActionParamMemory.load(this, paramsNode, p) ?: p.value
+            if (v != null) chatParams[name] = v
+        }
+        paramsNode.onParamsConfirmed = { values ->
+            chatParams.clear()
+            chatParams.putAll(values)
+        }
+    }
+
+    private fun setupOptionsButton() {
+        val paramsNode = node.paramsNode ?: return
+        val button = findViewById<ImageButton>(R.id.chat_options)
+        val custom = try {
+            IconPathAnalysis().loadIcon(this, paramsNode)
+        } catch (_: Exception) {
+            null
+        }
+        if (custom != null) button.setImageDrawable(custom) else button.setImageResource(R.drawable.ic_chat_options)
+        val tint = TypedValue()
+        if (theme.resolveAttribute(android.R.attr.textColorSecondary, tint, true) && tint.resourceId != 0) {
+            button.imageTintList = ContextCompat.getColorStateList(this, tint.resourceId)
+        }
+        button.contentDescription = paramsNode.title
+        button.visibility = View.VISIBLE
+        button.setOnClickListener {
+            actionHost?.takeIf { it.isAdded }?.onActionClick(paramsNode, Runnable {})
+        }
+    }
+
     private fun addGreeting() {
-        if (node.desc.isNotEmpty()) adapter.add(ChatMessage(false, node.desc))
+        if (node.greeting.isNotEmpty()) adapter.add(ChatMessage(false, node.greeting))
     }
 
     private fun accentColor(): Int {
@@ -168,7 +195,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
     private fun updateSendButton() {
         sendButton.setImageResource(if (running) R.drawable.ic_chat_stop else R.drawable.ic_chat_send)
-        sendButton.imageTintList = ColorStateList.valueOf(accentColor())
+        sendButton.imageTintList = ColorStateList.valueOf(Color.WHITE)
     }
 
     private fun scrollToEnd() {
@@ -201,6 +228,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private fun runScript(text: String, reply: ChatMessage) {
         running = true
         updateSendButton()
+        AnsiColorParser.reset()
         val handler = ChatShellHandler(
             this,
             reply,
@@ -216,7 +244,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             }
         )
         currentHandler = handler
-        val process = ShellExecutor().execute(this, node, node.script, null, hashMapOf("MSG" to text), handler)
+        val process = ShellExecutor().execute(this, node, node.script, null, HashMap(chatParams).apply { put("MSG", text) }, handler)
         if (process == null) handler.finishNow(-1)
     }
 
@@ -251,8 +279,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         addGreeting()
     }
 
-    private fun headerId(action: ActionNode) = ("header:" + action.key).hashCode()
-
     private fun isSupported(o: PageMenuOption): Boolean {
         if (o.link.isNotEmpty() || o.activity.isNotEmpty() || o.onlineHtmlPage.isNotEmpty() ||
             o.pageConfigSh.isNotEmpty() || o.pageConfigPath.isNotEmpty()
@@ -263,22 +289,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menu ?: return false
         menu.clear()
-
-        node.headerActions.forEach { action ->
-            val item = menu.add(Menu.NONE, headerId(action), Menu.NONE, action.title)
-            item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-            val custom = try {
-                IconPathAnalysis().loadIcon(this, action)
-            } catch (_: Exception) {
-                null
-            }
-            if (custom != null) {
-                item.icon = custom
-                MenuItemCompat.setIconTintList(item, toolbarIconTint)
-            } else {
-                item.icon = ContextCompat.getDrawable(this, R.drawable.ic_menu)
-            }
-        }
 
         val options = node.menuOptions.filter { isSupported(it) }
         if (options.isNotEmpty()) {
@@ -305,11 +315,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val action = node.headerActions.find { headerId(it) == item.itemId }
-        if (action != null) {
-            actionHost?.takeIf { it.isAdded }?.onActionClick(action, Runnable {})
-            return true
-        }
         return super.onOptionsItemSelected(item)
     }
 
@@ -404,6 +409,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private class ChatMessage(val fromUser: Boolean, initial: CharSequence) {
         val text = SpannableStringBuilder(initial)
         var running = false
+        var progressCur = 0
+        var progressTotal = 0
     }
 
     private class ChatShellHandler(
@@ -413,16 +420,28 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private val onForceStop: (Runnable?) -> Unit,
         private val onFinished: () -> Unit
     ) : SilentShellOutputHandler(context) {
-        private var skipNextLf = false
+        private var lineStart = 0
+        private var pendingOverwrite = false
+        private var prevEndedWithCr = false
         private var finished = false
 
         override fun onStart(forceStop: Runnable?) {
             onForceStop(forceStop)
         }
 
-        override fun onReader(msg: Any?) = appendLine(msg, null)
-        override fun onError(msg: Any?) = appendLine(msg, Color.RED)
+        override fun onReader(msg: Any?) = dispatch(msg, null)
+        override fun onError(msg: Any?) = dispatch(msg, Color.RED)
         override fun onWrite(msg: Any?) {}
+
+        override fun onProgress(current: Int, total: Int) {
+            message.progressCur = current
+            message.progressTotal = when {
+                current < 0 -> -1
+                current >= total -> 0
+                else -> total
+            }
+            onChanged()
+        }
 
         override fun onExit(msg: Any?) {
             finishNow((msg as? Int) ?: -1)
@@ -431,38 +450,76 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         fun finishNow(code: Int) {
             if (finished) return
             finished = true
-            while (message.text.isNotEmpty() && message.text.last() == '\n') {
-                message.text.delete(message.text.length - 1, message.text.length)
-            }
+            message.progressTotal = 0
+            val buf = message.text
+            while (buf.isNotEmpty() && buf.last() == '\n') buf.delete(buf.length - 1, buf.length)
             if (code != 0) {
-                append((if (message.text.isEmpty()) "" else "\n") + context.getString(R.string.kr_shell_finish_error), Color.RED)
-            } else if (message.text.isEmpty()) {
-                append(context.getString(R.string.kr_shell_completed), null)
+                appendPlain((if (buf.isEmpty()) "" else "\n") + context.getString(R.string.kr_shell_finish_error), Color.RED)
+            } else if (buf.isEmpty()) {
+                appendPlain(context.getString(R.string.kr_shell_completed), null)
             }
             onFinished()
         }
 
-        private fun appendLine(msg: Any?, color: Int?) {
-            if (msg == null || finished) return
-            val text = ANSI_REGEX.replace(msg.toString(), "")
-            if (text == "\n" && skipNextLf) {
-                skipNextLf = false
-                return
-            }
-            skipNextLf = text.endsWith("\r")
-            append(text.trimEnd('\r', '\n') + "\n", color)
+        private fun appendPlain(s: String, color: Int?) {
+            val buf = message.text
+            val start = buf.length
+            buf.append(s)
+            if (color != null) buf.setSpan(ForegroundColorSpan(color), start, buf.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
-        private fun append(s: String, color: Int?) {
-            val start = message.text.length
-            message.text.append(s)
-            if (color != null) {
-                message.text.setSpan(ForegroundColorSpan(color), start, message.text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        private fun dispatch(msg: Any?, forcedColor: Int?) {
+            if (msg == null || finished) return
+            val raw = msg.toString()
+            var parsed: CharSequence = AnsiColorParser.parse(raw)
+            if (forcedColor != null && !raw.contains("\u001B[")) {
+                parsed = SpannableStringBuilder(parsed).apply {
+                    setSpan(ForegroundColorSpan(forcedColor), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
             }
-            if (message.text.length > MAX_REPLY_CHARS) {
-                message.text.delete(0, message.text.length - MAX_REPLY_CHARS)
-            }
+            append(parsed)
             onChanged()
+        }
+
+        // Same carriage-return rules as the shell log dialog: "\r" rewinds to the start of the line,
+        // the next text overwrites it, "\n" commits the line.
+        private fun append(text: CharSequence) {
+            val buf = message.text
+            val len = text.length
+            if (prevEndedWithCr && len > 0 && text[0] == '\n') pendingOverwrite = false
+            var i = 0
+            while (i < len) {
+                var j = i
+                while (j < len && text[j] != '\r' && text[j] != '\n') j++
+                if (j > i) {
+                    if (pendingOverwrite) {
+                        if (lineStart in 0..buf.length) buf.delete(lineStart, buf.length)
+                        pendingOverwrite = false
+                    }
+                    buf.append(text.subSequence(i, j))
+                }
+                if (j < len) {
+                    if (text[j] == '\r') {
+                        val isCrlf = j + 1 < len && text[j + 1] == '\n'
+                        if (!isCrlf) pendingOverwrite = true
+                    } else {
+                        if (pendingOverwrite && lineStart in 0..buf.length) {
+                            buf.delete(lineStart, buf.length)
+                            pendingOverwrite = false
+                        }
+                        buf.append('\n')
+                        lineStart = buf.length
+                    }
+                    j++
+                }
+                i = j
+            }
+            prevEndedWithCr = len > 0 && text[len - 1] == '\r'
+            if (buf.length > MAX_REPLY_CHARS) {
+                val cut = buf.length - MAX_REPLY_CHARS
+                buf.delete(0, cut)
+                lineStart = (lineStart - cut).coerceAtLeast(0)
+            }
         }
     }
 
@@ -472,7 +529,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     ) : RecyclerView.Adapter<ChatAdapter.VH>() {
         private val items = ArrayList<ChatMessage>()
 
-        class VH(view: View, val text: TextView) : RecyclerView.ViewHolder(view)
+        class VH(view: View, val bubble: View, val text: TextView, val progress: ProgressBar) : RecyclerView.ViewHolder(view)
 
         fun add(message: ChatMessage) {
             items.add(message)
@@ -495,22 +552,34 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_chat_message, parent, false)
+            val bubble = view.findViewById<View>(R.id.chat_bubble)
             val tv = view.findViewById<TextView>(R.id.chat_text)
+            val progress = view.findViewById<ProgressBar>(R.id.chat_progress)
             val density = parent.resources.displayMetrics.density
             val fromUser = viewType == 1
             val bg = GradientDrawable().apply {
                 cornerRadius = 18 * density
                 setColor(if (fromUser) (activity.accentColor() and 0x00FFFFFF) or 0x40000000 else 0x26808080)
             }
-            tv.background = bg
+            bubble.background = bg
             tv.maxWidth = (parent.resources.displayMetrics.widthPixels * 0.82f).toInt()
-            (tv.layoutParams as FrameLayout.LayoutParams).gravity = if (fromUser) Gravity.END else Gravity.START
-            return VH(view, tv)
+            (bubble.layoutParams as FrameLayout.LayoutParams).gravity = if (fromUser) Gravity.END else Gravity.START
+            return VH(view, bubble, tv, progress)
         }
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val m = items[position]
             holder.text.text = if (m.text.isEmpty() && m.running) "…" else m.text
+            if (m.running && m.progressTotal != 0) {
+                holder.progress.visibility = View.VISIBLE
+                holder.progress.isIndeterminate = m.progressTotal < 0
+                if (m.progressTotal > 0) {
+                    holder.progress.max = m.progressTotal
+                    holder.progress.progress = m.progressCur
+                }
+            } else {
+                holder.progress.visibility = View.GONE
+            }
             holder.text.setOnLongClickListener {
                 if (m.text.isNotEmpty()) onCopy(m.text.toString())
                 true

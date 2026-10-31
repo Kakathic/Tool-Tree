@@ -221,4 +221,5 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="chat_copied">Đã sao chép</string>
     <string name="chat_script_empty">Trang chat chưa cấu hình script</string>
     <string name="chat_cleared_stop">Đang dừng script rồi xoá lịch sử</string>
+    <string name="chat_params_title">Cài đặt</string>
 </resources>

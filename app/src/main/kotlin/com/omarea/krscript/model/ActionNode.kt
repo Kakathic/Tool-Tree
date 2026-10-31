@@ -14,6 +14,10 @@ class ActionNode(currentConfigXml: String) : RunnableNode(currentConfigXml){
 
     var keepParamsDialog: Boolean = false
 
+    var paramsOnly: Boolean = false
+    @Transient
+    var onParamsConfirmed: ((HashMap<String, String>) -> Unit)? = null
+
     var shellBy: List<String> = emptyList()
     var shellValue: List<String> = emptyList()
     var shellMode: List<String> = emptyList()

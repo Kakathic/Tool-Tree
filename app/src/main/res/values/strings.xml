@@ -235,4 +235,5 @@ If you agree, press the confirm button to continue."</string>
     <string name="chat_copied">Copied</string>
     <string name="chat_script_empty">This chat has no script configured</string>
     <string name="chat_cleared_stop">Stopping the running script, then clearing</string>
+    <string name="chat_params_title">Settings</string>
 </resources>

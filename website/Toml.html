@@ -1545,41 +1545,44 @@ exit-on-back = true
 
 <section id="chat">
 <h2>12b. [[chat]] - Chat-style page</h2>
-<p><code>[[chat]]</code> opens a full-screen chat page (<code>ChatActivity</code>): type a message, press send, the <code>script</code> runs with the text in <code>$MSG</code> and its live output appears in a reply bubble. A <strong>Stop</strong> button replaces Send while the script is running. History lives only while the page is open.</p>
+<p><code>[[chat]]</code> opens a full-screen chat page (<code>ChatActivity</code>): type a message, press send, the <code>script</code> runs with the text in <code>$MSG</code> and its live output appears in a reply bubble. The reply bubble renders output like the shell log dialog: ANSI colors, <code>\r</code> progress lines overwrite the current line, and <code>progress:[current/total]</code> shows a thin progress bar in the bubble. A <strong>Stop</strong> button replaces Send while the script is running. The input box contains an options button on the left (only with <code>[[chat.params]]</code>) and a round send button on the right. The toolbar only shows the 3-dot menu. History lives only while the page is open.</p>
 <h3>12b.1. Chat fields</h3>
 <table>
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Default</th><th>Description</th></tr>
-<tr><td class="field-name">script</td><td>set, setstate</td><td class="field-type">Shell</td><td>-</td><td>Runs on every send. The sent text is exported as env <code>$MSG</code> (no quoting problems). Output (stdout + stderr) streams into the reply bubble</td></tr>
-<tr><td class="field-name">desc</td><td>-</td><td class="field-type">String</td><td>-</td><td>Also shown as the first (greeting) bubble when the page opens</td></tr>
+<tr><td class="field-name">script</td><td>set, setstate</td><td class="field-type">Shell</td><td>-</td><td>Runs on every send. The sent text is exported as env <code>$MSG</code>; values saved from <code>[[chat.params]]</code> are exported too (<code>$MSG</code> wins on a name clash). Output (stdout + stderr) streams into the reply bubble</td></tr>
+<tr><td class="field-name">chat-title</td><td>bot-title</td><td class="field-type">String</td><td>title</td><td>Title shown on the chat page toolbar. <code>title</code> stays the name of the item in the list</td></tr>
+<tr><td class="field-name">greeting</td><td>welcome</td><td class="field-type">String</td><td>-</td><td>First (greeting) bubble shown when the chat page opens and after <code>type = "clear"</code>. Empty: no greeting</td></tr>
 <tr><td class="field-name">placeholder</td><td>hint</td><td class="field-type">String</td><td>-</td><td>Hint of the input box</td></tr>
 <tr><td class="field-name">max-lines</td><td>-</td><td class="field-type">Int</td><td>6</td><td>The input box grows with the text up to this many lines</td></tr>
+<tr><td class="field-name">params-title</td><td>-</td><td class="field-type">String</td><td>Settings</td><td>Title of the dialog opened by the options button on the left of the input box (needs <code>[[chat.params]]</code>)</td></tr>
+<tr><td class="field-name">params-icon</td><td>-</td><td class="field-type">Path</td><td>default icon</td><td>Icon of that options button</td></tr>
+<tr><td class="field-name">params-script</td><td>apply</td><td class="field-type">Shell</td><td>-</td><td>Optional. Empty: pressing Confirm only saves the values. Set: it also runs once in the log dialog with the values as env</td></tr>
 </table>
 <p>All common fields of RunnableNode (<code>title</code>, <code>icon</code>, <code>lock</code>, <code>interruptable</code>, ...) work as well.</p>
-<h3>12b.2. Toolbar menus</h3>
-<p>Entries placed <strong>right after</strong> <code>[[chat]]</code> (until the next <code>[[group]]</code>, <code>[[end]]</code> or any other node) belong to that chat page:</p>
-<ul>
-<li><code>[[action]]</code> with <code>menu = true</code>: shown as an icon on the toolbar; tapping it runs the action exactly like a normal <code>[[action]]</code> (params dialog, <code>keep-dialog</code>, log dialog).</li>
-<li><code>[[menu]]</code> (<code>[[menu.items]]</code>): shown in the 3-dot popup. Supported: script items (log dialog, or <code>silent</code>), <code>type = "exit" | "finish" | "close"</code> (close page) and <code>type = "clear"</code> (clear the history). Not supported in chat and hidden: <code>file</code>, <code>folder</code>, <code>spinner</code>, <code>checkbox</code>, <code>refresh</code>, <code>reload</code>, <code>restart</code>, <code>killapp</code>, links and pages. <code>[[fab]]</code> is not used by chat.</li>
-</ul>
-<p>Entries not directly after <code>[[chat]]</code> keep their normal page-level behavior. File-chooser params inside a chat toolbar action are not supported.</p>
-<h3>12b.3. Example</h3>
+<h3>12b.2. [[chat.params]] - options button next to the input</h3>
+<p>Each <code>[[chat.params]]</code> is a normal param (same fields as <code>[[action.params]]</code>). When at least one exists, an options button appears on the left inside the input box and opens a params dialog (same dialog as an <code>[[action]]</code>, including <code>max-lines</code>). Confirmed values are exported as env to every later <code>script</code> run; before the first confirm the param defaults (or remembered values) are used.</p>
+<h3>12b.3. [[chat.menu]] - 3-dot menu</h3>
+<p>Each <code>[[chat.menu]]</code> is one item of the 3-dot popup (same fields as a menu item). Supported: script items (log dialog, or <code>silent</code>), <code>type = "exit" | "finish" | "close"</code> (close page) and <code>type = "clear"</code> (clear the history). Not supported in chat and hidden: <code>file</code>, <code>folder</code>, <code>spinner</code>, <code>checkbox</code>, <code>refresh</code>, <code>reload</code>, <code>restart</code>, <code>killapp</code>, links and pages. File-chooser params in <code>[[chat.params]]</code> are not supported.</p>
+<h3>12b.4. Example</h3>
 <pre><code>[[chat]]
 title = "Assistant"
-desc = "Type a command name"
-script = 'echo "You said: $MSG"; "$MSG" 2&gt;&amp;1'
+chat-title = "Shell helper"
+greeting = "Hi! Type a command name."
+script = 'echo "[$MODE] You said: $MSG"; "$MSG" 2&gt;&amp;1'
 max-lines = 6
 
-[[action]]
-title = "Settings"
-menu = true
-[[action.params]]
-name = "mode"
+[[chat.params]]
+name = "MODE"
 type = "text"
+value = "safe"
 
-[[menu]]
-[[menu.items]]
+[[chat.menu]]
 title = "Clear history"
 type = "clear"
+
+[[chat.menu]]
+title = "Close"
+type = "close"
 </code></pre>
 </section>
 <section id="download">
