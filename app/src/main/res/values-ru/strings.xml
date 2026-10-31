@@ -189,6 +189,7 @@
     <string name="terminal_close_confirm">Закрыть терминал? Запущенная оболочка будет остановлена.</string>
     <string name="terminal_sessions">Запущенные сеансы</string>
     <string name="terminal_new_session">Новый сеанс</string>
+    <string name="terminal_keep_screen_on">Не выключать экран</string>
     <string name="terminal_notif_sessions">Запущено сеансов: %d</string>
     <string name="terminal_notif_open">Открыть</string>
     <string name="terminal_notif_exit_all">Выйти из всех</string>

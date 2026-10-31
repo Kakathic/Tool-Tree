@@ -115,7 +115,7 @@
             android:paddingTop="14dp"
             android:paddingEnd="16dp"
             android:paddingBottom="14dp"
-            android:text="Giữ màn hình sáng"
+            android:text="@string/terminal_keep_screen_on"
             android:textColor="#FFFFFF"
             android:textSize="15sp" />
 

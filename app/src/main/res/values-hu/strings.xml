@@ -189,6 +189,7 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="terminal_close_confirm">Bezárja a terminált? A futó shell leáll.</string>
     <string name="terminal_sessions">Futó munkamenetek</string>
     <string name="terminal_new_session">Új munkamenet</string>
+    <string name="terminal_keep_screen_on">Képernyő bekapcsolva tartása</string>
     <string name="terminal_notif_sessions">Futó munkamenetek: %d</string>
     <string name="terminal_notif_open">Megnyitás</string>
     <string name="terminal_notif_exit_all">Kilépés mindből</string>
