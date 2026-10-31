@@ -822,7 +822,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     ) : RecyclerView.Adapter<ChatAdapter.VH>() {
         private val items = ArrayList<ChatMessage>()
 
-        class VH(view: View, val bubble: View, val text: TextView, val progress: ProgressBar) : RecyclerView.ViewHolder(view)
+        class VH(view: View, val bubble: View, val title: TextView, val text: TextView, val progress: ProgressBar) : RecyclerView.ViewHolder(view)
 
         fun add(message: ChatMessage) {
             items.add(message)
@@ -853,7 +853,9 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_chat_message, parent, false)
+            val column = view.findViewById<View>(R.id.chat_column)
             val bubble = view.findViewById<View>(R.id.chat_bubble)
+            val title = view.findViewById<TextView>(R.id.chat_title)
             val tv = view.findViewById<TextView>(R.id.chat_text)
             val progress = view.findViewById<ProgressBar>(R.id.chat_progress)
             val density = parent.resources.displayMetrics.density
@@ -863,21 +865,34 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 setColor(if (fromUser) (activity.accentColor() and 0x00FFFFFF) or 0x40000000 else 0x26808080)
             }
             bubble.background = bg
-            val bubbleParams = bubble.layoutParams as FrameLayout.LayoutParams
+            val columnParams = column.layoutParams as FrameLayout.LayoutParams
             if (activity.node.session && !fromUser) {
-                bubbleParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+                columnParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+                bubble.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
                 tv.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
                 tv.maxWidth = Int.MAX_VALUE
             } else {
                 tv.maxWidth = (parent.resources.displayMetrics.widthPixels * 0.82f).toInt()
             }
-            bubbleParams.gravity = if (fromUser) Gravity.END else Gravity.START
-            return VH(view, bubble, tv, progress)
+            columnParams.gravity = if (fromUser) Gravity.END else Gravity.START
+            return VH(view, bubble, title, tv, progress)
         }
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val m = items[position]
-            holder.text.text = if (m.text.isEmpty() && m.running) "…" else m.text
+            var body: CharSequence = m.text
+            var label: CharSequence? = null
+            if (activity.node.session && !m.fromUser) {
+                val mark = m.text.indexOf('❯')
+                val firstBreak = m.text.indexOf('\n')
+                if (mark in 1..40 && (firstBreak < 0 || firstBreak > mark)) {
+                    label = m.text.subSequence(0, mark + 1).trim()
+                    body = m.text.subSequence(mark + 1, m.text.length).trimStart()
+                }
+            }
+            holder.title.visibility = if (label != null) View.VISIBLE else View.GONE
+            holder.title.text = label
+            holder.text.text = if (body.isEmpty() && m.running) "…" else body
             if (m.running && m.progressTotal != 0) {
                 holder.progress.visibility = View.VISIBLE
                 holder.progress.isIndeterminate = m.progressTotal < 0
