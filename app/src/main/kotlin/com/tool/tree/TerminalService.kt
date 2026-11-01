@@ -58,6 +58,14 @@ class TerminalService : Service(), TerminalSessionStore.Listener {
         return START_NOT_STICKY
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        TerminalSessionStore.killAll()
+        releaseWakeLock()
+        stopForeground(true)
+        stopSelf()
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
         releaseWakeLock()
         TerminalSessionStore.removeListener(this)
@@ -111,8 +119,8 @@ class TerminalService : Service(), TerminalSessionStore.Listener {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text + "\n" + labels.joinToString("\n")))
             .setContentIntent(openIntent)
-            .addAction(0, getString(if (wakeLockOn) R.string.turn_off_wakelock else R.string.turn_on_wakelock), wakeLockIntent)
             .addAction(0, getString(R.string.terminal_notif_exit_all), exitIntent)
+            .addAction(0, getString(if (wakeLockOn) R.string.turn_off_wakelock else R.string.turn_on_wakelock), wakeLockIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

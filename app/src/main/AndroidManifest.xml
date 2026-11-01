@@ -186,6 +186,7 @@
             android:exported="true"/>
         <service
             android:name=".TerminalService"
-            android:exported="false" />
+            android:exported="false"
+            android:stopWithTask="false" />
     </application>
 </manifest>
