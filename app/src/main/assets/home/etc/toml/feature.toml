@@ -33,11 +33,11 @@ shell = "hidden"
 support = "command -v taskset &>/dev/null && echo 1"
 script = "slog use_cpu $use_cpus"
 
-  [[action.params]]
-  name = "use_cpus"
-  label = "@option_text"
-  value-sh = "glog use_cpu"
-  options-sh = "seq 1 $(nproc --all)"
+[[action.params]]
+name = "use_cpus"
+label = "@option_text"
+value-sh = "glog use_cpu"
+options-sh = "seq 1 $(nproc --all)"
 
 [[group]]
 [[action]]
@@ -47,11 +47,11 @@ warn = "@project_text_9"
 shell = "hidden"
 script = "slog ramoccupied $ramoccupied"
 
-  [[action.params]]
-  name = "ramoccupied"
-  label = "@option_text"
-  value-sh = "glog ramoccupied 4096"
-  items = [ "512", "1024", "2048", "3072", "4096", "5120", "6144", "7168", "8192" ]
+[[action.params]]
+name = "ramoccupied"
+label = "@option_text"
+value-sh = "glog ramoccupied 4096"
+items = [ "512", "1024", "2048", "3072", "4096", "5120", "6144", "7168", "8192" ]
 
 [[group]]
 [[action]]
@@ -69,24 +69,24 @@ slog uri_change_background "$uri_change_background"
 set_permis "$ETC/wallpaper.jpg" &>/dev/null
 """
 
-  [[action.params]]
-  name = "dissblur"
-  label = "@dissblur_text"
-  type = "switch"
-  value-sh = "glog dissblur"
+[[action.params]]
+name = "dissblur"
+label = "@dissblur_text"
+type = "switch"
+value-sh = "glog dissblur"
 
-  [[action.params]]
-  name = "directbg"
-  label = "@directbg_text"
-  type = "switch"
-  value-sh = "glog directbg"
+[[action.params]]
+name = "directbg"
+label = "@directbg_text"
+type = "switch"
+value-sh = "glog directbg"
 
-  [[action.params]]
-  name = "uri_change_background"
-  type = "file"
-  suffix = "jpg"
-  editable = true
-  value-sh = "glog uri_change_background"
+[[action.params]]
+name = "uri_change_background"
+type = "file"
+suffix = "jpg"
+editable = true
+value-sh = "glog uri_change_background"
 
 [[group]]
 [[action]]
@@ -94,34 +94,76 @@ id = "gemini_api"
 allow-shortcut = false
 title = "@api_key_text"
 icon = "{ICON}/apikey.png"
-shell = "hidden"
-script = """
-slog models_genmini "$models_genmini"
-gemini -c
-"""
+script = '''
+slog ai_models "$ai_models"
+chatbot -c
+echo
+echo -e "\033[32mList of websites to register for API\033[0m"
+chatbot --list-websites --lang "$LANGUAGE-$COUNTRY"
+echo
+echo -e "\033[32mList of current supplier models\033[0m"
+chatbot --list-models --lang "$LANGUAGE-$COUNTRY"
+'''
 
 [[action.params-rows]]
-text = "@note_genmini_text:"
+#text-sh = "chatbot --list-websites"
 line = true
 
-[[action.params-rows]]
-text = "@generate_text Gemini API"
-link = "https://aistudio.google.com/api-keys"
-underline = true
+[[action.params]]
+name = "GEMINI_API_KEY"
+label = "Gemini API"
+placeholder-sh = "list_provider=gemini chatbot --show 2>/dev/null"
+type = "password"
+remember = false
 
-  [[action.params]]
-  name = "api_genmini"
-  title = "Gemini API"
-  placeholder = "*******************"
-  type = "password"
-  desc-sh = "gemini -c 2>&1"
-  remember = false
-  
-  [[action.params]]
-  name = "models_genmini"
-  placeholder = "gemini-3.1-flash-lite"
-  title = "Models Gemini"
-  editable = true
-  label = "Models"
-  items = [ "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" ]
-  value-sh = "glog models_genmini gemini-3.5-flash-lite"
+[[action.params]]
+name = "OPENAI_API_KEY"
+label = "Openai API"
+placeholder-sh = "list_provider=openai chatbot --show 2>/dev/null"
+type = "password"
+remember = false
+
+[[action.params]]
+name = "OPENROUTER_API_KEY"
+label = "Openroute API"
+placeholder-sh = "list_provider=openrouter chatbot --show 2>/dev/null"
+type = "password"
+remember = false
+
+[[action.params]]
+name = "GROQ_API_KEY"
+label = "Groq API"
+placeholder-sh = "list_provider=groq chatbot --show 2>/dev/null"
+type = "password"
+remember = false
+
+[[action.params]]
+name = "TOGETHER_API_KEY"
+label = "Together API"
+placeholder-sh = "list_provider=together chatbot --show 2>/dev/null"
+type = "password"
+remember = false
+
+[[action.params]]
+name = "CUSTOM_API_KEY"
+label = "Custom API"
+placeholder-sh = "list_provider=custom chatbot --show 2>/dev/null"
+type = "password"
+remember = false
+
+[[action.params]]
+name = "list_provider"
+placeholder = "gemini"
+title = "Chọn nhà cung cấp"
+label = "Provider"
+items = [ "gemini", "openai", "openrouter", "groq", "together", "custom" ]
+value = "gemini"
+
+[[action.params]]
+name = "ai_models"
+placeholder = "gemini-3.1-flash-lite"
+title = "Models API"
+editable = true
+label = "Models"
+items = [ "gemini-3.5-flash-lite", "free" ]
+value-sh = "glog ai_models gemini-3.5-flash-lite"

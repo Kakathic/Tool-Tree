@@ -154,6 +154,14 @@
     <string name="theme_text">Темы</string>
     <string name="theme_disable_blur">Отключить размытие</string>
     <string name="theme_direct_bg">Прямой фон</string>
+    <string name="about_back">Назад</string>
+    <string name="about_wallpaper">Обои</string>
+    <string name="about_wallpaper_hint">Системные обои</string>
+    <string name="about_choose">Выбрать</string>
+    <string name="about_remove">Удалить</string>
+    <string name="about_wallpaper_invalid">Это изображение нельзя использовать</string>
+    <string name="about_update_downloading">Загрузка...</string>
+    <string name="about_update_recheck">Проверить снова</string>
     <string name="open_in_browser">Открыть в браузере</string>
 
     <string name="update_text">Обновить</string>

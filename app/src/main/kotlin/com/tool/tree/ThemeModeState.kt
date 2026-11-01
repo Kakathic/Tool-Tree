@@ -3,6 +3,7 @@ package com.tool.tree
 import android.app.Activity
 import android.app.WallpaperManager
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -44,6 +45,48 @@ object ThemeModeState {
     @JvmStatic
     fun setBlurDisabled(context: Context, disabled: Boolean) {
         ThemeConfig(context).setBlurDisabled(disabled)
+    }
+
+    private fun customWallpaperFile(context: Context) = File(context.filesDir, "home/etc/wallpaper.jpg")
+
+    @JvmStatic
+    fun getCustomWallpaperPath(context: Context): String? {
+        val file = customWallpaperFile(context)
+        return if (file.exists()) file.absolutePath else null
+    }
+
+    @JvmStatic
+    fun setCustomWallpaper(context: Context, sourcePath: String): Boolean {
+        return try {
+            val src = File(sourcePath.trim())
+            if (!src.isFile || !src.canRead()) return false
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(src.absolutePath, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return false
+            val dest = customWallpaperFile(context)
+            if (src.canonicalPath != dest.canonicalPath) {
+                dest.parentFile?.mkdirs()
+                val tmp = File(dest.parentFile, "wallpaper.tmp")
+                src.inputStream().use { input -> tmp.outputStream().use { output -> input.copyTo(output) } }
+                if (!tmp.renameTo(dest)) {
+                    tmp.copyTo(dest, overwrite = true)
+                    tmp.delete()
+                }
+            }
+            com.omarea.common.ui.FastBlurUtility.clearCache()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @JvmStatic
+    fun clearCustomWallpaper(context: Context) {
+        try {
+            customWallpaperFile(context).delete()
+            com.omarea.common.ui.FastBlurUtility.clearCache()
+        } catch (e: Exception) {
+        }
     }
 
     @JvmStatic

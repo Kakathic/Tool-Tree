@@ -167,6 +167,14 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="theme_text">Chủ đề</string>
     <string name="theme_disable_blur">Tắt làm mờ</string>
     <string name="theme_direct_bg">Nền trực tiếp</string>
+    <string name="about_back">Quay lại</string>
+    <string name="about_wallpaper">Hình nền</string>
+    <string name="about_wallpaper_hint">Hình nền hệ thống</string>
+    <string name="about_choose">Chọn</string>
+    <string name="about_remove">Xoá</string>
+    <string name="about_wallpaper_invalid">Không dùng được ảnh này</string>
+    <string name="about_update_downloading">Đang tải xuống...</string>
+    <string name="about_update_recheck">Kiểm tra lại</string>
     <string name="open_in_browser">Mở bằng trình duyệt</string>
     
     <string name="update_text">Cập nhật</string>

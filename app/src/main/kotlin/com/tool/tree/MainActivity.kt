@@ -29,7 +29,6 @@ import com.google.android.material.tabs.TabLayout
 import com.omarea.common.shared.FilePathResolver
 import com.omarea.common.shell.KeepShellPublic
 import com.omarea.common.ui.BlurEngine
-import com.omarea.common.ui.DialogAppUpdate
 import com.omarea.common.ui.DialogHelper
 import com.omarea.krscript.config.PageConfigReader
 import com.omarea.krscript.config.PageConfigSh
@@ -130,52 +129,39 @@ class MainActivity : AppCompatActivity() {
         invalidateOptionsMenu()
 
         if (updateInfo != null && !AppUpdateConfig(this).isDismissed(updateInfo.sha256)) {
-            BlurEngine.runWhenBlurReady {
-                if (!isFinishing && !isDestroyed) {
-                    showUpdateDialog(updateInfo)
-                }
-            }
+            showAboutDialog(updateInfo)
         }
     }
 
-    private fun showUpdateCheckDialog() {
-        if (supportFragmentManager.findFragmentByTag("app_update") != null) return
-        var loadedInfo: AppUpdateInfo? = null
+    private fun showAboutDialog(info: AppUpdateInfo?) {
         BlurEngine.runWhenBlurReady {
-            if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return@runWhenBlurReady
-            val dialog = DialogAppUpdate(
-                darkMode = ThemeModeState.isDarkMode(),
-                apkUrl = "",
-                changelogText = null,
-                fileName = AppUpdateChecker.APK_FILE_NAME,
-                onCancel = { loadedInfo?.let { AppUpdateConfig(this).setDismissedSha256(it.sha256) } },
-                startLoading = true
-            )
-            dialog.show(supportFragmentManager, "app_update")
-
-            lifecycleScope.launch(Dispatchers.IO) {
-                val result = AppUpdateChecker.check(this@MainActivity)
-                withContext(Dispatchers.Main) {
-                    if (isFinishing || isDestroyed) return@withContext
-                    when (result) {
-                        is AppUpdateCheckResult.Available -> {
-                            loadedInfo = result.info
-                            updateChecked = true
-                            cachedUpdateInfo = result.info
-                            pendingUpdateInfo = result.info
-                            invalidateOptionsMenu()
-                        }
-                        is AppUpdateCheckResult.UpToDate -> {
-                            updateChecked = true
-                            cachedUpdateInfo = null
-                            pendingUpdateInfo = null
-                            invalidateOptionsMenu()
-                        }
-                        is AppUpdateCheckResult.Failed -> {}
-                    }
-                    dialog.showResult(result)
-                }
+            if (isFinishing || isDestroyed) return@runWhenBlurReady
+            if (supportFragmentManager.isStateSaved) {
+                if (info != null) deferredUpdateInfo = info
+                return@runWhenBlurReady
             }
+            if (supportFragmentManager.findFragmentByTag("app_update") != null) return@runWhenBlurReady
+            DialogAboutUpdate(ThemeModeState.isDarkMode(), info) { result -> onUpdateResult(result) }
+                .show(supportFragmentManager, "app_update")
+        }
+    }
+
+    private fun onUpdateResult(result: AppUpdateCheckResult) {
+        if (isFinishing || isDestroyed) return
+        when (result) {
+            is AppUpdateCheckResult.Available -> {
+                updateChecked = true
+                cachedUpdateInfo = result.info
+                pendingUpdateInfo = result.info
+                invalidateOptionsMenu()
+            }
+            is AppUpdateCheckResult.UpToDate -> {
+                updateChecked = true
+                cachedUpdateInfo = null
+                pendingUpdateInfo = null
+                invalidateOptionsMenu()
+            }
+            is AppUpdateCheckResult.Failed -> {}
         }
     }
 
@@ -183,26 +169,7 @@ class MainActivity : AppCompatActivity() {
         super.onResumeFragments()
         val info = deferredUpdateInfo ?: return
         deferredUpdateInfo = null
-        if (supportFragmentManager.findFragmentByTag("app_update") == null) {
-            BlurEngine.runWhenBlurReady {
-                if (!isFinishing && !isDestroyed) showUpdateDialog(info)
-            }
-        }
-    }
-
-    private fun showUpdateDialog(updateInfo: AppUpdateInfo) {
-        if (supportFragmentManager.isStateSaved) {
-            deferredUpdateInfo = updateInfo
-            return
-        }
-        DialogAppUpdate(
-            darkMode = ThemeModeState.isDarkMode(),
-            apkUrl = updateInfo.apkUrl,
-            changelogText = updateInfo.changelogText,
-            fileName = updateInfo.apkFileName,
-            apkSize = updateInfo.apkSize,
-            onCancel = { AppUpdateConfig(this).setDismissedSha256(updateInfo.sha256) }
-        ).show(supportFragmentManager, "app_update")
+        showAboutDialog(info)
     }
 
     private fun setAppTitleWithVersion(versionName: String) {
@@ -555,101 +522,12 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.option_menu_update -> {
-                val info = pendingUpdateInfo
-                if (info != null) {
-                    BlurEngine.runWhenBlurReady {
-                        if (!isFinishing && !isDestroyed) showUpdateDialog(info)
-                    }
-                } else {
-                    showUpdateCheckDialog()
-                }
+                showAboutDialog(pendingUpdateInfo)
                 true
             }
-            R.id.option_menu_info -> { showSettingsDialog(); true }
+            R.id.option_menu_info -> { showAboutDialog(pendingUpdateInfo); true }
             R.id.option_menu_reboot -> { DialogPower(this).showPowerMenu(); true }
             else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    private fun showSettingsDialog() {
-        val layout = LayoutInflater.from(this).inflate(R.layout.dialog_about, null)
-        val themeConfig = ThemeConfig(this)
-
-        val blurRow = layout.findViewById<View>(R.id.blur_disable_row)
-        val blurLabel = layout.findViewById<TextView>(R.id.blur_disable_label)
-        val blurCheck = layout.findViewById<CheckBox>(R.id.blur_disable_check)
-        val directRow = layout.findViewById<View>(R.id.direct_bg_row)
-        val directLabel = layout.findViewById<TextView>(R.id.direct_bg_label)
-        val directCheck = layout.findViewById<CheckBox>(R.id.direct_bg_check)
-        fun updateOptionStates(themeLevel: Int) {
-            val enabled = themeLevel >= 3
-            val alpha = if (enabled) 0.7f else 0.35f
-            blurCheck.isEnabled = enabled
-            blurRow.isClickable = enabled
-            blurLabel.alpha = alpha
-            directCheck.isEnabled = enabled
-            directRow.isClickable = enabled
-            directLabel.alpha = alpha
-        }
-        blurCheck.isChecked = ThemeModeState.isBlurDisabled(this)
-        directCheck.isChecked = ThemeModeState.isDirectBgEnabled(this)
-        updateOptionStates(themeConfig.getThemeMode())
-        blurRow.setOnClickListener { if (blurCheck.isEnabled) blurCheck.toggle() }
-        directRow.setOnClickListener { if (directCheck.isEnabled) directCheck.toggle() }
-        blurCheck.setOnCheckedChangeListener { _, checked ->
-            ThemeModeState.setBlurDisabled(this, checked)
-            ThemeModeState.switchTheme(this)
-            recreate()
-        }
-        directCheck.setOnCheckedChangeListener { _, checked ->
-            ThemeModeState.setDirectBgEnabled(this, checked)
-            ThemeModeState.switchTheme(this)
-            recreate()
-        }
-
-        val themeSelector = layout.findViewById<TextView>(R.id.theme_selector)
-        val themeNames = listOf(
-            getString(R.string.theme_system_default), getString(R.string.theme_dark),
-            getString(R.string.theme_light), getString(R.string.theme_wallpaper_system),
-            getString(R.string.theme_wallpaper_dark), getString(R.string.theme_wallpaper_light)
-        )
-        
-        themeSelector.text = themeNames[themeConfig.getThemeMode().coerceIn(0, themeNames.size - 1)]
-        themeSelector.setOnClickListener {
-            val popup = ListPopupWindow(this)
-            popup.anchorView = themeSelector
-            popup.setAdapter(ArrayAdapter(this, R.layout.kr_spinner_dropdown, themeNames))
-            val background = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.kr_spinner_popup_bg)
-            popup.setBackgroundDrawable(background)
-            popup.setOnItemClickListener { _, _, position, _ ->
-                themeConfig.setThemeMode(position)
-                themeSelector.text = themeNames[position]
-                updateOptionStates(position)
-                popup.dismiss()
-                ThemeModeState.switchTheme(this)
-                recreate()
-            }
-            val inflater = LayoutInflater.from(this)
-            val itemViews = themeNames.map { name ->
-                inflater.inflate(R.layout.kr_spinner_dropdown, themeSelector.parent as? android.view.ViewGroup, false).apply {
-                    findViewById<TextView>(R.id.text).text = name
-                }
-            }
-            val minWidthPx = (resources.displayMetrics.density * 220).toInt()
-            SpinnerPopupHelper.applyWidthAndPosition(
-                popup, themeSelector, itemViews, background, minWidthPx, alignRight = false
-            )
-            popup.show()
-            SpinnerPopupHelper.applyRoundedClip(popup, resources.getDimension(R.dimen.kr_spinner_popup_radius))
-        }
-
-        layout.findViewById<TextView>(R.id.appliction_authorText).setOnClickListener {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://Kakathic.github.io/Tool-Tree/website/Information.html")))
-        }
-        layout.findViewById<TextView>(R.id.appliction_nameText).setOnClickListener {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kakathic/Tool-Tree")))
-        }
-
-        DialogHelper.customDialog(this, layout)
     }
 }
