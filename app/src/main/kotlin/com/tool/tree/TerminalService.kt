@@ -20,10 +20,20 @@ class TerminalService : Service(), TerminalSessionStore.Listener {
         private const val NOTIFICATION_ID = 0x7E01
         const val ACTION_EXIT_ALL = "com.tool.tree.TERMINAL_EXIT_ALL"
         const val ACTION_TOGGLE_WAKELOCK = "com.tool.tree.TERMINAL_TOGGLE_WAKELOCK"
+        const val ACTION_SET_WAKELOCK = "com.tool.tree.TERMINAL_SET_WAKELOCK"
+        private const val EXTRA_WAKELOCK = "wakelock"
         private const val WAKE_LOCK_TAG = "com.tool.tree:terminal"
 
         fun ensureStarted(context: Context) {
             ContextCompat.startForegroundService(context, Intent(context, TerminalService::class.java))
+        }
+
+        /** Bật/tắt WakeLock từ UI (checkbox); thông báo tự cập nhật theo */
+        fun setWakeLock(context: Context, on: Boolean) {
+            ContextCompat.startForegroundService(
+                context,
+                Intent(context, TerminalService::class.java).setAction(ACTION_SET_WAKELOCK).putExtra(EXTRA_WAKELOCK, on)
+            )
         }
     }
 
@@ -43,6 +53,7 @@ class TerminalService : Service(), TerminalSessionStore.Listener {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_TOGGLE_WAKELOCK) toggleWakeLock()
+        if (intent?.action == ACTION_SET_WAKELOCK) setWakeLockState(intent.getBooleanExtra(EXTRA_WAKELOCK, false))
         // Phải gọi startForeground ngay sau startForegroundService
         startForeground(NOTIFICATION_ID, buildNotification())
         if (intent?.action == ACTION_EXIT_ALL) {
@@ -73,17 +84,34 @@ class TerminalService : Service(), TerminalSessionStore.Listener {
     }
 
     private fun toggleWakeLock() {
-        if (wakeLock?.isHeld == true) {
-            releaseWakeLock()
+        setWakeLockState(wakeLock?.isHeld != true)
+    }
+
+    private fun setWakeLockState(on: Boolean) {
+        if (on) {
+            if (wakeLock?.isHeld != true) {
+                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).also { it.acquire() }
+            }
+            publishWakeLockState()
         } else {
-            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-            wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).also { it.acquire() }
+            releaseWakeLock()
         }
     }
 
     private fun releaseWakeLock() {
         if (wakeLock?.isHeld == true) wakeLock?.release()
         wakeLock = null
+        publishWakeLockState()
+    }
+
+    // Đồng bộ trạng thái thật sang Store để checkbox trong Activity khớp với nút trên thông báo
+    private fun publishWakeLockState() {
+        val held = wakeLock?.isHeld == true
+        if (TerminalSessionStore.wakeLockOn != held) {
+            TerminalSessionStore.wakeLockOn = held
+            TerminalSessionStore.notifySettingsChanged()
+        }
     }
 
     override fun onSessionsChanged() {

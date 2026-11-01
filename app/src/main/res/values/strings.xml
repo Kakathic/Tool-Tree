@@ -235,6 +235,13 @@ If you agree, press the confirm button to continue."</string>
     <string name="terminal_sessions">Running sessions</string>
     <string name="terminal_new_session">New session</string>
     <string name="terminal_keep_screen_on">Keep screen on</string>
+    <string name="terminal_more">More...</string>
+    <string name="terminal_more_title">Terminal options</string>
+    <string name="terminal_wakelock">WakeLock</string>
+    <string name="terminal_mono_toolbar">Monospace font on toolbar</string>
+    <string name="terminal_url_list">URL list</string>
+    <string name="terminal_url_empty">No URLs found in terminal output</string>
+    <string name="terminal_url_open_fail">Cannot open this link</string>
     <string name="terminal_notif_sessions">Sessions running: %d</string>
     <string name="terminal_notif_open">Open</string>
     <string name="terminal_notif_exit_all">Exit all</string>

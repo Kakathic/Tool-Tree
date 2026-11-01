@@ -208,6 +208,13 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="terminal_sessions">Sesiones en ejecución</string>
     <string name="terminal_new_session">Nueva sesión</string>
     <string name="terminal_keep_screen_on">Mantener pantalla encendida</string>
+    <string name="terminal_more">Más...</string>
+    <string name="terminal_more_title">Opciones del terminal</string>
+    <string name="terminal_wakelock">WakeLock</string>
+    <string name="terminal_mono_toolbar">Fuente monoespaciada en la barra</string>
+    <string name="terminal_url_list">Lista de URL</string>
+    <string name="terminal_url_empty">No se encontraron URL en el terminal</string>
+    <string name="terminal_url_open_fail">No se puede abrir este enlace</string>
     <string name="terminal_notif_sessions">Sesiones en ejecución: %d</string>
     <string name="terminal_notif_open">Abrir</string>
     <string name="terminal_notif_exit_all">Salir de todas</string>

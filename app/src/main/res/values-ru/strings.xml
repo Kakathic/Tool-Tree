@@ -203,6 +203,13 @@
     <string name="terminal_sessions">Запущенные сеансы</string>
     <string name="terminal_new_session">Новый сеанс</string>
     <string name="terminal_keep_screen_on">Не выключать экран</string>
+    <string name="terminal_more">Ещё...</string>
+    <string name="terminal_more_title">Параметры терминала</string>
+    <string name="terminal_wakelock">WakeLock</string>
+    <string name="terminal_mono_toolbar">Моноширинный шрифт на панели</string>
+    <string name="terminal_url_list">Список URL</string>
+    <string name="terminal_url_empty">В терминале нет URL</string>
+    <string name="terminal_url_open_fail">Не удалось открыть ссылку</string>
     <string name="terminal_notif_sessions">Запущено сеансов: %d</string>
     <string name="terminal_notif_open">Открыть</string>
     <string name="terminal_notif_exit_all">Выйти из всех</string>

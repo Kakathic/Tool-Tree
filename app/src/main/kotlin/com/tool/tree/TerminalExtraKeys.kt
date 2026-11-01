@@ -37,6 +37,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
     private var altActive = false
     private var ctrlButton: TextView? = null
     private var altButton: TextView? = null
+    private val keyButtons = ArrayList<Pair<TextView, Key>>()
 
     init {
         build()
@@ -58,6 +59,17 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
             altButton?.isSelected = false
         }
         return value
+    }
+
+    /** Bật/tắt font mono cho các phím */
+    fun setMono(mono: Boolean) {
+        for ((button, key) in keyButtons) {
+            val style = if (key.isBold) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
+            button.typeface = android.graphics.Typeface.create(
+                if (mono) android.graphics.Typeface.MONOSPACE else android.graphics.Typeface.DEFAULT,
+                style
+            )
+        }
     }
 
     private fun dp(value: Int): Int = (value * container.resources.displayMetrics.density).toInt()
@@ -115,6 +127,7 @@ class TerminalExtraKeys(private val container: LinearLayout, private val termina
                         setMargins(margin, margin, margin, margin)
                     }
                 }
+                keyButtons.add(button to key)
                 if (key.id == "CTRL") ctrlButton = button
                 if (key.id == "ALT") altButton = button
                 attachTouch(button, key)

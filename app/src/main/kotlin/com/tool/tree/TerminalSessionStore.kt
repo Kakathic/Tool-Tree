@@ -17,6 +17,17 @@ object TerminalSessionStore {
     /** Giữ màn hình sáng khi xem terminal; dùng chung mọi phiên, tắt mặc định */
     var keepScreenOn = false
 
+    /** Trạng thái WakeLock thật của TerminalService (Service cập nhật, UI chỉ đọc) */
+    var wakeLockOn = false
+
+    /** Dùng font mono cho thanh phím */
+    var monoToolbar = false
+
+    /** Gọi sau khi đổi keepScreenOn / wakeLockOn / monoToolbar để các UI đang mở tự đồng bộ */
+    fun notifySettingsChanged() {
+        listeners.forEach { it.onSettingsChanged() }
+    }
+
     class Request(val title: String, val cwd: String, val cmd: String, val root: Int, val pagePath: String = "", val exitOnBack: Boolean = false, val fontSize: Int = 0, val closeOnExit: Boolean = false) {
         val key: String get() = "$title\u0000$cwd\u0000$cmd\u0000$root\u0000$pagePath\u0000$exitOnBack\u0000$closeOnExit"
     }
@@ -30,6 +41,7 @@ object TerminalSessionStore {
     interface Listener {
         fun onSessionsChanged()
         fun onSessionFinished(entry: Entry)
+        fun onSettingsChanged() {}
     }
 
     class Entry(

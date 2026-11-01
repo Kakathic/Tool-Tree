@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/dialogRootSmall"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:alpha="0.9"
+        android:background="@drawable/krscript_item_ripple_kon"
+        android:orientation="vertical"
+        android:paddingBottom="8dp">
+
+        <TextView
+            style="@style/textTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="8dp"
+            android:text="@string/terminal_more_title" />
+
+        <CheckBox
+            android:id="@+id/terminal_more_keep_screen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="16dp"
+            android:text="@string/terminal_keep_screen_on" />
+
+        <CheckBox
+            android:id="@+id/terminal_more_wakelock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="16dp"
+            android:text="@string/terminal_wakelock" />
+
+        <CheckBox
+            android:id="@+id/terminal_more_mono"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="16dp"
+            android:text="@string/terminal_mono_toolbar" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="4dp"
+            android:background="?android:attr/listDivider" />
+
+        <TextView
+            android:id="@+id/terminal_more_urls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:minHeight="48dp"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:text="@string/terminal_url_list"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/terminal_more_share"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:minHeight="48dp"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:text="@string/terminal_share"
+            android:textSize="16sp" />
+    </LinearLayout>
+</LinearLayout>

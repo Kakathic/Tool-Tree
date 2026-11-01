@@ -18,7 +18,7 @@ import androidx.annotation.Nullable;
 import com.termux.terminal.TerminalBuffer;
 import com.termux.terminal.WcWidth;
 import com.tool.tree.R;
-import com.tool.tree.TerminalShare;
+import com.tool.tree.TerminalMoreDialog;
 import com.termux.view.TerminalView;
 
 public class TextSelectionCursorController implements CursorController {
@@ -119,7 +119,7 @@ public class TextSelectionCursorController implements CursorController {
                 ClipboardManager clipboard = (ClipboardManager) terminalView.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
                 menu.add(Menu.NONE, ACTION_COPY, Menu.NONE, R.string.btn_copy_output).setShowAsAction(show);
                 menu.add(Menu.NONE, ACTION_PASTE, Menu.NONE, R.string.terminal_paste).setEnabled(clipboard != null && clipboard.hasPrimaryClip()).setShowAsAction(show);
-                menu.add(Menu.NONE, ACTION_MORE, Menu.NONE, R.string.terminal_share);
+                menu.add(Menu.NONE, ACTION_MORE, Menu.NONE, R.string.terminal_more).setShowAsAction(show);
                 return true;
             }
 
@@ -146,10 +146,10 @@ public class TextSelectionCursorController implements CursorController {
                         terminalView.mTermSession.onPasteTextFromClipboard();
                         break;
                     case ACTION_MORE:
-                        // Chia sẻ toàn bộ nội dung terminal (lệnh đã gõ và kết quả, gồm cả phần cuộn lên)
+                        // Mở dialog "Thêm...": WakeLock, giữ sáng, font mono, danh sách URL (quét từ toàn bộ nội dung terminal)
                         String transcript = terminalView.mEmulator.getScreen().getTranscriptText();
                         terminalView.stopTextSelectionMode();
-                        TerminalShare.shareTranscript(terminalView.getContext(), terminalView.mTermSession, transcript);
+                        TerminalMoreDialog.show(terminalView.getContext(), transcript, terminalView.mTermSession);
                         break;
                 }
 

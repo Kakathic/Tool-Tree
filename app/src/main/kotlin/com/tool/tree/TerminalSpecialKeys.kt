@@ -20,9 +20,17 @@ class TerminalSpecialKeys(
         listOf("-", "_", "|", "\\", "~", "'", "\"", "`", "&", ";"),
         listOf("{", "}", "[", "]", "(", ")", "<", ">", "*", "#")
     )
+    private val keyButtons = ArrayList<TextView>()
 
     init {
         build()
+    }
+
+    /** Bật/tắt font mono cho các phím */
+    fun setMono(mono: Boolean) {
+        for (button in keyButtons) {
+            button.typeface = if (mono) android.graphics.Typeface.MONOSPACE else android.graphics.Typeface.DEFAULT
+        }
     }
 
     private fun dp(value: Int): Int = (value * container.resources.displayMetrics.density).toInt()
@@ -69,6 +77,7 @@ class TerminalSpecialKeys(
                         terminalView.inputCodePoint(ch.codePointAt(0), false, false)
                     }
                 }
+                keyButtons.add(button)
                 row.addView(button)
             }
             container.addView(row)

@@ -20,7 +20,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.omarea.common.ui.DialogHelper
@@ -147,6 +146,8 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
             terminalView
         )
         toolbarPager.setPage(TerminalSwipePager.PAGE_KEYS, false)
+        TerminalSessionStore.monoToolbar = TerminalMoreDialog.loadMono(this)
+        applyMonoToolbar()
 
         setupDrawer()
 
@@ -192,13 +193,6 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
                 drawer.closeDrawer(GravityCompat.START)
             }
         )
-        findViewById<SwitchCompat>(R.id.terminal_keep_screen).apply {
-            isChecked = TerminalSessionStore.keepScreenOn
-            setOnCheckedChangeListener { _, checked ->
-                TerminalSessionStore.keepScreenOn = checked
-                updateKeepScreenOn()
-            }
-        }
         drawer.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
             override fun onDrawerClosed(drawerView: View) {
                 terminalView.requestFocus()
@@ -218,9 +212,9 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
 
     private fun handleIntent(intent: Intent) {
         if (intent.getBooleanExtra(EXTRA_HAS_REQUEST, false)) {
-            if (intent.getBooleanExtra(EXTRA_KEEP_SCREEN_ON, false)) {
+            // keep-screen-on trong TOML chỉ là giá trị ban đầu khi vừa vào (chưa có phiên nào), không ép lại sau khi người dùng đã chỉnh
+            if (intent.getBooleanExtra(EXTRA_KEEP_SCREEN_ON, false) && current == null && pendingCreates == 0 && TerminalSessionStore.all().isEmpty()) {
                 TerminalSessionStore.keepScreenOn = true
-                findViewById<SwitchCompat>(R.id.terminal_keep_screen).isChecked = true
                 updateKeepScreenOn()
             }
             val request = TerminalSessionStore.Request(
@@ -315,6 +309,18 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         sessionDrawer.refresh(TerminalSessionStore.all(), current)
         updateKeepScreenOn()
         if (TerminalSessionStore.all().isEmpty() && pendingCreates == 0) finish()
+    }
+
+    // Checkbox ở dialog "Thêm..." hoặc nút WakeLock trên thông báo đổi trạng thái
+    override fun onSettingsChanged() {
+        updateKeepScreenOn()
+        applyMonoToolbar()
+    }
+
+    private fun applyMonoToolbar() {
+        val mono = TerminalSessionStore.monoToolbar
+        extraKeys.setMono(mono)
+        specialKeys.setMono(mono)
     }
 
     override fun onSessionFinished(entry: TerminalSessionStore.Entry) {
