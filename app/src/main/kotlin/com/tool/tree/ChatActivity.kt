@@ -13,7 +13,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -843,9 +842,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             notifyDataSetChanged()
         }
 
-        class VH(view: View, val bubble: View, val title: TextView, val text: TextView, val progress: ProgressBar) : RecyclerView.ViewHolder(view) {
-            var dots: Runnable? = null
-        }
+        class VH(view: View, val bubble: View, val title: TextView, val text: TextView, val progress: ProgressBar, val dots: TypingDotsView) : RecyclerView.ViewHolder(view)
 
         fun add(message: ChatMessage) {
             items.add(message)
@@ -863,35 +860,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             return if (end == text.length) text else text.subSequence(0, end)
         }
 
-        private fun stopDots(holder: VH) {
-            holder.dots?.let { holder.text.removeCallbacks(it) }
-            holder.dots = null
-        }
-
-        // Ba chấm chờ phản hồi: nhảy nhẹ lần lượt (TypingDotsSpan), mỗi khung hình chỉ invalidate TextView
-        private fun startDots(holder: VH) {
-            val tv = holder.text
-            val dots = SpannableString(".")
-            dots.setSpan(
-                TypingDotsSpan(tv.currentTextColor, tv.resources.displayMetrics.density),
-                0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-            tv.text = dots
-            val frame = object : Runnable {
-                override fun run() {
-                    tv.invalidate()
-                    tv.postOnAnimation(this)
-                }
-            }
-            holder.dots = frame
-            tv.postOnAnimation(frame)
-        }
-
-        override fun onViewRecycled(holder: VH) {
-            stopDots(holder)
-            super.onViewRecycled(holder)
-        }
-
         override fun getItemCount() = items.size
         override fun getItemViewType(position: Int) = if (items[position].fromUser) 1 else 0
 
@@ -902,6 +870,9 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             val title = view.findViewById<TextView>(R.id.chat_title)
             val tv = view.findViewById<TextView>(R.id.chat_text)
             val progress = view.findViewById<ProgressBar>(R.id.chat_progress)
+            val dots = view.findViewById<TypingDotsView>(R.id.chat_dots)
+            dots.setDotColor(tv.currentTextColor)
+            dots.minimumHeight = tv.lineHeight + tv.paddingTop + tv.paddingBottom
             val density = parent.resources.displayMetrics.density
             val fromUser = viewType == 1
             val tint = if (fromUser) (activity.accentColor() and 0x00FFFFFF) or 0x40000000 else 0x26808080
@@ -914,6 +885,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             bubble.overlayColor = if (fromUser) tint else 0
             tv.maxWidth = parent.resources.displayMetrics.widthPixels - (24 * density).toInt()
             tv.setTextIsSelectable(true)
+            tv.movementMethod = ChatMarkdown.SelectableLinkMovement
+            tv.setLinkTextColor(activity.accentColor())
             (column.layoutParams as FrameLayout.LayoutParams).gravity = if (fromUser) Gravity.END else Gravity.START
             if (fromUser) {
                 (title.layoutParams as LinearLayout.LayoutParams).apply {
@@ -922,7 +895,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                     marginEnd = (8 * density).toInt()
                 }
             }
-            return VH(view, bubble, title, tv, progress)
+            return VH(view, bubble, title, tv, progress, dots)
         }
 
         override fun onBindViewHolder(holder: VH, position: Int) {
@@ -931,11 +904,11 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             holder.title.visibility = if (label != null) View.VISIBLE else View.GONE
             holder.title.text = label
             val visible = visibleText(m.text)
-            stopDots(holder)
             val renderMd = activity.node.markdown && !m.fromUser
-            if (renderMd) holder.text.movementMethod = ChatMarkdown.SelectableLinkMovement
-            if (visible.isEmpty() && m.running) startDots(holder)
-            else holder.text.text = if (renderMd) ChatMarkdown.render(holder.text.context, visible) else visible
+            val showDots = visible.isEmpty() && m.running
+            holder.dots.visibility = if (showDots) View.VISIBLE else View.GONE
+            holder.text.visibility = if (showDots) View.GONE else View.VISIBLE
+            if (!showDots) holder.text.text = ChatMarkdown.linkify(if (renderMd) ChatMarkdown.render(holder.text.context, visible) else visible)
             if (m.running && m.progressTotal != 0) {
                 holder.progress.visibility = View.VISIBLE
                 holder.progress.isIndeterminate = m.progressTotal < 0

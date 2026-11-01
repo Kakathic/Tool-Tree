@@ -30,6 +30,14 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <com.tool.tree.TypingDotsView
+                android:id="@+id/chat_dots"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/chat_text"
                 android:layout_width="wrap_content"

@@ -16,6 +16,7 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
+import android.text.style.URLSpan
 import android.view.View
 import android.widget.Toast
 import com.omarea.krscript.ui.MarkdownCodeSpan
@@ -34,6 +35,33 @@ object ChatMarkdown {
     /** Bấm được link nhưng vẫn cho nhấn giữ để bôi chọn chữ (LinkMovementMethod gốc chặn chọn). */
     object SelectableLinkMovement : LinkMovementMethod() {
         override fun canSelectArbitrarily(): Boolean = true
+    }
+
+    private val BARE_URL = Regex("(?i)\\b(?:https?://|www\\.)[^\\s<>\"']+")
+    private const val URL_TRAILING = ".,;:!?'\"*_~"
+
+    /** Biến URL trần (http://, https://, www.) thành link bấm được; luôn trả về bản sao để không đụng buffer gốc. */
+    fun linkify(source: CharSequence): CharSequence {
+        if (source.length < 4) return source
+        val out = SpannableStringBuilder(source)
+        var found = false
+        for (match in BARE_URL.findAll(source)) {
+            var end = match.range.last + 1
+            val start = match.range.first
+            while (end > start) {
+                val c = source[end - 1]
+                val opens = source.subSequence(start, end).count { it == '(' }
+                val closes = source.subSequence(start, end).count { it == ')' }
+                if (URL_TRAILING.indexOf(c) >= 0 || (c == ')' && closes > opens) || c == ']' || c == '}') end-- else break
+            }
+            if (end - start < 4) continue
+            if (out.getSpans(start, end, ClickableSpan::class.java).isNotEmpty()) continue
+            val url = source.subSequence(start, end).toString()
+            val href = if (url.startsWith("www.", ignoreCase = true)) "http://$url" else url
+            out.setSpan(URLSpan(href), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            found = true
+        }
+        return if (found) out else source
     }
 
     private val HEADING = Regex("^(#{1,3})\\s+(.*)$")
