@@ -17,6 +17,7 @@ import android.os.Looper
 import android.text.Layout
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.style.CharacterStyle
 import android.text.style.ForegroundColorSpan
 import android.util.TypedValue
 import android.view.Gravity
@@ -70,6 +71,7 @@ import com.tool.tree.ui.PopupMenuListAdapter
 import com.tool.tree.ui.PopupMenuRow
 import com.tool.tree.ui.PopupRowTypeIcon
 import com.tool.tree.ui.SpinnerPopupHelper
+import com.tool.tree.ui.SyntaxHighlighterFactory
 
 class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     companion object {
@@ -882,7 +884,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             return tv
         }
 
-        private fun buildCodeBlock(container: LinearLayout, holder: VH, code: CharSequence): View {
+        private fun buildCodeBlock(container: LinearLayout, holder: VH, code: CharSequence, lang: String): View {
             val ctx = container.context
             val textColor = holder.text.currentTextColor
             val card = FrameLayout(ctx)
@@ -900,7 +902,12 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             tv.maxWidth = holder.text.maxWidth - dp(tv, 20f)
             if (Build.VERSION.SDK_INT >= 23) tv.hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
             tv.setTextIsSelectable(true)
-            tv.text = code
+            val colored = SpannableStringBuilder(code)
+            val lightToml = lang.equals("toml", ignoreCase = true) && !ThemeModeState.getThemeMode().isDarkMode
+            if (!lightToml && colored.getSpans(0, colored.length, CharacterStyle::class.java).isEmpty()) {
+                SyntaxHighlighterFactory.highlightSpannable(lang, colored)
+            }
+            tv.text = colored
             card.addView(tv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
             val icon = ImageView(ctx)
@@ -934,7 +941,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                         topMargin = dp(container, if (first) 10f else 3f)
                         bottomMargin = dp(container, if (last) 10f else 3f)
                     }
-                    container.addView(buildCodeBlock(container, holder, block.text), params)
+                    container.addView(buildCodeBlock(container, holder, block.text, block.lang), params)
                 } else {
                     container.addView(
                         buildTextBlock(container, holder, block.text, first, last),

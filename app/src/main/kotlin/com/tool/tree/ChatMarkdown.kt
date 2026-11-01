@@ -69,9 +69,9 @@ object ChatMarkdown {
     private const val SEG_CODE = 1
     private const val SEG_MARK = 2
 
-    private class Seg(val kind: Int, val start: Int, val end: Int, val block: Boolean = false)
+    private class Seg(val kind: Int, val start: Int, val end: Int, val block: Boolean = false, val info: String = "")
 
-    class Block(val isCode: Boolean, val text: CharSequence)
+    class Block(val isCode: Boolean, val text: CharSequence, val lang: String = "")
 
     fun splitBlocks(source: CharSequence): List<Block> {
         val s = source.toString()
@@ -88,7 +88,7 @@ object ChatMarkdown {
             val code = segs.getOrNull(i + 1)
             if (seg.kind == SEG_MARK && code != null && code.kind == SEG_CODE && code.block) {
                 addTextBlock(out, source, textFrom, seg.start)
-                if (code.end > code.start) out.add(Block(true, source.subSequence(code.start, code.end)))
+                if (code.end > code.start) out.add(Block(true, source.subSequence(code.start, code.end), code.info))
                 val close = segs.getOrNull(i + 2)
                 if (close != null && close.kind == SEG_MARK) {
                     textFrom = close.start + FENCE.length
@@ -131,11 +131,13 @@ object ChatMarkdown {
             val contentEnd = if (close < 0) n else close
             var cs = open + 3
             var infoHandled = false
+            var info = ""
             if (atLineStart) {
                 val nl = s.indexOf('\n', cs)
                 val hasBreak = nl in cs until contentEnd
                 val firstEnd = if (hasBreak) nl else contentEnd
                 if (FENCE_INFO.matches(s.substring(cs, firstEnd)) && (hasBreak || close < 0)) {
+                    info = s.substring(cs, firstEnd).trim()
                     cs = if (hasBreak) nl + 1 else contentEnd
                     infoHandled = true
                 }
@@ -152,7 +154,7 @@ object ChatMarkdown {
                     ce = if (lb > cs && s[lb - 1] == '\r') lb - 1 else lb
                 }
             }
-            segs.add(Seg(SEG_CODE, cs, maxOf(cs, ce), atLineStart))
+            segs.add(Seg(SEG_CODE, cs, maxOf(cs, ce), atLineStart, info))
 
             if (close >= 0) {
                 segs.add(Seg(SEG_MARK, close, close))

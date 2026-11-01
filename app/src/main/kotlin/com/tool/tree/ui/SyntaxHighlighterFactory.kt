@@ -4,6 +4,7 @@ import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
+import android.text.Spannable
 import android.text.Spanned
 import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
@@ -15,16 +16,27 @@ import java.lang.ref.WeakReference
 import java.util.Locale
 
 object SyntaxHighlighterFactory {
+    private val staticCache = HashMap<String, BaseSyntaxHighlighter>()
+    private val languageAlias = mapOf("shell" to "sh", "python" to "py")
+
+    private fun resolve(ext: String, editText: EditText?): BaseSyntaxHighlighter? = when (ext) {
+        "sh", "bash", "zsh", "ksh" -> ShellSyntaxHighlighter(editText)
+        "xml" -> XmlSyntaxHighlighter(editText)
+        "toml" -> TomlSyntaxHighlighter(editText)
+        "prop", "properties" -> PropSyntaxHighlighter(editText)
+        "py" -> PythonSyntaxHighlighter(editText)
+        else -> null
+    }
+
     fun create(extension: String?, editText: EditText): SyntaxHighlighter? {
-        val ext = extension.orEmpty().lowercase(Locale.ROOT)
-        return when (ext) {
-            "sh", "bash", "zsh", "ksh" -> ShellSyntaxHighlighter(editText)
-            "xml" -> XmlSyntaxHighlighter(editText)
-            "toml" -> TomlSyntaxHighlighter(editText)
-            "prop", "properties" -> PropSyntaxHighlighter(editText)
-            "py" -> PythonSyntaxHighlighter(editText)
-            else -> null
-        }
+        return resolve(extension.orEmpty().lowercase(Locale.ROOT), editText)
+    }
+
+    fun highlightSpannable(language: String?, text: Spannable): Boolean {
+        val lang = language.orEmpty().lowercase(Locale.ROOT)
+        val key = languageAlias[lang] ?: lang
+        val highlighter = staticCache[key] ?: resolve(key, null)?.also { staticCache[key] = it } ?: return false
+        return highlighter.applyTo(text)
     }
 
     fun createForPath(path: String?, editText: EditText): SyntaxHighlighter? {
@@ -44,7 +56,7 @@ interface SyntaxHighlighter {
 }
 
 abstract class BaseSyntaxHighlighter(
-    editText: EditText,
+    editText: EditText?,
     @param:ColorInt private val keywordColor: Int,
     @param:ColorInt private val builtinColor: Int,
     @param:ColorInt private val stringColor: Int,
@@ -70,7 +82,17 @@ abstract class BaseSyntaxHighlighter(
     protected val editText: EditText?
         get() = editTextRef.get()
 
-    protected abstract fun applyHighlight(text: Editable)
+    protected abstract fun applyHighlight(text: Spannable)
+
+    fun applyTo(text: Spannable): Boolean {
+        if (text.length > MAX_HIGHLIGHT_LENGTH) return false
+        return try {
+            applyHighlight(text)
+            true
+        } catch (_: Throwable) {
+            false
+        }
+    }
 
     override fun attach() {
         val et = editText ?: return
@@ -134,7 +156,7 @@ abstract class BaseSyntaxHighlighter(
         }
     }
 
-    protected fun clearSpans(text: Editable) {
+    protected fun clearSpans(text: Spannable) {
         val colorSpans = text.getSpans(0, text.length, ForegroundColorSpan::class.java)
         for (span in colorSpans) {
             text.removeSpan(span)
@@ -147,7 +169,7 @@ abstract class BaseSyntaxHighlighter(
         }
     }
 
-    protected fun color(text: Editable, start: Int, end: Int, @ColorInt color: Int) {
+    protected fun color(text: Spannable, start: Int, end: Int, @ColorInt color: Int) {
         if (start < 0 || end <= start || start >= text.length) return
         val safeEnd = end.coerceAtMost(text.length)
         text.setSpan(
@@ -158,7 +180,7 @@ abstract class BaseSyntaxHighlighter(
         )
     }
 
-    protected fun bold(text: Editable, start: Int, end: Int) {
+    protected fun bold(text: Spannable, start: Int, end: Int) {
         if (start < 0 || end <= start || start >= text.length) return
         val safeEnd = end.coerceAtMost(text.length)
         text.setSpan(
@@ -177,7 +199,7 @@ abstract class BaseSyntaxHighlighter(
     protected fun punctuationColor(): Int = punctuationColor
 }
 
-class ShellSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
+class ShellSyntaxHighlighter(editText: EditText?) : BaseSyntaxHighlighter(
     editText = editText,
     keywordColor = 0xFF3D8BFF.toInt(),
     builtinColor = 0xFFFFA000.toInt(),
@@ -210,7 +232,7 @@ class ShellSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
             "|(?<PUNCTUATION>&&|\\|\\||\\||;|\\(|\\)|\\{|\\}|\\[\\[|\\]\\]|<|>)"
     )
 
-    override fun applyHighlight(text: Editable) {
+    override fun applyHighlight(text: Spannable) {
         clearSpans(text)
         val s = text.toString()
 
@@ -239,7 +261,7 @@ class ShellSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     }
 }
 
-class XmlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
+class XmlSyntaxHighlighter(editText: EditText?) : BaseSyntaxHighlighter(
     editText = editText,
     keywordColor = 0xFF3D8BFF.toInt(),
     builtinColor = 0xFFFFA000.toInt(),
@@ -258,7 +280,7 @@ class XmlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
             "|(?<PUNCTUATION></?|/>|>[^<]*)"
     )
 
-    override fun applyHighlight(text: Editable) {
+    override fun applyHighlight(text: Spannable) {
         clearSpans(text)
         val s = text.toString()
 
@@ -289,7 +311,7 @@ class XmlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     }
 }
 
-class TomlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
+class TomlSyntaxHighlighter(editText: EditText?) : BaseSyntaxHighlighter(
     editText = editText,
     keywordColor = 0xFFF9E2AF.toInt(),
     builtinColor = 0xFF89B4FA.toInt(),
@@ -316,7 +338,7 @@ class TomlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
             "|(?<PUNCTUATION>[=,.\\[\\]{}])"
     )
 
-    override fun applyHighlight(text: Editable) {
+    override fun applyHighlight(text: Spannable) {
         clearSpans(text)
         val s = text.toString()
 
@@ -346,7 +368,7 @@ class TomlSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     }
 }
 
-class PropSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
+class PropSyntaxHighlighter(editText: EditText?) : BaseSyntaxHighlighter(
     editText = editText,
     keywordColor = 0xFF3D8BFF.toInt(),
     builtinColor = 0xFFFFA000.toInt(),
@@ -363,7 +385,7 @@ class PropSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
             "|(?<SEPARATOR>=)"
     )
 
-    override fun applyHighlight(text: Editable) {
+    override fun applyHighlight(text: Spannable) {
         clearSpans(text)
         val s = text.toString()
 
@@ -390,7 +412,7 @@ class PropSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
     }
 }
 
-class PythonSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
+class PythonSyntaxHighlighter(editText: EditText?) : BaseSyntaxHighlighter(
     editText = editText,
     keywordColor = 0xFF3D8BFF.toInt(),
     builtinColor = 0xFFFFA000.toInt(),
@@ -421,7 +443,7 @@ class PythonSyntaxHighlighter(editText: EditText) : BaseSyntaxHighlighter(
             "|(?<PUNCTUATION>[:.,;()\\[\\]{}@+\\-*/%=<>!&|^~])"
     )
 
-    override fun applyHighlight(text: Editable) {
+    override fun applyHighlight(text: Spannable) {
         clearSpans(text)
         val s = text.toString()
 
