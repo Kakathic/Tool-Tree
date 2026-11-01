@@ -172,6 +172,7 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="theme_system_default">Alapértelmezett felület</string>
     <string name="theme_text">Témák</string>
     <string name="theme_disable_blur">Elmosás kikapcsolása</string>
+    <string name="theme_direct_bg">Közvetlen háttér</string>
     <string name="theme_wallpaper_dark">Háttérkép + Sötét</string>
     <string name="theme_wallpaper_light">Háttérkép + Világos</string>
     <string name="theme_wallpaper_system">Háttérkép + Alapértelmezett</string>

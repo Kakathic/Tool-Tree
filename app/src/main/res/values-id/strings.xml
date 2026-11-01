@@ -152,6 +152,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="theme_wallpaper_light">Wallpaper terang</string>
     <string name="theme_text">Tema</string>
     <string name="theme_disable_blur">Nonaktifkan blur</string>
+    <string name="theme_direct_bg">Latar langsung</string>
     <string name="open_in_browser">Buka di peramban</string>
     
     <string name="update_text">Perbarui</string>

@@ -578,21 +578,35 @@ class MainActivity : AppCompatActivity() {
         val blurRow = layout.findViewById<View>(R.id.blur_disable_row)
         val blurLabel = layout.findViewById<TextView>(R.id.blur_disable_label)
         val blurCheck = layout.findViewById<CheckBox>(R.id.blur_disable_check)
-        fun updateBlurCheckState(themeLevel: Int) {
+        val directRow = layout.findViewById<View>(R.id.direct_bg_row)
+        val directLabel = layout.findViewById<TextView>(R.id.direct_bg_label)
+        val directCheck = layout.findViewById<CheckBox>(R.id.direct_bg_check)
+        fun updateOptionStates(themeLevel: Int) {
             val enabled = themeLevel >= 3
+            val alpha = if (enabled) 0.7f else 0.35f
             blurCheck.isEnabled = enabled
             blurRow.isClickable = enabled
-            blurLabel.alpha = if (enabled) 0.7f else 0.35f
+            blurLabel.alpha = alpha
+            directCheck.isEnabled = enabled
+            directRow.isClickable = enabled
+            directLabel.alpha = alpha
         }
         blurCheck.isChecked = ThemeModeState.isBlurDisabled(this)
-        updateBlurCheckState(themeConfig.getThemeMode())
+        directCheck.isChecked = ThemeModeState.isDirectBgEnabled(this)
+        updateOptionStates(themeConfig.getThemeMode())
         blurRow.setOnClickListener { if (blurCheck.isEnabled) blurCheck.toggle() }
+        directRow.setOnClickListener { if (directCheck.isEnabled) directCheck.toggle() }
         blurCheck.setOnCheckedChangeListener { _, checked ->
             ThemeModeState.setBlurDisabled(this, checked)
             ThemeModeState.switchTheme(this)
             recreate()
         }
-        
+        directCheck.setOnCheckedChangeListener { _, checked ->
+            ThemeModeState.setDirectBgEnabled(this, checked)
+            ThemeModeState.switchTheme(this)
+            recreate()
+        }
+
         val themeSelector = layout.findViewById<TextView>(R.id.theme_selector)
         val themeNames = listOf(
             getString(R.string.theme_system_default), getString(R.string.theme_dark),
@@ -610,7 +624,7 @@ class MainActivity : AppCompatActivity() {
             popup.setOnItemClickListener { _, _, position, _ ->
                 themeConfig.setThemeMode(position)
                 themeSelector.text = themeNames[position]
-                updateBlurCheckState(position)
+                updateOptionStates(position)
                 popup.dismiss()
                 ThemeModeState.switchTheme(this)
                 recreate()

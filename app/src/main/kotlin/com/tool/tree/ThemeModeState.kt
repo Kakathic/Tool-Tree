@@ -39,40 +39,19 @@ object ThemeModeState {
     fun isBlurActive(): Boolean = blurActive
 
     @JvmStatic
-    fun isBlurDisabled(context: Context): Boolean {
-        val file = File(context.filesDir, "home/usr/log/dissblur")
-        return try {
-            if (file.exists()) {
-                file.readText().trim() == "1"
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            false
-        }
-    }
+    fun isBlurDisabled(context: Context): Boolean = ThemeConfig(context).isBlurDisabled()
 
     @JvmStatic
     fun setBlurDisabled(context: Context, disabled: Boolean) {
-        val file = File(context.filesDir, "home/usr/log/dissblur")
-        try {
-            file.parentFile?.mkdirs()
-            file.writeText(if (disabled) "1" else "0")
-        } catch (e: Exception) {
-        }
+        ThemeConfig(context).setBlurDisabled(disabled)
     }
 
-    private fun isDirectBgEnabled(activity: Activity): Boolean {
-        val file = File(activity.filesDir, "home/usr/log/directbg")
-        return try {
-            if (file.exists()) {
-                file.readText().trim() == "1"
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            false
-        }
+    @JvmStatic
+    fun isDirectBgEnabled(context: Context): Boolean = ThemeConfig(context).isDirectBgEnabled()
+
+    @JvmStatic
+    fun setDirectBgEnabled(context: Context, enabled: Boolean) {
+        ThemeConfig(context).setDirectBgEnabled(enabled)
     }
 
     fun switchTheme(activity: Activity, themeLevel: Int? = null): ThemeMode {
