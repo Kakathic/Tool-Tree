@@ -46,7 +46,7 @@ class TerminalActivity : AppCompatActivity(), TerminalViewClient, TerminalSessio
         private const val STARTUP_FAIL_WINDOW_MS = 3000L
         private const val PREF_FONT_SP_PREFIX = "font_sp_"
         private const val DEFAULT_FONT_SP = 14
-        private const val MIN_FONT_SP = 8
+        private const val MIN_FONT_SP = 4
         private const val MAX_FONT_SP = 40
 
         fun start(context: Context, title: String?, cwd: String?, cmd: String?, fontSize: Int, root: Int = 0, pagePath: String? = null, exitOnBack: Boolean = false, closeOnExit: Boolean = false, keepScreenOn: Boolean = false) {

@@ -5,7 +5,7 @@
         android:width="7dp"
         android:height="7dp"
         android:gravity="top|end"
-        android:right="6dp"
+        android:right="2dp"
         android:top="0dp">
         <shape android:shape="oval">
             <solid android:color="@color/banner_error" />

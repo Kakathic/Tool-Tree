@@ -48,7 +48,7 @@
                 android:id="@+id/about_version"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="-10dp"
+                android:layout_marginTop="-5dp"
                 android:alpha="0.7"
                 android:text="@string/engine_version_name"
                 android:textSize="12sp" />
@@ -141,6 +141,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/wallpaper_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"

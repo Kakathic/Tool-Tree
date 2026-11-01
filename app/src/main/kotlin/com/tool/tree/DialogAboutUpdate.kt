@@ -57,6 +57,7 @@ class DialogAboutUpdate(
     private lateinit var itemDesc: TextView
     private lateinit var itemWidget: ImageView
     private lateinit var itemRing: DownloadProgressRing
+    private lateinit var wallpaperRow: View
     private lateinit var wallpaperPath: TextView
     private lateinit var wallpaperChoose: TextView
     private lateinit var wallpaperRemove: TextView
@@ -134,6 +135,7 @@ class DialogAboutUpdate(
         directRow = view.findViewById(R.id.direct_bg_row)
         directLabel = view.findViewById(R.id.direct_bg_label)
         directCheck = view.findViewById(R.id.direct_bg_check)
+        wallpaperRow = view.findViewById(R.id.wallpaper_row)
         wallpaperPath = view.findViewById(R.id.wallpaper_path)
         wallpaperChoose = view.findViewById(R.id.wallpaper_choose)
         wallpaperRemove = view.findViewById(R.id.wallpaper_remove)
@@ -187,19 +189,10 @@ class DialogAboutUpdate(
     }
 
     private fun updateOptionStates(themeLevel: Int) {
-        val enabled = themeLevel >= 3
-        val alpha = if (enabled) 0.7f else 0.35f
-        blurCheck.isEnabled = enabled
-        blurRow.isClickable = enabled
-        blurLabel.alpha = alpha
-        directCheck.isEnabled = enabled
-        directRow.isClickable = enabled
-        directLabel.alpha = alpha
-        wallpaperPath.alpha = alpha
-        wallpaperChoose.isEnabled = enabled
-        wallpaperRemove.isEnabled = enabled
-        wallpaperChoose.alpha = if (enabled) 1f else 0.35f
-        wallpaperRemove.alpha = if (enabled) 1f else 0.35f
+        val visibility = if (themeLevel >= 3) View.VISIBLE else View.GONE
+        wallpaperRow.visibility = visibility
+        blurRow.visibility = visibility
+        directRow.visibility = visibility
     }
 
     private fun bindThemeSelector(view: View, activity: Activity, themeConfig: ThemeConfig) {
