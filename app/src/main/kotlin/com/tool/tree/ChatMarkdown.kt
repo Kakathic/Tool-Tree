@@ -20,6 +20,7 @@ import android.text.style.URLSpan
 import android.view.View
 import android.widget.Toast
 import com.omarea.krscript.ui.MarkdownCodeSpan
+import com.omarea.krscript.ui.MarkdownInlineCodeSpan
 import com.omarea.krscript.ui.MarkdownInlineHelper
 
 /**
@@ -166,7 +167,7 @@ object ChatMarkdown {
                     out.setSpan(StrikethroughSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 MarkdownInlineHelper.MarkdownSpanType.CODE -> {
                     val radius = info.href.toFloatOrNull()
-                    val span = if (radius != null) MarkdownCodeSpan(context, cornerRadiusDp = radius) else MarkdownCodeSpan(context)
+                    val span = if (radius != null) MarkdownInlineCodeSpan(context, cornerRadiusDp = radius) else MarkdownInlineCodeSpan(context)
                     out.setSpan(span, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
                 MarkdownInlineHelper.MarkdownSpanType.COLOR -> {
