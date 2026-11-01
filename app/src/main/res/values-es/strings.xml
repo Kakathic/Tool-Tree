@@ -219,4 +219,5 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="chat_params_title">Ajustes</string>
     <string name="chat_sessions_title">Sesiones de chat</string>
     <string name="chat_delete_session_confirm">¿Eliminar esta sesión?</string>
+    <string name="chat_markdown_toggle">Formato Markdown</string>
 </resources>

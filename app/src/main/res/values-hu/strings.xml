@@ -214,4 +214,5 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="chat_params_title">Beállítások</string>
     <string name="chat_sessions_title">Csevegési munkamenetek</string>
     <string name="chat_delete_session_confirm">Törli ezt a munkamenetet?</string>
+    <string name="chat_markdown_toggle">Markdown formázás</string>
 </resources>

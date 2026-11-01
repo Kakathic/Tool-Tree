@@ -222,4 +222,5 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="chat_params_title">Cài đặt</string>
     <string name="chat_sessions_title">Phiên chat</string>
     <string name="chat_delete_session_confirm">Xoá phiên này?</string>
+    <string name="chat_markdown_toggle">Định dạng Markdown</string>
 </resources>

@@ -95,6 +95,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     }
 
     private lateinit var node: ChatNode
+    private var markdownEnabled = false
     private lateinit var adapter: ChatAdapter
     private lateinit var listView: RecyclerView
     private lateinit var inputView: EditText
@@ -130,6 +131,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             return
         }
         node = chat
+        markdownEnabled = node.markdown
 
         ThemeModeState.switchTheme(this)
         setContentView(R.layout.activity_chat)
@@ -358,12 +360,10 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         )
         drawer.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
             override fun onDrawerStateChanged(newState: Int) {
-                // Vuốt từ mép phải: nạp danh sách ngay khi bắt đầu kéo
                 if (newState == DrawerLayout.STATE_DRAGGING && !drawer.isDrawerOpen(GravityCompat.END)) prepareSessionList()
             }
         })
 
-        // Android 10+ dùng vuốt mép để Back: nhường dải mép phải cho ngăn kéo
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val density = resources.displayMetrics.density
             drawer.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
@@ -587,7 +587,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         sessionsItem.actionView = sessionsButton
 
         val options = node.menuOptions.filter { isSupported(it) }
-        if (options.isNotEmpty()) {
+        if (options.isNotEmpty() || node.markdown) {
             val button = toolbarButton(R.drawable.ic_more_vert, getString(R.string.kr_more_options))
             button.setOnClickListener { anchor -> showOptionsPopup(anchor, options) }
             val item = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getString(R.string.kr_more_options))
@@ -619,7 +619,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     }
 
     private fun showOptionsPopup(anchor: View, options: List<PageMenuOption>) {
-        val rows = options.map { buildRow(it) }
+        val rows = ArrayList<PopupMenuRow>(options.map { buildRow(it) })
+        if (node.markdown) rows.add(markdownRow())
         val adapter = PopupMenuListAdapter(this, rows)
         val background = ContextCompat.getDrawable(this, R.drawable.kr_spinner_popup_bg)
 
@@ -627,7 +628,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         popup.anchorView = anchor
         popup.setAdapter(adapter)
         popup.setBackgroundDrawable(background)
-        // Không lấy focus để bàn phím đang mở không bị tắt
         popup.isModal = false
         popup.inputMethodMode = ListPopupWindow.INPUT_METHOD_NOT_NEEDED
         popup.setOnItemClickListener { _, _, position, _ ->
@@ -644,6 +644,20 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         )
         popup.show()
         SpinnerPopupHelper.applyRoundedClip(popup, resources.getDimension(R.dimen.kr_spinner_popup_radius))
+    }
+
+    private fun markdownRow() = PopupMenuRow(
+        title = getString(R.string.chat_markdown_toggle),
+        leftIcon = null,
+        typeIcon = PopupRowTypeIcon.CHECKBOX,
+        checked = markdownEnabled
+    ) { toggleMarkdown() }
+
+    private fun toggleMarkdown() {
+        markdownEnabled = !markdownEnabled
+        val stick = !listView.canScrollVertically(1)
+        adapter.refreshAll()
+        if (stick) scrollToEnd()
     }
 
     private fun buildRow(option: PageMenuOption): PopupMenuRow {
@@ -789,8 +803,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             onChanged()
         }
 
-        // Same carriage-return rules as the shell log dialog: "\r" rewinds to the start of the line,
-        // the next text overwrites it, "\n" commits the line.
         private fun append(text: CharSequence) {
             val buf = message.text
             val len = text.length
@@ -850,6 +862,11 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             notifyItemInserted(items.size - 1)
         }
 
+        @android.annotation.SuppressLint("NotifyDataSetChanged")
+        fun refreshAll() {
+            notifyDataSetChanged()
+        }
+
         fun changed(message: ChatMessage) {
             val index = items.indexOf(message)
             if (index >= 0) notifyItemChanged(index)
@@ -858,7 +875,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private fun visibleText(text: SpannableStringBuilder): CharSequence {
             var end = text.length
             while (end > 0 && (text[end - 1] == '\n' || text[end - 1] == '\r')) end--
-            // Bỏ dòng trống ở đầu (chỉ khi hiển thị), giữ nguyên thụt đầu dòng của dòng có chữ đầu tiên
             var start = 0
             var i = 0
             while (i < end) {
@@ -915,7 +931,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             holder.title.visibility = if (label != null) View.VISIBLE else View.GONE
             holder.title.text = label
             val visible = visibleText(m.text)
-            val renderMd = activity.node.markdown && !m.fromUser
+            val renderMd = activity.markdownEnabled && !m.fromUser
             val showDots = visible.isEmpty() && m.running
             holder.dots.visibility = if (showDots) View.VISIBLE else View.GONE
             holder.text.visibility = if (showDots) View.GONE else View.VISIBLE
