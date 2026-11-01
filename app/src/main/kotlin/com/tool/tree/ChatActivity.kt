@@ -324,6 +324,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         for (m in store.load(id)) {
             s.messages.add(
                 ChatMessage(m.fromUser, m.text).apply {
+                    ChatSpanCodec.apply(text, m.spans)
                     title = (if (m.fromUser) node.userTitle else node.chatTitle).ifEmpty { null }
                 }
             )
@@ -336,7 +337,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         if (id in deletedIds) return
         val snapshot = target.messages
             .filter { !it.transient && (it.fromUser || it.text.isNotEmpty()) }
-            .map { ChatSessionStore.Stored(it.fromUser, it.text.toString()) }
+            .map { ChatSessionStore.Stored(it.fromUser, it.text.toString(), ChatSpanCodec.encode(it.text)) }
         try {
             ioExecutor.execute { store.save(id, snapshot) }
         } catch (_: Exception) {
@@ -857,7 +858,17 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private fun visibleText(text: SpannableStringBuilder): CharSequence {
             var end = text.length
             while (end > 0 && (text[end - 1] == '\n' || text[end - 1] == '\r')) end--
-            return if (end == text.length) text else text.subSequence(0, end)
+            // Bỏ dòng trống ở đầu (chỉ khi hiển thị), giữ nguyên thụt đầu dòng của dòng có chữ đầu tiên
+            var start = 0
+            var i = 0
+            while (i < end) {
+                val c = text[i]
+                if (c == '\n') start = i + 1
+                else if (c != '\r' && c != ' ' && c != '\t') break
+                i++
+            }
+            if (i >= end) start = end
+            return if (start == 0 && end == text.length) text else text.subSequence(start, end)
         }
 
         override fun getItemCount() = items.size

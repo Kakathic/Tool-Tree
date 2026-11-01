@@ -6,7 +6,7 @@ import org.json.JSONObject
 import java.io.File
 
 class ChatSessionStore(context: Context, pageKey: String, val emptyName: String) {
-    class Stored(val fromUser: Boolean, val text: String)
+    class Stored(val fromUser: Boolean, val text: String, val spans: JSONArray? = null)
 
     class Info(val id: String, val name: String, val updated: Long)
 
@@ -46,7 +46,7 @@ class ChatSessionStore(context: Context, pageKey: String, val emptyName: String)
             val messages = JSONObject(file(id).readText(Charsets.UTF_8)).getJSONArray("messages")
             (0 until messages.length()).map {
                 val m = messages.getJSONObject(it)
-                Stored(m.getBoolean("u"), m.getString("t"))
+                Stored(m.getBoolean("u"), m.getString("t"), m.optJSONArray("s"))
             }
         } catch (_: Exception) {
             emptyList()
@@ -61,7 +61,11 @@ class ChatSessionStore(context: Context, pageKey: String, val emptyName: String)
         }
         try {
             val array = JSONArray()
-            for (m in messages) array.put(JSONObject().put("u", m.fromUser).put("t", m.text))
+            for (m in messages) {
+                val obj = JSONObject().put("u", m.fromUser).put("t", m.text)
+                if (m.spans != null && m.spans.length() > 0) obj.put("s", m.spans)
+                array.put(obj)
+            }
             val tmp = File(dir, target.name + ".tmp")
             tmp.writeText(JSONObject().put("messages", array).toString(), Charsets.UTF_8)
             if (!tmp.renameTo(target)) {

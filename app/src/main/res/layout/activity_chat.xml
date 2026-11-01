@@ -106,7 +106,7 @@
         </com.tool.tree.ChatBottomBarLayout>
     </FrameLayout>
 
-    <LinearLayout
+    <com.tool.tree.ChatDrawerPanelLayout
         android:id="@+id/chat_drawer_panel"
         android:layout_width="280dp"
         android:layout_height="match_parent"
@@ -147,6 +147,6 @@
             android:padding="14dp"
             android:textColor="?android:attr/textColorPrimary"
             android:textSize="15sp" />
-    </LinearLayout>
+    </com.tool.tree.ChatDrawerPanelLayout>
 </androidx.drawerlayout.widget.DrawerLayout>
 </FrameLayout>
