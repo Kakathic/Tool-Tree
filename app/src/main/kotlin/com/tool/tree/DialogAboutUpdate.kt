@@ -4,34 +4,38 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
+import android.os.SystemClock
 import android.os.Looper
 import android.text.SpannableStringBuilder
 import android.text.method.LinkMovementMethod
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.ArrayAdapter
-import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.ListPopupWindow
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
 import com.omarea.common.ui.DialogFullScreen
+import com.omarea.krscript.ui.DownloadProgressRing
+import com.omarea.krscript.ui.ListItemDownload
 import com.tool.tree.ui.SpinnerPopupHelper
 import java.io.File
 
 class DialogAboutUpdate(
-    darkMode: Boolean,
-    private val knownInfo: AppUpdateInfo?,
-    private val onResult: (AppUpdateCheckResult) -> Unit
+    darkMode: Boolean = false,
+    private val knownInfo: AppUpdateInfo? = null,
+    private val onResult: (AppUpdateCheckResult) -> Unit = {}
 ) : DialogFullScreen(R.layout.dialog_about, darkMode) {
 
     private enum class UpdateMode { CHECK, UPDATE, INSTALL }
@@ -48,9 +52,13 @@ class DialogAboutUpdate(
     private val logBuilder = SpannableStringBuilder()
 
     private lateinit var logText: TextView
-    private lateinit var updateBtn: Button
-    private lateinit var updateProgress: ProgressBar
-    private lateinit var updatePercent: TextView
+    private lateinit var updateItem: View
+    private lateinit var itemIcon: ImageView
+    private lateinit var itemTitle: TextView
+    private lateinit var itemDesc: TextView
+    private lateinit var itemSummary: TextView
+    private lateinit var itemWidget: ImageView
+    private lateinit var itemRing: DownloadProgressRing
     private lateinit var wallpaperPath: EditText
     private lateinit var wallpaperChoose: TextView
     private lateinit var wallpaperRemove: TextView
@@ -70,6 +78,7 @@ class DialogAboutUpdate(
     private var loadedInfo: AppUpdateInfo? = knownInfo
     private var activeDownload: AppUpdateInstaller.DownloadState? = null
     private var closingToInstall = false
+    private var closingForRecreate = false
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
@@ -108,7 +117,7 @@ class DialogAboutUpdate(
     }
 
     override fun onDismiss(dialog: DialogInterface) {
-        if (!closingToInstall && activeDownload == null && ::appContext.isInitialized) {
+        if (!closingToInstall && !closingForRecreate && activeDownload == null && ::appContext.isInitialized) {
             loadedInfo?.let { AppUpdateConfig(appContext).setDismissedSha256(it.sha256) }
         }
         super.onDismiss(dialog)
@@ -123,7 +132,7 @@ class DialogAboutUpdate(
 
     @Suppress("DEPRECATION")
     private fun bindSettings(view: View, activity: Activity) {
-        val themeConfig = ThemeConfig(activity)
+        val themeConfig = ThemeConfig(activity.applicationContext)
 
         blurRow = view.findViewById(R.id.blur_disable_row)
         blurLabel = view.findViewById(R.id.blur_disable_label)
@@ -145,13 +154,11 @@ class DialogAboutUpdate(
         directRow.setOnClickListener { if (directCheck.isEnabled) directCheck.toggle() }
         blurCheck.setOnCheckedChangeListener { _, checked ->
             ThemeModeState.setBlurDisabled(activity, checked)
-            ThemeModeState.switchTheme(activity)
-            activity.recreate()
+            applyThemeChange(activity)
         }
         directCheck.setOnCheckedChangeListener { _, checked ->
             ThemeModeState.setDirectBgEnabled(activity, checked)
-            ThemeModeState.switchTheme(activity)
-            activity.recreate()
+            applyThemeChange(activity)
         }
 
         wallpaperChoose.setOnClickListener {
@@ -168,8 +175,7 @@ class DialogAboutUpdate(
             if (!wallpaperRemove.isEnabled) return@setOnClickListener
             ThemeModeState.clearCustomWallpaper(activity)
             wallpaperPath.setText("")
-            ThemeModeState.switchTheme(activity)
-            activity.recreate()
+            applyThemeChange(activity)
         }
         wallpaperPath.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE && wallpaperPath.isEnabled) {
@@ -181,6 +187,14 @@ class DialogAboutUpdate(
         }
 
         bindThemeSelector(view, activity, themeConfig)
+    }
+
+    private fun applyThemeChange(activity: Activity) {
+        ThemeModeState.switchTheme(activity)
+        MainActivity.reopenAbout = true
+        closingForRecreate = true
+        runCatching { dismissNow() }
+        activity.recreate()
     }
 
     private fun updateOptionStates(themeLevel: Int) {
@@ -220,8 +234,7 @@ class DialogAboutUpdate(
                 themeSelector.text = themeNames[position]
                 updateOptionStates(position)
                 popup.dismiss()
-                ThemeModeState.switchTheme(activity)
-                activity.recreate()
+                applyThemeChange(activity)
             }
             val inflater = LayoutInflater.from(activity)
             val itemViews = themeNames.map { name ->
@@ -251,25 +264,39 @@ class DialogAboutUpdate(
         if (path.isBlank()) return
         if (ThemeModeState.setCustomWallpaper(activity, path)) {
             wallpaperPath.setText(ThemeModeState.getCustomWallpaperPath(activity).orEmpty())
-            ThemeModeState.switchTheme(activity)
-            activity.recreate()
+            applyThemeChange(activity)
         } else {
             Toast.makeText(activity, R.string.about_wallpaper_invalid, Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun bindUpdate(view: View, activity: Activity) {
-        logText = view.findViewById(R.id.update_log)
-        logText.movementMethod = LinkMovementMethod.getInstance()
-        updateBtn = view.findViewById(R.id.update_btn)
-        updateProgress = view.findViewById(R.id.update_progress)
-        updatePercent = view.findViewById(R.id.update_percent)
+        updateItem = view.findViewById(R.id.update_item)
+        itemIcon = view.findViewById(R.id.kr_icon)
+        itemTitle = view.findViewById(R.id.kr_title)
+        itemDesc = view.findViewById(R.id.kr_desc)
+        itemSummary = view.findViewById(R.id.kr_summary)
+        itemWidget = view.findViewById(R.id.kr_widget)
+        itemRing = view.findViewById(R.id.kr_download_ring)
+        logText = view.findViewById(R.id.kr_rows)
 
-        updateBtn.setOnClickListener {
+        val accent = TypedValue().also { activity.theme.resolveAttribute(android.R.attr.colorAccent, it, true) }.data
+        itemIcon.setImageResource(R.drawable.ic_update)
+        itemIcon.imageTintList = ColorStateList.valueOf(accent)
+        itemTitle.setText(R.string.update_text)
+        itemDesc.visibility = View.VISIBLE
+        itemSummary.visibility = View.VISIBLE
+
+        logText.setTextIsSelectable(true)
+        logText.movementMethod = LinkMovementMethod.getInstance()
+        logText.setOnClickListener { }
+
+        updateItem.setOnClickListener {
             if (activeDownload != null) {
                 cancelDownload(activity)
                 return@setOnClickListener
             }
+            if (checking) return@setOnClickListener
             when (mode) {
                 UpdateMode.CHECK -> startCheck(activity)
                 UpdateMode.UPDATE -> startDownload(activity)
@@ -283,24 +310,39 @@ class DialogAboutUpdate(
 
     private fun setMode(newMode: UpdateMode) {
         mode = newMode
-        updateBtn.setText(
+        itemSummary.setText(
             when (newMode) {
                 UpdateMode.CHECK -> R.string.about_update_recheck
                 UpdateMode.UPDATE -> R.string.update_text
                 UpdateMode.INSTALL -> R.string.app_update_btn_install
             }
         )
+        itemWidget.setImageResource(
+            when (newMode) {
+                UpdateMode.CHECK -> R.drawable.ic_update
+                UpdateMode.UPDATE -> R.drawable.kr_download
+                UpdateMode.INSTALL -> R.drawable.download_done
+            }
+        )
+    }
+
+    private fun setBusy(busy: Boolean) {
+        itemRing.visibility = if (busy) View.VISIBLE else View.GONE
+        itemWidget.visibility = if (busy) View.GONE else View.VISIBLE
+        if (busy) itemRing.setIndeterminate(true)
     }
 
     private fun resetLog() {
         logBuilder.clear()
-        logText.text = logBuilder
+        logText.text = ""
+        logText.visibility = View.GONE
     }
 
     private fun appendLog(line: CharSequence) {
         if (logBuilder.isNotEmpty()) logBuilder.append('\n')
         logBuilder.append(line)
         logText.text = logBuilder
+        logText.visibility = View.VISIBLE
     }
 
     private fun appendChangelog(activity: Activity, text: String?) {
@@ -311,13 +353,14 @@ class DialogAboutUpdate(
         }
     }
 
-    private fun showBusy(busy: Boolean, percent: Int? = null) {
-        updateProgress.visibility = if (busy) View.VISIBLE else View.GONE
-        if (percent != null) {
-            updatePercent.visibility = View.VISIBLE
-            updatePercent.text = "$percent%"
+    private fun showDownloadProgress(downloaded: Long, total: Long, startTime: Long) {
+        val elapsed = (SystemClock.elapsedRealtime() - startTime).coerceAtLeast(1L)
+        itemDesc.text = ListItemDownload.formatProgress(downloaded, total, downloaded * 1000.0 / elapsed)
+        if (total > 0) {
+            itemRing.setIndeterminate(false)
+            itemRing.setProgress(downloaded * 100f / total)
         } else {
-            updatePercent.visibility = View.GONE
+            itemRing.setIndeterminate(true)
         }
     }
 
@@ -326,20 +369,19 @@ class DialogAboutUpdate(
         destFile = File(activity.cacheDir, info.apkFileName)
         resetLog()
         val size = if (info.apkSize > 0) " (" + AppUpdateInstaller.formatFileSize(info.apkSize) + ")" else ""
-        appendLog(activity.getString(R.string.app_update_desc) + size)
+        itemDesc.text = activity.getString(R.string.app_update_desc) + size
         appendChangelog(activity, info.changelogText)
         setMode(if (destFile.exists() && destFile.length() > 0) UpdateMode.INSTALL else UpdateMode.UPDATE)
-        updateBtn.isEnabled = true
-        showBusy(false)
+        setBusy(false)
     }
 
     private fun startCheck(activity: Activity) {
         if (checking) return
         checking = true
-        updateBtn.isEnabled = false
-        showBusy(true)
+        setBusy(true)
         resetLog()
-        appendLog(activity.getString(R.string.app_update_checking))
+        itemSummary.text = ""
+        itemDesc.text = activity.getString(R.string.app_update_checking)
 
         Thread {
             val result = try {
@@ -362,18 +404,16 @@ class DialogAboutUpdate(
             is AppUpdateCheckResult.UpToDate -> {
                 loadedInfo = null
                 resetLog()
-                appendLog(activity.getString(R.string.app_update_latest))
+                itemDesc.text = activity.getString(R.string.app_update_latest)
                 appendChangelog(activity, result.changelogText)
                 setMode(UpdateMode.CHECK)
-                updateBtn.isEnabled = true
-                showBusy(false)
+                setBusy(false)
             }
             is AppUpdateCheckResult.Failed -> {
                 resetLog()
-                appendLog(activity.getString(R.string.app_update_check_fail))
+                itemDesc.text = activity.getString(R.string.app_update_check_fail)
                 setMode(UpdateMode.CHECK)
-                updateBtn.isEnabled = true
-                showBusy(false)
+                setBusy(false)
             }
         }
     }
@@ -383,12 +423,13 @@ class DialogAboutUpdate(
         isCancelable = false
         setSwipeBackRuntimeEnabled(false)
 
-        updateBtn.setText(R.string.btn_cancel)
-        showBusy(true, 0)
-        appendLog(activity.getString(R.string.about_update_downloading))
+        itemSummary.setText(R.string.btn_cancel)
+        setBusy(true)
+        itemDesc.text = activity.getString(R.string.about_update_downloading)
 
         val state = AppUpdateInstaller.DownloadState()
         activeDownload = state
+        val startTime = SystemClock.elapsedRealtime()
 
         Thread {
             val error = AppUpdateInstaller.downloadApk(
@@ -396,12 +437,8 @@ class DialogAboutUpdate(
                 destFile,
                 onConnectionOpened = { state.connection = it },
                 onProgress = { downloaded, total ->
-                    if (total > 0) {
-                        mainHandler.post {
-                            if (activeDownload === state && viewReady) {
-                                showBusy(true, (downloaded * 100 / total).toInt())
-                            }
-                        }
+                    mainHandler.post {
+                        if (activeDownload === state && viewReady) showDownloadProgress(downloaded, total, startTime)
                     }
                 }
             )
@@ -417,9 +454,9 @@ class DialogAboutUpdate(
                     if (isAdded && viewReady) {
                         isCancelable = true
                         setSwipeBackRuntimeEnabled(true)
-                        showBusy(false)
+                        setBusy(false)
                         setMode(UpdateMode.UPDATE)
-                        appendLog(activity.getString(R.string.app_update_download_fail) + ": " + error)
+                        itemDesc.text = activity.getString(R.string.app_update_download_fail) + ": " + error
                     }
                     Toast.makeText(
                         activity,
@@ -443,9 +480,9 @@ class DialogAboutUpdate(
             state.connection?.disconnect()
         } catch (_: Exception) {
         }
-        showBusy(false)
+        setBusy(false)
         setMode(UpdateMode.UPDATE)
-        appendLog(activity.getString(R.string.app_update_download_cancelled))
+        itemDesc.text = activity.getString(R.string.app_update_download_cancelled)
     }
 
     private fun openApk(activity: Activity, file: File) {
@@ -457,7 +494,7 @@ class DialogAboutUpdate(
                     if (isAdded) runCatching { dismissAllowingStateLoss() }
                     AppUpdateInstaller.openApkViaSystemInstaller(activity, file)
                 } else if (viewReady) {
-                    showBusy(false)
+                    setBusy(false)
                     setMode(UpdateMode.INSTALL)
                 }
             }

@@ -58,10 +58,12 @@ class MainActivity : AppCompatActivity() {
     
     private var pendingUpdateInfo: AppUpdateInfo? = null
     private var deferredUpdateInfo: AppUpdateInfo? = null
+    private var aboutPending = false
 
     companion object {
         private var updateChecked = false
         private var cachedUpdateInfo: AppUpdateInfo? = null
+        @Volatile var reopenAbout = false
     }
     private lateinit var toolbar: Toolbar
 
@@ -71,6 +73,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState != null) {
+            (supportFragmentManager.findFragmentByTag("app_update") as? androidx.fragment.app.DialogFragment)?.dismissAllowingStateLoss()
+        }
         ThemeModeState.switchTheme(this)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -134,7 +139,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAboutDialog(info: AppUpdateInfo?) {
+        if (aboutPending) return
+        aboutPending = true
         BlurEngine.runWhenBlurReady {
+            aboutPending = false
             if (isFinishing || isDestroyed) return@runWhenBlurReady
             if (supportFragmentManager.isStateSaved) {
                 if (info != null) deferredUpdateInfo = info
@@ -167,6 +175,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResumeFragments() {
         super.onResumeFragments()
+        if (reopenAbout) {
+            reopenAbout = false
+            showAboutDialog(pendingUpdateInfo ?: cachedUpdateInfo)
+            return
+        }
         val info = deferredUpdateInfo ?: return
         deferredUpdateInfo = null
         showAboutDialog(info)
@@ -512,19 +525,14 @@ class MainActivity : AppCompatActivity() {
         val rebootItem = menu.findItem(R.id.option_menu_reboot)
         rebootItem?.isEnabled = hasRoot
         rebootItem?.icon?.alpha = if (hasRoot) 255 else 97
-        menu.findItem(R.id.option_menu_update)?.let {
-            it.isVisible = true
-            it.setIcon(if (pendingUpdateInfo != null) R.drawable.ic_update_badge else R.drawable.ic_update)
-        }
+        menu.findItem(R.id.option_menu_info)?.setIcon(
+            if (pendingUpdateInfo != null) R.drawable.info_badge else R.drawable.info
+        )
         return super.onPrepareOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.option_menu_update -> {
-                showAboutDialog(pendingUpdateInfo)
-                true
-            }
             R.id.option_menu_info -> { showAboutDialog(pendingUpdateInfo); true }
             R.id.option_menu_reboot -> { DialogPower(this).showPowerMenu(); true }
             else -> super.onOptionsItemSelected(item)

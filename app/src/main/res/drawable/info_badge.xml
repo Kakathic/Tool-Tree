@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@drawable/ic_update" />
+    <item android:drawable="@drawable/info" />
     <item
         android:width="7dp"
         android:height="7dp"
