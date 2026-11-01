@@ -206,4 +206,12 @@
     <string name="terminal_input_hint">Введите команду...</string>
     <string name="log_share_fail">Не удалось поделиться журналом</string>
     <string name="log_share_empty">Пока нет журнала для отправки</string>
+    <string name="chat_default_title">Чат</string>
+    <string name="chat_input_hint">Введите сообщение…</string>
+    <string name="chat_copied">Скопировано</string>
+    <string name="chat_script_empty">Для этого чата не настроен скрипт</string>
+    <string name="chat_cleared_stop">Остановка работающего скрипта, затем очистка</string>
+    <string name="chat_params_title">Настройки</string>
+    <string name="chat_sessions_title">Сеансы чата</string>
+    <string name="chat_delete_session_confirm">Удалить этот сеанс?</string>
 </resources>

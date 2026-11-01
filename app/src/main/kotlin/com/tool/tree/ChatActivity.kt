@@ -90,8 +90,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private val uiHandler = Handler(Looper.getMainLooper())
 
     private val chatParams = HashMap<String, String>()
-    private var running = false
-    private var stopRunnable: Runnable? = null
+    @Volatile private var running = false
+    @Volatile private var stopRunnable: Runnable? = null
     private var currentHandler: ChatShellHandler? = null
     private var refreshPending = false
     private var refreshTarget: ChatMessage? = null
@@ -101,6 +101,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private lateinit var drawer: DrawerLayout
     private lateinit var sessionDrawer: ChatSessionDrawer
     private val ioExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val shellStarter: ExecutorService = Executors.newSingleThreadExecutor()
     private val deletedIds = HashSet<String>()
 
     @Suppress("DEPRECATION")
@@ -191,6 +192,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         if (running) stopRunnable?.run()
         if (::session.isInitialized) saveSession(session)
         ioExecutor.shutdown()
+        shellStarter.shutdown()
     }
 
     private fun newSession(id: String): ChatSession {
@@ -227,9 +229,9 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
     private fun setupDrawer() {
         drawer = findViewById(R.id.chat_drawer)
-        findViewById<TextView>(R.id.chat_drawer_title).text = "Phiên chat"
+        findViewById<TextView>(R.id.chat_drawer_title).setText(R.string.chat_sessions_title)
         val newButton = findViewById<TextView>(R.id.chat_new_session)
-        newButton.text = "Phiên mới"
+        newButton.setText(R.string.terminal_new_session)
         sessionDrawer = ChatSessionDrawer(
             findViewById(R.id.chat_session_list),
             newButton,
@@ -293,7 +295,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     }
 
     private fun confirmDelete(info: ChatSessionStore.Info) {
-        DialogHelper.confirm(this, info.name, "Xoá phiên này?", Runnable {
+        DialogHelper.confirm(this, info.name, getString(R.string.chat_delete_session_confirm), Runnable {
             deletedIds.add(info.id)
             ioExecutor.execute {
                 store.delete(info.id)
@@ -408,8 +410,14 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             put("MSG", text)
             put("CHAT_ID", owner.id)
         }
-        val process = ShellExecutor().execute(this, node, node.script, null, params, handler)
-        if (process == null) handler.finishNow(-1)
+        shellStarter.execute {
+            val started = try {
+                ShellExecutor().execute(this, node, node.script, null, params, handler) != null
+            } catch (ex: Throwable) {
+                false
+            }
+            if (!started) uiHandler.post { handler.finishNow(-1) }
+        }
     }
 
     private fun stopRunning() {
@@ -455,9 +463,9 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         menu ?: return false
         menu.clear()
 
-        val sessionsButton = toolbarButton(R.drawable.ic_chat_sessions, "Phiên chat")
+        val sessionsButton = toolbarButton(R.drawable.ic_chat_sessions, getString(R.string.chat_sessions_title))
         sessionsButton.setOnClickListener { toggleDrawer() }
-        val sessionsItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, "Phiên chat")
+        val sessionsItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getString(R.string.chat_sessions_title))
         sessionsItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         sessionsItem.actionView = sessionsButton
 

@@ -206,4 +206,12 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="terminal_input_hint">Írjon be egy parancsot...</string>
     <string name="log_share_fail">A napló megosztása sikertelen</string>
     <string name="log_share_empty">Még nincs megosztható napló</string>
+    <string name="chat_default_title">Csevegés</string>
+    <string name="chat_input_hint">Írjon üzenetet…</string>
+    <string name="chat_copied">Másolva</string>
+    <string name="chat_script_empty">Ehhez a csevegéshez nincs szkript beállítva</string>
+    <string name="chat_cleared_stop">A futó szkript leállítása, majd törlés</string>
+    <string name="chat_params_title">Beállítások</string>
+    <string name="chat_sessions_title">Csevegési munkamenetek</string>
+    <string name="chat_delete_session_confirm">Törli ezt a munkamenetet?</string>
 </resources>

@@ -211,4 +211,12 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="terminal_input_hint">Escribe un comando...</string>
     <string name="log_share_fail">No se pudo compartir el registro</string>
     <string name="log_share_empty">Aún no hay registro para compartir</string>
+    <string name="chat_default_title">Chat</string>
+    <string name="chat_input_hint">Escribe un mensaje…</string>
+    <string name="chat_copied">Copiado</string>
+    <string name="chat_script_empty">Este chat no tiene un script configurado</string>
+    <string name="chat_cleared_stop">Deteniendo el script en ejecución y luego borrando</string>
+    <string name="chat_params_title">Ajustes</string>
+    <string name="chat_sessions_title">Sesiones de chat</string>
+    <string name="chat_delete_session_confirm">¿Eliminar esta sesión?</string>
 </resources>
