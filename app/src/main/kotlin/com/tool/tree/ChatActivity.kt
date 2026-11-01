@@ -778,7 +778,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private fun dispatch(msg: Any?, forcedColor: Int?) {
             if (msg == null || finished) return
             val raw = msg.toString()
-            var parsed: CharSequence = AnsiColorParser.parse(raw)
+            var parsed: CharSequence = ChatAnsi.stripDefaultColor(AnsiColorParser.parse(raw))
             if (forcedColor != null && !raw.contains("\u001B[")) {
                 parsed = SpannableStringBuilder(parsed).apply {
                     setSpan(ForegroundColorSpan(forcedColor), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
