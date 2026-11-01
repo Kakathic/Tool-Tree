@@ -28,24 +28,39 @@
             android:id="@+id/terminal_more_keep_screen"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="12dp"
+            android:button="@null"
+            android:drawableEnd="?android:attr/listChoiceIndicatorMultiple"
+            android:gravity="center_vertical"
+            android:minHeight="48dp"
+            android:paddingStart="16dp"
             android:paddingEnd="16dp"
+            android:textSize="16sp"
             android:text="@string/terminal_keep_screen_on" />
 
         <CheckBox
             android:id="@+id/terminal_more_wakelock"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="12dp"
+            android:button="@null"
+            android:drawableEnd="?android:attr/listChoiceIndicatorMultiple"
+            android:gravity="center_vertical"
+            android:minHeight="48dp"
+            android:paddingStart="16dp"
             android:paddingEnd="16dp"
+            android:textSize="16sp"
             android:text="@string/terminal_wakelock" />
 
         <CheckBox
             android:id="@+id/terminal_more_mono"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="12dp"
+            android:button="@null"
+            android:drawableEnd="?android:attr/listChoiceIndicatorMultiple"
+            android:gravity="center_vertical"
+            android:minHeight="48dp"
+            android:paddingStart="16dp"
             android:paddingEnd="16dp"
+            android:textSize="16sp"
             android:text="@string/terminal_mono_toolbar" />
 
         <View
@@ -70,6 +85,15 @@
             android:paddingEnd="16dp"
             android:text="@string/terminal_url_list"
             android:textSize="16sp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="4dp"
+            android:background="?android:attr/listDivider" />
 
         <TextView
             android:id="@+id/terminal_more_share"
