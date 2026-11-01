@@ -268,9 +268,10 @@
                     android:layout_height="wrap_content" />
             </LinearLayout>
             <View
+                android:id="@+id/update_divider_bottom"
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="0dp"
                 android:background="#33808080" />
             <ScrollView
                 android:layout_width="match_parent"

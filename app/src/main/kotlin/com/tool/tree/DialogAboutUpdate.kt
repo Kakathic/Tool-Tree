@@ -51,6 +51,7 @@ class DialogAboutUpdate(
     private lateinit var logText: TextView
     private lateinit var updateCard: View
     private lateinit var updateDividerTop: View
+    private lateinit var updateDividerBottom: View
     private lateinit var updateItem: View
     private lateinit var itemIcon: ImageView
     private lateinit var itemTitle: TextView
@@ -253,6 +254,7 @@ class DialogAboutUpdate(
     private fun bindUpdate(view: View, activity: Activity) {
         updateCard = view.findViewById(R.id.update_card)
         updateDividerTop = view.findViewById(R.id.update_divider_top)
+        updateDividerBottom = view.findViewById(R.id.update_divider_bottom)
         updateItem = view.findViewById(R.id.update_item)
         itemIcon = view.findViewById(R.id.kr_icon)
         itemTitle = view.findViewById(R.id.kr_title)
@@ -304,6 +306,10 @@ class DialogAboutUpdate(
         val v = if (visible) View.VISIBLE else View.GONE
         updateCard.visibility = v
         updateDividerTop.visibility = v
+        (updateDividerBottom.layoutParams as? android.widget.LinearLayout.LayoutParams)?.let {
+            it.topMargin = if (visible) (16 * resources.displayMetrics.density).toInt() else 0
+            updateDividerBottom.layoutParams = it
+        }
     }
 
     private fun setBusy(busy: Boolean) {
