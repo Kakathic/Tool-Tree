@@ -728,7 +728,7 @@ remember = false
 
 [[action.params]]
 name = "app_carrier"
-label = "Carrier Servicesi"
+label = "Carrier Services"
 desc = "@string_text_2: product"
 type = "bool"
 remember = false
