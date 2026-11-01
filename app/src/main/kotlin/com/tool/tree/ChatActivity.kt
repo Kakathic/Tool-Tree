@@ -23,6 +23,7 @@ import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -77,7 +78,9 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private val CLOSE_TYPES = setOf("exit", "finish", "close")
         private val UNSUPPORTED_TYPES = setOf("file", "folder", "spinner", "checkbox", "refresh", "reload", "restart", "killapp")
 
-        private const val SWIPE_BACK_EDGE_RATIO = 0.2f
+        private const val SWIPE_HORIZONTAL_RATIO = 2f
+        private const val OPEN_SESSIONS_SWIPE_DP = 64
+        private const val CLOSE_SESSIONS_SWIPE_DP = 48
 
         fun start(context: Context, node: ChatNode) {
             val intent = Intent(context, ChatActivity::class.java).apply {
@@ -230,19 +233,54 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 }
             },
             onDragProgress = { progress -> previewSharp.alpha = progress * progress },
-            canStart = { ev -> canStartSwipeBack(ev) },
-            allowLeftPull = false
+            canStart = { !drawer.isDrawerVisible(GravityCompat.END) },
+            allowLeftPull = false,
+            canDrag = { ev -> canSwipeNow(ev) },
+            horizontalRatio = SWIPE_HORIZONTAL_RATIO,
+            onLeftSwipe = { toggleDrawer() },
+            leftSwipeDistancePx = OPEN_SESSIONS_SWIPE_DP * resources.displayMetrics.density
         )
     }
 
-    private fun canStartSwipeBack(ev: MotionEvent): Boolean {
-        if (!::drawer.isInitialized || drawer.isDrawerVisible(GravityCompat.END)) return false
-        if (ev.rawX > resources.displayMetrics.widthPixels * SWIPE_BACK_EDGE_RATIO) return false
+    private fun canSwipeNow(ev: MotionEvent): Boolean {
+        if (ev.eventTime - ev.downTime >= ViewConfiguration.getLongPressTimeout()) return false
         val focused = currentFocus as? TextView
         return focused == null || !focused.hasSelection()
     }
 
+    private var closeSwipeTracking = false
+    private var closeSwipeDownX = 0f
+    private var closeSwipeDownY = 0f
+
+    private fun handleCloseSessionsSwipe(ev: MotionEvent): Boolean {
+        if (!::drawer.isInitialized) return false
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                val panel = findViewById<View>(R.id.chat_drawer_panel)
+                closeSwipeTracking = drawer.isDrawerOpen(GravityCompat.END) && ev.rawX < panel.left
+                closeSwipeDownX = ev.rawX
+                closeSwipeDownY = ev.rawY
+            }
+            MotionEvent.ACTION_MOVE -> if (closeSwipeTracking) {
+                val dx = ev.rawX - closeSwipeDownX
+                val dy = ev.rawY - closeSwipeDownY
+                if (dx >= CLOSE_SESSIONS_SWIPE_DP * resources.displayMetrics.density && dx > Math.abs(dy) * SWIPE_HORIZONTAL_RATIO) {
+                    closeSwipeTracking = false
+                    val cancelEvent = MotionEvent.obtain(ev)
+                    cancelEvent.action = MotionEvent.ACTION_CANCEL
+                    super.dispatchTouchEvent(cancelEvent)
+                    cancelEvent.recycle()
+                    drawer.closeDrawer(GravityCompat.END)
+                    return true
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> closeSwipeTracking = false
+        }
+        return false
+    }
+
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (handleCloseSessionsSwipe(ev)) return true
         if (::swipeBackHelper.isInitialized && swipeBackHelper.dispatchTouchEvent(ev)) return true
         return super.dispatchTouchEvent(ev)
     }

@@ -22,7 +22,11 @@ class SwipeBackHelper(
     private val onDragProgress: (progress: Float) -> Unit = {},
     private val onBack: () -> Unit = { activity.finish(); activity.overridePendingTransition(0, 0) },
     private val canStart: (MotionEvent) -> Boolean = { true },
-    private val allowLeftPull: Boolean = true
+    private val allowLeftPull: Boolean = true,
+    private val canDrag: (MotionEvent) -> Boolean = { true },
+    private val horizontalRatio: Float = 1.2f,
+    private val onLeftSwipe: (() -> Unit)? = null,
+    private val leftSwipeDistancePx: Float = 0f
 ) {
     companion object {
         private const val COMMIT_DISTANCE_RATIO = 0.28f
@@ -102,8 +106,12 @@ class SwipeBackHelper(
                 val dy = ev.rawY - downY
 
                 if (!dragging && !draggingLeft) {
+                    if (!canDrag(ev)) {
+                        candidate = false
+                        return false
+                    }
                     when {
-                        dx > touchSlop && dx > abs(dy) * 1.2f -> {
+                        dx > touchSlop && dx > abs(dy) * horizontalRatio -> {
                             beginNewDragSession()
                             dragging = true
                             onDragStateChanged(true)
@@ -114,10 +122,21 @@ class SwipeBackHelper(
                             contentView.dispatchTouchEvent(cancelEvent)
                             cancelEvent.recycle()
                         }
-                        dx < -touchSlop && abs(dx) > abs(dy) * 1.2f -> {
+                        dx < -touchSlop && abs(dx) > abs(dy) * horizontalRatio -> {
                             if (!allowLeftPull) {
+                                val callback = onLeftSwipe
+                                if (callback == null) {
+                                    candidate = false
+                                    return false
+                                }
+                                if (-dx < leftSwipeDistancePx) return false
                                 candidate = false
-                                return false
+                                val cancelEvent = MotionEvent.obtain(ev)
+                                cancelEvent.action = MotionEvent.ACTION_CANCEL
+                                contentView.dispatchTouchEvent(cancelEvent)
+                                cancelEvent.recycle()
+                                callback()
+                                return true
                             }
                             beginNewDragSession()
                             draggingLeft = true
