@@ -57,13 +57,11 @@ class DialogAboutUpdate(
     private lateinit var itemIcon: ImageView
     private lateinit var itemTitle: TextView
     private lateinit var itemDesc: TextView
-    private lateinit var itemSummary: TextView
     private lateinit var itemWidget: ImageView
     private lateinit var itemRing: DownloadProgressRing
     private lateinit var wallpaperPath: EditText
     private lateinit var wallpaperChoose: TextView
     private lateinit var wallpaperRemove: TextView
-    private lateinit var wallpaperLabel: TextView
     private lateinit var blurRow: View
     private lateinit var blurLabel: TextView
     private lateinit var blurCheck: CheckBox
@@ -141,7 +139,6 @@ class DialogAboutUpdate(
         directRow = view.findViewById(R.id.direct_bg_row)
         directLabel = view.findViewById(R.id.direct_bg_label)
         directCheck = view.findViewById(R.id.direct_bg_check)
-        wallpaperLabel = view.findViewById(R.id.wallpaper_label)
         wallpaperPath = view.findViewById(R.id.wallpaper_path)
         wallpaperChoose = view.findViewById(R.id.wallpaper_choose)
         wallpaperRemove = view.findViewById(R.id.wallpaper_remove)
@@ -210,7 +207,6 @@ class DialogAboutUpdate(
         wallpaperPath.isEnabled = enabled
         wallpaperChoose.isEnabled = enabled
         wallpaperRemove.isEnabled = enabled
-        wallpaperLabel.alpha = alpha
         wallpaperChoose.alpha = if (enabled) 1f else 0.35f
         wallpaperRemove.alpha = if (enabled) 1f else 0.35f
     }
@@ -277,17 +273,15 @@ class DialogAboutUpdate(
         itemIcon = view.findViewById(R.id.kr_icon)
         itemTitle = view.findViewById(R.id.kr_title)
         itemDesc = view.findViewById(R.id.kr_desc)
-        itemSummary = view.findViewById(R.id.kr_summary)
         itemWidget = view.findViewById(R.id.kr_widget)
         itemRing = view.findViewById(R.id.kr_download_ring)
-        logText = view.findViewById(R.id.kr_rows)
+        logText = view.findViewById(R.id.update_log)
 
         val accent = TypedValue().also { activity.theme.resolveAttribute(android.R.attr.colorAccent, it, true) }.data
         itemIcon.setImageResource(R.drawable.ic_update)
         itemIcon.imageTintList = ColorStateList.valueOf(accent)
         itemTitle.setText(R.string.update_text)
         itemDesc.visibility = View.VISIBLE
-        itemSummary.visibility = View.VISIBLE
 
         logText.setTextIsSelectable(true)
         logText.movementMethod = LinkMovementMethod.getInstance()
@@ -312,13 +306,6 @@ class DialogAboutUpdate(
 
     private fun setMode(newMode: UpdateMode) {
         mode = newMode
-        itemSummary.setText(
-            when (newMode) {
-                UpdateMode.CHECK -> R.string.about_update_recheck
-                UpdateMode.UPDATE -> R.string.update_text
-                UpdateMode.INSTALL -> R.string.app_update_btn_install
-            }
-        )
         itemWidget.setImageResource(
             when (newMode) {
                 UpdateMode.CHECK -> R.drawable.ic_update
@@ -337,14 +324,12 @@ class DialogAboutUpdate(
     private fun resetLog() {
         logBuilder.clear()
         logText.text = ""
-        logText.visibility = View.GONE
     }
 
     private fun appendLog(line: CharSequence) {
         if (logBuilder.isNotEmpty()) logBuilder.append('\n')
         logBuilder.append(line)
         logText.text = logBuilder
-        logText.visibility = View.VISIBLE
     }
 
     private fun appendChangelog(activity: Activity, text: String?) {
@@ -384,9 +369,8 @@ class DialogAboutUpdate(
         updateCard.visibility = View.GONE
         setBusy(true)
         resetLog()
-        itemSummary.text = ""
         itemDesc.text = activity.getString(R.string.app_update_checking)
-        Toast.makeText(activity, R.string.app_update_checking, Toast.LENGTH_SHORT).show()
+        appendLog(activity.getString(R.string.app_update_checking))
 
         Thread {
             val result = try {
@@ -410,16 +394,17 @@ class DialogAboutUpdate(
                 loadedInfo = null
                 updateCard.visibility = View.GONE
                 resetLog()
+                appendLog(activity.getString(R.string.app_update_latest))
+                appendChangelog(activity, result.changelogText)
                 setMode(UpdateMode.CHECK)
                 setBusy(false)
-                Toast.makeText(activity, R.string.app_update_latest, Toast.LENGTH_SHORT).show()
             }
             is AppUpdateCheckResult.Failed -> {
                 updateCard.visibility = View.GONE
                 resetLog()
+                appendLog(activity.getString(R.string.app_update_check_fail))
                 setMode(UpdateMode.CHECK)
                 setBusy(false)
-                Toast.makeText(activity, R.string.app_update_check_fail, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -429,7 +414,6 @@ class DialogAboutUpdate(
         isCancelable = false
         setSwipeBackRuntimeEnabled(false)
 
-        itemSummary.setText(R.string.btn_cancel)
         setBusy(true)
         itemDesc.text = activity.getString(R.string.about_update_downloading)
 
