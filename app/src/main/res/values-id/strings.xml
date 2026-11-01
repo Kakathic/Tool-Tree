@@ -153,6 +153,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="theme_text">Tema</string>
     <string name="theme_disable_blur">Nonaktifkan blur</string>
     <string name="theme_direct_bg">Latar langsung</string>
+    <string name="about_latest_version">Versi terbaru</string>
     <string name="about_back">Kembali</string>
     <string name="about_wallpaper">Wallpaper</string>
     <string name="about_wallpaper_hint">Wallpaper sistem</string>

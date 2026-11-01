@@ -56,6 +56,7 @@ class DialogAboutUpdate(
     private var statusColor = 0
     private var accentColor = 0
     private lateinit var updateCard: View
+    private lateinit var updateDividerTop: View
     private lateinit var updateItem: View
     private lateinit var itemIcon: ImageView
     private lateinit var itemTitle: TextView
@@ -99,7 +100,8 @@ class DialogAboutUpdate(
         }
 
         val versionName = runCatching { activity.packageManager.getPackageInfo(activity.packageName, 0).versionName }.getOrNull() ?: "1.0.0"
-        view.findViewById<TextView>(R.id.about_version).text = versionName
+        view.findViewById<TextView>(R.id.about_version).text =
+            if (versionName.startsWith("v", ignoreCase = true)) versionName else "V$versionName"
         aboutStatus = view.findViewById(R.id.about_status)
         statusColor = aboutStatus.currentTextColor
         accentColor = TypedValue().also { activity.theme.resolveAttribute(android.R.attr.colorAccent, it, true) }.data
@@ -275,6 +277,7 @@ class DialogAboutUpdate(
 
     private fun bindUpdate(view: View, activity: Activity) {
         updateCard = view.findViewById(R.id.update_card)
+        updateDividerTop = view.findViewById(R.id.update_divider_top)
         updateItem = view.findViewById(R.id.update_item)
         itemIcon = view.findViewById(R.id.kr_icon)
         itemTitle = view.findViewById(R.id.kr_title)
@@ -318,6 +321,12 @@ class DialogAboutUpdate(
                 UpdateMode.INSTALL -> R.drawable.download_done
             }
         )
+    }
+
+    private fun setUpdateVisible(visible: Boolean) {
+        val v = if (visible) View.VISIBLE else View.GONE
+        updateCard.visibility = v
+        updateDividerTop.visibility = v
     }
 
     private fun setStatus(text: CharSequence, highlight: Boolean = false) {
@@ -364,7 +373,7 @@ class DialogAboutUpdate(
     private fun showAvailable(info: AppUpdateInfo, activity: Activity) {
         loadedInfo = info
         destFile = File(activity.cacheDir, info.apkFileName)
-        updateCard.visibility = View.VISIBLE
+        setUpdateVisible(true)
         setStatus(activity.getString(R.string.app_update_title), true)
         resetLog()
         val size = if (info.apkSize > 0) " (" + AppUpdateInstaller.formatFileSize(info.apkSize) + ")" else ""
@@ -377,7 +386,7 @@ class DialogAboutUpdate(
     private fun startCheck(activity: Activity) {
         if (checking) return
         checking = true
-        updateCard.visibility = View.GONE
+        setUpdateVisible(false)
         setStatus("")
         setBusy(true)
         resetLog()
@@ -404,16 +413,15 @@ class DialogAboutUpdate(
             is AppUpdateCheckResult.Available -> showAvailable(result.info, activity)
             is AppUpdateCheckResult.UpToDate -> {
                 loadedInfo = null
-                updateCard.visibility = View.GONE
+                setUpdateVisible(false)
                 resetLog()
-                setStatus(activity.getString(R.string.app_update_latest))
-                appendLog(activity.getString(R.string.app_update_latest))
+                setStatus(activity.getString(R.string.about_latest_version))
                 appendChangelog(activity, result.changelogText)
                 setMode(UpdateMode.CHECK)
                 setBusy(false)
             }
             is AppUpdateCheckResult.Failed -> {
-                updateCard.visibility = View.GONE
+                setUpdateVisible(false)
                 resetLog()
                 setStatus(activity.getString(R.string.app_update_check_fail))
                 appendLog(activity.getString(R.string.app_update_check_fail))

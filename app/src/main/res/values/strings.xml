@@ -179,6 +179,7 @@ If you agree, press the confirm button to continue."</string>
     <string name="theme_text">Theme</string>
     <string name="theme_disable_blur">Disable blur</string>
     <string name="theme_direct_bg">Direct background</string>
+    <string name="about_latest_version">Latest version</string>
     <string name="about_back">Back</string>
     <string name="about_wallpaper">Wallpaper</string>
     <string name="about_wallpaper_hint">System wallpaper</string>

@@ -154,6 +154,7 @@
     <string name="theme_text">Темы</string>
     <string name="theme_disable_blur">Отключить размытие</string>
     <string name="theme_direct_bg">Прямой фон</string>
+    <string name="about_latest_version">Последняя версия</string>
     <string name="about_back">Назад</string>
     <string name="about_wallpaper">Обои</string>
     <string name="about_wallpaper_hint">Системные обои</string>

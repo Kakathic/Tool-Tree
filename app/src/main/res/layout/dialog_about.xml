@@ -40,15 +40,13 @@
                 android:id="@+id/about_status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:alpha="0.8"
-                android:textSize="11sp"
+                android:textSize="16sp"
                 android:textStyle="bold" />
             <TextView
                 android:id="@+id/about_version"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:alpha="0.7"
-                android:textSize="12sp"
+                android:textSize="16sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
@@ -234,6 +232,12 @@
                     android:paddingEnd="0dp" />
             </LinearLayout>
 
+            <View
+                android:id="@+id/update_divider_top"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#33808080"
+                android:visibility="gone" />
             <LinearLayout
                 android:id="@+id/update_card"
                 android:layout_width="match_parent"

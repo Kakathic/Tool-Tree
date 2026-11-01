@@ -173,6 +173,7 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="theme_text">Témák</string>
     <string name="theme_disable_blur">Elmosás kikapcsolása</string>
     <string name="theme_direct_bg">Közvetlen háttér</string>
+    <string name="about_latest_version">Legújabb verzió</string>
     <string name="about_back">Vissza</string>
     <string name="about_wallpaper">Háttérkép</string>
     <string name="about_wallpaper_hint">Rendszer háttérkép</string>

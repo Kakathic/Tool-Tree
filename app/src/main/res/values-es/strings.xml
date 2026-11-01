@@ -157,6 +157,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="theme_text">Tema</string>
     <string name="theme_disable_blur">Desactivar desenfoque</string>
     <string name="theme_direct_bg">Fondo directo</string>
+    <string name="about_latest_version">Última versión</string>
     <string name="about_back">Atrás</string>
     <string name="about_wallpaper">Fondo de pantalla</string>
     <string name="about_wallpaper_hint">Fondo del sistema</string>
