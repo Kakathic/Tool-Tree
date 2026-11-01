@@ -24,7 +24,7 @@
             android:textSize="12sp"
             android:visibility="gone" />
 
-        <LinearLayout
+        <com.tool.tree.ChatBubbleLayout
             android:id="@+id/chat_bubble"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -50,6 +50,6 @@
                 android:layout_marginEnd="14dp"
                 android:layout_marginBottom="10dp"
                 android:visibility="gone" />
-        </LinearLayout>
+        </com.tool.tree.ChatBubbleLayout>
     </LinearLayout>
 </FrameLayout>

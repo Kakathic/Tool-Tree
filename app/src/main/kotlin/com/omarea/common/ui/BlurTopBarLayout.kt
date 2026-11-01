@@ -16,7 +16,9 @@ import androidx.core.content.ContextCompat
 import com.tool.tree.R
 import com.tool.tree.ThemeModeState
 
-class BlurTopBarLayout(context: Context, attrs: AttributeSet?) : BlurViewLinearLayout(context, attrs) {
+open class BlurTopBarLayout(context: Context, attrs: AttributeSet?) : BlurViewLinearLayout(context, attrs) {
+    protected open val sampleAbove: Boolean = false
+
     var blurSource: View? = null
         set(value) {
             if (field === value) return
@@ -124,7 +126,8 @@ class BlurTopBarLayout(context: Context, attrs: AttributeSet?) : BlurViewLinearL
         capture.eraseColor(0)
         capCanvas.save()
         capCanvas.scale(cw.toFloat() / width, scaleY * LIVE_SUPERSAMPLE)
-        capCanvas.translate(-offsetX.toFloat(), -offsetY.toFloat())
+        val shiftY = if (sampleAbove) offsetY - extraRows / scaleY else offsetY.toFloat()
+        capCanvas.translate(-offsetX.toFloat(), -shiftY)
         try {
             source.draw(capCanvas)
         } finally {
@@ -134,7 +137,7 @@ class BlurTopBarLayout(context: Context, attrs: AttributeSet?) : BlurViewLinearL
         blurPixels(bitmap, capture, w, h)
         liveCanvas.drawColor(frostColor(), PorterDuff.Mode.SRC_ATOP)
 
-        liveSrcRect.set(0, 0, w, visibleRows)
+        if (sampleAbove) liveSrcRect.set(0, extraRows, w, h) else liveSrcRect.set(0, 0, w, visibleRows)
         liveDstRect.set(0, 0, width, height)
         canvas.drawBitmap(bitmap, liveSrcRect, liveDstRect, livePaint)
     }

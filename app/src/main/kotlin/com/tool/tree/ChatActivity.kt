@@ -22,10 +22,12 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ListPopupWindow
@@ -49,6 +51,9 @@ import com.omarea.krscript.config.IconPathAnalysis
 import com.omarea.krscript.config.ActionParamMemory
 import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.executor.ShellExecutor
+import com.omarea.common.ui.BlurTopBarLayout
+import com.tool.tree.ui.SwipeBackHelper
+import com.tool.tree.ui.SwipeBackPreviewCache
 import com.omarea.krscript.model.ChatNode
 import com.omarea.krscript.model.ClickableNode
 import com.omarea.krscript.model.KrScriptActionHandler
@@ -72,12 +77,18 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private val CLOSE_TYPES = setOf("exit", "finish", "close")
         private val UNSUPPORTED_TYPES = setOf("file", "folder", "spinner", "checkbox", "refresh", "reload", "restart", "killapp")
 
+        private const val SWIPE_BACK_EDGE_RATIO = 0.2f
+
         fun start(context: Context, node: ChatNode) {
             val intent = Intent(context, ChatActivity::class.java).apply {
                 putExtra(EXTRA_CHAT, node)
                 if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            context.startActivity(intent)
+            if (context is Activity) {
+                SwipeBackPreviewCache.capture(context) { context.startActivity(intent) }
+            } else {
+                context.startActivity(intent)
+            }
         }
     }
 
@@ -99,6 +110,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private lateinit var store: ChatSessionStore
     private lateinit var session: ChatSession
     private lateinit var drawer: DrawerLayout
+    private lateinit var swipeBackHelper: SwipeBackHelper
+    private var swipePreview: SwipeBackPreviewCache.Preview? = null
     private lateinit var sessionDrawer: ChatSessionDrawer
     private val ioExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val shellStarter: ExecutorService = Executors.newSingleThreadExecutor()
@@ -118,6 +131,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
         ThemeModeState.switchTheme(this)
         setContentView(R.layout.activity_chat)
+        setupSwipeBack()
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -158,8 +172,23 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         setupOptionsButton()
         setupDrawer()
 
-        val bar = findViewById<View>(R.id.chat_input_bar)
+        val bar = findViewById<ChatBottomBarLayout>(R.id.chat_input_bar)
+        val topBar = findViewById<BlurTopBarLayout>(R.id.blur_top_container)
         val panel = findViewById<View>(R.id.chat_drawer_panel)
+        topBar.blurSource = listView
+        bar.blurSource = listView
+        val updateListInsets = {
+            val gap = (8 * resources.displayMetrics.density).toInt()
+            val top = topBar.height + gap
+            val bottom = bar.height + gap
+            if (listView.paddingTop != top || listView.paddingBottom != bottom) {
+                val stick = !listView.canScrollVertically(1)
+                listView.setPadding(listView.paddingLeft, top, listView.paddingRight, bottom)
+                if (stick) scrollToEnd()
+            }
+        }
+        topBar.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateListInsets() }
+        bar.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateListInsets() }
         val basePadBottom = bar.paddingBottom
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.chat_root)) { _, insets ->
             val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -181,6 +210,51 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         })
     }
 
+    private fun setupSwipeBack() {
+        val previewBlur = findViewById<ImageView>(R.id.chat_swipe_preview_blur)
+        val previewSharp = findViewById<ImageView>(R.id.chat_swipe_preview_sharp)
+        swipePreview = SwipeBackPreviewCache.consume()
+        swipePreview?.let {
+            previewSharp.setImageBitmap(it.sharp)
+            previewBlur.setImageBitmap(it.blurred ?: it.sharp)
+        }
+        swipeBackHelper = SwipeBackHelper(
+            activity = this,
+            contentView = findViewById(R.id.chat_drawer),
+            onDragStateChanged = { dragging ->
+                if (swipePreview != null) {
+                    val visibility = if (dragging) View.VISIBLE else View.GONE
+                    previewBlur.visibility = visibility
+                    previewSharp.visibility = visibility
+                    if (!dragging) previewSharp.alpha = 0f
+                }
+            },
+            onDragProgress = { progress -> previewSharp.alpha = progress * progress },
+            canStart = { ev -> canStartSwipeBack(ev) },
+            allowLeftPull = false
+        )
+    }
+
+    private fun canStartSwipeBack(ev: MotionEvent): Boolean {
+        if (!::drawer.isInitialized || drawer.isDrawerVisible(GravityCompat.END)) return false
+        if (ev.rawX > resources.displayMetrics.widthPixels * SWIPE_BACK_EDGE_RATIO) return false
+        val focused = currentFocus as? TextView
+        return focused == null || !focused.hasSelection()
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (::swipeBackHelper.isInitialized && swipeBackHelper.dispatchTouchEvent(ev)) return true
+        return super.dispatchTouchEvent(ev)
+    }
+
+    private fun recycleImageBitmap(imageView: ImageView) {
+        val drawable = imageView.drawable
+        if (drawable is android.graphics.drawable.BitmapDrawable) {
+            imageView.setImageDrawable(null)
+            drawable.bitmap?.takeIf { !it.isRecycled }?.recycle()
+        }
+    }
+
     override fun onStop() {
         super.onStop()
         if (::session.isInitialized) saveSession(session)
@@ -193,6 +267,11 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         if (::session.isInitialized) saveSession(session)
         ioExecutor.shutdown()
         shellStarter.shutdown()
+        if (::swipeBackHelper.isInitialized) swipeBackHelper.release()
+        if (isFinishing) {
+            findViewById<ImageView>(R.id.chat_swipe_preview_blur)?.let { recycleImageBitmap(it) }
+            findViewById<ImageView>(R.id.chat_swipe_preview_sharp)?.let { recycleImageBitmap(it) }
+        }
     }
 
     private fun newSession(id: String): ChatSession {
@@ -781,17 +860,20 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_chat_message, parent, false)
             val column = view.findViewById<View>(R.id.chat_column)
-            val bubble = view.findViewById<View>(R.id.chat_bubble)
+            val bubble = view.findViewById<ChatBubbleLayout>(R.id.chat_bubble)
             val title = view.findViewById<TextView>(R.id.chat_title)
             val tv = view.findViewById<TextView>(R.id.chat_text)
             val progress = view.findViewById<ProgressBar>(R.id.chat_progress)
             val density = parent.resources.displayMetrics.density
             val fromUser = viewType == 1
+            val tint = if (fromUser) (activity.accentColor() and 0x00FFFFFF) or 0x40000000 else 0x26808080
             val bg = GradientDrawable().apply {
                 cornerRadius = 18 * density
-                setColor(if (fromUser) (activity.accentColor() and 0x00FFFFFF) or 0x40000000 else 0x26808080)
+                setColor(tint)
             }
             bubble.background = bg
+            bubble.engine.cornerRadius = 18 * density
+            bubble.overlayColor = if (fromUser) tint else 0
             tv.maxWidth = parent.resources.displayMetrics.widthPixels - (24 * density).toInt()
             tv.setTextIsSelectable(true)
             (column.layoutParams as FrameLayout.LayoutParams).gravity = if (fromUser) Gravity.END else Gravity.START

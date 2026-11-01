@@ -20,7 +20,9 @@ class SwipeBackHelper(
     private val contentView: View,
     private val onDragStateChanged: (dragging: Boolean) -> Unit = {},
     private val onDragProgress: (progress: Float) -> Unit = {},
-    private val onBack: () -> Unit = { activity.finish(); activity.overridePendingTransition(0, 0) }
+    private val onBack: () -> Unit = { activity.finish(); activity.overridePendingTransition(0, 0) },
+    private val canStart: (MotionEvent) -> Boolean = { true },
+    private val allowLeftPull: Boolean = true
 ) {
     companion object {
         private const val COMMIT_DISTANCE_RATIO = 0.28f
@@ -79,7 +81,7 @@ class SwipeBackHelper(
             MotionEvent.ACTION_DOWN -> {
                 val isIdle = settleAnimator?.isRunning != true &&
                     contentView.translationX == 0f
-                candidate = isIdle
+                candidate = isIdle && canStart(ev)
                 dragging = false
                 draggingLeft = false
                 downX = ev.rawX
@@ -113,6 +115,10 @@ class SwipeBackHelper(
                             cancelEvent.recycle()
                         }
                         dx < -touchSlop && abs(dx) > abs(dy) * 1.2f -> {
+                            if (!allowLeftPull) {
+                                candidate = false
+                                return false
+                            }
                             beginNewDragSession()
                             draggingLeft = true
                             onDragStateChanged(true)
