@@ -52,6 +52,7 @@ class DialogAboutUpdate(
     private val logBuilder = SpannableStringBuilder()
 
     private lateinit var logText: TextView
+    private lateinit var updateCard: View
     private lateinit var updateItem: View
     private lateinit var itemIcon: ImageView
     private lateinit var itemTitle: TextView
@@ -271,6 +272,7 @@ class DialogAboutUpdate(
     }
 
     private fun bindUpdate(view: View, activity: Activity) {
+        updateCard = view.findViewById(R.id.update_card)
         updateItem = view.findViewById(R.id.update_item)
         itemIcon = view.findViewById(R.id.kr_icon)
         itemTitle = view.findViewById(R.id.kr_title)
@@ -367,6 +369,7 @@ class DialogAboutUpdate(
     private fun showAvailable(info: AppUpdateInfo, activity: Activity) {
         loadedInfo = info
         destFile = File(activity.cacheDir, info.apkFileName)
+        updateCard.visibility = View.VISIBLE
         resetLog()
         val size = if (info.apkSize > 0) " (" + AppUpdateInstaller.formatFileSize(info.apkSize) + ")" else ""
         itemDesc.text = activity.getString(R.string.app_update_desc) + size
@@ -378,10 +381,12 @@ class DialogAboutUpdate(
     private fun startCheck(activity: Activity) {
         if (checking) return
         checking = true
+        updateCard.visibility = View.GONE
         setBusy(true)
         resetLog()
         itemSummary.text = ""
         itemDesc.text = activity.getString(R.string.app_update_checking)
+        Toast.makeText(activity, R.string.app_update_checking, Toast.LENGTH_SHORT).show()
 
         Thread {
             val result = try {
@@ -403,17 +408,18 @@ class DialogAboutUpdate(
             is AppUpdateCheckResult.Available -> showAvailable(result.info, activity)
             is AppUpdateCheckResult.UpToDate -> {
                 loadedInfo = null
+                updateCard.visibility = View.GONE
                 resetLog()
-                itemDesc.text = activity.getString(R.string.app_update_latest)
-                appendChangelog(activity, result.changelogText)
                 setMode(UpdateMode.CHECK)
                 setBusy(false)
+                Toast.makeText(activity, R.string.app_update_latest, Toast.LENGTH_SHORT).show()
             }
             is AppUpdateCheckResult.Failed -> {
+                updateCard.visibility = View.GONE
                 resetLog()
-                itemDesc.text = activity.getString(R.string.app_update_check_fail)
                 setMode(UpdateMode.CHECK)
                 setBusy(false)
+                Toast.makeText(activity, R.string.app_update_check_fail, Toast.LENGTH_SHORT).show()
             }
         }
     }

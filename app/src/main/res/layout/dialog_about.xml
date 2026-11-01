@@ -88,10 +88,14 @@
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:background="#33808080" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
                 android:gravity="center_vertical"
                 android:minHeight="44dp"
                 android:orientation="horizontal">
@@ -119,6 +123,11 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="0dp"
+                android:background="#33808080" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -174,6 +183,11 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="0dp"
+                android:background="#33808080" />
             <LinearLayout
                 android:id="@+id/blur_disable_row"
                 android:layout_width="match_parent"
@@ -201,6 +215,11 @@
                     android:paddingEnd="0dp" />
             </LinearLayout>
 
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="0dp"
+                android:background="#33808080" />
             <LinearLayout
                 android:id="@+id/direct_bg_row"
                 android:layout_width="match_parent"
@@ -228,12 +247,26 @@
                     android:paddingEnd="0dp" />
             </LinearLayout>
 
-            <include
-                android:id="@+id/update_item"
-                layout="@layout/kr_download_list_item"
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="0dp"
+                android:background="#33808080" />
+            <LinearLayout
+                android:id="@+id/update_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp" />
+                android:layout_marginTop="16dp"
+                android:background="@drawable/about_card_bg"
+                android:clipToOutline="true"
+                android:orientation="vertical"
+                android:visibility="gone">
+                <include
+                    android:id="@+id/update_item"
+                    layout="@layout/kr_download_list_item"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
