@@ -16,10 +16,8 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.EditorInfo
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
-import android.widget.EditText
 import android.widget.ImageView
 import android.widget.ListPopupWindow
 import android.widget.TextView
@@ -63,7 +61,7 @@ class DialogAboutUpdate(
     private lateinit var itemDesc: TextView
     private lateinit var itemWidget: ImageView
     private lateinit var itemRing: DownloadProgressRing
-    private lateinit var wallpaperPath: EditText
+    private lateinit var wallpaperPath: TextView
     private lateinit var wallpaperChoose: TextView
     private lateinit var wallpaperRemove: TextView
     private lateinit var blurRow: View
@@ -153,7 +151,7 @@ class DialogAboutUpdate(
 
         blurCheck.isChecked = ThemeModeState.isBlurDisabled(activity)
         directCheck.isChecked = ThemeModeState.isDirectBgEnabled(activity)
-        wallpaperPath.setText(ThemeModeState.getCustomWallpaperPath(activity).orEmpty())
+        refreshWallpaperRow(activity)
         updateOptionStates(themeConfig.getThemeMode())
 
         blurRow.setOnClickListener { if (blurCheck.isEnabled) blurCheck.toggle() }
@@ -180,18 +178,8 @@ class DialogAboutUpdate(
         wallpaperRemove.setOnClickListener {
             if (!wallpaperRemove.isEnabled) return@setOnClickListener
             ThemeModeState.clearCustomWallpaper(activity)
-            wallpaperPath.setText("")
             applyThemeChange(activity)
         }
-        wallpaperPath.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE && wallpaperPath.isEnabled) {
-                applyWallpaper(wallpaperPath.text?.toString().orEmpty())
-                true
-            } else {
-                false
-            }
-        }
-
         bindThemeSelector(view, activity, themeConfig)
     }
 
@@ -203,6 +191,12 @@ class DialogAboutUpdate(
         activity.recreate()
     }
 
+    private fun refreshWallpaperRow(activity: Activity) {
+        val hasCustom = ThemeModeState.getCustomWallpaperPath(activity) != null
+        wallpaperPath.setText(if (hasCustom) R.string.about_wallpaper_custom else R.string.about_wallpaper_hint)
+        wallpaperRemove.visibility = if (hasCustom) View.VISIBLE else View.GONE
+    }
+
     private fun updateOptionStates(themeLevel: Int) {
         val enabled = themeLevel >= 3
         val alpha = if (enabled) 0.7f else 0.35f
@@ -212,7 +206,7 @@ class DialogAboutUpdate(
         directCheck.isEnabled = enabled
         directRow.isClickable = enabled
         directLabel.alpha = alpha
-        wallpaperPath.isEnabled = enabled
+        wallpaperPath.alpha = alpha
         wallpaperChoose.isEnabled = enabled
         wallpaperRemove.isEnabled = enabled
         wallpaperChoose.alpha = if (enabled) 1f else 0.35f
@@ -268,7 +262,6 @@ class DialogAboutUpdate(
         val activity = activity ?: return
         if (path.isBlank()) return
         if (ThemeModeState.setCustomWallpaper(activity, path)) {
-            wallpaperPath.setText(ThemeModeState.getCustomWallpaperPath(activity).orEmpty())
             applyThemeChange(activity)
         } else {
             Toast.makeText(activity, R.string.about_wallpaper_invalid, Toast.LENGTH_SHORT).show()

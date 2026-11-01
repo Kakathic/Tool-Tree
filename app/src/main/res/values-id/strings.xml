@@ -158,6 +158,8 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="about_wallpaper">Wallpaper</string>
     <string name="about_wallpaper_hint">Wallpaper sistem</string>
     <string name="about_choose">Pilih</string>
+    <string name="about_import_image">Impor gambar</string>
+    <string name="about_wallpaper_custom">Wallpaper kustom</string>
     <string name="about_remove">Hapus</string>
     <string name="about_wallpaper_invalid">Gambar ini tidak dapat digunakan</string>
     <string name="about_update_downloading">Mengunduh...</string>

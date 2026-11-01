@@ -178,6 +178,8 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="about_wallpaper">Háttérkép</string>
     <string name="about_wallpaper_hint">Rendszer háttérkép</string>
     <string name="about_choose">Választ</string>
+    <string name="about_import_image">Kép importálása</string>
+    <string name="about_wallpaper_custom">Egyéni háttér</string>
     <string name="about_remove">Törlés</string>
     <string name="about_wallpaper_invalid">Ez a kép nem használható</string>
     <string name="about_update_downloading">Letöltés...</string>

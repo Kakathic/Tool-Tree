@@ -162,6 +162,8 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="about_wallpaper">Fondo de pantalla</string>
     <string name="about_wallpaper_hint">Fondo del sistema</string>
     <string name="about_choose">Elegir</string>
+    <string name="about_import_image">Importar imagen</string>
+    <string name="about_wallpaper_custom">Fondo personalizado</string>
     <string name="about_remove">Quitar</string>
     <string name="about_wallpaper_invalid">No se puede usar esta imagen</string>
     <string name="about_update_downloading">Descargando...</string>

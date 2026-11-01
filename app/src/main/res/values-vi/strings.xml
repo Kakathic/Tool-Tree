@@ -172,6 +172,8 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="about_wallpaper">Hình nền</string>
     <string name="about_wallpaper_hint">Hình nền hệ thống</string>
     <string name="about_choose">Chọn</string>
+    <string name="about_import_image">Nhập ảnh</string>
+    <string name="about_wallpaper_custom">Hình nền tuỳ chỉnh</string>
     <string name="about_remove">Xoá</string>
     <string name="about_wallpaper_invalid">Không dùng được ảnh này</string>
     <string name="about_update_downloading">Đang tải xuống...</string>

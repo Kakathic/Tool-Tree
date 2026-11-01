@@ -184,6 +184,8 @@ If you agree, press the confirm button to continue."</string>
     <string name="about_wallpaper">Wallpaper</string>
     <string name="about_wallpaper_hint">System wallpaper</string>
     <string name="about_choose">Choose</string>
+    <string name="about_import_image">Import image</string>
+    <string name="about_wallpaper_custom">Custom wallpaper</string>
     <string name="about_remove">Remove</string>
     <string name="about_wallpaper_invalid">Cannot use this image</string>
     <string name="about_update_downloading">Downloading...</string>
