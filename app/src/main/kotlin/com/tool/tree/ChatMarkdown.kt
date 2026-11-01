@@ -23,8 +23,8 @@ import com.omarea.krscript.ui.MarkdownInlineCodeSpan
 import com.omarea.krscript.ui.MarkdownInlineHelper
 
 /**
- * Văn bản nằm trong ```...``` (một dòng hoặc nhiều dòng, ở bất kỳ vị trí nào) được giữ nguyên từng ký tự,
- * không parse markdown, không bị bắt link; chỉ thêm nền code.
+ * Khối ```...``` bắt đầu ở đầu dòng được tách bằng [splitBlocks] thành khối code riêng (hiển thị thành khung có nút sao chép).
+ * Văn bản trong ``` nằm giữa dòng vẫn giữ nguyên từng ký tự bằng [MarkdownCodeSpan], không parse markdown, không bị bắt link.
  */
 object ChatMarkdown {
     object SelectableLinkMovement : LinkMovementMethod() {
@@ -69,7 +69,49 @@ object ChatMarkdown {
     private const val SEG_CODE = 1
     private const val SEG_MARK = 2
 
-    private class Seg(val kind: Int, val start: Int, val end: Int)
+    private class Seg(val kind: Int, val start: Int, val end: Int, val block: Boolean = false)
+
+    class Block(val isCode: Boolean, val text: CharSequence)
+
+    fun splitBlocks(source: CharSequence): List<Block> {
+        val s = source.toString()
+        val out = ArrayList<Block>()
+        if (!s.contains(FENCE)) {
+            addTextBlock(out, source, 0, s.length)
+            return out
+        }
+        val segs = splitFences(s)
+        var textFrom = 0
+        var i = 0
+        while (i < segs.size) {
+            val seg = segs[i]
+            val code = segs.getOrNull(i + 1)
+            if (seg.kind == SEG_MARK && code != null && code.kind == SEG_CODE && code.block) {
+                addTextBlock(out, source, textFrom, seg.start)
+                if (code.end > code.start) out.add(Block(true, source.subSequence(code.start, code.end)))
+                val close = segs.getOrNull(i + 2)
+                if (close != null && close.kind == SEG_MARK) {
+                    textFrom = close.start + FENCE.length
+                    i += 3
+                } else {
+                    textFrom = s.length
+                    i += 2
+                }
+            } else {
+                i++
+            }
+        }
+        addTextBlock(out, source, textFrom, s.length)
+        return out
+    }
+
+    private fun addTextBlock(out: MutableList<Block>, source: CharSequence, from: Int, to: Int) {
+        var a = from
+        var b = to
+        while (a < b && (source[a] == '\n' || source[a] == '\r')) a++
+        while (b > a && (source[b - 1] == '\n' || source[b - 1] == '\r')) b--
+        if (b > a && source.subSequence(a, b).isNotBlank()) out.add(Block(false, source.subSequence(a, b)))
+    }
 
     private class Piece(val text: CharSequence, val code: Boolean, val lineStart: Boolean)
 
@@ -110,7 +152,7 @@ object ChatMarkdown {
                     ce = if (lb > cs && s[lb - 1] == '\r') lb - 1 else lb
                 }
             }
-            segs.add(Seg(SEG_CODE, cs, maxOf(cs, ce)))
+            segs.add(Seg(SEG_CODE, cs, maxOf(cs, ce), atLineStart))
 
             if (close >= 0) {
                 segs.add(Seg(SEG_MARK, close, close))

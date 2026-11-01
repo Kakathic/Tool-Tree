@@ -8,11 +8,13 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Rect
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.Layout
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -855,7 +857,92 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             notifyDataSetChanged()
         }
 
-        class VH(view: View, val bubble: View, val title: TextView, val text: TextView, val progress: ProgressBar, val dots: TypingDotsView) : RecyclerView.ViewHolder(view)
+        class VH(
+            view: View,
+            val bubble: View,
+            val title: TextView,
+            val text: TextView,
+            val blocks: LinearLayout,
+            val progress: ProgressBar,
+            val dots: TypingDotsView
+        ) : RecyclerView.ViewHolder(view)
+
+        private fun dp(view: View, value: Float) = (value * view.resources.displayMetrics.density).toInt()
+
+        private fun buildTextBlock(container: LinearLayout, holder: VH, source: CharSequence, first: Boolean, last: Boolean): View {
+            val tv = ChatTextView(container.context)
+            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            tv.setTextColor(holder.text.currentTextColor)
+            tv.setPadding(dp(tv, 14f), dp(tv, if (first) 9f else 3f), dp(tv, 14f), dp(tv, if (last) 9f else 3f))
+            tv.maxWidth = holder.text.maxWidth
+            tv.setTextIsSelectable(true)
+            tv.movementMethod = ChatMarkdown.SelectableLinkMovement
+            tv.setLinkTextColor(activity.accentColor())
+            tv.text = ChatMarkdown.linkify(ChatMarkdown.render(tv.context, source))
+            return tv
+        }
+
+        private fun buildCodeBlock(container: LinearLayout, holder: VH, code: CharSequence): View {
+            val ctx = container.context
+            val textColor = holder.text.currentTextColor
+            val card = FrameLayout(ctx)
+            card.minimumHeight = dp(card, 36f)
+            card.background = GradientDrawable().apply {
+                cornerRadius = 10 * ctx.resources.displayMetrics.density
+                setColor(0x44808080)
+            }
+
+            val tv = ChatTextView(ctx)
+            tv.typeface = Typeface.MONOSPACE
+            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            tv.setTextColor(textColor)
+            tv.setPadding(dp(tv, 10f), dp(tv, 8f), dp(tv, 38f), dp(tv, 8f))
+            tv.maxWidth = holder.text.maxWidth - dp(tv, 20f)
+            if (Build.VERSION.SDK_INT >= 23) tv.hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
+            tv.setTextIsSelectable(true)
+            tv.text = code
+            card.addView(tv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+            val icon = ImageView(ctx)
+            icon.setImageResource(R.drawable.ic_chat_copy)
+            icon.imageTintList = ColorStateList.valueOf((textColor and 0x00FFFFFF) or (0xB3 shl 24))
+            icon.setPadding(dp(icon, 7f), dp(icon, 7f), dp(icon, 7f), dp(icon, 7f))
+            icon.contentDescription = ctx.getString(R.string.btn_copy_output)
+            val ripple = TypedValue()
+            if (ctx.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, ripple, true) && ripple.resourceId != 0) {
+                icon.background = ContextCompat.getDrawable(ctx, ripple.resourceId)
+            }
+            val plain = code.toString()
+            icon.setOnClickListener { onCopy(plain) }
+            card.addView(icon, FrameLayout.LayoutParams(dp(icon, 34f), dp(icon, 34f), Gravity.TOP or Gravity.END).apply {
+                topMargin = dp(icon, 2f)
+                marginEnd = dp(icon, 2f)
+            })
+            return card
+        }
+
+        private fun bindBlocks(holder: VH, blocks: List<ChatMarkdown.Block>) {
+            val container = holder.blocks
+            container.removeAllViews()
+            blocks.forEachIndexed { index, block ->
+                val first = index == 0
+                val last = index == blocks.lastIndex
+                if (block.isCode) {
+                    val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        marginStart = dp(container, 10f)
+                        marginEnd = dp(container, 10f)
+                        topMargin = dp(container, if (first) 10f else 3f)
+                        bottomMargin = dp(container, if (last) 10f else 3f)
+                    }
+                    container.addView(buildCodeBlock(container, holder, block.text), params)
+                } else {
+                    container.addView(
+                        buildTextBlock(container, holder, block.text, first, last),
+                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    )
+                }
+            }
+        }
 
         fun add(message: ChatMessage) {
             items.add(message)
@@ -896,6 +983,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             val bubble = view.findViewById<ChatBubbleLayout>(R.id.chat_bubble)
             val title = view.findViewById<TextView>(R.id.chat_title)
             val tv = view.findViewById<TextView>(R.id.chat_text)
+            val blocks = view.findViewById<LinearLayout>(R.id.chat_blocks)
             val progress = view.findViewById<ProgressBar>(R.id.chat_progress)
             val dots = view.findViewById<TypingDotsView>(R.id.chat_dots)
             dots.setDotColor(tv.currentTextColor)
@@ -922,7 +1010,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                     marginEnd = (8 * density).toInt()
                 }
             }
-            return VH(view, bubble, title, tv, progress, dots)
+            return VH(view, bubble, title, tv, blocks, progress, dots)
         }
 
         override fun onBindViewHolder(holder: VH, position: Int) {
@@ -931,11 +1019,20 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             holder.title.visibility = if (label != null) View.VISIBLE else View.GONE
             holder.title.text = label
             val visible = visibleText(m.text)
-            val renderMd = activity.markdownEnabled && !m.fromUser
+            val renderMd = activity.markdownEnabled && !m.fromUser && !m.running
             val showDots = visible.isEmpty() && m.running
             holder.dots.visibility = if (showDots) View.VISIBLE else View.GONE
-            holder.text.visibility = if (showDots) View.GONE else View.VISIBLE
-            if (!showDots) holder.text.text = ChatMarkdown.linkify(if (renderMd) ChatMarkdown.render(holder.text.context, visible) else visible)
+            val blocks = if (renderMd) ChatMarkdown.splitBlocks(visible).takeIf { list -> list.any { it.isCode } } else null
+            if (blocks != null) {
+                holder.text.visibility = View.GONE
+                holder.blocks.visibility = View.VISIBLE
+                bindBlocks(holder, blocks)
+            } else {
+                holder.blocks.removeAllViews()
+                holder.blocks.visibility = View.GONE
+                holder.text.visibility = if (showDots) View.GONE else View.VISIBLE
+                if (!showDots) holder.text.text = ChatMarkdown.linkify(if (renderMd) ChatMarkdown.render(holder.text.context, visible) else visible)
+            }
             if (m.running && m.progressTotal != 0) {
                 holder.progress.visibility = View.VISIBLE
                 holder.progress.isIndeterminate = m.progressTotal < 0
