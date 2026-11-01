@@ -2,6 +2,7 @@ package com.tool.tree
 
 import android.app.Activity
 import android.app.WallpaperManager
+import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -37,8 +38,9 @@ object ThemeModeState {
     @JvmStatic
     fun isBlurActive(): Boolean = blurActive
 
-    private fun isBlurDisabled(activity: Activity): Boolean {
-        val file = File(activity.filesDir, "home/usr/log/dissblur")
+    @JvmStatic
+    fun isBlurDisabled(context: Context): Boolean {
+        val file = File(context.filesDir, "home/usr/log/dissblur")
         return try {
             if (file.exists()) {
                 file.readText().trim() == "1"
@@ -47,6 +49,16 @@ object ThemeModeState {
             }
         } catch (e: Exception) {
             false
+        }
+    }
+
+    @JvmStatic
+    fun setBlurDisabled(context: Context, disabled: Boolean) {
+        val file = File(context.filesDir, "home/usr/log/dissblur")
+        try {
+            file.parentFile?.mkdirs()
+            file.writeText(if (disabled) "1" else "0")
+        } catch (e: Exception) {
         }
     }
 

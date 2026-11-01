@@ -152,6 +152,7 @@
     <string name="theme_wallpaper_dark">Обои + Тёмный</string>
     <string name="theme_wallpaper_light">Обои + Светлый</string>
     <string name="theme_text">Темы</string>
+    <string name="theme_disable_blur">Отключить размытие</string>
     <string name="open_in_browser">Открыть в браузере</string>
 
     <string name="update_text">Обновить</string>

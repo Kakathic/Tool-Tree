@@ -15,7 +15,9 @@ import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.MotionEvent
+import android.view.View
 import android.widget.ArrayAdapter
+import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.addCallback
@@ -572,6 +574,24 @@ class MainActivity : AppCompatActivity() {
     private fun showSettingsDialog() {
         val layout = LayoutInflater.from(this).inflate(R.layout.dialog_about, null)
         val themeConfig = ThemeConfig(this)
+
+        val blurRow = layout.findViewById<View>(R.id.blur_disable_row)
+        val blurLabel = layout.findViewById<TextView>(R.id.blur_disable_label)
+        val blurCheck = layout.findViewById<CheckBox>(R.id.blur_disable_check)
+        fun updateBlurCheckState(themeLevel: Int) {
+            val enabled = themeLevel >= 3
+            blurCheck.isEnabled = enabled
+            blurRow.isClickable = enabled
+            blurLabel.alpha = if (enabled) 0.7f else 0.35f
+        }
+        blurCheck.isChecked = ThemeModeState.isBlurDisabled(this)
+        updateBlurCheckState(themeConfig.getThemeMode())
+        blurRow.setOnClickListener { if (blurCheck.isEnabled) blurCheck.toggle() }
+        blurCheck.setOnCheckedChangeListener { _, checked ->
+            ThemeModeState.setBlurDisabled(this, checked)
+            ThemeModeState.switchTheme(this)
+            recreate()
+        }
         
         val themeSelector = layout.findViewById<TextView>(R.id.theme_selector)
         val themeNames = listOf(
@@ -590,6 +610,7 @@ class MainActivity : AppCompatActivity() {
             popup.setOnItemClickListener { _, _, position, _ ->
                 themeConfig.setThemeMode(position)
                 themeSelector.text = themeNames[position]
+                updateBlurCheckState(position)
                 popup.dismiss()
                 ThemeModeState.switchTheme(this)
                 recreate()

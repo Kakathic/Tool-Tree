@@ -165,6 +165,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="theme_wallpaper_dark">Hình nền tối</string>
     <string name="theme_wallpaper_light">Hình nền sáng</string>
     <string name="theme_text">Chủ đề</string>
+    <string name="theme_disable_blur">Tắt làm mờ</string>
     <string name="open_in_browser">Mở bằng trình duyệt</string>
     
     <string name="update_text">Cập nhật</string>

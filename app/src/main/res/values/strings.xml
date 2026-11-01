@@ -177,6 +177,7 @@ If you agree, press the confirm button to continue."</string>
     <string name="theme_wallpaper_dark">Wallpaper Dark</string>
     <string name="theme_wallpaper_light">Wallpaper Light</string>
     <string name="theme_text">Theme</string>
+    <string name="theme_disable_blur">Disable blur</string>
     <string name="open_in_browser">Open with a browser</string>
     
     <string name="update_text">Update</string>

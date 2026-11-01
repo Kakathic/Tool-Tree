@@ -155,6 +155,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="theme_wallpaper_dark">Fondo de pantalla oscuro</string>
     <string name="theme_wallpaper_light">Fondo de pantalla claro</string>
     <string name="theme_text">Tema</string>
+    <string name="theme_disable_blur">Desactivar desenfoque</string>
     <string name="open_in_browser">Abrir con un navegador</string>
     
     <string name="update_text">Actualizar</string>
