@@ -214,6 +214,8 @@ object ScriptEnvironmen {
             }
 
             append("\n\n").append(environmentPath).append(" \"").append(path).append("\"")
+            // Lượt tải có nút Hủy: truyền tag (tham số thứ 2 như ShellExecutor) để killtree tìm được lệnh này
+            ShellCancelTag.current()?.let { append(" \"").append(it).append("\"") }
         }
 
         val shell = privateShell
@@ -273,7 +275,9 @@ object ScriptEnvironmen {
 
         val mergedPath = createShellCache(context, merged.toString())
         if (mergedPath.isNotEmpty()) {
-            cmd.append(environmentPath).append(" \"").append(mergedPath).append("\"\n")
+            cmd.append(environmentPath).append(" \"").append(mergedPath).append("\"")
+            ShellCancelTag.current()?.let { cmd.append(" \"").append(it).append("\"") }
+            cmd.append("\n")
         }
 
         var rawOutput = privateShell?.doCmdSync(cmd.toString()) ?: ""
@@ -474,6 +478,22 @@ object ScriptEnvironmen {
             envp.add("$key='$safeValue'")
         }
         return envp
+    }
+
+    // Shell riêng chỉ để kill: shell dùng chung (privateShell) đang bị chính lệnh cần kill giữ khoá nên không dùng được
+    private var killShell: ShellSession? = null
+
+    /** Kill cây tiến trình của các lệnh chạy với tag này (xem ShellCancelTag) */
+    @JvmStatic
+    fun killTagTree(context: Context, tag: String) {
+        if (!inited) init(context)
+        if (!inited || tag.isEmpty()) return
+        val path = createShellCache(context, "shell_progres='$tag' killtree")
+        if (path.isEmpty()) return
+        val shell = synchronized(this) {
+            killShell ?: KeepShell(rooted).also { killShell = it }
+        }
+        shell.doCmdSync(buildDynamicExports(context) + "\n" + environmentPath + " \"" + path + "\"")
     }
 
     private fun getExecuteScript(context: Context, script: String?, tag: String?): String {

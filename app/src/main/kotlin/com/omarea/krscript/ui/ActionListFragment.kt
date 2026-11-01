@@ -28,6 +28,7 @@ import com.omarea.krscript.config.IconPathAnalysis
 import com.omarea.krscript.config.ActionShowMemory
 import com.omarea.krscript.config.ActionParamMemory
 import com.omarea.krscript.executor.ScriptEnvironmen
+import com.omarea.krscript.executor.ShellCancelTag
 import com.omarea.krscript.model.*
 import com.omarea.krscript.shortcut.ActionShortcutManager
 import com.tool.tree.ThemeModeState
@@ -362,12 +363,15 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
             separator = item.separator
         }
 
+        val cancelTag = ShellCancelTag()
+        val cancelCtx = requireContext().applicationContext
         progressBarDialog.setCancelCallback {
+            cancelTag.kill(cancelCtx)
             activeLoadJob?.cancel()
         }
         progressBarDialog.showDialog(getString(R.string.kr_param_options_load) + " ");
 
-        activeLoadJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+        activeLoadJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO + cancelTag.element()) {
             val scripts = LinkedHashMap<String, String>()
             if (!item.getState.isNullOrEmpty()) {
                 scripts["state"] = item.getState!!
@@ -520,12 +524,15 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
             val layoutInflater = LayoutInflater.from(requireContext())
             val linearLayout = layoutInflater.inflate(R.layout.kr_params_list, null) as LinearLayout
 
+            val cancelTag = ShellCancelTag()
+            val cancelCtx = requireContext().applicationContext
             progressBarDialog.setCancelCallback {
+                cancelTag.kill(cancelCtx)
                 activeLoadJob?.cancel()
             }
             progressBarDialog.showDialog(getString(R.string.onloading))
 
-            activeLoadJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            activeLoadJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO + cancelTag.element()) {
                 withContext(Dispatchers.Main) {
                     progressBarDialog.showDialog(getString(R.string.kr_param_options_load) + " ");
                 }

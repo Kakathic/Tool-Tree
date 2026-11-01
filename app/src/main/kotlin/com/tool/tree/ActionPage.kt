@@ -45,6 +45,7 @@ import com.omarea.krscript.config.IconPathAnalysis
 import com.omarea.krscript.config.PageConfigReader
 import com.omarea.krscript.config.PageConfigSh
 import com.omarea.krscript.executor.ScriptEnvironmen
+import com.omarea.krscript.executor.ShellCancelTag
 import com.omarea.krscript.model.*
 import com.omarea.krscript.shortcut.ActionShortcutManager
 import com.omarea.krscript.ui.ActionListFragment
@@ -831,14 +832,16 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
 
         pendingDeferredBuilder = null
         pagePrewarmIconAnalysis = IconPathAnalysis()
+        val cancelTag = ShellCancelTag()
         progressBarDialog.setCancelCallback {
+            cancelTag.kill(this)
             loadPageJob?.cancel()
             finish()
         }
 
         val useProgressiveLoad = showLoading && config.process
 
-        loadPageJob = lifecycleScope.launch(Dispatchers.IO) {
+        loadPageJob = lifecycleScope.launch(Dispatchers.IO + cancelTag.element()) {
             if (showLoading && !useProgressiveLoad) {
                 withContext(Dispatchers.Main) {
                     hideLoadProgress()
@@ -1175,10 +1178,14 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         val config = currentPageConfig ?: return
         val resolvedAnchor = anchor ?: findViewById<View>(R.id.toolbar) ?: binding.root
 
-        progressBarDialog.setCancelCallback { spinnerLoadJob?.cancel() }
+        val cancelTag = ShellCancelTag()
+        progressBarDialog.setCancelCallback {
+            cancelTag.kill(this)
+            spinnerLoadJob?.cancel()
+        }
         progressBarDialog.showDialog(getString(R.string.kr_param_options_load) + " ")
 
-        spinnerLoadJob = lifecycleScope.launch(Dispatchers.IO) {
+        spinnerLoadJob = lifecycleScope.launch(Dispatchers.IO + cancelTag.element()) {
             val scripts = LinkedHashMap<String, String>()
             if (menuOption.spinnerGetState.isNotEmpty()) {
                 scripts["state"] = menuOption.spinnerGetState
