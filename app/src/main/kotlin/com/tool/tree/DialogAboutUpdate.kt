@@ -52,6 +52,9 @@ class DialogAboutUpdate(
     private val logBuilder = SpannableStringBuilder()
 
     private lateinit var logText: TextView
+    private lateinit var aboutStatus: TextView
+    private var statusColor = 0
+    private var accentColor = 0
     private lateinit var updateCard: View
     private lateinit var updateItem: View
     private lateinit var itemIcon: ImageView
@@ -97,6 +100,9 @@ class DialogAboutUpdate(
 
         val versionName = runCatching { activity.packageManager.getPackageInfo(activity.packageName, 0).versionName }.getOrNull() ?: "1.0.0"
         view.findViewById<TextView>(R.id.about_version).text = versionName
+        aboutStatus = view.findViewById(R.id.about_status)
+        statusColor = aboutStatus.currentTextColor
+        accentColor = TypedValue().also { activity.theme.resolveAttribute(android.R.attr.colorAccent, it, true) }.data
 
         view.findViewById<TextView>(R.id.appliction_authorText).setOnClickListener {
             openLink(activity, "https://Kakathic.github.io/Tool-Tree/website/Information.html")
@@ -277,9 +283,8 @@ class DialogAboutUpdate(
         itemRing = view.findViewById(R.id.kr_download_ring)
         logText = view.findViewById(R.id.update_log)
 
-        val accent = TypedValue().also { activity.theme.resolveAttribute(android.R.attr.colorAccent, it, true) }.data
         itemIcon.setImageResource(R.drawable.ic_update)
-        itemIcon.imageTintList = ColorStateList.valueOf(accent)
+        itemIcon.imageTintList = ColorStateList.valueOf(accentColor)
         itemTitle.setText(R.string.update_text)
         itemDesc.visibility = View.VISIBLE
 
@@ -313,6 +318,11 @@ class DialogAboutUpdate(
                 UpdateMode.INSTALL -> R.drawable.download_done
             }
         )
+    }
+
+    private fun setStatus(text: CharSequence, highlight: Boolean = false) {
+        aboutStatus.text = text
+        aboutStatus.setTextColor(if (highlight) accentColor else statusColor)
     }
 
     private fun setBusy(busy: Boolean) {
@@ -355,6 +365,7 @@ class DialogAboutUpdate(
         loadedInfo = info
         destFile = File(activity.cacheDir, info.apkFileName)
         updateCard.visibility = View.VISIBLE
+        setStatus(activity.getString(R.string.app_update_title), true)
         resetLog()
         val size = if (info.apkSize > 0) " (" + AppUpdateInstaller.formatFileSize(info.apkSize) + ")" else ""
         itemDesc.text = activity.getString(R.string.app_update_desc) + size
@@ -367,6 +378,7 @@ class DialogAboutUpdate(
         if (checking) return
         checking = true
         updateCard.visibility = View.GONE
+        setStatus("")
         setBusy(true)
         resetLog()
         itemDesc.text = activity.getString(R.string.app_update_checking)
@@ -394,6 +406,7 @@ class DialogAboutUpdate(
                 loadedInfo = null
                 updateCard.visibility = View.GONE
                 resetLog()
+                setStatus(activity.getString(R.string.app_update_latest))
                 appendLog(activity.getString(R.string.app_update_latest))
                 appendChangelog(activity, result.changelogText)
                 setMode(UpdateMode.CHECK)
@@ -402,6 +415,7 @@ class DialogAboutUpdate(
             is AppUpdateCheckResult.Failed -> {
                 updateCard.visibility = View.GONE
                 resetLog()
+                setStatus(activity.getString(R.string.app_update_check_fail))
                 appendLog(activity.getString(R.string.app_update_check_fail))
                 setMode(UpdateMode.CHECK)
                 setBusy(false)

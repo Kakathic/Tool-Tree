@@ -31,26 +31,37 @@
             android:text="@string/about_title"
             android:textSize="16sp"
             android:textStyle="bold" />
-        <TextView
-            android:id="@+id/about_version"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:alpha="0.7"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:gravity="end"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/about_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.8"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/about_version"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.7"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
 
-    <ScrollView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true"
-        android:overScrollMode="never"
-        android:requiresFadingEdge="vertical">
+        android:orientation="vertical">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical">
 
             <TextView
@@ -243,13 +254,21 @@
                 android:layout_height="1dp"
                 android:layout_marginTop="16dp"
                 android:background="#33808080" />
-            <TextView
-                android:id="@+id/update_log"
-                style="@style/textSmall"
+            <ScrollView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="0dp"
                 android:layout_marginTop="12dp"
-                android:textIsSelectable="true" />
+                android:layout_weight="1"
+                android:minHeight="96dp"
+                android:overScrollMode="never"
+                android:requiresFadingEdge="vertical">
+                <TextView
+                    android:id="@+id/update_log"
+                    style="@style/textSmall"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textIsSelectable="true" />
+            </ScrollView>
         </LinearLayout>
-    </ScrollView>
+    </LinearLayout>
 </LinearLayout>
