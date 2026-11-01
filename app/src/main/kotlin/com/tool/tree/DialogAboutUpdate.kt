@@ -4,7 +4,6 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -279,8 +278,8 @@ class DialogAboutUpdate(
         itemRing = view.findViewById(R.id.kr_download_ring)
         logText = view.findViewById(R.id.update_log)
 
-        itemIcon.setImageResource(R.drawable.ic_update)
-        itemIcon.imageTintList = ColorStateList.valueOf(accentColor)
+        runCatching { itemIcon.setImageDrawable(activity.packageManager.getApplicationIcon(activity.applicationInfo)) }
+        itemIcon.imageTintList = null
         itemTitle.setText(R.string.update_text)
         itemDesc.visibility = View.VISIBLE
 

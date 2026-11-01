@@ -13,7 +13,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
+        android:gravity="top"
         android:minHeight="48dp"
         android:orientation="horizontal">
         <ImageButton
@@ -26,12 +26,12 @@
             android:src="@drawable/ic_arrow_back" />
         <TextView
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
             android:layout_marginStart="4dp"
             android:layout_weight="1"
+            android:gravity="center_vertical"
             android:text="@string/about_title"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            style="@style/aboutHeaderText" />
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -39,16 +39,16 @@
             android:orientation="vertical">
             <TextView
                 android:id="@+id/about_status"
+                style="@style/aboutHeaderText"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:layout_height="40dp"
+                android:gravity="center_vertical" />
             <TextView
                 android:id="@+id/about_version"
+                style="@style/aboutHeaderText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:layout_marginTop="-10dp" />
         </LinearLayout>
     </LinearLayout>
 
@@ -65,20 +65,22 @@
 
             <TextView
                 android:id="@+id/appliction_nameText"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
+                android:layout_gravity="center_horizontal"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="20dp"
                 android:alpha="0.8"
                 android:clickable="true"
                 android:focusable="true"
                 android:text="@string/appliction_name"
                 android:textAlignment="center"
                 android:textColor="@drawable/text_color_selector"
-                android:textSize="32sp"
+                android:textSize="40sp"
                 android:textStyle="bold" />
             <TextView
                 android:id="@+id/appliction_authorText"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
+                android:layout_gravity="center_horizontal"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:alpha="0.7"
@@ -115,7 +117,7 @@
                     android:layout_weight="1"
                     android:alpha="0.7"
                     android:text="@string/theme_text"
-                    android:textColor="@drawable/text_color_selector"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
                 <TextView
@@ -123,6 +125,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="-4dp"
+                    android:background="@null"
                     android:clickable="true"
                     android:drawablePadding="6dp"
                     android:drawableEnd="@drawable/abc_spinner_mtrl_am_alpha"
@@ -148,14 +151,14 @@
                     android:alpha="0.7"
                     android:ellipsize="end"
                     android:singleLine="true"
-                    android:textColor="@drawable/text_color_selector"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
                 <TextView
                     android:id="@+id/wallpaper_choose"
                     android:layout_width="wrap_content"
                     android:layout_height="44dp"
-                    android:background="?android:attr/selectableItemBackground"
+                    android:background="@null"
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center_vertical"
@@ -169,7 +172,7 @@
                     android:id="@+id/wallpaper_remove"
                     android:layout_width="wrap_content"
                     android:layout_height="44dp"
-                    android:background="?android:attr/selectableItemBackground"
+                    android:background="@null"
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center_vertical"
@@ -195,13 +198,14 @@
                     android:layout_weight="1"
                     android:alpha="0.7"
                     android:text="@string/theme_disable_blur"
-                    android:textColor="@drawable/text_color_selector"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
                 <CheckBox
                     android:id="@+id/blur_disable_check"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:background="@null"
                     android:layout_marginEnd="-6dp"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
@@ -223,13 +227,14 @@
                     android:layout_weight="1"
                     android:alpha="0.7"
                     android:text="@string/theme_direct_bg"
-                    android:textColor="@drawable/text_color_selector"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
                 <CheckBox
                     android:id="@+id/direct_bg_check"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:background="@null"
                     android:layout_marginEnd="-6dp"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
