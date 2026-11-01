@@ -1,6 +1,8 @@
 package com.tool.tree
 
 import android.app.Activity
+import android.content.Context
+import android.util.Log
 import com.omarea.common.shared.FileSha256
 import org.json.JSONObject
 import java.io.File
@@ -13,16 +15,53 @@ object AppUpdateChecker {
     private const val ASSET_BETA_FLAG = "beta"
     private const val CHANGELOG_URL = "https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/Version.md"
     const val APK_FILE_NAME = "Tool-Tree.apk"
+    private const val TAG = "AppUpdateChecker"
+    private const val CHANGELOG_CACHE = "changelog_cache.md"
+    private const val RESULT_TTL_MS = 5 * 60 * 1000L
+
+    @Volatile private var lastResult: AppUpdateCheckResult? = null
+    @Volatile private var lastResultTime = 0L
+
+    fun cachedChangelog(context: Context): String? {
+        return try {
+            val file = File(context.filesDir, CHANGELOG_CACHE)
+            if (file.isFile) file.readText(Charsets.UTF_8).takeIf { it.isNotBlank() } else null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun saveChangelog(context: Context, text: String) {
+        try {
+            File(context.filesDir, CHANGELOG_CACHE).writeText(text, Charsets.UTF_8)
+        } catch (_: Exception) {
+        }
+    }
+
+    fun checkCached(activity: Activity): AppUpdateCheckResult {
+        val cached = lastResult
+        if (cached != null && System.currentTimeMillis() - lastResultTime < RESULT_TTL_MS) return cached
+        return check(activity)
+    }
 
     fun fetchUpdateInfo(activity: Activity): AppUpdateInfo? {
         return (check(activity) as? AppUpdateCheckResult.Available)?.info
     }
 
     fun check(activity: Activity): AppUpdateCheckResult {
+        val result = doCheck(activity)
+        if (result !is AppUpdateCheckResult.Failed) {
+            lastResult = result
+            lastResultTime = System.currentTimeMillis()
+        }
+        return result
+    }
+
+    private fun doCheck(activity: Activity): AppUpdateCheckResult {
         return try {
+            val changelogText = fetchText(CHANGELOG_URL)?.also { saveChangelog(activity, it) }
             val apiUrl = if (isBetaBuild(activity)) API_BETA else API_LATEST
             val release = fetchJson(apiUrl) ?: return AppUpdateCheckResult.Failed
-            val changelogText = fetchText(CHANGELOG_URL)
 
             val assets = release.optJSONArray("assets")
             val firstAsset = if (assets != null && assets.length() > 0) assets.getJSONObject(0) else null
@@ -52,7 +91,8 @@ object AppUpdateChecker {
             AppUpdateCheckResult.Available(
                 AppUpdateInfo(apkUrl, CHANGELOG_URL, remoteSha256, apkSize, APK_FILE_NAME, changelogText)
             )
-        } catch (_: Exception) {
+        } catch (ex: Exception) {
+            Log.w(TAG, "check failed: $ex")
             AppUpdateCheckResult.Failed
         }
     }
@@ -73,12 +113,17 @@ object AppUpdateChecker {
                 readTimeout = 8000
                 instanceFollowRedirects = true
                 setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("User-Agent", "Tool-Tree")
             }
             connection.connect()
-            if (connection.responseCode !in 200..299) return null
+            if (connection.responseCode !in 200..299) {
+                Log.w(TAG, "GitHub API HTTP ${connection.responseCode} for $url")
+                return null
+            }
             val body = connection.inputStream.bufferedReader().use { it.readText() }
             JSONObject(body)
-        } catch (_: Exception) {
+        } catch (ex: Exception) {
+            Log.w(TAG, "GitHub API error for $url: $ex")
             null
         } finally {
             connection?.disconnect()

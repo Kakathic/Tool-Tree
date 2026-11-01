@@ -49,9 +49,6 @@ class DialogAboutUpdate(
     private val logBuilder = SpannableStringBuilder()
 
     private lateinit var logText: TextView
-    private lateinit var aboutStatus: TextView
-    private var statusColor = 0
-    private var accentColor = 0
     private lateinit var updateCard: View
     private lateinit var updateDividerTop: View
     private lateinit var updateItem: View
@@ -95,13 +92,6 @@ class DialogAboutUpdate(
         view.findViewById<View>(R.id.about_back).setOnClickListener {
             if (activeDownload == null) closeView()
         }
-
-        val versionName = runCatching { activity.packageManager.getPackageInfo(activity.packageName, 0).versionName }.getOrNull() ?: "1.0.0"
-        view.findViewById<TextView>(R.id.about_version).text =
-            if (versionName.startsWith("v", ignoreCase = true)) versionName else "V$versionName"
-        aboutStatus = view.findViewById(R.id.about_status)
-        statusColor = aboutStatus.currentTextColor
-        accentColor = TypedValue().also { activity.theme.resolveAttribute(android.R.attr.colorAccent, it, true) }.data
 
         view.findViewById<TextView>(R.id.appliction_authorText).setOnClickListener {
             openLink(activity, "https://Kakathic.github.io/Tool-Tree/website/Information.html")
@@ -300,6 +290,8 @@ class DialogAboutUpdate(
             }
         }
 
+        showChangelog(AppUpdateChecker.cachedChangelog(activity))
+
         val info = knownInfo
         if (info != null) showAvailable(info, activity) else startCheck(activity)
     }
@@ -321,11 +313,6 @@ class DialogAboutUpdate(
         updateDividerTop.visibility = v
     }
 
-    private fun setStatus(text: CharSequence, highlight: Boolean = false) {
-        aboutStatus.text = text
-        aboutStatus.setTextColor(if (highlight) accentColor else statusColor)
-    }
-
     private fun setBusy(busy: Boolean) {
         itemRing.visibility = if (busy) View.VISIBLE else View.GONE
         itemWidget.visibility = if (busy) View.GONE else View.VISIBLE
@@ -343,12 +330,10 @@ class DialogAboutUpdate(
         logText.text = logBuilder
     }
 
-    private fun appendChangelog(activity: Activity, text: String?) {
-        if (text != null) {
-            appendLog(HtmlCompat.fromHtml(AppUpdateInstaller.markdownToHtml(text), HtmlCompat.FROM_HTML_MODE_LEGACY))
-        } else {
-            appendLog(activity.getString(R.string.app_update_changelog_fail))
-        }
+    private fun showChangelog(text: String?) {
+        if (text.isNullOrBlank()) return
+        resetLog()
+        appendLog(HtmlCompat.fromHtml(AppUpdateInstaller.markdownToHtml(text), HtmlCompat.FROM_HTML_MODE_LEGACY))
     }
 
     private fun showDownloadProgress(downloaded: Long, total: Long, startTime: Long) {
@@ -366,11 +351,9 @@ class DialogAboutUpdate(
         loadedInfo = info
         destFile = File(activity.cacheDir, info.apkFileName)
         setUpdateVisible(true)
-        setStatus(activity.getString(R.string.app_update_title), true)
-        resetLog()
         val size = if (info.apkSize > 0) " (" + AppUpdateInstaller.formatFileSize(info.apkSize) + ")" else ""
         itemDesc.text = activity.getString(R.string.app_update_desc) + size
-        appendChangelog(activity, info.changelogText)
+        showChangelog(info.changelogText)
         setMode(if (destFile.exists() && destFile.length() > 0) UpdateMode.INSTALL else UpdateMode.UPDATE)
         setBusy(false)
     }
@@ -379,15 +362,12 @@ class DialogAboutUpdate(
         if (checking) return
         checking = true
         setUpdateVisible(false)
-        setStatus("")
         setBusy(true)
-        resetLog()
         itemDesc.text = activity.getString(R.string.app_update_checking)
-        appendLog(activity.getString(R.string.app_update_checking))
 
         Thread {
             val result = try {
-                AppUpdateChecker.check(activity)
+                AppUpdateChecker.checkCached(activity)
             } catch (_: Exception) {
                 AppUpdateCheckResult.Failed
             }
@@ -406,17 +386,13 @@ class DialogAboutUpdate(
             is AppUpdateCheckResult.UpToDate -> {
                 loadedInfo = null
                 setUpdateVisible(false)
-                resetLog()
-                setStatus(activity.getString(R.string.about_latest_version))
-                appendChangelog(activity, result.changelogText)
+                showChangelog(result.changelogText)
                 setMode(UpdateMode.CHECK)
                 setBusy(false)
             }
             is AppUpdateCheckResult.Failed -> {
                 setUpdateVisible(false)
-                resetLog()
-                setStatus(activity.getString(R.string.app_update_check_fail))
-                appendLog(activity.getString(R.string.app_update_check_fail))
+                showChangelog(AppUpdateChecker.cachedChangelog(activity))
                 setMode(UpdateMode.CHECK)
                 setBusy(false)
             }

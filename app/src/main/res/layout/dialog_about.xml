@@ -42,13 +42,16 @@
                 style="@style/aboutHeaderText"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
-                android:gravity="center_vertical" />
+                android:gravity="center_vertical"
+                android:text="@string/author_name" />
             <TextView
                 android:id="@+id/about_version"
-                style="@style/aboutHeaderText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="-10dp" />
+                android:layout_marginTop="-10dp"
+                android:alpha="0.7"
+                android:text="@string/engine_version_name"
+                android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>
 
