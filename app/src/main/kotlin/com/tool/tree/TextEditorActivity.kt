@@ -178,6 +178,7 @@ class TextEditorActivity : AppCompatActivity() {
         binding = ActivityTextEditorBinding.inflate(layoutInflater)
         setContentView(wrapWithSwipePreview(binding.root))
 
+        binding.editorRoot.engine.cornerRadius = 0f
         binding.editorRoot.setDrawStrokeEnabled(false)
         setupSwipeBack()
 
