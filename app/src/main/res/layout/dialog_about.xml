@@ -89,7 +89,6 @@
                     android:text="@string/appliction_desc"
                     android:textAlignment="center"
                     android:textColor="@color/colorAccent"
-                    android:textSize="12sp"
                     android:textStyle="bold" />
                 <TextView
                     android:id="@+id/appliction_nameText"
@@ -126,31 +125,30 @@
                         android:id="@+id/about_donate"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:background="?android:attr/selectableItemBackground"
                         android:clickable="true"
                         android:focusable="true"
                         android:paddingStart="12dp"
-                        android:paddingTop="6dp"
+                        android:paddingTop="8dp"
                         android:paddingEnd="12dp"
                         android:paddingBottom="6dp"
                         android:text="@string/about_donate"
-                        android:textColor="@color/about_link_blue"
-                        android:textSize="14sp"
+                        android:textColor="@color/about_link_selector"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
                     <TextView
                         android:id="@+id/about_telegram"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:background="?android:attr/selectableItemBackground"
+                        android:layout_marginStart="32dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:paddingStart="12dp"
-                        android:paddingTop="6dp"
+                        android:paddingTop="8dp"
                         android:paddingEnd="12dp"
                         android:paddingBottom="6dp"
                         android:text="@string/about_telegram"
-                        android:textColor="@color/about_link_blue"
-                        android:textSize="14sp"
+                        android:textColor="@color/about_link_selector"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
