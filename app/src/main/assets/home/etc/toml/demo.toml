@@ -23,17 +23,6 @@ title = "Test switch"
 get = "glog test_log_nut"
 set = "slog test_log_nut $state"
 """
-
-[[group]]
-[[page]]
-title = "@check_title"
-config = "test.toml"
-icon = "{ICON}/test_addon.png"
-lock-sh = """
-[ -f $ETC/toml/test.toml ] && echo 0 || echo "@lock_msg"
-"""
-
-[[group]]
 [[editor]]
 id = "shella"
 title = "@home_text_5"
@@ -43,4 +32,14 @@ file = "{HOME}/usr/run_shella.bash"
 need-input = true
 placeholder = "#bash|sh|python"
 value = """# bash
+"""
+
+
+[[group]]
+[[page]]
+title = "@check_title"
+config = "test.toml"
+icon = "{ICON}/test_addon.png"
+lock-sh = """
+[ -f $ETC/toml/test.toml ] && echo 0 || echo "@lock_msg"
 """
