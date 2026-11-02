@@ -107,6 +107,9 @@ class DialogLogFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        dialog?.window?.let {
+            com.omarea.common.ui.DialogHelper.applyEdgeToEdge(it, themeResId == R.style.kr_full_screen_dialog_dark, view)
+        }
         setupSwipeToDismiss(view)
 
         val resumingHandler = resumeHandler
