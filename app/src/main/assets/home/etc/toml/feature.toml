@@ -55,41 +55,6 @@ items = [ "512", "1024", "2048", "3072", "4096", "5120", "6144", "7168", "8192" 
 
 [[group]]
 [[action]]
-title = "@project_text_14"
-icon = "{ICON}/background.png"
-warn = "@project_text_15"
-shell = "hidden"
-auto-restart = true
-script = """
-slog dissblur "$dissblur"
-slog directbg "$directbg"
-slog uri_change_background "$uri_change_background"
-[ -f "$uri_change_background" ] && cp -f "$uri_change_background" "$ETC/wallpaper.jpg"
-[ -z "$uri_change_background" ] && rm -f "$ETC/wallpaper.jpg"
-set_permis "$ETC/wallpaper.jpg" &>/dev/null
-"""
-
-[[action.params]]
-name = "dissblur"
-label = "@dissblur_text"
-type = "switch"
-value-sh = "glog dissblur"
-
-[[action.params]]
-name = "directbg"
-label = "@directbg_text"
-type = "switch"
-value-sh = "glog directbg"
-
-[[action.params]]
-name = "uri_change_background"
-type = "file"
-suffix = "jpg"
-editable = true
-value-sh = "glog uri_change_background"
-
-[[group]]
-[[action]]
 id = "gemini_api"
 allow-shortcut = false
 title = "@api_key_text"
