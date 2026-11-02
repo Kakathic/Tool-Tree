@@ -1053,6 +1053,7 @@ class PageConfigReader {
         tomlGet(table, "chat-title", "bot-title")?.let { chat.chatTitle = StringResRef.resolve(context, it) }
         tomlGet(table, "user-title", "me-title")?.let { chat.userTitle = StringResRef.resolve(context, it) }
         tomlGet(table, "greeting", "welcome")?.let { chat.greeting = StringResRef.resolve(context, it) }
+        tomlGet(table, "greeting-sh", "welcome-sh")?.let { chat.greetingSh = it }
         tomlGet(table, "placeholder", "hint")?.let { chat.placeholder = StringResRef.resolve(context, it) }
         tomlGet(table, "max-lines")?.let { chat.maxLines = parseIntOr(it, chat.maxLines).coerceAtLeast(1) }
         tomlGet(table, "markdown", "md")?.let { chat.markdown = tomlTruthy(it) }

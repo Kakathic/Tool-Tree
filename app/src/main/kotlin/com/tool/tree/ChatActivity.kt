@@ -105,6 +105,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private lateinit var listView: RecyclerView
     private lateinit var inputView: EditText
     private var pendingAutoShowIme = false
+    private var greetingCache: CharSequence? = null
     private lateinit var sendButton: ImageButton
     private var actionHost: ActionListFragment? = null
     private val uiHandler = Handler(Looper.getMainLooper())
@@ -182,6 +183,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         updateSendButton()
         setupOptionsButton()
         setupDrawer()
+        if (savedInstanceState == null) runGreeting()
 
         val bar = findViewById<ChatBottomBarLayout>(R.id.chat_input_bar)
         val topBar = findViewById<BlurTopBarLayout>(R.id.blur_top_container)
@@ -333,8 +335,41 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
     private fun newSession(id: String): ChatSession {
         val s = ChatSession(id)
-        if (node.greeting.isNotEmpty()) s.messages.add(ChatMessage(false, node.greeting).apply { transient = true })
+        if (node.greetingSh.isBlank()) {
+            if (node.greeting.isNotEmpty()) s.messages.add(ChatMessage(false, node.greeting).apply { transient = true })
+        } else {
+            greetingCache?.let { cached ->
+                s.messages.add(ChatMessage(false, SpannableStringBuilder(cached)).apply {
+                    transient = true
+                    title = node.chatTitle.ifEmpty { null }
+                })
+            }
+        }
         return s
+    }
+
+    private fun runGreeting() {
+        if (node.greetingSh.isBlank() || running) return
+        val owner = session
+        val msg = ChatMessage(false, "").apply {
+            transient = true
+            running = true
+            title = node.chatTitle.ifEmpty { null }
+        }
+        owner.messages.add(0, msg)
+        adapter.bind(owner.messages)
+        scrollToEnd()
+        runScript("", msg, owner, node.greetingSh, true) {
+            if (msg.text.isEmpty()) {
+                owner.messages.remove(msg)
+                if (node.greeting.isNotEmpty()) {
+                    owner.messages.add(0, ChatMessage(false, node.greeting).apply { transient = true })
+                }
+            } else {
+                greetingCache = SpannableStringBuilder(msg.text)
+            }
+            if (owner === session) adapter.bind(owner.messages)
+        }
     }
 
     private fun newEmptySession(): ChatSession = newSession(store.newId())
@@ -521,7 +556,14 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         runScript(text, reply, owner)
     }
 
-    private fun runScript(text: String, reply: ChatMessage, owner: ChatSession) {
+    private fun runScript(
+        text: String,
+        reply: ChatMessage,
+        owner: ChatSession,
+        script: String = node.script,
+        quietEmpty: Boolean = false,
+        onDone: (() -> Unit)? = null
+    ) {
         running = true
         updateSendButton()
         AnsiColorParser.reset()
@@ -537,8 +579,10 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 reply.running = false
                 refreshNow(reply)
                 updateSendButton()
+                onDone?.invoke()
                 saveSession(owner)
-            }
+            },
+            quietEmpty
         )
         currentHandler = handler
         val params = HashMap(chatParams).apply {
@@ -547,7 +591,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         }
         shellStarter.execute {
             val started = try {
-                ShellExecutor().execute(this, node, node.script, null, params, handler) != null
+                ShellExecutor().execute(this, node, script, null, params, handler) != null
             } catch (ex: Throwable) {
                 false
             }
@@ -763,7 +807,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private val message: ChatMessage,
         private val onChanged: () -> Unit,
         private val onForceStop: (Runnable?) -> Unit,
-        private val onFinished: () -> Unit
+        private val onFinished: () -> Unit,
+        private val quietEmpty: Boolean = false
     ) : SilentShellOutputHandler(context) {
         private var lineStart = 0
         private var pendingOverwrite = false
@@ -798,7 +843,9 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             message.progressTotal = 0
             val buf = message.text
             while (buf.isNotEmpty() && buf.last() == '\n') buf.delete(buf.length - 1, buf.length)
-            if (code != 0) {
+            if (quietEmpty && buf.isEmpty()) {
+                // greeting-sh: no output -> no bubble
+            } else if (code != 0) {
                 appendPlain((if (buf.isEmpty()) "" else "\n") + context.getString(R.string.kr_shell_finish_error), Color.RED)
             } else if (buf.isEmpty()) {
                 appendPlain(context.getString(R.string.kr_shell_completed), null)

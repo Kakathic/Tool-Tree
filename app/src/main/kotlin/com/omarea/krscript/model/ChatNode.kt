@@ -5,6 +5,7 @@ class ChatNode(currentConfigXml: String) : RunnableNode(currentConfigXml) {
     var chatTitle: String = ""
     var userTitle: String = ""
     var greeting: String = ""
+    var greetingSh: String = ""
     var placeholder: String = ""
     var maxLines: Int = 6
     var markdown: Boolean = false
