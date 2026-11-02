@@ -10,6 +10,7 @@ import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.TypedValue
+import android.view.ActionMode
 import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
@@ -218,6 +219,7 @@ class TextEditorActivity : AppCompatActivity() {
         applyWrapState()
         applyMonospaceState()
         setupUnifiedTextWatcher()
+        setupSelectionMenuOrder()
         setupSpecialCharsBar()
         setupEditorTouchAndFocus()
         applyReadonlyState()
@@ -495,6 +497,64 @@ class TextEditorActivity : AppCompatActivity() {
                 }
             }
             true
+        }
+    }
+
+    private val selectionMenuOrder = intArrayOf(
+        android.R.id.copy,
+        android.R.id.paste,
+        android.R.id.cut,
+        android.R.id.selectAll
+    )
+
+    private val selectionMenuCallback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean = true
+
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
+            reorderSelectionMenu(menu)
+            return true
+        }
+
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean = false
+
+        override fun onDestroyActionMode(mode: ActionMode) {}
+    }
+
+    private fun setupSelectionMenuOrder() {
+        binding.editorContent.customSelectionActionModeCallback = selectionMenuCallback
+        binding.editorContent.customInsertionActionModeCallback = selectionMenuCallback
+    }
+
+    private class MenuItemSnapshot(
+        val id: Int,
+        val groupId: Int,
+        val title: CharSequence?,
+        val icon: android.graphics.drawable.Drawable?,
+        val shortcut: Char,
+        val visible: Boolean,
+        val enabled: Boolean
+    )
+
+    private fun reorderSelectionMenu(menu: Menu) {
+        val present = selectionMenuOrder.filter { menu.findItem(it) != null }
+        if (present.size < 2) return
+        val inOrder = present.withIndex().all { (index, id) ->
+            index < menu.size() && menu.getItem(index).itemId == id
+        }
+        if (inOrder) return
+
+        val snapshots = present.map { id ->
+            val item = menu.findItem(id)
+            MenuItemSnapshot(id, item.groupId, item.title, item.icon, item.alphabeticShortcut, item.isVisible, item.isEnabled)
+        }
+        snapshots.forEach { menu.removeItem(it.id) }
+        snapshots.forEach { snap ->
+            val added = menu.add(snap.groupId, snap.id, 0, snap.title)
+            added.icon = snap.icon
+            added.setAlphabeticShortcut(snap.shortcut)
+            added.isVisible = snap.visible
+            added.isEnabled = snap.enabled
+            added.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
         }
     }
 
