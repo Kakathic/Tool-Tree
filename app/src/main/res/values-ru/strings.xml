@@ -237,5 +237,4 @@
     <string name="chat_params_title">Настройки</string>
     <string name="chat_sessions_title">Сеансы чата</string>
     <string name="chat_delete_session_confirm">Удалить этот сеанс?</string>
-    <string name="chat_markdown_toggle">Форматирование Markdown</string>
 </resources>

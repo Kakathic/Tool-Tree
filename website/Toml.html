@@ -1563,7 +1563,7 @@ keep-screen-on = true
 <tr><td class="field-name">greeting-sh</td><td>welcome-sh</td><td class="field-type">Shell</td><td>-</td><td><span class="badge shell">shell</span> Script run once when the chat page opens (not when switching to another conversation). Its output streams into the first (greeting) bubble with the same ANSI / markdown rendering as replies. <code>$MSG</code> is empty; <code>$CHAT_ID</code> and the saved <code>[[chat.params]]</code> values are exported. Takes priority over <code>greeting</code>; if it prints nothing, <code>greeting</code> is used instead (no bubble when both are empty). The bubble is not stored; its last output is reused as the greeting of other conversations opened in the same visit. While it runs the Send button shows Stop and sending is blocked until it ends</td></tr>
 <tr><td class="field-name">placeholder</td><td>hint</td><td class="field-type">String</td><td>-</td><td>Hint of the input box</td></tr>
 <tr><td class="field-name">max-lines</td><td>-</td><td class="field-type">Int</td><td>6</td><td>The input box grows with the text up to this many lines</td></tr>
-<tr><td class="field-name">markdown</td><td>md</td><td class="field-type">Bool</td><td>false</td><td>Render the reply bubbles as Markdown (same inline syntax as §11.4: bold, italic, strikethrough, inline code, links, colors). Lines starting with <code>```</code> become separate code blocks with a copy button. When enabled, a <em>Markdown</em> checkbox appears in the 3-dot menu so the user can switch rendering on/off while chatting. User bubbles and a reply that is still running are shown as plain text</td></tr>
+<tr><td class="field-name">markdown</td><td>md</td><td class="field-type">Bool</td><td>false</td><td>Render the reply bubbles as Markdown (same inline syntax as §11.4: bold, italic, strikethrough, inline code, links, colors). Lines starting with <code>```</code> become separate code blocks with a copy button. User bubbles and a reply that is still running are shown as plain text</td></tr>
 <tr><td class="field-name">params-title</td><td>-</td><td class="field-type">String</td><td>Settings</td><td>Title of the dialog opened by the options button on the left of the input box (needs <code>[[chat.params]]</code>)</td></tr>
 <tr><td class="field-name">params-icon</td><td>-</td><td class="field-type">Path</td><td>default icon</td><td>Icon of that options button</td></tr>
 <tr><td class="field-name">params-script</td><td>apply</td><td class="field-type">Shell</td><td>-</td><td>Optional. Empty: pressing Confirm only saves the values. Set: it also runs once in the log dialog with the values as env</td></tr>
@@ -2158,9 +2158,9 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Fields marked with the badge throughout this guide are summarized here, grouped by section, for quick reference when upgrading an existing config.</p>
 <ul>
-<li><code>[[terminal]]</code>: added <code>close-on-exit</code> (the shell exits after <code>cmd</code>; a failed command keeps the screen), a special-character toolbar page, vibration on bell, always-on screen while a shell runs, no volume panel on volume keys, <code>HOME</code> fixed to the toolkit home in root mode and <code>umask 022</code>.</li>
 <li><code>[[chat]]</code>: the page now focuses the input box and shows the keyboard as soon as it opens (only on a fresh open, not on restore).</li>
 <li>Added <code>greeting-sh</code> (<code>welcome-sh</code>) for <code>[[chat]]</code>: a script run when the chat page opens whose output fills the greeting bubble (priority over <code>greeting</code>, which is the fallback when it prints nothing).</li>
+<li><code>[[chat]]</code>: removed the <em>Markdown</em> checkbox from the 3-dot menu; <code>markdown = true</code> now always renders replies as Markdown.</li>
 </ul>
 </section>
 </main>

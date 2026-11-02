@@ -237,5 +237,4 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="chat_params_title">Pengaturan</string>
     <string name="chat_sessions_title">Sesi obrolan</string>
     <string name="chat_delete_session_confirm">Hapus sesi ini?</string>
-    <string name="chat_markdown_toggle">Format Markdown</string>
 </resources>
