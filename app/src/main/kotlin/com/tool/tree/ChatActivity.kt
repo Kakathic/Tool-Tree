@@ -45,6 +45,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -103,6 +104,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     private lateinit var adapter: ChatAdapter
     private lateinit var listView: RecyclerView
     private lateinit var inputView: EditText
+    private var pendingAutoShowIme = false
     private lateinit var sendButton: ImageButton
     private var actionHost: ActionListFragment? = null
     private val uiHandler = Handler(Looper.getMainLooper())
@@ -174,6 +176,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         inputView = findViewById(R.id.chat_input)
         inputView.hint = node.placeholder.ifEmpty { getString(R.string.chat_input_hint) }
         inputView.maxLines = node.maxLines
+        pendingAutoShowIme = savedInstanceState == null
         sendButton = findViewById(R.id.chat_send)
         sendButton.setOnClickListener { if (running) stopRunning() else send() }
         updateSendButton()
@@ -216,6 +219,17 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 }
             }
         })
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && pendingAutoShowIme && ::inputView.isInitialized) {
+            pendingAutoShowIme = false
+            inputView.requestFocus()
+            inputView.post {
+                WindowCompat.getInsetsController(window, inputView).show(WindowInsetsCompat.Type.ime())
+            }
+        }
     }
 
     private fun setupSwipeBack() {
