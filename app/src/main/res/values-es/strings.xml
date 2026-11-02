@@ -7,6 +7,8 @@
     <string name="about_title">Acerca de</string>
     <string name="appliction_desc">Muchas utilidades para el teléfono</string>
     <string name="appliction_author">Grandes herramientas</string>
+    <string name="about_donate">Apoyar</string>
+    <string name="about_telegram">Telegram</string>
     <string name="engine_version_name">Desarrollando este proyecto</string>
     <string name="tab_home">Inicio</string>
     <string name="tab_favorites">Favoritos</string>

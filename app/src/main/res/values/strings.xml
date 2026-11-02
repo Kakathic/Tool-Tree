@@ -11,6 +11,8 @@
     <string name="appliction_desc">Lots of utilities on the phone</string>
     <string name="appliction_name">[•-•]</string>
     <string name="appliction_author">Great tools</string>
+    <string name="about_donate">Donate</string>
+    <string name="about_telegram">Telegram</string>
     <string name="engine_version_name">Developing this project</string>
     <string name="tab_home">Home</string>
     <string name="tab_favorites">Favorites</string>

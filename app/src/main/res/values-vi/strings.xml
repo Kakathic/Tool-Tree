@@ -6,6 +6,8 @@
     <string name="about_title">Giới thiệu</string>
     <string name="appliction_desc">Rất nhiều tiện ích trên điện thoại</string>
     <string name="appliction_author">Công cụ tuyệt vời</string>
+    <string name="about_donate">Ủng hộ</string>
+    <string name="about_telegram">Telegram</string>
     <string name="engine_version_name">Nhà phát triển dự án</string>
     <string name="tab_home">Trang chủ</string>
     <string name="tab_favorites">Yêu thích</string>

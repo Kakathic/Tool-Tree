@@ -93,8 +93,11 @@ class DialogAboutUpdate(
             if (activeDownload == null) closeView()
         }
 
-        view.findViewById<TextView>(R.id.appliction_authorText).setOnClickListener {
+        view.findViewById<TextView>(R.id.about_donate).setOnClickListener {
             openLink(activity, "https://Kakathic.github.io/Tool-Tree/website/Information.html")
+        }
+        view.findViewById<TextView>(R.id.about_telegram).setOnClickListener {
+            openLink(activity, "https://t.me/tool_tree")
         }
         view.findViewById<TextView>(R.id.appliction_nameText).setOnClickListener {
             openLink(activity, "https://github.com/Kakathic/Tool-Tree")

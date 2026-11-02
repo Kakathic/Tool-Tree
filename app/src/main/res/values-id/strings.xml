@@ -6,6 +6,8 @@
     <string name="about_title">Tentang</string>
     <string name="appliction_desc">Banyak utilitas di ponsel</string>
     <string name="appliction_author">Alat yang Luar Biasa</string>
+    <string name="about_donate">Dukung</string>
+    <string name="about_telegram">Telegram</string>
     <string name="engine_version_name">Pengembang Proyek</string>
     <string name="tab_home">Beranda</string>
     <string name="tab_favorites">Favorit</string>

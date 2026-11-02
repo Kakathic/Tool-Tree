@@ -4,6 +4,8 @@
     <string name="action_done_select">Kész</string>
     <string name="app_chooser_search_hint">Adja meg az alkalmazás nevét vagy a csomagnevet a kereséshez</string>
     <string name="appliction_author">Nagyszerű eszköz</string>
+    <string name="about_donate">Támogatás</string>
+    <string name="about_telegram">Telegram</string>
     <string name="appliction_desc">Számos hasznos eszköz a telefonon</string>
     <string name="btn_cancel">Mégse</string>
     <string name="btn_confirm">Megerősítés</string>

@@ -6,6 +6,8 @@
     <string name="about_title">О приложении</string>
     <string name="appliction_desc">Множество полезных инструментов на телефоне</string>
     <string name="appliction_author">Отличный инструмент</string>
+    <string name="about_donate">Поддержать</string>
+    <string name="about_telegram">Telegram</string>
     <string name="engine_version_name">Приложение в разработке</string>
     <string name="tab_home">Главная</string>
     <string name="tab_favorites">Избранное</string>
