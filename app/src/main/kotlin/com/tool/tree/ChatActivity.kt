@@ -688,13 +688,18 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         }
     }
 
-    private fun menuParams(option: PageMenuOption) = hashMapOf("state" to option.key, "menu_id" to option.key)
+    private fun menuParams(option: PageMenuOption) = HashMap(chatParams).apply {
+        put("state", option.key)
+        put("menu_id", option.key)
+        put("CHAT_ID", session.id)
+    }
 
     private fun runSilent(option: PageMenuOption) {
         val appContext = applicationContext
+        val params = menuParams(option)
         Thread {
             try {
-                ScriptEnvironmen.executeResultRoot(appContext, option.script, option, menuParams(option))
+                ScriptEnvironmen.executeResultRoot(appContext, option.script, option, params)
             } catch (_: Exception) {
             }
         }.start()

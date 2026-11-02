@@ -219,6 +219,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     
     <string name="terminal_paste">Dán</string>
     <string name="terminal_share">Chia sẻ nội dung</string>
+    <string name="share">Chia sẻ</string>
     <string name="terminal_close_confirm">Đóng terminal? Shell đang chạy sẽ bị dừng.</string>
     <string name="terminal_sessions">Phiên đang chạy</string>
     <string name="terminal_new_session">Phiên mới</string>

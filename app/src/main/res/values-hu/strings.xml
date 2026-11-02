@@ -201,6 +201,7 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="warning_root_text">A funkció használatához root jogosultság szükséges!</string>
     <string name="terminal_paste">Beillesztés</string>
     <string name="terminal_share">Kimenet megosztása</string>
+    <string name="share">Megosztás</string>
     <string name="terminal_close_confirm">Bezárja a terminált? A futó shell leáll.</string>
     <string name="terminal_sessions">Futó munkamenetek</string>
     <string name="terminal_new_session">Új munkamenet</string>

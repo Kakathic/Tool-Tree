@@ -201,6 +201,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
 
     <string name="terminal_paste">Tempel</string>
     <string name="terminal_share">Bagikan isi</string>
+    <string name="share">Bagikan</string>
     <string name="terminal_close_confirm">Tutup terminal? Shell yang sedang berjalan akan dihentikan.</string>
     <string name="terminal_sessions">Sesi yang berjalan</string>
     <string name="terminal_new_session">Sesi baru</string>

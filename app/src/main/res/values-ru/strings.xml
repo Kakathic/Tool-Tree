@@ -201,6 +201,7 @@
     
     <string name="terminal_paste">Вставить</string>
     <string name="terminal_share">Поделиться выводом</string>
+    <string name="share">Поделиться</string>
     <string name="terminal_close_confirm">Закрыть терминал? Запущенная оболочка будет остановлена.</string>
     <string name="terminal_sessions">Запущенные сеансы</string>
     <string name="terminal_new_session">Новый сеанс</string>

@@ -391,7 +391,7 @@ class DialogLogFragment : DialogFragment() {
             text,
             nodeInfo?.title.orEmpty(),
             "Tool-Tree_log",
-            getString(R.string.terminal_share),
+            getString(R.string.share),
             getString(R.string.log_share_fail)
         )
     }

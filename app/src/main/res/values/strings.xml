@@ -233,6 +233,7 @@ If you agree, press the confirm button to continue."</string>
     <string name="terminal_default_title" translatable="false">Terminal</string>
     <string name="terminal_paste">Paste</string>
     <string name="terminal_share">Share output</string>
+    <string name="share">Share</string>
     <string name="terminal_close_confirm">Close terminal? The running shell will be killed.</string>
     <string name="terminal_sessions">Running sessions</string>
     <string name="terminal_new_session">New session</string>
