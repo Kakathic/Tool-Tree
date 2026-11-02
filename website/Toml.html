@@ -1554,7 +1554,8 @@ keep-screen-on = true
 <h2>14. [[chat]] - Chat-style page</h2>
 <p><code>[[chat]]</code> opens a full-screen chat page (<code>ChatActivity</code>): type a message, press send, the <code>script</code> runs with the text in <code>$MSG</code> and its live output appears in a reply bubble. The reply bubble renders output like the shell log dialog: ANSI colors, <code>\r</code> progress lines overwrite the current line, and <code>progress:[current/total]</code> shows a thin progress bar in the bubble. A <strong>Stop</strong> button replaces Send while the script is running. The input box contains an options button on the left (only with <code>[[chat.params]]</code>) and a round send button on the right. The toolbar has a <strong>sessions</strong> button (opens the conversation list, see §14.4) and the 3-dot menu. Conversations are saved automatically and reopened the next time the page is opened. When the page opens, the input box is focused and the keyboard is shown automatically (not when the page is restored after a rotation or process restart).</p>
 <h3>14.1. Chat fields</h3>
-<table>
+<div class="tbl-container">
+<table class="tbl cols-5">
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Default</th><th>Description</th></tr>
 <tr><td class="field-name">script</td><td>set, setstate</td><td class="field-type">Shell</td><td>-</td><td>Runs on every send. The sent text is exported as env <code>$MSG</code> and the id of the open conversation as <code>$CHAT_ID</code>; values saved from <code>[[chat.params]]</code> are exported too (<code>$MSG</code> and <code>$CHAT_ID</code> win on a name clash). Output (stdout + stderr) streams into the reply bubble</td></tr>
 <tr><td class="field-name">chat-title</td><td>bot-title</td><td class="field-type">String</td><td>title</td><td>Title shown on the chat page toolbar. <code>title</code> stays the name of the item in the list</td></tr>
@@ -1568,17 +1569,18 @@ keep-screen-on = true
 <tr><td class="field-name">params-icon</td><td>-</td><td class="field-type">Path</td><td>default icon</td><td>Icon of that options button</td></tr>
 <tr><td class="field-name">params-script</td><td>apply</td><td class="field-type">Shell</td><td>-</td><td>Optional. Empty: pressing Confirm only saves the values. Set: it also runs once in the log dialog with the values as env</td></tr>
 </table>
+</div>
 <p>All common fields of RunnableNode (<code>title</code>, <code>icon</code>, <code>lock</code>, <code>interruptable</code>, ...) work as well.</p>
 <h3>14.2. [[chat.params]] - options button next to the input</h3>
 <p>Each <code>[[chat.params]]</code> is a normal param (same fields as <code>[[action.params]]</code>). When at least one exists, an options button appears on the left inside the input box and opens a params dialog (same dialog as an <code>[[action]]</code>, including <code>max-lines</code>). Confirmed values are exported as env to every later <code>script</code> run; before the first confirm the param defaults (or remembered values) are used.</p>
 <h3>14.3. [[chat.menu]] - 3-dot menu</h3>
-<p>Each <code>[[chat.menu]]</code> is one item of the 3-dot popup (same fields as a menu item). Supported: script items (log dialog, or <code>silent</code>), <code>type = "exit" | "finish" | "close"</code> (close page) and <code>type = "clear"</code> (clear the messages of the open conversation). Not supported in chat and hidden: <code>file</code>, <code>folder</code>, <code>spinner</code>, <code>checkbox</code>, <code>refresh</code>, <code>reload</code>, <code>restart</code>, <code>killapp</code>, links and pages. File-chooser params in <code>[[chat.params]]</code> are not supported.</p>
+<p>Each <code>[[chat.menu]]</code> is one item of the 3-dot popup (same fields as a menu item). Supported: script items (log dialog, or <code>silent</code>), <code>type = "exit" | "finish" | "close"</code> (close page) and <code>type = "clear"</code> (clear the messages of the open conversation, and also run its <code>script</code> silently when one is set). Not supported in chat and hidden: <code>file</code>, <code>folder</code>, <code>spinner</code>, <code>checkbox</code>, <code>refresh</code>, <code>reload</code>, <code>restart</code>, <code>killapp</code>, links and pages. File-chooser params in <code>[[chat.params]]</code> are not supported.</p>
 <p>A menu item runs its <strong>own</strong> <code>script</code>, not the chat <code>script</code>. The script receives <code>$menu_id</code> / <code>$state</code> (the item's <code>key</code>/<code>id</code>, or its title when no key is set), <code>$CHAT_ID</code> (the open conversation) and the saved <code>[[chat.params]]</code> values. <code>$MSG</code> is not set. Use it for actions such as wiping the data that belongs to the open conversation:</p>
 <pre><code>[[chat.menu]]
 title = "Clear memory"
 script = 'rm -f "$HOME/.cache/$CHAT_ID.sql"'
 </code></pre>
-<p><code>type = "clear"</code> only clears the visible messages; it does not run a script and does not change <code>$CHAT_ID</code>, so files named after it survive.</p>
+<p><code>type = "clear"</code> clears the visible messages and does not change <code>$CHAT_ID</code>. When the item also has a <code>script</code>, it runs silently (no log dialog) <strong>after</strong> the messages are cleared, with the same variables as other menu scripts (<code>$CHAT_ID</code>, <code>$menu_id</code>, <code>$state</code>, saved <code>[[chat.params]]</code>). If a reply is still running, it is stopped first and the script starts a moment later so it cannot recreate the files it deletes. Without a <code>script</code>, <code>type = "clear"</code> only clears the visible messages, so files named after <code>$CHAT_ID</code> survive.</p>
 <h3>14.4. Sessions (conversation history)</h3>
 <ul>
 <li>Every conversation is stored on the device (up to <strong>50</strong> per <code>[[chat]]</code> item, oldest dropped first). A chat item is identified by its page + <code>title</code>, so renaming <code>title</code> starts an empty history.</li>

@@ -722,7 +722,13 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
     private fun onMenuOption(option: PageMenuOption) {
         when {
-            option.type == "clear" -> clearChat()
+            option.type == "clear" -> {
+                val wasRunning = running
+                clearChat()
+                if (option.script.isNotBlank()) {
+                    if (wasRunning) uiHandler.postDelayed({ runSilent(option) }, 1600) else runSilent(option)
+                }
+            }
             option.type in CLOSE_TYPES -> finish()
             option.silent -> runSilent(option)
             else -> showLog(option)
