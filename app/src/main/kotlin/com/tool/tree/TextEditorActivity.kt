@@ -733,6 +733,8 @@ class TextEditorActivity : AppCompatActivity() {
 
     private fun isTomlFile() = fileExtension() == "toml"
 
+    private fun isRunButtonVisible() = runEnabled && (isTomlFile() || runnableInterpreter() != null)
+
     private fun detectFirstLineLanguageOverride(): String? {
         val editable = binding.editorContent.text ?: return null
         if (editable.isEmpty()) return null
@@ -1022,7 +1024,9 @@ class TextEditorActivity : AppCompatActivity() {
         redoMenuItem = menu.findItem(R.id.editor_menu_redo)
         saveMenuItem = menu.findItem(R.id.editor_menu_save)
 
-        menu.findItem(R.id.editor_menu_run)?.isVisible = runEnabled && (isTomlFile() || runnableInterpreter() != null)
+        val runVisible = isRunButtonVisible()
+        menu.findItem(R.id.editor_menu_run)?.isVisible = runVisible
+        menu.findItem(R.id.editor_menu_save)?.isVisible = !runVisible
 
         if (readonlyMode) {
             menu.findItem(R.id.editor_menu_save)?.isVisible = false
@@ -1041,7 +1045,20 @@ class TextEditorActivity : AppCompatActivity() {
     }
 
     private fun showEditorOverflowPopup(anchor: View) {
-        val rows = listOf(
+        val rows = ArrayList<PopupMenuRow>()
+        if (!readonlyMode && isRunButtonVisible()) {
+            rows.add(
+                PopupMenuRow(
+                    title = getString(R.string.editor_save),
+                    leftIcon = null,
+                    typeIcon = PopupRowTypeIcon.NONE,
+                    checked = false
+                ) {
+                    saveFile()
+                }
+            )
+        }
+        rows.addAll(listOf(
             PopupMenuRow(
                 title = getString(R.string.editor_toggle_wrap),
                 leftIcon = null,
@@ -1060,7 +1077,7 @@ class TextEditorActivity : AppCompatActivity() {
                 monospaceEnabled = !monospaceEnabled
                 applyMonospaceState()
             }
-        )
+        ))
         OverflowMenuPopup.show(this, anchor, rows)
     }
 
