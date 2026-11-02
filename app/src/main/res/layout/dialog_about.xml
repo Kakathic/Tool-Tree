@@ -254,12 +254,6 @@
             </LinearLayout>
             </LinearLayout>
 
-            <!-- Giữ id vì DialogAboutUpdate còn findViewById; không còn vẽ dải ngăn cách -->
-            <View
-                android:id="@+id/update_divider_top"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:visibility="gone" />
             <LinearLayout
                 android:id="@+id/update_card"
                 android:layout_width="match_parent"
