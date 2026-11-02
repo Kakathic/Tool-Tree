@@ -187,18 +187,11 @@ class DialogAboutUpdate(
         wallpaperRemove.visibility = if (hasCustom) View.VISIBLE else View.GONE
     }
 
-    // Các tùy chọn nền chỉ dùng được với chủ đề hình nền (>= 3): luôn hiện, chưa phù hợp thì làm mờ + vô hiệu hóa
     private fun updateOptionStates(themeLevel: Int) {
-        val enabled = themeLevel >= 3
-        val alpha = if (enabled) 1f else 0.4f
-        for (row in listOf(wallpaperRow, blurRow, directRow)) {
-            row.alpha = alpha
-            row.isEnabled = enabled
-        }
-        blurCheck.isEnabled = enabled
-        directCheck.isEnabled = enabled
-        wallpaperChoose.isEnabled = enabled
-        wallpaperRemove.isEnabled = enabled
+        val visibility = if (themeLevel >= 3) View.VISIBLE else View.GONE
+        wallpaperRow.visibility = visibility
+        blurRow.visibility = visibility
+        directRow.visibility = visibility
     }
 
     private fun bindThemeSelector(view: View, activity: Activity, themeConfig: ThemeConfig) {
