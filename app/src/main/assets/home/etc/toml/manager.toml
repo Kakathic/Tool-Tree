@@ -205,6 +205,7 @@ home (){
   '
 }
 '''
+[[group]]
 [[editor]]
 id = "shella"
 title = "@home_text_5"

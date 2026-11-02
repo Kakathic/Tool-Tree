@@ -1444,7 +1444,7 @@ reset = "all"
 <tr><td class="field-name">file</td><td>path</td><td class="field-type">String</td><td>""</td><td><span class="badge req">required at runtime</span> Path of the file to open. The parser accepts an empty value, but the editor UI rejects an editor entry with no file path.</td></tr>
 <tr><td class="field-name">file-sh</td><td>path-sh</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that prints the file path dynamically. Runs during parse (batched with title-sh/desc-sh/icon-sh/...); a non-empty result overrides <code>file</code>, an empty result or <code>error</code> keeps <code>file</code></td></tr>
 <tr><td class="field-name">wrap</td><td>-</td><td class="field-type">Bool</td><td>true</td><td>Enable line wrapping</td></tr>
-<tr><td class="field-name">run</td><td>runnable</td><td class="field-type">Bool</td><td>true</td><td>Show the Run button in the editor (only for runnable files: sh/py or a shebang). <code>run = false</code> hides it; works together with <code>readonly</code> (a read-only file can still run when <code>run</code> is not false)</td></tr>
+<tr><td class="field-name">run</td><td>runnable</td><td class="field-type">Bool</td><td>true</td><td>Show the Run button in the editor (only for runnable files: sh/py, a shebang, or a <code>.toml</code> file). For a <code>.toml</code> file the button saves the file and opens it as a Tool-Tree page (see 12.2). <code>run = false</code> hides it; works together with <code>readonly</code> (a read-only file can still run when <code>run</code> is not false)</td></tr>
 <tr><td class="field-name">placeholder</td><td>-</td><td class="field-type">String</td><td>null</td><td>Hint when file is empty</td></tr>
 <tr><td class="field-name">readonly</td><td>-</td><td class="field-type">Bool|Shell</td><td>false</td><td>Read-only. Accepts shell too!</td></tr>
 <tr><td class="field-name">need-input</td><td>-</td><td class="field-type">Bool</td><td>false</td><td>Whether the run script uses <code>read</code></td></tr>
@@ -1492,6 +1492,8 @@ title = "View-only script (no Run)"
 file = "/sdcard/myscript.sh"
 run = false
 </code></pre>
+<h3>12.2. Run a TOML file as a page</h3>
+<p>When the opened file has the <code>.toml</code> extension, the Run button saves pending changes and opens the file as a regular Tool-Tree page (the file is read like a <code>[[page]]</code> whose <code>config</code> is its absolute path). Every node of the file - actions, switches, pickers, nested pages and so on - can then be tapped and run directly, and relative paths in the file (<code>load-toml</code>, icons, nested <code>config</code>) resolve against the folder of the opened file. Press Back or swipe right on the page to return to the editor and keep editing; run it again to see the new result. If saving fails, the page is not opened. <code>run = false</code> hides the button as for any other file.</p>
 <div class="callout warn"><code>value</code> is only written when the file <strong>does not exist</strong>. If the file already exists, <code>value</code>/<code>value-sh</code> are ignored - the existing file content is preserved.</div>
 </section>
 <section id="terminal">

@@ -38,6 +38,7 @@ import com.omarea.common.shell.KeepShellPublic
 import com.omarea.common.ui.DialogHelper
 import com.omarea.krscript.config.PathAnalysis
 import com.omarea.krscript.model.ActionNode
+import com.omarea.krscript.model.PageNode
 import com.omarea.krscript.model.RunnableNode
 import com.omarea.krscript.ui.DialogLogFragment
 import com.tool.tree.databinding.ActivityTextEditorBinding
@@ -730,6 +731,8 @@ class TextEditorActivity : AppCompatActivity() {
 
     private fun fileExtension() = File(absoluteFilePath).name.substringAfterLast('.', "").lowercase()
 
+    private fun isTomlFile() = fileExtension() == "toml"
+
     private fun detectFirstLineLanguageOverride(): String? {
         val editable = binding.editorContent.text ?: return null
         if (editable.isEmpty()) return null
@@ -1019,7 +1022,7 @@ class TextEditorActivity : AppCompatActivity() {
         redoMenuItem = menu.findItem(R.id.editor_menu_redo)
         saveMenuItem = menu.findItem(R.id.editor_menu_save)
 
-        menu.findItem(R.id.editor_menu_run)?.isVisible = runEnabled && runnableInterpreter() != null
+        menu.findItem(R.id.editor_menu_run)?.isVisible = runEnabled && (isTomlFile() || runnableInterpreter() != null)
 
         if (readonlyMode) {
             menu.findItem(R.id.editor_menu_save)?.isVisible = false
@@ -1072,7 +1075,9 @@ class TextEditorActivity : AppCompatActivity() {
                 true
             }
             R.id.editor_menu_run -> {
-                if (runEnabled) runnableInterpreter()?.let { saveAndRun(it) }
+                if (runEnabled) {
+                    if (isTomlFile()) saveAndOpenTomlPage() else runnableInterpreter()?.let { saveAndRun(it) }
+                }
                 true
             }
             R.id.editor_menu_save -> {
@@ -1154,6 +1159,28 @@ class TextEditorActivity : AppCompatActivity() {
         } catch (_: Exception) {
             false
         }
+    }
+
+    private fun saveAndOpenTomlPage() {
+        if (hasUnsavedChanges()) {
+            saveFile(showToast = false) { success ->
+                if (success) {
+                    openTomlPage()
+                } else {
+                    Toast.makeText(this, R.string.editor_save_fail, Toast.LENGTH_LONG).show()
+                }
+            }
+        } else {
+            openTomlPage()
+        }
+    }
+
+    private fun openTomlPage() {
+        val page = PageNode(absoluteFilePath).apply {
+            title = titleText.ifEmpty { File(absoluteFilePath).name }
+            pageConfigPath = absoluteFilePath
+        }
+        OpenPageHelper(this).openPage(page)
     }
 
     private fun saveAndRun(interpreter: String) {
