@@ -100,7 +100,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     }
 
     private lateinit var node: ChatNode
-    private var markdownEnabled = false
     private lateinit var adapter: ChatAdapter
     private lateinit var listView: RecyclerView
     private lateinit var inputView: EditText
@@ -138,7 +137,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             return
         }
         node = chat
-        markdownEnabled = node.markdown
 
         ThemeModeState.switchTheme(this)
         setContentView(R.layout.activity_chat)
@@ -649,7 +647,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         sessionsItem.actionView = sessionsButton
 
         val options = node.menuOptions.filter { isSupported(it) }
-        if (options.isNotEmpty() || node.markdown) {
+        if (options.isNotEmpty()) {
             val button = toolbarButton(R.drawable.ic_more_vert, getString(R.string.kr_more_options))
             button.setOnClickListener { anchor -> showOptionsPopup(anchor, options) }
             val item = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getString(R.string.kr_more_options))
@@ -682,7 +680,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
     private fun showOptionsPopup(anchor: View, options: List<PageMenuOption>) {
         val rows = ArrayList<PopupMenuRow>(options.map { buildRow(it) })
-        if (node.markdown) rows.add(markdownRow())
         val adapter = PopupMenuListAdapter(this, rows)
         val background = ContextCompat.getDrawable(this, R.drawable.kr_spinner_popup_bg)
 
@@ -706,20 +703,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         )
         popup.show()
         SpinnerPopupHelper.applyRoundedClip(popup, resources.getDimension(R.dimen.kr_spinner_popup_radius))
-    }
-
-    private fun markdownRow() = PopupMenuRow(
-        title = getString(R.string.chat_markdown_toggle),
-        leftIcon = null,
-        typeIcon = PopupRowTypeIcon.CHECKBOX,
-        checked = markdownEnabled
-    ) { toggleMarkdown() }
-
-    private fun toggleMarkdown() {
-        markdownEnabled = !markdownEnabled
-        val stick = !listView.canScrollVertically(1)
-        adapter.refreshAll()
-        if (stick) scrollToEnd()
     }
 
     private fun buildRow(option: PageMenuOption): PopupMenuRow {
@@ -1092,7 +1075,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             holder.title.visibility = if (label != null) View.VISIBLE else View.GONE
             holder.title.text = label
             val visible = visibleText(m.text)
-            val renderMd = activity.markdownEnabled && !m.fromUser && !m.running
+            val renderMd = activity.node.markdown && !m.fromUser && !m.running
             val showDots = visible.isEmpty() && m.running
             holder.dots.visibility = if (showDots) View.VISIBLE else View.GONE
             val blocks = if (renderMd) ChatMarkdown.splitBlocks(visible).takeIf { list -> list.any { it.isCode } } else null
