@@ -966,7 +966,10 @@ class TextEditorActivity : AppCompatActivity() {
         saveMenuItem = menu.findItem(R.id.editor_menu_save)
 
         val runVisible = isRunButtonVisible()
-        menu.findItem(R.id.editor_menu_run)?.isVisible = runVisible
+        menu.findItem(R.id.editor_menu_run)?.apply {
+            isVisible = runVisible
+            setIcon(if (isTomlFile()) R.drawable.ic_editor_play else R.drawable.ic_editor_run)
+        }
         menu.findItem(R.id.editor_menu_save)?.isVisible = !runVisible
 
         if (readonlyMode) {
