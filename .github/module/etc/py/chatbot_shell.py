@@ -11,6 +11,7 @@ import os
 import sys
 import urllib.request
 import urllib.error
+import http.client
 import urllib.parse
 import threading
 import itertools
@@ -337,6 +338,8 @@ UI_TEXT = {
     "stream_state": "Streaming: {value}",
     "stream_label": "Streaming",
     "throttle_wait": "Đang chờ để không vượt giới hạn yêu cầu:",
+    "net_down": "Mất kết nối mạng hoặc máy chủ đã ngắt kết nối. Hãy kiểm tra Internet rồi thử lại. ({detail})",
+    "net_timeout": "Hết thời gian chờ phản hồi. Mạng có thể đang yếu hoặc bị mất, hãy kiểm tra Internet rồi thử lại.",
     "retry_wait": "Bị giới hạn tốc độ (HTTP {code}), thử lại {n}/{max} sau",
     "blocked": "Đã chặn lệnh nguy hiểm",
     "log_label": "Nhật ký",
@@ -402,6 +405,8 @@ UI_TEXT = {
     "stream_state": "Streaming: {value}",
     "stream_label": "Streaming",
     "throttle_wait": "Waiting to stay under the request limit:",
+    "net_down": "Network connection lost or the server closed the connection. Check your Internet and try again. ({detail})",
+    "net_timeout": "Timed out waiting for a response. The network may be weak or offline; check your Internet and try again.",
     "retry_wait": "Rate limited (HTTP {code}), retry {n}/{max} in",
     "blocked": "Blocked dangerous command",
     "log_label": "Log",
@@ -1046,10 +1051,8 @@ def _compatible_urlopen(request, timeout, status_callback=None):
           _wait(delay + 1, _ui_text("retry_wait", code=exc.code, n=attempt, max=RETRY["max"]), status_callback)
           continue
       raise RuntimeError(f"{provider} HTTP {exc.code}: {message}") from exc
-    except urllib.error.URLError as exc:
-      raise RuntimeError(f"{provider} network error: {exc.reason}") from exc
-    except TimeoutError as exc:
-      raise RuntimeError(f"{provider} request timed out.") from exc
+    except NETWORK_ERRORS as exc:
+      raise _net_error(exc, provider) from exc
 
 def call_compatible_api(api_key, model, history, instruction, language, thinking, timeout, memory_summary=None, shell_enabled=False, files_enabled=False, stream_callback=None, status_callback=None):
   system_instruction = build_system_instruction(instruction, language, memory_summary, shell_enabled, files_enabled)
@@ -1080,6 +1083,12 @@ def call_compatible_api(api_key, model, history, instruction, language, thinking
       opened = _compatible_urlopen(build_request(), timeout, status_callback)
     else:
       raise
+  try:
+    return _compatible_read(opened, payload, stream_callback)
+  except NETWORK_ERRORS as exc:
+    raise _net_error(exc, PROVIDERS[ACTIVE_PROVIDER["name"]]["label"]) from exc
+
+def _compatible_read(opened, payload, stream_callback):
   with opened as response:
     if payload["stream"]:
       pieces = []
@@ -1153,10 +1162,8 @@ def _fetch_json(url, api_key, timeout, gemini=False):
     except json.JSONDecodeError:
       message = body
     raise RuntimeError(f"HTTP {exc.code}: {message}") from exc
-  except urllib.error.URLError as exc:
-    raise RuntimeError(f"Network error: {exc.reason}") from exc
-  except TimeoutError as exc:
-    raise RuntimeError("Request timed out.") from exc
+  except NETWORK_ERRORS as exc:
+    raise _net_error(exc) from exc
   except json.JSONDecodeError as exc:
     raise RuntimeError("Invalid JSON response.") from exc
 
@@ -1213,12 +1220,8 @@ def check_api_key_model(api_key, model, timeout):
       raise RuntimeError(
         f"HTTP {exc.code} ({status}): {message}"
       ) from exc
-    except urllib.error.URLError as exc:
-      raise RuntimeError(
-        f"Network error: {exc.reason}"
-      ) from exc
-    except TimeoutError as exc:
-      raise RuntimeError("Request timed out.") from exc
+    except NETWORK_ERRORS as exc:
+      raise _net_error(exc) from exc
     except json.JSONDecodeError as exc:
       raise RuntimeError("Invalid JSON response.") from exc
 
@@ -1262,6 +1265,18 @@ ACTIVE_UI = {"ui": None}
 def _ui_text(key, **values):
   ui = ACTIVE_UI["ui"] or UI_TEXT["en"]
   return ui[key].format(**values)
+
+NETWORK_ERRORS = (OSError, http.client.HTTPException)
+
+def _net_error(exc, provider=""):
+  """Build a readable RuntimeError for network failures
+  (offline, connection reset, DNS, SSL, timeout, truncated reply)."""
+  prefix = f"{provider}: " if provider else ""
+  reason = getattr(exc, "reason", exc)
+  if isinstance(exc, TimeoutError) or isinstance(reason, TimeoutError):
+    return RuntimeError(prefix + _ui_text("net_timeout"))
+  detail = str(reason).strip() or type(reason).__name__
+  return RuntimeError(prefix + _ui_text("net_down", detail=detail))
 
 def _wait(seconds, label, status=None):
   """Sleep with a visible notice. status(text) updates the spinner."""
@@ -1360,12 +1375,8 @@ def _send_request(request, timeout, stream_callback, status):
       raise RuntimeError(
         f"HTTP {exc.code}: {error_message}"
       ) from exc
-    except urllib.error.URLError as exc:
-      raise RuntimeError(
-        f"Network error: {exc.reason}"
-      ) from exc
-    except TimeoutError as exc:
-      raise RuntimeError("Request timed out.") from exc
+    except NETWORK_ERRORS as exc:
+      raise _net_error(exc) from exc
     except json.JSONDecodeError as exc:
       raise RuntimeError("Invalid JSON response.") from exc
 
@@ -2338,7 +2349,7 @@ def chat_turn(
             if sys.stdout.isatty():
               spinner.start()
             else:
-              emit_progress("▶ " + label)
+              emit_progress(label)
         results.append(run_tool_call(step, policy, ui))
       generated.extend(results)
       working = working + steps + results
