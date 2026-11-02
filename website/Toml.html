@@ -836,7 +836,7 @@ config = "/sdcard/Tool-Tree/advanced.toml"
 <tr><td class="field-name">params</td><td>-</td><td class="field-type">Array</td><td>List of input parameters - see <a href="#action-params">section 3</a></td></tr>
 <tr><td class="field-name">rows</td><td>-</td><td class="field-type">Array</td><td>Rich-text rows shown below the item - see <a href="#text-rows">section 3</a></td></tr>
 <tr><td class="field-name">rows-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that prints <code>[[rows]]</code> tables (inline TOML, also accepts <code>[[&lt;type&gt;.rows]]</code>) to build the rows dynamically. Runs during parse (batched); a non-empty valid result replaces the static <code>rows</code>, empty/<code>error</code>/invalid TOML keeps them</td></tr>
-<tr><td class="field-name">params-rows</td><td>-</td><td class="field-type">Array</td><td>Rows for the params dialog only (separate from <code>rows</code> which appear both in list and dialog)</td></tr>
+<tr><td class="field-name">params-rows</td><td>-</td><td class="field-type">Array</td><td>Rows for the params dialog only (separate from <code>rows</code> which appear both in list and dialog). Each row may add <code>position = "bottom"</code> to be shown under the params instead of above them (default: top)</td></tr>
 <tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ all fields of RunnableNode, ClickableNode, NodeInfoBase (see <a href="#shared-fields">section 3</a>)</td></tr>
 </table>
 </div>
@@ -939,7 +939,7 @@ type = "password"
 <tr><td class="field-name">max-lines</td><td>-</td><td class="field-type">Int</td><td>Max visible lines of a text input (default 2). The box grows with the content up to this many lines, then scrolls. Ignored for <code>int</code>/<code>number</code>/<code>password</code></td></tr>
 <tr><td class="field-name">min</td><td>-</td><td class="field-type">Int</td><td>Minimum value (seekbar)</td></tr>
 <tr><td class="field-name">max</td><td>-</td><td class="field-type">Int</td><td>Maximum value (seekbar). Default <code>Int.MAX_VALUE</code></td></tr>
-<tr><td class="field-name">options</td><td>-</td><td class="field-type">Array</td><td>List of choices (spinner/single-select/multi-select)</td></tr>
+<tr><td class="field-name">options</td><td>-</td><td class="field-type">Array</td><td>List of choices (spinner/single-select/multi-select) - <code>[[action.params.options]]</code> with <code>title</code>/<code>value</code> (<code>val</code> is accepted as a short alias of <code>value</code>)</td></tr>
 <tr><td class="field-name">items</td><td>-</td><td class="field-type">Array of String</td><td>Shorthand choice list - each entry is <code>"value|title"</code> or just <code>"value"</code>. Takes priority over <code>options</code> tables when both are declared. The same string list may also be written as <code>options = ["value|title", ...]</code></td></tr>
 <tr><td class="field-name">options-sh</td><td>option-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces options dynamically</td></tr>
 <tr><td class="field-name">multiple</td><td>-</td><td class="field-type">Bool</td><td>Allow multiple files/options</td></tr>
@@ -1088,7 +1088,7 @@ set = "settings put system screen_brightness_mode $state"
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Description</th></tr>
 <tr><td class="field-name">get</td><td>getstate</td><td class="field-type">String</td><td>Script to read the current value. If omitted, no dynamic current-state read is performed.</td></tr>
 <tr><td class="field-name">set</td><td>setstate</td><td class="field-type">String</td><td>Script to set the value. Receives <code>$state</code>. If omitted or empty, no set-state script is executed.</td></tr>
-<tr><td class="field-name">options</td><td>-</td><td class="field-type">Array</td><td>Static options list - <code>[[picker.options]]</code> with <code>title</code>/<code>value</code></td></tr>
+<tr><td class="field-name">options</td><td>-</td><td class="field-type">Array</td><td>Static options list - <code>[[picker.options]]</code> with <code>title</code>/<code>value</code> (<code>val</code> is accepted as a short alias of <code>value</code>)</td></tr>
 <tr><td class="field-name">items</td><td>-</td><td class="field-type">Array of String</td><td>Shorthand static choice list - each entry is <code>"value|title"</code> or just <code>"value"</code>. Takes priority over <code>[[picker.options]]</code> when both are declared (the two are alternative ways to write the same static list, not additive). The same string list may also be written as <code>options = ["value|title", ...]</code></td></tr>
 <tr><td class="field-name">option-sh</td><td>options-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces options dynamically. Each line <code>value|title</code> or just <code>value</code></td></tr>
 <tr><td class="field-name">multiple</td><td>-</td><td class="field-type">Bool</td><td>Allow selecting multiple values</td></tr>
@@ -1507,6 +1507,7 @@ run = false
 <tr><td class="field-name">font-size</td><td>-</td><td class="field-type">Int</td><td>14</td><td>Font size in sp (8-40) used the first time this terminal is opened. Once the user pinch-zooms, that size is remembered for this <code>[[terminal]]</code> item (identified by page + <code>title</code> + <code>cwd</code> + <code>cmd</code>) and used on every later open instead of this field. Changing <code>title</code>, <code>cwd</code> or <code>cmd</code> counts as a new item</td></tr>
 <tr><td class="field-name">exit-on-back</td><td>back-exit</td><td class="field-type">Bool</td><td>false</td><td>Default <code>false</code>: Back hides the terminal and the shell keeps running. <code>true</code>: Back stops the session you are viewing right away (no confirmation) and leaves the screen, or switches to another session if one is still open</td></tr>
 <tr><td class="field-name">close-on-exit</td><td>auto-close</td><td class="field-type">Bool</td><td>false</td><td>For one-shot terminals: when <code>true</code> and <code>cmd</code> is set, the shell exits right after <code>cmd</code> finishes. Exit code 0 closes the session automatically; a non-zero exit code keeps the screen so you can read the output (press Enter to close). Ignored when <code>cmd</code> is empty</td></tr>
+<tr><td class="field-name">keep-screen-on</td><td>keep-awake</td><td class="field-type">Bool</td><td>false</td><td>Initial state of the <em>Keep screen on</em> switch (terminal <em>More</em> menu). Applied only when the terminal is opened while no session is open yet; after that the user's own switch choice is never overridden. The setting is shared by all sessions and is off by default. Accepts <code>true</code> / <code>1</code></td></tr>
 <tr><td colspan="5" style="background:var(--bg-soft);font-style:italic;">+ ClickableNode fields (icon, lock, min-sdk...) and NodeInfoBase (title, desc...)</td></tr>
 </table>
 </div>
@@ -1526,6 +1527,11 @@ title = "Run once"
 cwd = "{PAGE_CONFIG_DIR}"
 cmd = "ls"
 exit-on-back = true
+
+[[terminal]]
+title = "Monitor"
+cmd = "top"
+keep-screen-on = true
 </code></pre>
 <h3>12a.3. How it runs</h3>
 <ul>
@@ -1533,7 +1539,8 @@ exit-on-back = true
 <li><strong>PTY</strong> is created by the bundled <code>busybox script</code>; the window size is applied with <code>stty</code> at start and again (through <code>stty -F</code>) whenever the view is resized or rotated, so a full-screen program may redraw a moment late.</li>
 <li><strong>executor.sh variables</strong>: when the terminal opens, the generated <code>executor.sh</code> (all <code>$ANDROID_ID</code>, <code>$ROOT</code>, <code>$HOME</code>, <code>$BIN</code>, <code>$PATH</code>... variables) is sourced once, before <code>cwd</code>/<code>cmd</code>. <code>COLUMNS</code>/<code>LINES</code> set by executor.sh are unset afterwards so the terminal uses its real size. If the device is not arm64 executor.sh exits and the terminal closes.</li>
 <li><strong>Toolbar pages</strong>: the bar under the terminal has three pages. Swipe right for a built-in page of special characters (<code>- _ | \ ~ ' " ` &amp; ;</code> and <code>{ } [ ] ( ) &lt; &gt; * #</code>), swipe left for the text input box. The middle page is the normal key bar.</li>
-<li><strong>Screen and keys</strong>: the screen stays on while a shell is running. The volume keys do nothing in the terminal, so the system volume panel does not appear. A bell character (<code>\a</code>) vibrates the device briefly.</li>
+<li><strong>Screen and keys</strong>: the screen follows the normal system timeout unless <em>Keep screen on</em> is enabled (set <code>keep-screen-on = true</code> or switch it on in the <em>More</em> menu; off by default). The volume keys do nothing in the terminal, so the system volume panel does not appear. A bell character (<code>\a</code>) vibrates the device briefly.</li>
+<li><strong>More menu</strong>: the terminal's <em>More</em> button offers <em>Keep screen on</em>, <em>WakeLock (keep CPU)</em> (keeps the CPU awake for background shells; mirrors the notification button), <em>Monospace font for keys</em> (remembered across launches), a list of the URLs found in the output, and <em>Share output</em> (shares the whole transcript as a text file).</li>
 <li><strong>Shell environment</strong>: <code>HOME</code> is always the toolkit home (also in root mode) and <code>umask</code> is <code>022</code>, so files created in the terminal are readable by other apps.</li>
 <li><strong>Page variables</strong>: <code>PAGE_CONFIG_DIR</code>, <code>PAGE_CONFIG_FILE</code>, <code>PAGE_WORK_DIR</code> and <code>PAGE_WORK_FILE</code> of the page that holds the <code>[[terminal]]</code> item are exported right after executor.sh, so <code>cmd</code> can use them. They are fixed when a session starts; reopening the item from another page starts a separate session.</li>
 <li>If <code>~/.bashrc</code> exists in the toolkit home it is sourced after executor.sh. The prompt is <code>$ </code>.</li>
@@ -1545,15 +1552,17 @@ exit-on-back = true
 
 <section id="chat">
 <h2>12b. [[chat]] - Chat-style page</h2>
-<p><code>[[chat]]</code> opens a full-screen chat page (<code>ChatActivity</code>): type a message, press send, the <code>script</code> runs with the text in <code>$MSG</code> and its live output appears in a reply bubble. The reply bubble renders output like the shell log dialog: ANSI colors, <code>\r</code> progress lines overwrite the current line, and <code>progress:[current/total]</code> shows a thin progress bar in the bubble. A <strong>Stop</strong> button replaces Send while the script is running. The input box contains an options button on the left (only with <code>[[chat.params]]</code>) and a round send button on the right. The toolbar only shows the 3-dot menu. History lives only while the page is open.</p>
+<p><code>[[chat]]</code> opens a full-screen chat page (<code>ChatActivity</code>): type a message, press send, the <code>script</code> runs with the text in <code>$MSG</code> and its live output appears in a reply bubble. The reply bubble renders output like the shell log dialog: ANSI colors, <code>\r</code> progress lines overwrite the current line, and <code>progress:[current/total]</code> shows a thin progress bar in the bubble. A <strong>Stop</strong> button replaces Send while the script is running. The input box contains an options button on the left (only with <code>[[chat.params]]</code>) and a round send button on the right. The toolbar has a <strong>sessions</strong> button (opens the conversation list, see §12b.4) and the 3-dot menu. Conversations are saved automatically and reopened the next time the page is opened.</p>
 <h3>12b.1. Chat fields</h3>
 <table>
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Default</th><th>Description</th></tr>
-<tr><td class="field-name">script</td><td>set, setstate</td><td class="field-type">Shell</td><td>-</td><td>Runs on every send. The sent text is exported as env <code>$MSG</code>; values saved from <code>[[chat.params]]</code> are exported too (<code>$MSG</code> wins on a name clash). Output (stdout + stderr) streams into the reply bubble</td></tr>
+<tr><td class="field-name">script</td><td>set, setstate</td><td class="field-type">Shell</td><td>-</td><td>Runs on every send. The sent text is exported as env <code>$MSG</code> and the id of the open conversation as <code>$CHAT_ID</code>; values saved from <code>[[chat.params]]</code> are exported too (<code>$MSG</code> and <code>$CHAT_ID</code> win on a name clash). Output (stdout + stderr) streams into the reply bubble</td></tr>
 <tr><td class="field-name">chat-title</td><td>bot-title</td><td class="field-type">String</td><td>title</td><td>Title shown on the chat page toolbar. <code>title</code> stays the name of the item in the list</td></tr>
+<tr><td class="field-name">user-title</td><td>me-title</td><td class="field-type">String</td><td>-</td><td>Name shown above the user's own bubbles (the counterpart of <code>chat-title</code>). Empty: no name is shown</td></tr>
 <tr><td class="field-name">greeting</td><td>welcome</td><td class="field-type">String</td><td>-</td><td>First (greeting) bubble shown when the chat page opens and after <code>type = "clear"</code>. Empty: no greeting</td></tr>
 <tr><td class="field-name">placeholder</td><td>hint</td><td class="field-type">String</td><td>-</td><td>Hint of the input box</td></tr>
 <tr><td class="field-name">max-lines</td><td>-</td><td class="field-type">Int</td><td>6</td><td>The input box grows with the text up to this many lines</td></tr>
+<tr><td class="field-name">markdown</td><td>md</td><td class="field-type">Bool</td><td>false</td><td>Render the reply bubbles as Markdown (same inline syntax as §12.4: bold, italic, strikethrough, inline code, links, colors). Lines starting with <code>```</code> become separate code blocks with a copy button. When enabled, a <em>Markdown</em> checkbox appears in the 3-dot menu so the user can switch rendering on/off while chatting. User bubbles and a reply that is still running are shown as plain text</td></tr>
 <tr><td class="field-name">params-title</td><td>-</td><td class="field-type">String</td><td>Settings</td><td>Title of the dialog opened by the options button on the left of the input box (needs <code>[[chat.params]]</code>)</td></tr>
 <tr><td class="field-name">params-icon</td><td>-</td><td class="field-type">Path</td><td>default icon</td><td>Icon of that options button</td></tr>
 <tr><td class="field-name">params-script</td><td>apply</td><td class="field-type">Shell</td><td>-</td><td>Optional. Empty: pressing Confirm only saves the values. Set: it also runs once in the log dialog with the values as env</td></tr>
@@ -1562,11 +1571,27 @@ exit-on-back = true
 <h3>12b.2. [[chat.params]] - options button next to the input</h3>
 <p>Each <code>[[chat.params]]</code> is a normal param (same fields as <code>[[action.params]]</code>). When at least one exists, an options button appears on the left inside the input box and opens a params dialog (same dialog as an <code>[[action]]</code>, including <code>max-lines</code>). Confirmed values are exported as env to every later <code>script</code> run; before the first confirm the param defaults (or remembered values) are used.</p>
 <h3>12b.3. [[chat.menu]] - 3-dot menu</h3>
-<p>Each <code>[[chat.menu]]</code> is one item of the 3-dot popup (same fields as a menu item). Supported: script items (log dialog, or <code>silent</code>), <code>type = "exit" | "finish" | "close"</code> (close page) and <code>type = "clear"</code> (clear the history). Not supported in chat and hidden: <code>file</code>, <code>folder</code>, <code>spinner</code>, <code>checkbox</code>, <code>refresh</code>, <code>reload</code>, <code>restart</code>, <code>killapp</code>, links and pages. File-chooser params in <code>[[chat.params]]</code> are not supported.</p>
-<h3>12b.4. Example</h3>
+<p>Each <code>[[chat.menu]]</code> is one item of the 3-dot popup (same fields as a menu item). Supported: script items (log dialog, or <code>silent</code>), <code>type = "exit" | "finish" | "close"</code> (close page) and <code>type = "clear"</code> (clear the messages of the open conversation). Not supported in chat and hidden: <code>file</code>, <code>folder</code>, <code>spinner</code>, <code>checkbox</code>, <code>refresh</code>, <code>reload</code>, <code>restart</code>, <code>killapp</code>, links and pages. File-chooser params in <code>[[chat.params]]</code> are not supported.</p>
+<p>A menu item runs its <strong>own</strong> <code>script</code>, not the chat <code>script</code>. The script receives <code>$menu_id</code> / <code>$state</code> (the item's <code>key</code>/<code>id</code>, or its title when no key is set), <code>$CHAT_ID</code> (the open conversation) and the saved <code>[[chat.params]]</code> values. <code>$MSG</code> is not set. Use it for actions such as wiping the data that belongs to the open conversation:</p>
+<pre><code>[[chat.menu]]
+title = "Clear memory"
+script = 'rm -f "$HOME/.cache/$CHAT_ID.sql"'
+</code></pre>
+<p><code>type = "clear"</code> only clears the visible messages; it does not run a script and does not change <code>$CHAT_ID</code>, so files named after it survive.</p>
+<h3>12b.4. Sessions (conversation history)</h3>
+<ul>
+<li>Every conversation is stored on the device (up to <strong>50</strong> per <code>[[chat]]</code> item, oldest dropped first). A chat item is identified by its page + <code>title</code>, so renaming <code>title</code> starts an empty history.</li>
+<li>Opening the page reopens the most recent conversation. The greeting bubble is not stored.</li>
+<li>The toolbar <strong>sessions</strong> button (or a swipe from the right edge) opens a drawer listing the conversations, named after the first user message. Tap one to switch, <em>New session</em> to start another (does nothing while the current one is still empty), and the delete button (asks for confirmation) to remove one.</li>
+<li><code>$CHAT_ID</code> is unique per conversation and stays the same for its whole life, so a script can keep separate memory/context per conversation, e.g. <code>--memory-file "$HOME/.cache/$CHAT_ID.sql"</code>. Deleting a conversation does not delete files your script created.</li>
+<li>Switching conversation while a script is running stops that script.</li>
+</ul>
+<h3>12b.5. Example</h3>
 <pre><code>[[chat]]
 title = "Assistant"
 chat-title = "Shell helper"
+user-title = "You"
+markdown = true
 greeting = "Hi! Type a command name."
 script = 'echo "[$MODE] You said: $MSG"; "$MSG" 2&gt;&amp;1'
 max-lines = 6
@@ -1579,6 +1604,10 @@ value = "safe"
 [[chat.menu]]
 title = "Clear history"
 type = "clear"
+
+[[chat.menu]]
+title = "Clear memory"
+script = 'rm -f "$HOME/.cache/$CHAT_ID.sql"'
 
 [[chat.menu]]
 title = "Close"
@@ -2143,6 +2172,9 @@ script = "sh $state"
 <li>Added the <code>[[terminal]]</code> node (§12a): full-screen bash with a real PTY, Termux-style UI; fields <code>cwd</code>, <code>cmd</code>, <code>font-size</code>, <code>root</code>. executor.sh variables are sourced once when the terminal opens; the shell follows the app's permission (<code>su</code> when the app has root); <code>root = false</code> forces the app user.</li>
 <li><code>[[terminal]]</code>: added <code>exit-on-back</code> (Back stops the session instead of hiding it), the <code>PAGE_*</code> variables exported into the shell, and <code>{PAGE_CONFIG_DIR}</code> / <code>{PAGE_WORK_DIR}</code> in <code>cwd</code>.</li>
 <li><code>[[terminal]]</code>: pinch-zoom size is now stored per item instead of shared by all terminals. First open uses <code>font-size</code>, later opens use the zoomed size if there is one.</li>
+<li><code>[[chat]]</code>: conversations are now saved and reopened (up to 50 per item, sessions drawer on the toolbar); added <code>$CHAT_ID</code> for the chat script and for <code>[[chat.menu]]</code> scripts (menu scripts also get <code>$menu_id</code>/<code>$state</code> and the <code>[[chat.params]]</code> values), <code>user-title</code> (<code>me-title</code>) and <code>markdown</code> (<code>md</code>) with a Markdown checkbox in the 3-dot menu.</li>
+<li><code>[[terminal]]</code>: added <code>keep-screen-on</code> (<code>keep-awake</code>); the screen no longer stays on by default. New <em>More</em> menu: Keep screen on, WakeLock, Monospace font for keys, URL list, Share output.</li>
+<li><code>[[action.params-rows]]</code>: documented <code>position = "bottom"</code>. Picker / param options: documented the <code>val</code> alias of <code>value</code>.</li>
 <li><code>[[terminal]]</code>: added <code>close-on-exit</code> (the shell exits after <code>cmd</code>; a failed command keeps the screen), a special-character toolbar page, vibration on bell, always-on screen while a shell runs, no volume panel on volume keys, <code>HOME</code> fixed to the toolkit home in root mode and <code>umask 022</code>.</li>
 </ul>
 </section>

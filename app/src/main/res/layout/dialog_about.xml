@@ -133,7 +133,6 @@
                         android:paddingBottom="6dp"
                         android:text="@string/about_donate"
                         android:textColor="@color/about_link_selector"
-                        android:paintFlags="UnderlineTextFlags"
                         android:textSize="16sp"
                         android:textStyle="bold" />
                     <TextView
@@ -149,7 +148,6 @@
                         android:paddingBottom="6dp"
                         android:text="@string/about_telegram"
                         android:textColor="@color/about_link_selector"
-                        android:paintFlags="UnderlineTextFlags"
                         android:textSize="16sp"
                         android:textStyle="bold" />
                 </LinearLayout>

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
+import android.graphics.Paint
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -93,10 +94,14 @@ class DialogAboutUpdate(
             if (activeDownload == null) closeView()
         }
 
-        view.findViewById<TextView>(R.id.about_donate).setOnClickListener {
+        val donateText = view.findViewById<TextView>(R.id.about_donate)
+        val telegramText = view.findViewById<TextView>(R.id.about_telegram)
+        donateText.paintFlags = donateText.paintFlags or Paint.UNDERLINE_TEXT_FLAG
+        telegramText.paintFlags = telegramText.paintFlags or Paint.UNDERLINE_TEXT_FLAG
+        donateText.setOnClickListener {
             openLink(activity, "https://Kakathic.github.io/Tool-Tree/website/Information.html")
         }
-        view.findViewById<TextView>(R.id.about_telegram).setOnClickListener {
+        telegramText.setOnClickListener {
             openLink(activity, "https://t.me/tool_tree")
         }
         view.findViewById<TextView>(R.id.appliction_nameText).setOnClickListener {
