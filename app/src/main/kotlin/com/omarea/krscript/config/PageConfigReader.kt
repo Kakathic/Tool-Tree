@@ -1111,7 +1111,8 @@ class PageConfigReader {
         rowsShToml(table, action.rows)
 
         for (rowTable in tomlEntries(table, "params-rows")) {
-            textRowToml(action.paramsRows, rowTable)
+            val atBottom = tomlGet(rowTable, "position")?.trim()?.lowercase(getDefault()) == "bottom"
+            textRowToml(if (atBottom) action.paramsRowsBottom else action.paramsRows, rowTable)
         }
 
         tomlGet(table, "menu")?.let { action.menu = tomlTruthy(it, "menu") }

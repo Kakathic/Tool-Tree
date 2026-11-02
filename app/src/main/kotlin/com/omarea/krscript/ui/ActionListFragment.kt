@@ -654,6 +654,14 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             action.paramsRows,
                             action
                         )
+                        // Hàng position = "bottom": cuối vùng cuộn, ngay dưới các tham số
+                        RowsRenderHelper.bind(
+                            requireContext(),
+                            dialogView.findViewById<TextView>(R.id.kr_rows_bottom),
+                            dialogView.findViewById<android.widget.ImageView>(R.id.kr_rows_bottom_photo),
+                            action.paramsRowsBottom,
+                            action
+                        )
 
                         dialogView.findViewById<View>(R.id.btn_cancel).setOnClickListener {
                             dialog?.dismiss()
