@@ -55,6 +55,7 @@
             <TextView
                 android:id="@+id/about_status"
                 style="@style/aboutHeaderText"
+                android:alpha="0.8"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/author_name" />
