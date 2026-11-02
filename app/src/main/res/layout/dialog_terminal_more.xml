@@ -24,6 +24,14 @@
             android:paddingBottom="8dp"
             android:text="@string/terminal_more_title" />
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="4dp"
+            android:background="?android:attr/listDivider" />
+
         <CheckBox
             android:id="@+id/terminal_more_keep_screen"
             android:layout_width="match_parent"

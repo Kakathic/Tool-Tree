@@ -216,18 +216,18 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="online_fullscreen_hint">Nhấn Back để thoát toàn màn hình</string>
     
     <string name="terminal_paste">Dán</string>
-    <string name="terminal_share">Chia sẻ</string>
+    <string name="terminal_share">Chia sẻ nội dung</string>
     <string name="terminal_close_confirm">Đóng terminal? Shell đang chạy sẽ bị dừng.</string>
     <string name="terminal_sessions">Phiên đang chạy</string>
     <string name="terminal_new_session">Phiên mới</string>
-    <string name="terminal_keep_screen_on">Giữ màn hình sáng</string>
+    <string name="terminal_keep_screen_on">Giữ sáng màn hình</string>
     <string name="terminal_more">Thêm...</string>
     <string name="terminal_more_title">Tùy chọn terminal</string>
-    <string name="terminal_wakelock">WakeLock</string>
-    <string name="terminal_mono_toolbar">Font mono ở thanh công cụ</string>
+    <string name="terminal_wakelock">WakeLock (giữ CPU)</string>
+    <string name="terminal_mono_toolbar">Font monospace cho phím</string>
     <string name="terminal_url_list">Danh sách URL</string>
-    <string name="terminal_url_empty">Không tìm thấy URL trong terminal</string>
-    <string name="terminal_url_open_fail">Không mở được liên kết này</string>
+    <string name="terminal_url_empty">Không tìm thấy URL</string>
+    <string name="terminal_url_open_fail">Không có app mở được link</string>
     <string name="terminal_notif_sessions">Số phiên đang chạy: %d</string>
     <string name="terminal_notif_open">Mở</string>
     <string name="terminal_notif_exit_all">Thoát tất cả</string>
