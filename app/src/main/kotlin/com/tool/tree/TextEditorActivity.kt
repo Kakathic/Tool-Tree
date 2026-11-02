@@ -15,12 +15,17 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import com.tool.tree.ui.SwipeBackHelper
+import com.tool.tree.ui.SwipeBackPreviewCache
 import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -116,8 +121,14 @@ class TextEditorActivity : AppCompatActivity() {
                 putExtra(EXTRA_VALUE_SH, valueSh ?: "")
                 if (context !is AppCompatActivity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            context.startActivity(intent)
+            if (context is android.app.Activity) {
+                SwipeBackPreviewCache.capture(context) { context.startActivity(intent) }
+            } else {
+                context.startActivity(intent)
+            }
         }
+
+        private const val SWIPE_HORIZONTAL_RATIO = 2f
     }
 
     private lateinit var binding: ActivityTextEditorBinding
@@ -129,6 +140,10 @@ class TextEditorActivity : AppCompatActivity() {
     private var savedContent: String = ""
     private var isSaving = false
     private var noWrapContainer: HorizontalScrollView? = null
+    private var swipeBackHelper: SwipeBackHelper? = null
+    private var swipePreviewBlur: ImageView? = null
+    private var swipePreviewSharp: ImageView? = null
+    private var hasSwipePreview = false
     private var mainListTextBaseBottomMargin = 0
     private var syntaxHighlighter: SyntaxHighlighter? = null
     private var placeholderText: String = ""
@@ -160,9 +175,11 @@ class TextEditorActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ThemeModeState.switchTheme(this)
-        binding = ActivityTextEditorBinding.inflate(layoutInflater).also { setContentView(it.root) }
+        binding = ActivityTextEditorBinding.inflate(layoutInflater)
+        setContentView(wrapWithSwipePreview(binding.root))
 
         binding.editorRoot.setDrawStrokeEnabled(false)
+        setupSwipeBack()
 
         setupKeyboardInsets()
 
@@ -215,7 +232,114 @@ class TextEditorActivity : AppCompatActivity() {
     override fun onDestroy() {
         syntaxHighlighter?.detach()
         editorHandler.removeCallbacksAndMessages(null)
+        swipeBackHelper?.release()
+        if (isFinishing) {
+            swipePreviewBlur?.let { recycleImageBitmap(it) }
+            swipePreviewSharp?.let { recycleImageBitmap(it) }
+        }
         super.onDestroy()
+    }
+
+    // ---- Swipe right to go back ----
+
+    private fun wrapWithSwipePreview(content: View): View {
+        val host = FrameLayout(this)
+        val blur = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            visibility = View.GONE
+        }
+        val sharp = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            alpha = 0f
+            visibility = View.GONE
+        }
+        val match = ViewGroup.LayoutParams.MATCH_PARENT
+        host.addView(blur, FrameLayout.LayoutParams(match, match))
+        host.addView(sharp, FrameLayout.LayoutParams(match, match))
+        host.addView(content, FrameLayout.LayoutParams(match, match))
+        swipePreviewBlur = blur
+        swipePreviewSharp = sharp
+        return host
+    }
+
+    private fun setupSwipeBack() {
+        val preview = SwipeBackPreviewCache.consume()
+        if (preview != null) {
+            swipePreviewSharp?.setImageBitmap(preview.sharp)
+            swipePreviewBlur?.setImageBitmap(preview.blurred ?: preview.sharp)
+            hasSwipePreview = true
+        }
+        swipeBackHelper = SwipeBackHelper(
+            activity = this,
+            contentView = binding.root,
+            onDragStateChanged = { dragging -> setSwipePreviewVisible(dragging) },
+            onDragProgress = { progress -> swipePreviewSharp?.alpha = progress * progress },
+            onBack = { onSwipeBack() },
+            canStart = { ev -> canStartSwipe(ev) },
+            allowLeftPull = false,
+            canDrag = { ev -> canDragNow(ev) },
+            horizontalRatio = SWIPE_HORIZONTAL_RATIO
+        )
+    }
+
+    private fun setSwipePreviewVisible(visible: Boolean) {
+        if (!hasSwipePreview) return
+        val visibility = if (visible) View.VISIBLE else View.GONE
+        swipePreviewBlur?.visibility = visibility
+        swipePreviewSharp?.visibility = visibility
+        if (!visible) swipePreviewSharp?.alpha = 0f
+    }
+
+    // Do not start on the special-characters bar: it scrolls horizontally on its own.
+    private fun canStartSwipe(ev: MotionEvent): Boolean {
+        val bar = binding.editorSpecialCharsScroll
+        if (bar.visibility != View.VISIBLE) return true
+        val loc = IntArray(2)
+        bar.getLocationOnScreen(loc)
+        val inBar = ev.rawX >= loc[0] && ev.rawX <= loc[0] + bar.width &&
+            ev.rawY >= loc[1] && ev.rawY <= loc[1] + bar.height
+        return !inBar
+    }
+
+    // Yield to text gestures: long-press / drag-select, an active selection,
+    // and horizontal scrolling of the no-wrap editor (only when it is at its left edge).
+    private fun canDragNow(ev: MotionEvent): Boolean {
+        if (ev.eventTime - ev.downTime >= ViewConfiguration.getLongPressTimeout()) return false
+        if (binding.editorContent.hasSelection()) return false
+        if (!wrapEnabled && (noWrapContainer?.scrollX ?: 0) > 0) return false
+        return true
+    }
+
+    private fun onSwipeBack() {
+        val needConfirm = !readonlyMode && hasUnsavedChanges()
+        if (isSaving || needConfirm) {
+            // Slide the page back first, then show the same save/discard dialog as Back.
+            restoreSwipe { if (needConfirm) attemptClose() }
+        } else {
+            attemptClose()
+            overridePendingTransition(0, 0)
+        }
+    }
+
+    private fun restoreSwipe(after: () -> Unit) {
+        binding.root.animate().translationX(0f).setDuration(180L).withEndAction {
+            binding.root.elevation = 0f
+            setSwipePreviewVisible(false)
+            after()
+        }.start()
+    }
+
+    private fun recycleImageBitmap(imageView: ImageView) {
+        val drawable = imageView.drawable
+        if (drawable is android.graphics.drawable.BitmapDrawable) {
+            imageView.setImageDrawable(null)
+            drawable.bitmap?.takeIf { !it.isRecycled }?.recycle()
+        }
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (swipeBackHelper?.dispatchTouchEvent(ev) == true) return true
+        return super.dispatchTouchEvent(ev)
     }
 
     private fun undoCacheFile(): File {

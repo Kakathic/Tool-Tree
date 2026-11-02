@@ -1436,7 +1436,7 @@ reset = "all"
 </section>
 <section id="editor">
 <h2>12. [[editor]] - Open file in the text editor</h2>
-<p><code>[[editor]]</code> lets the user open a file in the built-in text editor (<code>TextEditorActivity</code>) to view or edit it. If the file does not exist, the editor creates it when the user saves.</p>
+<p><code>[[editor]]</code> lets the user open a file in the built-in text editor (<code>TextEditorActivity</code>) to view or edit it. If the file does not exist, the editor creates it when the user saves. Swiping right anywhere on the editor goes back to the previous page, like Back: with unsaved changes the page slides back and the save/discard dialog appears. The swipe is ignored in places where it would conflict with text gestures: the special-characters bar, an active text selection, a long-press drag, and the no-wrap editor while it is scrolled horizontally.</p>
 <h3>12.1. Editor fields</h3>
 <div class="tbl-container">
 <table class="tbl cols-5">
@@ -2158,9 +2158,9 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Fields marked with the badge throughout this guide are summarized here, grouped by section, for quick reference when upgrading an existing config.</p>
 <ul>
-<li><code>[[chat]]</code>: the page now focuses the input box and shows the keyboard as soon as it opens (only on a fresh open, not on restore).</li>
 <li>Added <code>greeting-sh</code> (<code>welcome-sh</code>) for <code>[[chat]]</code>: a script run when the chat page opens whose output fills the greeting bubble (priority over <code>greeting</code>, which is the fallback when it prints nothing).</li>
 <li><code>[[chat]]</code>: removed the <em>Markdown</em> checkbox from the 3-dot menu; <code>markdown = true</code> now always renders replies as Markdown.</li>
+<li><code>[[editor]]</code>: swipe right to go back to the previous page (asks to save/discard when there are unsaved changes; ignored on the special-characters bar, during text selection / long-press drag and while the no-wrap editor is scrolled horizontally).</li>
 </ul>
 </section>
 </main>
