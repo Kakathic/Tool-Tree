@@ -564,7 +564,11 @@ object ScriptEnvironmen {
         try {
             dataOutputStream.write(envpCmds.toString().toByteArray(StandardCharsets.UTF_8))
             val executeScript = getExecuteScript(context, cmds, tag)
-            if (executeScript.isEmpty()) return
+            if (executeScript.isEmpty()) {
+                dataOutputStream.write("exit\n".toByteArray(StandardCharsets.UTF_8))
+                dataOutputStream.flush()
+                return
+            }
 
             if (needInput) {
                 dataOutputStream.write(("$executeScript; sleep 0.2; exit\n").toByteArray(StandardCharsets.UTF_8))
