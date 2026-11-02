@@ -29,6 +29,8 @@ import android.text.style.ClickableSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.UnderlineSpan
 import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -50,6 +52,7 @@ import com.omarea.common.shared.ShareFileHelper
 import androidx.fragment.app.DialogFragment
 import androidx.transition.ChangeBounds
 import androidx.transition.TransitionManager
+import com.omarea.common.ui.DialogFullScreen
 import com.omarea.common.ui.DialogHelper
 import com.omarea.krscript.config.IconPathAnalysis
 import com.omarea.krscript.executor.ShellExecutor
@@ -85,6 +88,7 @@ class DialogLogFragment : DialogFragment() {
     private var noWrapContainer: HorizontalScrollView? = null
 
     private var attachedWindow: android.view.Window? = null
+    private var swipeBinding: DialogFullScreen.SwipeToDismissBinding? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -103,9 +107,7 @@ class DialogLogFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        dialog?.window?.let { window ->
-            DialogHelper.setWindowBlurBg(window, requireActivity())
-        }
+        setupSwipeToDismiss(view)
 
         val resumingHandler = resumeHandler
         if (resumingHandler != null) {
@@ -189,7 +191,7 @@ class DialogLogFragment : DialogFragment() {
                         b.chooseRow.visibility = View.GONE
                         hideKeyboard(b.shellInput)
                     }
-                    isCancelable = true
+                    allowDismiss()
                 }
             }
         )
@@ -209,7 +211,7 @@ class DialogLogFragment : DialogFragment() {
             binding.actionProgress.visibility = View.GONE
             binding.inputRow.visibility = View.GONE
             binding.chooseRow.visibility = View.GONE
-            isCancelable = true
+            allowDismiss()
             running = false
         } else {
             dialog?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -273,7 +275,7 @@ class DialogLogFragment : DialogFragment() {
                         b.chooseRow.visibility = View.GONE
                         hideKeyboard(b.shellInput)
                     }
-                    isCancelable = true
+                    allowDismiss()
                 }
             },
             logView = binding.shellOutput,
@@ -327,7 +329,7 @@ class DialogLogFragment : DialogFragment() {
         }
 
         binding.btnExit.setOnClickListener {
-            isCancelable = true
+            allowDismiss()
             closeView()
         }
 
@@ -1335,6 +1337,70 @@ class DialogLogFragment : DialogFragment() {
         }
     }
 
+    // ---- Swipe right to close (only once the script has finished) ----
+
+    private fun allowDismiss() {
+        isCancelable = true
+        swipeBinding?.setEnabled(true)
+    }
+
+    private fun setupSwipeToDismiss(view: View) {
+        val activity = this.activity ?: return
+        val d = dialog ?: return
+        runBeforeFirstDraw(view) {
+            if (d.window == null || _binding == null) return@runBeforeFirstDraw
+            swipeBinding = DialogFullScreen.bindSwipeToDismiss(
+                activity, d,
+                canDrag = { ev -> canDragNow(ev) },
+                horizontalRatio = SWIPE_HORIZONTAL_RATIO,
+                allowLeftPull = false
+            ) { closeView() }
+            // Locked while the script is running (same rule as the Back key)
+            swipeBinding?.setEnabled(isCancelable)
+        }
+    }
+
+    // Yield to text gestures: long-press / drag-select, an active selection,
+    // and horizontal scrolling of the no-wrap log (only when it is at its left edge).
+    // Left swipes are never taken (allowLeftPull = false) so the no-wrap log can scroll right.
+    private fun canDragNow(ev: MotionEvent): Boolean {
+        if (ev.eventTime - ev.downTime >= ViewConfiguration.getLongPressTimeout()) return false
+        val b = _binding ?: return false
+        if (b.shellOutput.hasSelection()) return false
+        if (!wrapEnabled && (noWrapContainer?.scrollX ?: 0) > 0) return false
+        return true
+    }
+
+    private fun runBeforeFirstDraw(view: View, action: () -> Unit) {
+        fun attachPreDraw() {
+            val observer = view.viewTreeObserver
+            if (!observer.isAlive) {
+                action()
+                return
+            }
+            observer.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    view.viewTreeObserver.removeOnPreDrawListener(this)
+                    action()
+                    return true
+                }
+            })
+        }
+
+        if (view.isAttachedToWindow) {
+            attachPreDraw()
+        } else {
+            view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) {
+                    view.removeOnAttachStateChangeListener(this)
+                    attachPreDraw()
+                }
+
+                override fun onViewDetachedFromWindow(v: View) {}
+            })
+        }
+    }
+
     private fun offScreen() {
         dialog?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
@@ -1349,6 +1415,8 @@ class DialogLogFragment : DialogFragment() {
     }
 
     override fun onDestroyView() {
+        dialog?.let { swipeBinding?.release(it) }
+        swipeBinding = null
         attachedWindow?.let { com.omarea.common.ui.TopWindowHolder.pop(it) }
         attachedWindow = null
         currentHandler?.release()
@@ -1364,6 +1432,7 @@ class DialogLogFragment : DialogFragment() {
     }
 
     companion object {
+        private const val SWIPE_HORIZONTAL_RATIO = 2f
         private const val WRAP_STATE_RELATIVE_PATH = "home/usr/log/scroll_ngang"
         private val IO_EXECUTOR = Executors.newSingleThreadExecutor()
 

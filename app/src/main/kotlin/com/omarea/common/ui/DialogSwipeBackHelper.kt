@@ -20,6 +20,10 @@ class DialogSwipeBackHelper(
     private val contentView: View,
     private val onDragStateChanged: (dragging: Boolean) -> Unit = {},
     private val onDragProgress: (progress: Float) -> Unit = {},
+    private val canStart: (MotionEvent) -> Boolean = { true },
+    private val canDrag: (MotionEvent) -> Boolean = { true },
+    private val horizontalRatio: Float = 1f,
+    private val allowLeftPull: Boolean = true,
     private val onBack: () -> Unit
 ) {
     companion object {
@@ -32,10 +36,14 @@ class DialogSwipeBackHelper(
             contentView: View,
             onDragStateChanged: (dragging: Boolean) -> Unit = {},
             onDragProgress: (progress: Float) -> Unit = {},
+            canStart: (MotionEvent) -> Boolean = { true },
+            canDrag: (MotionEvent) -> Boolean = { true },
+            horizontalRatio: Float = 1f,
+            allowLeftPull: Boolean = true,
             onBack: () -> Unit
         ): DialogSwipeBackHelper? {
             val window = dialog.window ?: return null
-            val helper = DialogSwipeBackHelper(contentView.context, contentView, onDragStateChanged, onDragProgress, onBack)
+            val helper = DialogSwipeBackHelper(contentView.context, contentView, onDragStateChanged, onDragProgress, canStart, canDrag, horizontalRatio, allowLeftPull, onBack)
             val original = window.callback
             window.callback = object : Window.Callback by original {
                 override fun dispatchTouchEvent(event: MotionEvent): Boolean {
@@ -75,7 +83,7 @@ class DialogSwipeBackHelper(
             MotionEvent.ACTION_DOWN -> {
                 val isIdle = settleAnimator?.isRunning != true &&
                     contentView.translationX == 0f
-                candidate = isIdle && !isTouchOnSeekBar(contentView, ev.rawX, ev.rawY)
+                candidate = isIdle && !isTouchOnSeekBar(contentView, ev.rawX, ev.rawY) && canStart(ev)
                 dragging = false
                 draggingLeft = false
                 downX = ev.rawX
@@ -95,8 +103,12 @@ class DialogSwipeBackHelper(
                 val dy = ev.rawY - downY
 
                 if (!dragging && !draggingLeft) {
+                    if (!canDrag(ev)) {
+                        candidate = false
+                        return false
+                    }
                     when {
-                        dx > touchSlop && dx > abs(dy) -> {
+                        dx > touchSlop && dx > abs(dy) * horizontalRatio -> {
                             beginNewDragSession()
                             dragging = true
                             onDragStateChanged(true)
@@ -106,7 +118,11 @@ class DialogSwipeBackHelper(
                             contentView.dispatchTouchEvent(cancelEvent)
                             cancelEvent.recycle()
                         }
-                        dx < -touchSlop && abs(dx) > abs(dy) -> {
+                        dx < -touchSlop && abs(dx) > abs(dy) * horizontalRatio -> {
+                            if (!allowLeftPull) {
+                                candidate = false
+                                return false
+                            }
                             beginNewDragSession()
                             draggingLeft = true
                             val cancelEvent = MotionEvent.obtain(ev)

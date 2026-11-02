@@ -725,7 +725,7 @@ script = "..."</code></pre>
 <tr><td class="field-name">confirm-text</td><td>confirm-message</td><td class="field-type">String</td><td>Message of the confirmation dialog instead of <code>desc</code> (implies <code>confirm = true</code>). Legacy: <code>confirm = "text"</code> also works</td></tr>
 <tr><td class="field-name">warn</td><td>warning</td><td class="field-type">String</td><td>Warning text shown in the confirmation dialog</td></tr>
 <tr><td class="field-name">warn-sh</td><td>warning-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces warning dynamically</td></tr>
-<tr><td class="field-name">auto-off</td><td>auto-close</td><td class="field-type">Bool</td><td>Auto-close the log dialog after running</td></tr>
+<tr><td class="field-name">auto-off</td><td>auto-close</td><td class="field-type">Bool</td><td>Auto-close the log dialog after running. Without it, once the script has finished the log dialog can also be closed by swiping right (locked while the script is running; ignored during text selection / long-press drag and while the no-wrap log is scrolled horizontally)</td></tr>
 <tr><td class="field-name">auto-finish</td><td>-</td><td class="field-type">Bool</td><td>Auto-close the page after running</td></tr>
 <tr><td class="field-name">auto-kill</td><td>-</td><td class="field-type">Bool</td><td>Auto-kill related processes</td></tr>
 <tr><td class="field-name">auto-restart</td><td>-</td><td class="field-type">Bool</td><td>Auto-restart the service</td></tr>
@@ -2158,9 +2158,9 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Fields marked with the badge throughout this guide are summarized here, grouped by section, for quick reference when upgrading an existing config.</p>
 <ul>
-<li>Added <code>greeting-sh</code> (<code>welcome-sh</code>) for <code>[[chat]]</code>: a script run when the chat page opens whose output fills the greeting bubble (priority over <code>greeting</code>, which is the fallback when it prints nothing).</li>
 <li><code>[[chat]]</code>: removed the <em>Markdown</em> checkbox from the 3-dot menu; <code>markdown = true</code> now always renders replies as Markdown.</li>
 <li><code>[[editor]]</code>: swipe right to go back to the previous page (asks to save/discard when there are unsaved changes; ignored on the special-characters bar, during text selection / long-press drag and while the no-wrap editor is scrolled horizontally).</li>
+<li>Log dialog (<code>shell = "default"</code>): after the script has finished, swipe right to close it, same as the Exit button (locked while running; ignored during text selection / long-press drag and while the no-wrap log is scrolled horizontally).</li>
 </ul>
 </section>
 </main>

@@ -22,13 +22,24 @@ open class DialogFullScreen(private val layout: Int, private val darkMode: Boole
     }
 
     companion object {
-        fun bindSwipeToDismiss(activity: Activity, dialog: Dialog, onBack: () -> Unit): SwipeToDismissBinding? {
+        fun bindSwipeToDismiss(
+            activity: Activity,
+            dialog: Dialog,
+            canStart: (android.view.MotionEvent) -> Boolean = { true },
+            canDrag: (android.view.MotionEvent) -> Boolean = { true },
+            horizontalRatio: Float = 1f,
+            allowLeftPull: Boolean = true,
+            onBack: () -> Unit
+        ): SwipeToDismissBinding? {
             val window = dialog.window ?: return null
             val swipeTarget = DialogSwipeBackBlurWrapper.wrap(activity, window) ?: run {
                 DialogHelper.setWindowBlurBg(window, activity)
                 window.findViewById(android.R.id.content)
             }
-            val helper = DialogSwipeBackHelper.bind(dialog, swipeTarget) { onBack() } ?: return null
+            val helper = DialogSwipeBackHelper.bind(
+                dialog, swipeTarget,
+                canStart = canStart, canDrag = canDrag, horizontalRatio = horizontalRatio, allowLeftPull = allowLeftPull
+            ) { onBack() } ?: return null
             return SwipeToDismissBinding(helper)
         }
     }
