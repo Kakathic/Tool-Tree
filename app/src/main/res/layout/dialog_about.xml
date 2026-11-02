@@ -55,7 +55,6 @@
             <TextView
                 android:id="@+id/about_status"
                 style="@style/aboutHeaderText"
-                android:alpha="0.8"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/author_name" />
@@ -134,6 +133,7 @@
                         android:paddingBottom="6dp"
                         android:text="@string/about_donate"
                         android:textColor="@color/about_link_selector"
+                        android:paintFlags="UnderlineTextFlags"
                         android:textSize="16sp"
                         android:textStyle="bold" />
                     <TextView
@@ -149,6 +149,7 @@
                         android:paddingBottom="6dp"
                         android:text="@string/about_telegram"
                         android:textColor="@color/about_link_selector"
+                        android:paintFlags="UnderlineTextFlags"
                         android:textSize="16sp"
                         android:textStyle="bold" />
                 </LinearLayout>
