@@ -182,6 +182,7 @@
     <string name="editor_unsaved_title">Несохранённые изменения</string>
     <string name="editor_unsaved_message">В этом файле есть несохранённые изменения. Сохранить перед выходом?</string>
     <string name="editor_save">Сохранить</string>
+    <string name="editor_save_file">Сохранить файл</string>
     <string name="editor_discard">Не сохранять</string>
     <string name="editor_saving">Сохранение…</string>
     <string name="editor_save_success">Файл сохранён</string>

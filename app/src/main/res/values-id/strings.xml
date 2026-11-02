@@ -182,6 +182,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="editor_unsaved_title">Perubahan belum disimpan</string>
     <string name="editor_unsaved_message">Berkas ini memiliki perubahan yang belum disimpan. Simpan sebelum keluar?</string>
     <string name="editor_save">Simpan</string>
+    <string name="editor_save_file">Simpan berkas</string>
     <string name="editor_discard">Abaikan</string>
     <string name="editor_saving">Menyimpan…</string>
     <string name="editor_save_success">Berkas berhasil disimpan</string>

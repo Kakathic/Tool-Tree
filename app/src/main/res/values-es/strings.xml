@@ -186,6 +186,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="editor_unsaved_title">Cambios sin guardar</string>
     <string name="editor_unsaved_message">Este archivo tiene cambios sin guardar. ¿Guardar antes de salir?</string>
     <string name="editor_save">Guardar</string>
+    <string name="editor_save_file">Guardar archivo</string>
     <string name="editor_discard">Descartar</string>
     <string name="editor_saving">Guardando…</string>
     <string name="editor_save_success">Archivo guardado</string>

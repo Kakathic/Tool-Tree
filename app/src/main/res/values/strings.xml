@@ -208,6 +208,7 @@ If you agree, press the confirm button to continue."</string>
     <string name="editor_unsaved_title">Unsaved changes</string>
     <string name="editor_unsaved_message">This file has unsaved changes. Save before leaving?</string>
     <string name="editor_save">Save</string>
+    <string name="editor_save_file">Save file</string>
     <string name="editor_discard">Discard</string>
     <string name="editor_saving">Saving…</string>
     <string name="editor_save_success">File saved</string>

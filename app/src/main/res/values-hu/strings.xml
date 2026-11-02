@@ -38,6 +38,7 @@
     <string name="editor_redo">Ismétlés</string>
     <string name="editor_run_test">Teszt futtatása</string>
     <string name="editor_save">Mentés</string>
+    <string name="editor_save_file">Fájl mentése</string>
     <string name="editor_save_fail">Nem sikerült menteni a fájlt</string>
     <string name="editor_save_success">Fájl mentve</string>
     <string name="editor_saving">Mentés…</string>

@@ -196,6 +196,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="editor_unsaved_title">Thay đổi chưa được lưu</string>
     <string name="editor_unsaved_message">File này có thay đổi chưa lưu. Lưu lại trước khi thoát?</string>
     <string name="editor_save">Lưu</string>
+    <string name="editor_save_file">Lưu tệp tin</string>
     <string name="editor_discard">Hủy bỏ</string>
     <string name="editor_saving">Đang lưu…</string>
     <string name="editor_save_success">Đã lưu file</string>

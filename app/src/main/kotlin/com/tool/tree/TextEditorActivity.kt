@@ -30,6 +30,7 @@ import com.tool.tree.ui.SwipeBackPreviewCache
 import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -522,6 +523,9 @@ class TextEditorActivity : AppCompatActivity() {
     }
 
     private fun setupSelectionMenuOrder() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            binding.editorContent.setTextClassifier(android.view.textclassifier.TextClassifier.NO_OP)
+        }
         binding.editorContent.customSelectionActionModeCallback = selectionMenuCallback
         binding.editorContent.customInsertionActionModeCallback = selectionMenuCallback
     }
@@ -1049,8 +1053,8 @@ class TextEditorActivity : AppCompatActivity() {
         if (!readonlyMode && isRunButtonVisible()) {
             rows.add(
                 PopupMenuRow(
-                    title = getString(R.string.editor_save),
-                    leftIcon = null,
+                    title = getString(R.string.editor_save_file),
+                    leftIcon = ContextCompat.getDrawable(this, R.drawable.ic_save),
                     typeIcon = PopupRowTypeIcon.NONE,
                     checked = false
                 ) {
