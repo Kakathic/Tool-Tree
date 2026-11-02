@@ -133,7 +133,6 @@
                         android:paddingBottom="6dp"
                         android:text="@string/about_donate"
                         android:textColor="@color/about_link_selector"
-                        android:textSize="16sp"
                         android:textStyle="bold" />
                     <TextView
                         android:id="@+id/about_telegram"
@@ -148,7 +147,6 @@
                         android:paddingBottom="6dp"
                         android:text="@string/about_telegram"
                         android:textColor="@color/about_link_selector"
-                        android:textSize="16sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
@@ -323,8 +321,6 @@
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
                 android:layout_marginTop="12dp"
                 android:layout_weight="1"
                 android:minHeight="96dp"
