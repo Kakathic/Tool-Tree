@@ -9,5 +9,5 @@ if [ -f "$LOG/$1" ]; then
     cat "$LOG/$1"
 else
     [ -d "$LOG" ] || mkdir -p "$LOG"
-    [ "$2" ] && echo -n "$2" | tee "$LOG/$1"
+    [ "$2" ] && echo "$2" | tee "$LOG/$1"
 fi

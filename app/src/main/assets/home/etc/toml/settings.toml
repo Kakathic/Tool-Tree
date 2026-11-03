@@ -67,7 +67,7 @@ chatbot --all --markdown --progress --stream --lang "$chatai_lang" --model "$ai_
 '''
 params-script = '''
 slog list_provider $list_provider
-alog ai_models $ai_models
+alog list_ai_models $ai_models
 '''
 
 [[chat.menu]]
@@ -113,8 +113,8 @@ title = "@api_model_title"
 desc = "@api_model_desc"
 editable = true
 label = "Models"
-options-sh = "glog ai_models"
-value-sh = "glog ai_models gemini-3.5-flash-lite"
+options-sh = "glog list_ai_models gemini-3.5-flash-lite"
+value = "gemini-3.5-flash-lite"
 
 [[chat.params]]
 name = "models_thinking"
