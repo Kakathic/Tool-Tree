@@ -40,7 +40,7 @@ class DialogAboutUpdate(
 
     private companion object {
         const val REQUEST_WALLPAPER = 4101
-        const val ABOUT_DESC_RESTORE_DELAY_MS = 3000L
+        const val ABOUT_DESC_RESTORE_DELAY_MS = 5000L
         const val CHECKING_MIN_VISIBLE_MS = 800L
         const val ABOUT_DESC_FADE_OUT_MS = 150L
         const val ABOUT_DESC_FADE_IN_MS = 200L

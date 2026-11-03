@@ -1265,8 +1265,10 @@ text = "Temp: 41 C"
 <tr><td class="field-name">progress-track-color</td><td>progress-bg (legacy)</td><td class="field-type">String</td><td>default grey</td><td>Track color of the bar. Default: translucent grey. Naming rule: <code>*-color</code> is always a color, <code>bg-image</code> is always an image</td></tr>
 <tr><td class="field-name">progress-width</td><td>-</td><td class="field-type">Int</td><td>120</td><td>Width of the progress bar (dp)</td></tr>
 <tr><td class="field-name">progress-height</td><td>-</td><td class="field-type">Int</td><td>8</td><td>Height of the progress bar (dp)</td></tr>
-<tr><td class="field-name">flash</td><td>-</td><td class="field-type">Bool</td><td>true</td><td>When this row is refreshed via another row's <code>reset</code> and its text <strong>actually changed</strong>, briefly flash a background highlight that fades out - so the user notices the new value. <code>false</code> = disable the effect for this row</td></tr>
-<tr><td class="field-name">flash-color</td><td>-</td><td class="field-type">String</td><td>amber</td><td>Highlight color used by the flash effect (e.g. <code>#FFC107</code>). Default: amber</td></tr>
+<tr><td class="field-name">flash</td><td>-</td><td class="field-type">Bool</td><td>true</td><td>When this row is refreshed via another row's <code>reset</code> and its text <strong>actually changed</strong>, the new text fades in smoothly (a short transition) so the user notices the new value. <code>false</code> = disable the effect for this row</td></tr>
+
+<tr><td class="field-name">flash-color</td><td>-</td><td class="field-type">String</td><td>-</td><td><em>No longer used.</em> The flash effect is now a text fade-in, not a colored highlight. The field is still accepted so existing configs keep loading, but it has no effect</td></tr>
+
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>true</td><td>Hide/show the row</td></tr>
 </table>
 </div>
@@ -1432,7 +1434,7 @@ align = "right"
 reset = "all"
 </code></pre>
 <div class="callout tip">Like <code>text-sh</code>/<code>icon-sh</code>/<code>photo-sh</code> of a row, <code>progress-sh</code> is re-evaluated on every rows render (batched into one shell round-trip) and by <code>refresh-interval</code> timers - the bar updates live together with the row's text. The output must be a plain number; when combined with <code>refresh-interval</code> + <code>reset</code> you get a self-updating gauge.</div>
-<p>The companion <code>flash</code> effect makes a reset-driven value change visible: whenever a row is updated through <code>reset</code> and its rendered text actually differs from before, a highlight rectangle is drawn behind the new text and fades out over a short animation. It is <strong>on by default</strong> - set <code>flash = false</code> on a row to opt out, or <code>flash-color</code> to use a custom color instead of the default amber.</p>
+<p>The companion <code>flash</code> effect makes a reset-driven value change visible: whenever a row is updated through <code>reset</code> and its rendered text actually differs from before, the new text fades in over a short animation (about 0.3 s) and the effect then removes itself, leaving the row exactly as it was. It is <strong>on by default</strong> - set <code>flash = false</code> on a row to opt out. <code>flash-color</code> is no longer used (the effect used to be a colored highlight rectangle) and is kept only so older configs still load.</p>
 </section>
 <section id="editor">
 <h2>12. [[editor]] - Open file in the text editor</h2>

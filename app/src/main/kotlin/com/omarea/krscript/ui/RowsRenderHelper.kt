@@ -1,5 +1,7 @@
 package com.omarea.krscript.ui
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
@@ -456,11 +458,11 @@ object RowsRenderHelper {
         val newEnd = start + rendered.spannable.length
 
         if (row.flash && oldText != rendered.spannable.toString()) {
-            val flashColor = if (row.flashColor != -1) row.flashColor else 0xFFFFC107.toInt()
-            val flashSpan = FlashBackgroundSpan(rowsView, flashColor)
-            editable.setSpan(flashSpan, start, newEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            flashSpan.start()
-            state.flashAnimators.add(flashSpan.animator)
+            val fadeSpan = FadeInTextSpan(rowsView, editable)
+            editable.setSpan(fadeSpan, start, newEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            state.flashAnimators.removeAll { !it.isRunning }
+            fadeSpan.start()
+            state.flashAnimators.add(fadeSpan.animator)
         }
 
         val newRanges = HashMap<Int, IntArray>()
@@ -884,15 +886,20 @@ object RowsRenderHelper {
         }
     }
 
-    private class FlashBackgroundSpan(private val view: TextView, color: Int) : CharacterStyle(), UpdateAppearance {
-        private val baseColor = color and 0x00FFFFFF
+    private class FadeInTextSpan(private val view: TextView, private val text: Editable) : CharacterStyle(), UpdateAppearance {
         private var currentAlpha = 0
-        val animator: ValueAnimator = ValueAnimator.ofInt(0x80, 0).apply {
-            duration = 700
+        val animator: ValueAnimator = ValueAnimator.ofInt(0, 255).apply {
+            duration = 300
             addUpdateListener {
                 currentAlpha = it.animatedValue as Int
                 view.invalidate()
             }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    text.removeSpan(this@FadeInTextSpan)
+                    view.invalidate()
+                }
+            })
         }
 
         fun start() {
@@ -900,8 +907,8 @@ object RowsRenderHelper {
         }
 
         override fun updateDrawState(tp: TextPaint) {
-            if (currentAlpha > 0) {
-                tp.bgColor = (currentAlpha shl 24) or baseColor
+            if (currentAlpha < 255) {
+                tp.alpha = tp.alpha * currentAlpha / 255
             }
         }
     }
