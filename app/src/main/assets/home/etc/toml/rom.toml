@@ -55,6 +55,10 @@ handler = '''
 '''
 
   [[menu.items]]
+  title = "@editor_rom"
+  config = "{HOME}/etc/toml/project.toml"
+
+  [[menu.items]]
   title = "@apex_text"
   config = "{HOME}/etc/toml/apex.toml"
 

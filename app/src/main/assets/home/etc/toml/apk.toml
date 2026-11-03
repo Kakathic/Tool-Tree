@@ -74,6 +74,10 @@ handler = '''
 '''
 
   [[menu.items]]
+  title = "@editor_apk"
+  config = "{HOME}/etc/toml/apkpro.toml"
+  
+  [[menu.items]]
   key = "b2"
   type = "default"
   title = "@framework_auto_text"

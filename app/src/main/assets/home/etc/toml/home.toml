@@ -56,6 +56,7 @@ title = "@editor_rom"
 desc = "@setting_text_4"
 icon = "{ICON}/project.png"
 config = "{HOME}/etc/toml/project.toml"
+support = '[ "$(glog Toff)" == 1 ] && echo 0'
 
 [[group]]
 [[page]]
