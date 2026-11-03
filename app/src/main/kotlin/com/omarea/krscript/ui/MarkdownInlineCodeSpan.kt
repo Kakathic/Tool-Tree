@@ -3,7 +3,9 @@ package com.omarea.krscript.ui
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
+import android.text.Spannable
 import android.text.Spanned
 import android.text.TextPaint
 import android.text.style.CharacterStyle
@@ -13,6 +15,10 @@ import android.text.style.ReplacementSpan
  * Code inline `như vậy`. Giống MarkdownCodeSpan nhưng nền được giới hạn trong khung dòng và
  * chừa lineGapDp ở mép trên/dưới, nên hai dòng liền nhau không bị nền dính vào nhau.
  * getSize giữ nguyên như MarkdownCodeSpan nên cách tính độ rộng/chiều cao dòng không đổi.
+ *
+ * ReplacementSpan là một khối không thể ngắt dòng, nên code inline dài sẽ không xuống dòng.
+ * Vì vậy dùng [apply] để cắt đoạn code thành nhiều span nhỏ (theo từ, từ quá dài thì cắt theo cụm ký tự);
+ * các span liền nhau được vẽ nối liền thành một khối, chỉ bo góc/đệm ở hai đầu.
  */
 class MarkdownInlineCodeSpan(
     context: Context,
@@ -20,7 +26,9 @@ class MarkdownInlineCodeSpan(
     cornerRadiusDp: Float = 6f,
     paddingHorizontalDp: Float = 4f,
     private val paddingVerticalDp: Float = 2f,
-    lineGapDp: Float = 1.5f
+    lineGapDp: Float = 1.5f,
+    private val isFirst: Boolean = true,
+    private val isLast: Boolean = true
 ) : ReplacementSpan() {
 
     private val density = context.resources.displayMetrics.density
@@ -29,6 +37,10 @@ class MarkdownInlineCodeSpan(
     private val paddingVerticalPx = paddingVerticalDp * density
     private val lineGapPx = lineGapDp * density
     private val rect = RectF()
+    private val path = Path()
+    private val radii = FloatArray(8)
+    private val padLeftPx get() = if (isFirst) paddingHorizontalPx else 0f
+    private val padRightPx get() = if (isLast) paddingHorizontalPx else 0f
 
     override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
         if (fm != null) {
@@ -38,7 +50,7 @@ class MarkdownInlineCodeSpan(
             fm.top = fontMetrics.top - paddingVerticalPx.toInt()
             fm.bottom = fontMetrics.bottom + paddingVerticalPx.toInt()
         }
-        return (paint.measureText(text, start, end) + paddingHorizontalPx * 2).toInt()
+        return (paint.measureText(text, start, end) + padLeftPx + padRightPx).toInt()
     }
 
     override fun draw(canvas: Canvas, text: CharSequence, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
@@ -62,13 +74,23 @@ class MarkdownInlineCodeSpan(
         paint.style = Paint.Style.FILL
         paint.color = backgroundColor
 
-        rect.set(x, rectTop, x + textWidth + paddingHorizontalPx * 2, rectBottom)
-        canvas.drawRoundRect(rect, cornerRadiusPx, cornerRadiusPx, paint)
+        rect.set(x, rectTop, x + textWidth + padLeftPx + padRightPx, rectBottom)
+        if (isFirst && isLast) {
+            canvas.drawRoundRect(rect, cornerRadiusPx, cornerRadiusPx, paint)
+        } else {
+            val l = if (isFirst) cornerRadiusPx else 0f
+            val r = if (isLast) cornerRadiusPx else 0f
+            radii[0] = l; radii[1] = l; radii[2] = r; radii[3] = r
+            radii[4] = r; radii[5] = r; radii[6] = l; radii[7] = l
+            path.reset()
+            path.addRoundRect(rect, radii, Path.Direction.CW)
+            canvas.drawPath(path, paint)
+        }
 
         paint.style = oldStyle
         paint.color = oldColor
 
-        drawInnerText(canvas, text, start, end, x + paddingHorizontalPx, y.toFloat(), paint)
+        drawInnerText(canvas, text, start, end, x + padLeftPx, y.toFloat(), paint)
     }
 
     private fun drawInnerText(canvas: Canvas, text: CharSequence, start: Int, end: Int, startX: Float, baselineY: Float, basePaint: Paint) {
@@ -98,6 +120,47 @@ class MarkdownInlineCodeSpan(
             }
             canvas.drawText(text, segStart, segEnd, drawX, baselineY, workPaint)
             drawX += workPaint.measureText(text, segStart, segEnd)
+        }
+    }
+
+    companion object {
+        /** Số ký tự tối đa của một span khi gặp từ không có khoảng trắng (đường dẫn, URL dài...) */
+        private const val MAX_CHUNK = 8
+
+        /**
+         * Gắn code inline cho [start, end) của [target], tách thành nhiều span để cho phép ngắt dòng.
+         */
+        fun apply(context: Context, target: Spannable, start: Int, end: Int, cornerRadiusDp: Float? = null) {
+            if (end <= start) return
+            val cuts = ArrayList<Int>()
+            cuts.add(start)
+            var i = start
+            var chunkLen = 0
+            while (i < end) {
+                val c = target[i]
+                chunkLen++
+                val next = i + 1
+                if (next < end) {
+                    val boundary = if (c.isWhitespace()) !target[next].isWhitespace() else chunkLen >= MAX_CHUNK
+                    if (boundary) {
+                        cuts.add(next)
+                        chunkLen = 0
+                    }
+                }
+                i = next
+            }
+            cuts.add(end)
+
+            for (k in 0 until cuts.size - 1) {
+                val first = k == 0
+                val last = k == cuts.size - 2
+                val span = if (cornerRadiusDp != null) {
+                    MarkdownInlineCodeSpan(context, cornerRadiusDp = cornerRadiusDp, isFirst = first, isLast = last)
+                } else {
+                    MarkdownInlineCodeSpan(context, isFirst = first, isLast = last)
+                }
+                target.setSpan(span, cuts[k], cuts[k + 1], Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
         }
     }
 }

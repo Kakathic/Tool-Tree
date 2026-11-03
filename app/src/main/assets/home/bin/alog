@@ -1,0 +1,20 @@
+# kakathic
+
+if [ "$1" == '-h' ] || [ "$1" == '--help' ] || [ -z "$1" ]; then
+    echo "Use: alog key 1" >&2
+    echo "Delete: alog -d key" >&2
+    exit 1
+fi
+
+[ -d "$LOG" ] || mkdir -p "$LOG"
+if [ "$2" ]; then
+    if [ "$1" == "-d" ] || [ "$1" == "--delete" ]; then
+    [ -f "$LOG/$2" ] && rm -f "$LOG/$2"
+    else
+    echo "$2" >> "$LOG/$1"
+    sort -u "$LOG/$1" > "$LOG/$1.tmp"
+    mv "$LOG/$1.tmp" "$LOG/$1"
+    fi
+else
+    [ "$1" ] && echo -n > "$LOG/$1"
+fi

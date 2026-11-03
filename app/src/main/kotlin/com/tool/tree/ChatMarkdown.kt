@@ -298,8 +298,7 @@ object ChatMarkdown {
                     out.setSpan(StrikethroughSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 MarkdownInlineHelper.MarkdownSpanType.CODE -> {
                     val radius = info.href.toFloatOrNull()
-                    val span = if (radius != null) MarkdownInlineCodeSpan(context, cornerRadiusDp = radius) else MarkdownInlineCodeSpan(context)
-                    out.setSpan(span, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    MarkdownInlineCodeSpan.apply(context, out, start, end, radius)
                 }
                 MarkdownInlineHelper.MarkdownSpanType.COLOR -> {
                     val color = try { Color.parseColor(info.href) } catch (e: IllegalArgumentException) { null }

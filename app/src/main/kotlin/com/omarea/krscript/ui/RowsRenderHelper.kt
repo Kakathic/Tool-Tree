@@ -1073,8 +1073,7 @@ object RowsRenderHelper {
                     spannableString.setSpan(StrikethroughSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 MarkdownInlineHelper.MarkdownSpanType.CODE -> {
                     val customRadius = info.href.toFloatOrNull()
-                    val codeSpan = if (customRadius != null) MarkdownInlineCodeSpan(context, cornerRadiusDp = customRadius) else MarkdownInlineCodeSpan(context)
-                    spannableString.setSpan(codeSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    MarkdownInlineCodeSpan.apply(context, spannableString, start, end, customRadius)
                 }
                 MarkdownInlineHelper.MarkdownSpanType.COLOR -> {
                     val colorInt = parseMarkdownColor(info.href)
