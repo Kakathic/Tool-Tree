@@ -21,7 +21,7 @@
             android:paddingStart="16dp"
             android:paddingTop="16dp"
             android:paddingEnd="16dp"
-            android:paddingBottom="8dp"
+            android:paddingBottom="16dp"
             android:text="@string/terminal_more_title" />
 
         <View
@@ -33,7 +33,7 @@
             android:background="?android:attr/listDivider" />
 
         <CheckBox
-            android:id="@+id/terminal_more_keep_screen"
+            android:id="@+id/terminal_more_mono"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:button="@null"
@@ -41,9 +41,9 @@
             android:gravity="center_vertical"
             android:minHeight="48dp"
             android:paddingStart="16dp"
-            android:paddingEnd="16dp"
+            android:paddingEnd="10dp"
             android:textSize="16sp"
-            android:text="@string/terminal_keep_screen_on" />
+            android:text="@string/terminal_mono_toolbar" />
 
         <CheckBox
             android:id="@+id/terminal_more_wakelock"
@@ -54,12 +54,12 @@
             android:gravity="center_vertical"
             android:minHeight="48dp"
             android:paddingStart="16dp"
-            android:paddingEnd="16dp"
+            android:paddingEnd="10dp"
             android:textSize="16sp"
             android:text="@string/terminal_wakelock" />
 
         <CheckBox
-            android:id="@+id/terminal_more_mono"
+            android:id="@+id/terminal_more_keep_screen"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:button="@null"
@@ -67,9 +67,9 @@
             android:gravity="center_vertical"
             android:minHeight="48dp"
             android:paddingStart="16dp"
-            android:paddingEnd="16dp"
+            android:paddingEnd="10dp"
             android:textSize="16sp"
-            android:text="@string/terminal_mono_toolbar" />
+            android:text="@string/terminal_keep_screen_on" />
 
         <View
             android:layout_width="match_parent"
