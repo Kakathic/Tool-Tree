@@ -25,7 +25,7 @@ get = "glog Ticon"
 set = "slog Ticon $state"
 
 [[switch]]
-title = "Bố cục 2 mục"
+title = "@project_text_16"
 icon = "{ICON}/layout.png"
 shell = "hidden"
 auto-restart = true
