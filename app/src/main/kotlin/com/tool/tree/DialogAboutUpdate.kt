@@ -40,6 +40,7 @@ class DialogAboutUpdate(
 
     private companion object {
         const val REQUEST_WALLPAPER = 4101
+        const val ABOUT_DESC_RESTORE_DELAY_MS = 3000L
     }
 
     init {
@@ -49,6 +50,7 @@ class DialogAboutUpdate(
     private val mainHandler = Handler(Looper.getMainLooper())
     private val logBuilder = SpannableStringBuilder()
 
+    private lateinit var aboutDesc: TextView
     private lateinit var logText: TextView
     private lateinit var updateCard: View
     private lateinit var updateItem: View
@@ -113,7 +115,23 @@ class DialogAboutUpdate(
         viewReady = true
     }
 
+    private val restoreAboutDescRunnable = Runnable { restoreAboutDesc() }
+
+    private fun restoreAboutDesc() {
+        mainHandler.removeCallbacks(restoreAboutDescRunnable)
+        if (!viewReady || !::aboutDesc.isInitialized) return
+        aboutDesc.setText(R.string.appliction_desc)
+    }
+
+    private fun showAboutDescTemp(resId: Int, restoreAfterMs: Long = 0L) {
+        mainHandler.removeCallbacks(restoreAboutDescRunnable)
+        if (!::aboutDesc.isInitialized) return
+        aboutDesc.setText(resId)
+        if (restoreAfterMs > 0L) mainHandler.postDelayed(restoreAboutDescRunnable, restoreAfterMs)
+    }
+
     override fun onDestroyView() {
+        mainHandler.removeCallbacks(restoreAboutDescRunnable)
         viewReady = false
         super.onDestroyView()
     }
@@ -258,6 +276,7 @@ class DialogAboutUpdate(
     }
 
     private fun bindUpdate(view: View, activity: Activity) {
+        aboutDesc = view.findViewById(R.id.about_desc)
         updateCard = view.findViewById(R.id.update_card)
         updateItem = view.findViewById(R.id.update_item)
         itemIcon = view.findViewById(R.id.kr_icon)
@@ -362,6 +381,7 @@ class DialogAboutUpdate(
         setUpdateVisible(false)
         setBusy(true)
         itemDesc.text = activity.getString(R.string.app_update_checking)
+        showAboutDescTemp(R.string.app_update_checking)
 
         Thread {
             val result = try {
@@ -380,8 +400,12 @@ class DialogAboutUpdate(
 
     private fun applyResult(activity: Activity, result: AppUpdateCheckResult) {
         when (result) {
-            is AppUpdateCheckResult.Available -> showAvailable(result.info, activity)
+            is AppUpdateCheckResult.Available -> {
+                restoreAboutDesc()
+                showAvailable(result.info, activity)
+            }
             is AppUpdateCheckResult.UpToDate -> {
+                showAboutDescTemp(R.string.app_update_latest, ABOUT_DESC_RESTORE_DELAY_MS)
                 loadedInfo = null
                 setUpdateVisible(false)
                 showChangelog(result.changelogText)
@@ -389,6 +413,7 @@ class DialogAboutUpdate(
                 setBusy(false)
             }
             is AppUpdateCheckResult.Failed -> {
+                restoreAboutDesc()
                 setUpdateVisible(false)
                 showChangelog(AppUpdateChecker.cachedChangelog(activity))
                 setMode(UpdateMode.CHECK)
