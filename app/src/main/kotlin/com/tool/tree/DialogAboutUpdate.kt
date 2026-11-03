@@ -41,6 +41,9 @@ class DialogAboutUpdate(
     private companion object {
         const val REQUEST_WALLPAPER = 4101
         const val ABOUT_DESC_RESTORE_DELAY_MS = 3000L
+        const val CHECKING_MIN_VISIBLE_MS = 800L
+        const val ABOUT_DESC_FADE_OUT_MS = 150L
+        const val ABOUT_DESC_FADE_IN_MS = 200L
     }
 
     init {
@@ -120,18 +123,36 @@ class DialogAboutUpdate(
     private fun restoreAboutDesc() {
         mainHandler.removeCallbacks(restoreAboutDescRunnable)
         if (!viewReady || !::aboutDesc.isInitialized) return
-        aboutDesc.setText(R.string.appliction_desc)
+        setAboutDescAnimated(R.string.appliction_desc)
+    }
+
+    private fun setAboutDescAnimated(resId: Int) {
+        val target = getString(resId)
+        aboutDesc.animate().cancel()
+        if (aboutDesc.text.toString() == target) {
+            aboutDesc.alpha = 1f
+            return
+        }
+        aboutDesc.animate()
+            .alpha(0f)
+            .setDuration(ABOUT_DESC_FADE_OUT_MS)
+            .withEndAction {
+                aboutDesc.text = target
+                aboutDesc.animate().alpha(1f).setDuration(ABOUT_DESC_FADE_IN_MS).start()
+            }
+            .start()
     }
 
     private fun showAboutDescTemp(resId: Int, restoreAfterMs: Long = 0L) {
         mainHandler.removeCallbacks(restoreAboutDescRunnable)
         if (!::aboutDesc.isInitialized) return
-        aboutDesc.setText(resId)
+        setAboutDescAnimated(resId)
         if (restoreAfterMs > 0L) mainHandler.postDelayed(restoreAboutDescRunnable, restoreAfterMs)
     }
 
     override fun onDestroyView() {
         mainHandler.removeCallbacks(restoreAboutDescRunnable)
+        if (::aboutDesc.isInitialized) aboutDesc.animate().cancel()
         viewReady = false
         super.onDestroyView()
     }
@@ -382,6 +403,7 @@ class DialogAboutUpdate(
         setBusy(true)
         itemDesc.text = activity.getString(R.string.app_update_checking)
         showAboutDescTemp(R.string.app_update_checking)
+        val checkStart = SystemClock.elapsedRealtime()
 
         Thread {
             val result = try {
@@ -389,12 +411,13 @@ class DialogAboutUpdate(
             } catch (_: Exception) {
                 AppUpdateCheckResult.Failed
             }
-            mainHandler.post {
+            val remaining = (CHECKING_MIN_VISIBLE_MS - (SystemClock.elapsedRealtime() - checkStart)).coerceAtLeast(0L)
+            mainHandler.postDelayed({
                 checking = false
                 onResult(result)
-                if (!viewReady || !isAdded) return@post
+                if (!viewReady || !isAdded) return@postDelayed
                 applyResult(activity, result)
-            }
+            }, remaining)
         }.apply { isDaemon = true }.start()
     }
 
