@@ -32,6 +32,7 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         internal var text: String = ""
         internal var dynamicTextSh: String = ""
         internal var markdown: Boolean = false
+        internal var autolink: Boolean = true
         internal var onClickScript: String = ""
         internal var toastResult: Boolean = false
         internal var photo: String = ""

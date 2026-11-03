@@ -1335,6 +1335,7 @@ class PageConfigReader {
         tomlGet(table, "flash")?.let { row.flash = tomlTruthy(it, "flash") }
         tomlGet(table, "flash-color")?.let { row.flashColor = parseColorOr(it, row.flashColor) }
         tomlGet(table, "markdown", "md")?.let { row.markdown = tomlTruthy(it, "markdown", "md") }
+        tomlGet(table, "autolink", "auto-link")?.let { row.autolink = tomlTruthy(it, "autolink", "auto-link") }
         tomlGet(table, "html-file", "html-path")?.let { row.htmlFile = it.trim() }
         tomlGet(table, "html-url", "html-link")?.let { row.htmlUrl = it.trim() }
         tomlGet(table, "html-height")?.let { row.htmlHeight = parseIntOr(it, row.htmlHeight) }

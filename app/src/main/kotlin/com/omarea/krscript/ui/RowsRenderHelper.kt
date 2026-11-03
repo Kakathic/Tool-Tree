@@ -796,6 +796,13 @@ object RowsRenderHelper {
             applyMarkdownSpans(context, spannableString, markdownSpans, markdownOffset, length)
         }
 
+        // Tự nhận diện link trần (http://, https://, www.) trong text; bỏ qua khi hàng đã có hành động nhấn riêng
+        val rowHasOwnClick = isToggle || row.link.isNotEmpty() || row.activity.isNotEmpty() ||
+            row.onClickScript.isNotEmpty() || row.resetTarget != -1
+        if (row.autolink && !rowHasOwnClick && label.isNotEmpty()) {
+            applyAutoLinks(context, spannableString, markdownOffset, minOf(length, markdownOffset + label.length))
+        }
+
         val measurePaint = measurePaintForRow(rowsView.paint, row)
         val specialSlots = ArrayList<Pair<Int, Float>>()
         if (toggleIconIndex != -1 && toggleDrawable != null) {
@@ -1100,6 +1107,50 @@ object RowsRenderHelper {
                     }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
+        }
+    }
+
+    private val BARE_URL = Regex("(?i)\\b(?:https?://|www\\.)[^\\s<>\"']+")
+    private const val URL_TRAILING = ".,;:!?'\"*_~"
+
+    /**
+     * Biến URL trần trong [from, to) thành link bấm được. Bỏ qua đoạn đã là link (markdown [text](url))
+     * hoặc nằm trong code inline; cắt bớt dấu câu ở cuối URL.
+     */
+    private fun applyAutoLinks(context: Context, target: SpannableString, from: Int, to: Int) {
+        if (to - from < 4) return
+        val region = target.subSequence(from, to).toString()
+        for (match in BARE_URL.findAll(region)) {
+            val start = from + match.range.first
+            var end = from + match.range.last + 1
+            while (end > start) {
+                val c = target[end - 1]
+                val seg = target.subSequence(start, end)
+                val opens = seg.count { it == '(' }
+                val closes = seg.count { it == ')' }
+                if (URL_TRAILING.indexOf(c) >= 0 || (c == ')' && closes > opens) || c == ']' || c == '}') end-- else break
+            }
+            if (end - start < 4) continue
+            if (target.getSpans(start, end, ClickableSpan::class.java).isNotEmpty()) continue
+            if (target.getSpans(start, end, MarkdownInlineCodeSpan::class.java).isNotEmpty()) continue
+            val url = target.subSequence(start, end).toString()
+            val href = if (url.startsWith("www.", ignoreCase = true)) "http://$url" else url
+            target.setSpan(object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(href))
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        context.startActivity(intent)
+                    } catch (ex: Exception) {
+                        Toast.makeText(context, context.getString(R.string.kr_slice_activity_fail), Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun updateDrawState(ds: TextPaint) {
+                    ds.color = ds.linkColor
+                    ds.isUnderlineText = true
+                }
+            }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
 

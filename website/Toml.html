@@ -1207,6 +1207,7 @@ text = "Temp: 41 C"
 <tr><td class="field-name">text</td><td>-</td><td class="field-type">String</td><td>""</td><td>Text content</td></tr>
 <tr><td class="field-name">sh</td><td>text-sh</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that produces text dynamically</td></tr>
 <tr><td class="field-name">markdown</td><td>md</td><td class="field-type">Bool</td><td>false</td><td>true: interpret <code>text</code> (or the <code>sh</code> result) as inline Markdown - bold/italic/strikethrough/color/link/code - before displaying, see <a href="#text-rows">section 11.4</a> for the full syntax</td></tr>
+<tr><td class="field-name">autolink</td><td>auto-link</td><td class="field-type">Bool</td><td>true</td><td>Auto-detect bare links (<code>http://</code>, <code>https://</code>, <code>www.</code>) in <code>text</code> (or the <code>sh</code> result) and make them clickable (underlined, opens in the browser; <code>www.</code> gets <code>http://</code> added). Trailing punctuation such as <code>.</code> <code>,</code> <code>)</code> is not part of the link. Not applied to a row that already has its own click action (<code>link</code>, <code>activity</code>, <code>script</code>, <code>reset</code>, <code>toggle</code>), and never inside <code>`code`</code> or an existing <code>[text](url)</code>. <code>false</code> turns it off for this row</td></tr>
 <tr><td class="field-name">bold</td><td>b</td><td class="field-type">Bool</td><td>false</td><td>Bold</td></tr>
 <tr><td class="field-name">italic</td><td>i</td><td class="field-type">Bool</td><td>false</td><td>Italic</td></tr>
 <tr><td class="field-name">underline</td><td>u</td><td class="field-type">Bool</td><td>false</td><td>Underline</td></tr>
@@ -2164,6 +2165,7 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Fields marked with the badge throughout this guide are summarized here, grouped by section, for quick reference when upgrading an existing config.</p>
 <ul>
+<li><code>[[text.rows]]</code>: new <code>autolink</code> (alias <code>auto-link</code>, default <code>true</code>) - bare <code>http(s)://</code> / <code>www.</code> links in row text become clickable; set <code>autolink = false</code> to disable.</li>
 <li><code>[[chat]]</code>: removed the <em>Markdown</em> checkbox from the 3-dot menu; <code>markdown = true</code> now always renders replies as Markdown.</li>
 <li><code>[[editor]]</code>: swipe right to go back to the previous page (asks to save/discard when there are unsaved changes; ignored on the special-characters bar, during text selection / long-press drag and while the no-wrap editor is scrolled horizontally).</li>
 <li>Log dialog (<code>shell = "default"</code>): after the script has finished, swipe right to close it, same as the Exit button (locked while running; ignored during text selection / long-press drag and while the no-wrap log is scrolled horizontally).</li>
