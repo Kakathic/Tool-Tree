@@ -1573,6 +1573,7 @@ keep-screen-on = true
 <tr><td class="field-name">params-title</td><td>-</td><td class="field-type">String</td><td>Settings</td><td>Title of the dialog opened by the options button on the left of the input box (needs <code>[[chat.params]]</code>)</td></tr>
 <tr><td class="field-name">params-icon</td><td>-</td><td class="field-type">Path</td><td>default icon</td><td>Icon of that options button</td></tr>
 <tr><td class="field-name">params-script</td><td>apply</td><td class="field-type">Shell</td><td>-</td><td>Optional. Empty: pressing Confirm only saves the values. Set: it also runs once in the log dialog with the values as env</td></tr>
+<tr><td class="field-name">params-shell</td><td>-</td><td class="field-type">String</td><td>default</td><td>How <code>params-script</code> runs when the user confirms the params dialog. <code>default</code> (aliases <code>log</code>, <code>dialog</code>) = log dialog; <code>hidden</code> = silent, no log dialog (a Toast with the error output is shown only if the script writes to stderr; ignored while another hidden task is still running); <code>bg-task</code> (aliases <code>bg</code>, <code>background</code>) = background task with notification. Unknown values are ignored. Has no effect when <code>params-script</code> is empty</td></tr>
 </table>
 </div>
 <p>All common fields of RunnableNode (<code>title</code>, <code>icon</code>, <code>lock</code>, <code>interruptable</code>, ...) work as well.</p>
@@ -2166,6 +2167,7 @@ script = "sh $state"
 <p>Fields marked with the badge throughout this guide are summarized here, grouped by section, for quick reference when upgrading an existing config.</p>
 <ul>
 <li><code>[[text.rows]]</code>: new <code>autolink</code> (alias <code>auto-link</code>, default <code>true</code>) - bare <code>http(s)://</code> / <code>www.</code> links in row text become clickable; set <code>autolink = false</code> to disable.</li>
+<li><code>[[chat]]</code>: new <code>params-shell</code> (<code>default</code> / <code>hidden</code> / <code>bg-task</code>) - run <code>params-script</code> silently or in the background instead of the log dialog.</li>
 <li><code>[[chat]]</code>: removed the <em>Markdown</em> checkbox from the 3-dot menu; <code>markdown = true</code> now always renders replies as Markdown.</li>
 <li><code>[[editor]]</code>: swipe right to go back to the previous page (asks to save/discard when there are unsaved changes; ignored on the special-characters bar, during text selection / long-press drag and while the no-wrap editor is scrolled horizontally).</li>
 <li>Log dialog (<code>shell = "default"</code>): after the script has finished, swipe right to close it, same as the Exit button (locked while running; ignored during text selection / long-press drag and while the no-wrap log is scrolled horizontally).</li>

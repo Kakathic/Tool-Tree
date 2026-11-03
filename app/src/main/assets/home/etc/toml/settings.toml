@@ -65,6 +65,7 @@ greeting = "@chat_greeting"
 script = '''
 chatbot --all --markdown --progress --stream --lang "$chatai_lang" --model "$ai_models" --provider "$list_provider" --instruction "$chatai_nextrule" --thinking "$models_thinking" --memory-file "$HOME/.cache/$CHAT_ID.sql" -p "$MSG"
 '''
+params-shell = "hidden"
 params-script = '''
 slog list_provider $list_provider
 alog list_ai_models $ai_models

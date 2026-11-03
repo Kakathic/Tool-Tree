@@ -1078,6 +1078,13 @@ class PageConfigReader {
                 setState = paramsScript
                 paramsOnly = paramsScript.isEmpty()
                 tomlGet(table, "params-icon")?.let { iconPath = it.trim() }
+                tomlGet(table, "params-shell")?.let {
+                    when (it.trim().lowercase()) {
+                        "hidden" -> shell = RunnableNode.shellModeHidden
+                        "bg-task", "bg", "background" -> shell = RunnableNode.shellModeBgTask
+                        "default", "log", "dialog" -> shell = RunnableNode.shellModeDefault
+                    }
+                }
             }
         }
         return chat
