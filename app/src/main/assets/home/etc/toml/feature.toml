@@ -1,12 +1,6 @@
 [[toml]]
 load-key-sh = "langpath"
 
-[[menu]]
-[[menu.items]]
-link = "https://aistudio.google.com/api-keys"
-title = "@generate_text Gemini API"
-silent = true
-
 [[group]]
 [[switch]]
 title = "@project_text_5"
@@ -69,60 +63,67 @@ title = "@api_key_text"
 icon = "{ICON}/apikey.png"
 script = '''
 slog ai_models "$ai_models"
-chatbot -c
-echo
-echo -e "\033[32mList of websites to register for API\033[0m"
-chatbot --list-websites --lang "$LANGUAGE-$COUNTRY"
-echo
-echo -e "\033[32mList of current supplier models\033[0m"
-chatbot --list-models --lang "$LANGUAGE-$COUNTRY"
+[ "$GEMINI_API_KEY" ] && list_provider=gemini chatbot -c
+[ "$OPENAI_API_KEY" ] && list_provider=openai chatbot -c
+[ "$OPENROUTER_API_KEY" ] && list_provider=openrouter chatbot -c
+[ "$GROQ_API_KEY" ] && list_provider=groq chatbot -c
+[ "$TOGETHER_API_KEY" ] && list_provider=together chatbot -c
 '''
-
-[[action.params-rows]]
-#text-sh = "chatbot --list-websites"
-line = true
 
 [[action.params]]
 name = "GEMINI_API_KEY"
-label = "Gemini API"
+label = "Gemini"
 placeholder-sh = "list_provider=gemini chatbot --show 2>/dev/null"
 type = "password"
 remember = false
 
 [[action.params]]
 name = "OPENAI_API_KEY"
-label = "Openai API"
+label = "Openai"
 placeholder-sh = "list_provider=openai chatbot --show 2>/dev/null"
 type = "password"
 remember = false
 
 [[action.params]]
 name = "OPENROUTER_API_KEY"
-label = "Openroute API"
+label = "Openroute"
 placeholder-sh = "list_provider=openrouter chatbot --show 2>/dev/null"
 type = "password"
 remember = false
 
 [[action.params]]
 name = "GROQ_API_KEY"
-label = "Groq API"
+label = "Groq"
 placeholder-sh = "list_provider=groq chatbot --show 2>/dev/null"
 type = "password"
 remember = false
 
 [[action.params]]
 name = "TOGETHER_API_KEY"
-label = "Together API"
+label = "Together"
 placeholder-sh = "list_provider=together chatbot --show 2>/dev/null"
 type = "password"
 remember = false
 
 [[action.params]]
 name = "CUSTOM_API_KEY"
-label = "Custom API"
+label = "Custom"
 placeholder-sh = "list_provider=custom chatbot --show 2>/dev/null"
 type = "password"
 remember = false
+
+[[action.params-rows]]
+text-sh = "chatbot --list-websites"
+position = "bottom"
+
+[[group]]
+[[action]]
+allow-shortcut = false
+title = "Công cụ dịch thuật"
+icon = "{ICON}/translation.png"
+script = '''
+slog ai_models "$ai_models"
+'''
 
 [[action.params]]
 name = "list_provider"

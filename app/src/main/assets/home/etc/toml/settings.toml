@@ -54,20 +54,21 @@ fi
 [[chat]]
 id = "chatbot"
 icon = "{ICON}/chatai.png"
-title = "Chatbot AI"
+title = "@chatai_title"
 desc = "@chat_gemini_text"
 chat-title = "Chatbot"
-user-title = "Bạn"
-placeholder = "Nhập tin nhắn…"
+user-title = "@user_title"
+placeholder = "@chat_placeholder"
 max-lines = 8
 markdown = true
-greeting = "Xin chào tôi có thể giúp gì cho bạn?"
+greeting = "@chat_greeting"
 script = '''
+slog list_provider "$list_provider"
 chatbot --all --markdown --progress --stream --lang "$chatai_lang" --model "$ai_models" --provider "$list_provider" --instruction "$chatai_nextrule" --thinking "$models_thinking" --memory-file "$HOME/.cache/$CHAT_ID.sql" -p "$MSG"
 '''
 
 [[chat.menu]]
-title = "Xoá bộ nhớ chatbot"
+title = "@clear_chat_title"
 type = "clear"
 silent = true
 script = '''
@@ -75,22 +76,20 @@ rm -f "$HOME/.cache/$CHAT_ID.sql" 2>/dev/null
 '''
 
 [[chat.menu]]
-title = "Tạo API key"
+title = "@api_website_title"
 script = '''
-echo "Đăng ký API KEY chính thức tại website sau:"
-echo
 chatbot --list-websites
 '''
 
 [[chat.menu]]
-title = "Danh sách model"
+title = "@model_list_title"
 script = '''
-chatbot --list-models
+chatbot --provider "$(glog list_provider)" --list-models
 '''
 
 [[chat.params]]
 name = "chatai_lang"
-title = "@permis_text_5"
+title = "@reply_lang_title"
 label = "@permis_text_2"
 placeholder = "en-US"
 type = "text"
@@ -99,44 +98,44 @@ value-sh = 'echo "$LANGUAGE-$COUNTRY"'
 [[chat.params]]
 name = "list_provider"
 placeholder = "gemini"
-title = "Chọn nhà cung cấp"
+title = "@select_provider_title"
 label = "Provider"
-items = [ "gemini|Gemini", "openai", "openrouter", "groq", "together", "custom" ]
-value = "gemini"
+items = [ "gemini|Gemini", "openai|Openai", "openrouter|Openrouter", "groq|Groq", "together|Together", "custom" ]
+value-sh = "glog list_provider gemini"
 
 [[chat.params]]
 name = "ai_models"
 placeholder = "gemini-3.5-flash-lite"
-title = "Models API"
-desc = "Có thể sửa thành model khác"
+title = "@api_model_title"
+desc = "@api_model_desc"
 editable = true
 label = "Models"
 items = [ "gemini-3.5-flash-lite", "free" ]
-value-sh = "gemini-3.5-flash-lite"
+value = "gemini-3.5-flash-lite"
 
 [[chat.params]]
 name = "models_thinking"
 title = "@chatai_think_text"
 label = "@option_text"
-items = [ "auto|@default_text", "low", "medium", "high" ]
+items = [ "auto|@auto_text", "low|@low_text", "medium|@medium_text", "high|@high_text" ]
 value = "auto"
 
 [[chat.params]]
 name = "chatai_nextrule"
 title = "@chatai_rule_text"
-placeholder = "- Always return text in uppercase"
+placeholder = "@rule_placeholder"
 type = "text"
 max-lines = 6
 
 [[group]]
 [[terminal]]
 id = "terminal"
-title = "Terminal"
+title = "@terminal_title"
 desc = "@home_text_6"
 icon = "{ICON}/shella.png"
 cwd = "{HOME}"
 root = true
-cmd = '''echo 'Welcome to Tool-Tree
+cmd = '''echo "Welcome to Tool-Tree
 
 Type the command:
 
@@ -144,6 +143,6 @@ Type the command:
 - java
 - python
 
-See more in bin and termux/bin.'
+See more in bin and termux/bin."
 '''
 font-size = 14

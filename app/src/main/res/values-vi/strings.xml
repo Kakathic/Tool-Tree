@@ -103,7 +103,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="kr_please_choose_app">Vui lòng chọn ứng dụng</string>
     <string name="kr_please_input_color">Vui lòng nhập màu</string>
     <string name="kr_hint_input_text">Nhập nội dung...</string>
-    <string name="kr_hint_input_password">Nhập mật khẩu...</string>
+    <string name="kr_hint_input_password">Nhập mật mã...</string>
     <string name="kr_hint_input_number">Nhập số...</string>
     <string name="kr_hint_select_or_input">Chọn hoặc nhập...</string>
     <string name="kr_hint_select_or_input_path">Chọn hoặc nhập đường dẫn...</string>

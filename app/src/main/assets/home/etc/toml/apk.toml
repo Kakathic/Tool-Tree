@@ -153,7 +153,7 @@ script = '''
 
   [[action.params]]
   name = "tooldecom"
-  label = "@customize_tools_text"
+  label = "@tools_text"
   value = "apkeditor"
   items = [ "apkeditor|Apkeditor", "apktool|Apktool" ]
 
