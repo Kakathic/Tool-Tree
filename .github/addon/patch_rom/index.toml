@@ -141,7 +141,7 @@ remember = false
 [[action.params]]
 name = "name_author"
 label = "@name_author_text_1"
-desc = "$name_author_text_2"
+desc = "@name_author_text_2"
 value = "Kakathic"
 depend = "set_telegram"
 depend-value = "1"
