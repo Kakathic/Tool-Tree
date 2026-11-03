@@ -19,7 +19,7 @@ config = "{HOME}/etc/toml/feature.toml"
 [[page]]
 title = "@addon_text"
 desc = "@setting_text_8"
-icon = "{ICON}/feature.png"
+icon = "{ICON}/test_addon.png"
 config = "{HOME}/etc/toml/addon.toml"
 support = "glog Toff"
 

@@ -26,7 +26,7 @@ set = "slog Ticon $state"
 
 [[switch]]
 title = "Bố cục 2 mục"
-icon = "{ICON}/icon_off.png"
+icon = "{ICON}/layout.png"
 shell = "hidden"
 auto-restart = true
 get = "glog Toff"
