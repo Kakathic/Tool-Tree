@@ -214,9 +214,7 @@ class ParamsSingleSelect(
             editText.setText(options[0].value ?: "")
         }
 
-        if (actionParamInfo.placeholder.isNotEmpty()) {
-            editText.hint = actionParamInfo.placeholder
-        }
+        editText.hint = actionParamInfo.placeholder.ifEmpty { context.getString(R.string.kr_hint_select_or_input) }
 
         val enabled = !actionParamInfo.readonly && options.isNotEmpty()
         editText.isEnabled = !actionParamInfo.readonly

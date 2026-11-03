@@ -98,6 +98,11 @@
     <string name="kr_please_choose_file">Kérjük, válasszon fájlt</string>
     <string name="kr_please_choose_folder">Kérjük, válasszon mappát</string>
     <string name="kr_please_input_color">Kérjük, adja meg a színt</string>
+    <string name="kr_hint_input_text">Adja meg a szöveget...</string>
+    <string name="kr_hint_input_password">Adja meg a jelszót...</string>
+    <string name="kr_hint_input_number">Adjon meg egy számot...</string>
+    <string name="kr_hint_select_or_input">Válasszon vagy írjon...</string>
+    <string name="kr_hint_select_or_input_path">Válasszon vagy írja be az útvonalat...</string>
     <string name="kr_please_select">Kérjük, válasszon</string>
     <string name="kr_no_selection">Nincs kiválasztva</string>
     <string name="kr_script_task_finished">A feladat befejeződött</string>

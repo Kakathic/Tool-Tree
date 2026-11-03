@@ -114,6 +114,11 @@ If you agree, press the confirm button to continue."</string>
     <string name="kr_please_choose_file">"Please select a file "</string>
     <string name="kr_please_choose_app">Please select an app</string>
     <string name="kr_please_input_color">Please enter a color</string>
+    <string name="kr_hint_input_text">Enter text...</string>
+    <string name="kr_hint_input_password">Enter password...</string>
+    <string name="kr_hint_input_number">Enter a number...</string>
+    <string name="kr_hint_select_or_input">Select or type...</string>
+    <string name="kr_hint_select_or_input_path">Select or type a path...</string>
     <string name="kr_please_select">Please select</string>
     <string name="kr_no_selection">No selection</string>
     <string name="kr_download_create_fail">Failed to create download task</string>

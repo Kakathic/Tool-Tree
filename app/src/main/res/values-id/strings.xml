@@ -88,6 +88,11 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="kr_please_choose_file">Silakan pilih berkas</string>
     <string name="kr_please_choose_app">Silakan pilih aplikasi</string>
     <string name="kr_please_input_color">Silakan masukkan warna</string>
+    <string name="kr_hint_input_text">Masukkan teks...</string>
+    <string name="kr_hint_input_password">Masukkan kata sandi...</string>
+    <string name="kr_hint_input_number">Masukkan angka...</string>
+    <string name="kr_hint_select_or_input">Pilih atau ketik...</string>
+    <string name="kr_hint_select_or_input_path">Pilih atau ketik jalur...</string>
     <string name="kr_please_select">Silakan pilih</string>
     <string name="kr_no_selection">Tidak dipilih</string>
     <string name="kr_download_create_fail">Gagal membuat tugas pengunduhan</string>

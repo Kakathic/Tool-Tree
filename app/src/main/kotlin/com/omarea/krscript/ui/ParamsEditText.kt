@@ -48,12 +48,11 @@ class ParamsEditText(private var actionParamInfo: ActionParamInfo, private var c
             val placeholderText = when {
                 actionParamInfo.placeholder.isNotEmpty() -> actionParamInfo.placeholder
                 isNumber && (actionParamInfo.min != Int.MIN_VALUE || actionParamInfo.max != Int.MAX_VALUE) -> "${actionParamInfo.min} ~ ${actionParamInfo.max}"
-                else -> null
+                isNumber -> context.getString(R.string.kr_hint_input_number)
+                else -> context.getString(R.string.kr_hint_input_text)
             }
-            
-            if (!placeholderText.isNullOrEmpty()) {
-                hint = placeholderText
-            }
+
+            hint = placeholderText
 
             expandBtn.setOnClickListener {
                 val editText = this
@@ -117,9 +116,7 @@ class ParamsEditText(private var actionParamInfo: ActionParamInfo, private var c
 
             isEnabled = !actionParamInfo.readonly
 
-            if (actionParamInfo.placeholder.isNotEmpty()) {
-                hint = actionParamInfo.placeholder
-            }
+            hint = actionParamInfo.placeholder.ifEmpty { context.getString(R.string.kr_hint_input_password) }
 
             var visible = false
             toggleBtn.setOnClickListener {

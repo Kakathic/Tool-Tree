@@ -92,6 +92,11 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="kr_please_choose_file">"Selecciona un archivo "</string>
     <string name="kr_please_choose_app">Selecciona una aplicación</string>
     <string name="kr_please_input_color">Introduce un color</string>
+    <string name="kr_hint_input_text">Introduce texto...</string>
+    <string name="kr_hint_input_password">Introduce la contraseña...</string>
+    <string name="kr_hint_input_number">Introduce un número...</string>
+    <string name="kr_hint_select_or_input">Selecciona o escribe...</string>
+    <string name="kr_hint_select_or_input_path">Selecciona o escribe una ruta...</string>
     <string name="kr_please_select">Selecciona una opción</string>
     <string name="kr_no_selection">Sin selección</string>
     <string name="kr_download_create_fail">Error al crear la tarea de descarga</string>

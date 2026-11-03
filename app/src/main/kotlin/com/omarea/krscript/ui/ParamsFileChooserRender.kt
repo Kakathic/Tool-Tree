@@ -57,7 +57,7 @@ class ParamsFileChooserRender(
         if (actionParamInfo.editable) {
             textView.visibility = View.GONE
             pathView.visibility = View.VISIBLE
-            pathView.hint = hintText
+            pathView.hint = context.getString(R.string.kr_hint_select_or_input_path)
         } else {
             textView.visibility = View.GONE
             pathView.visibility = View.VISIBLE
