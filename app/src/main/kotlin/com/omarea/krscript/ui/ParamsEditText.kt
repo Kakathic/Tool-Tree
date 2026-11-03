@@ -62,7 +62,7 @@ class ParamsEditText(private var actionParamInfo: ActionParamInfo, private var c
                         actionParamInfo.label?.ifEmpty { null }
                 )
                 val dialogTitle = if (titleParts.isNotEmpty()) {
-                    titleParts.joinToString(" ")
+                    titleParts.joinToString(" | ")
                 } else {
                     null
                 }
