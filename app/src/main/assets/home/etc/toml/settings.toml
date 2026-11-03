@@ -41,37 +41,45 @@ else
   exit
 fi
 """
-  
+
 [[group]]
-[[action]]
-keep-dialog = true
-id = "chatgemini"
-title = "Chat Gemini"
-desc = "@chat_gemini_text"
+[[chat]]
+id = "chatbot"
 icon = "{ICON}/chatai.png"
-lock-sh = '[ -z $(glog api_genmini) ] && echo "@warn_gemini_text" || echo 0'
-script = """
-slog models_genmini "$models_genmini"
-gemini --lang "$chatai_lang" --model "$models_genmini" --thinking "$models_thinking" --instruction "$chatai_nextrule" -p "$chatai"
-"""
+title = "Chatbot AI"
+chat-title = "Chatbot"
+user-title = "Bạn"
+placeholder = "Nhập tin nhắn…"
+max-lines = 8
+markdown = true
+greeting = "Xin chào tôi có thể giúp gì cho bạn?"
+script = '''
+chatbot --all --markdown --progress --stream --lang "$chatai_lang" --model "$ai_models" --provider "$list_provider" --instruction "$chatai_nextrule" --thinking "$models_thinking" --memory-file "$HOME/.cache/$CHAT_ID.sql" -p "$MSG"
+'''
 
-[[action.params]]
-name = "models_genmini"
-placeholder = "gemini-3.1-flash-lite"
-title = "Models Gemini"
-editable = true
-label = "Models"
-items = [ "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" ]
-value-sh = "glog models_genmini gemini-3.5-flash-lite"
+[[chat.menu]]
+title = "Xoá bộ nhớ chatbot"
+type = "clear"
+silent = true
+script = '''
+rm -f "$HOME/.cache/$CHAT_ID.sql" 2>/dev/null
+'''
 
-[[action.params]]
-name = "models_thinking"
-title = "@chatai_think_text"
-label = "@option_text"
-items = [ "auto|@default_text", "low", "medium", "high" ]
-value = "auto"
+[[chat.menu]]
+title = "Tạo API key"
+script = '''
+echo "Đăng ký API KEY chính thức tại website sau:"
+echo
+chatbot --list-websites
+'''
 
-[[action.params]]
+[[chat.menu]]
+title = "Danh sách model"
+script = '''
+chatbot --list-models
+'''
+
+[[chat.params]]
 name = "chatai_lang"
 title = "@permis_text_5"
 label = "@permis_text_2"
@@ -79,20 +87,37 @@ placeholder = "en-US"
 type = "text"
 value-sh = 'echo "$LANGUAGE-$COUNTRY"'
 
-[[action.params]]
+[[chat.params]]
+name = "list_provider"
+placeholder = "gemini"
+title = "Chọn nhà cung cấp"
+label = "Provider"
+items = [ "gemini|Gemini", "openai", "openrouter", "groq", "together", "custom" ]
+value = "gemini"
+
+[[chat.params]]
+name = "ai_models"
+placeholder = "gemini-3.5-flash-lite"
+title = "Models API"
+desc = "Có thể sửa thành model khác"
+editable = true
+label = "Models"
+items = [ "gemini-3.5-flash-lite", "free" ]
+value-sh = "gemini-3.5-flash-lite"
+
+[[chat.params]]
+name = "models_thinking"
+title = "@chatai_think_text"
+label = "@option_text"
+items = [ "auto|@default_text", "low", "medium", "high" ]
+value = "auto"
+
+[[chat.params]]
 name = "chatai_nextrule"
 title = "@chatai_rule_text"
 placeholder = "- Always return text in uppercase"
 type = "text"
-max-lines = 4
-
-[[action.params]]
-name = "chatai"
-title = "@doc_text"
-placeholder = "Hello Gemini"
-type = "text"
-required = true
-max-lines = 8
+max-lines = 6
 
 [[group]]
 [[terminal]]
