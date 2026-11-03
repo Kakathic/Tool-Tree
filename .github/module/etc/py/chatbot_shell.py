@@ -77,7 +77,7 @@ RUN_COMMAND_TOOL = {
     "required": ["command"],
   },
 }
-DATA_DIR = os.path.join(os.path.expanduser("~"), ".gemini_cli")
+DATA_DIR = os.path.join(os.path.expanduser("~"), ".cache")
 DEFAULT_LOG_FILE = os.path.join(DATA_DIR, "actions.log")
 INTERACTIVE_HISTORY_CHARS = 60000
 POWER_PROGRAMS = {"reboot", "shutdown", "poweroff", "halt"}
@@ -973,19 +973,33 @@ def build_system_instruction(
     )
   if shell_enabled or files_enabled:
     parts.append(
-      "Batch independent operations to reduce tool-call overhead. When several "
-      "independent actions are already known, issue them together in one tool round "
-      "whenever the API supports multiple function calls. For shell work, combine "
-      "related read-only checks into one concise command or short script. For file work, "
-      "read multiple required files in the same tool round and group independent edits "
-      "or searches when possible. Execute dependent actions sequentially, using each "
-      "result before deciding the next step. Never batch in a way that obscures errors, "
-      "weakens safety or bypasses confirmation. Keep output concise and relevant. "
-      "Retry only for plausibly temporary failures or when a specific corrective action "
-      "is available; keep retries bounded and never repeat a denied or destructive action. "
-      "Distinguish API, tool, syntax, build and logic errors. If an operation fails, "
-      "inspect the actual result, correct it when safe and within scope, or explain the "
-      "cause and current state. Do not claim an operation succeeded without evidence."
+      "Batch independent operations to minimize tool-call overhead. Before calling "
+      "any tool, identify all currently known operations and group independent ones "
+      "into the fewest possible tool calls. Do not execute independent operations "
+      "one by one when they can safely be grouped. "
+      "For shell work, you MUST combine all currently known independent shell "
+      "commands into a single shell invocation whenever possible. Prefer one concise "
+      "multi-command script over multiple shell tool calls. Do not make a separate "
+      "shell call for each command when those commands can be executed together. "
+      "Use && when a command depends on the successful completion of the previous "
+      "command, and use ; or explicit status handling for independent commands that "
+      "should run regardless of previous failures. Preserve and report individual "
+      "command failures instead of silently ignoring them. "
+      "Only make another shell call when the next operation depends on a previous "
+      "result, requires information that was not available earlier, or is needed to "
+      "correct a failure. Before every additional shell call, check whether the "
+      "remaining independent operations can also be included. "
+      "For file work, read multiple required files in the same tool round and group "
+      "independent edits or searches when the API supports it. Execute dependent "
+      "actions sequentially, using each result before deciding the next step. "
+      "Never batch in a way that obscures errors, weakens safety or bypasses "
+      "confirmation. Keep output concise and relevant. "
+      "Retry only for plausibly temporary failures or when a specific corrective "
+      "action is available; keep retries bounded and never repeat a denied or "
+      "destructive action. Distinguish API, tool, syntax, build and logic errors. "
+      "If an operation fails, inspect the actual result, correct it when safe and "
+      "within scope, or explain the cause and current state. Do not claim an "
+      "operation succeeded without evidence."
     )
     parts.append(
       "Before reporting completion, verify the actual result. Read back edited files "
