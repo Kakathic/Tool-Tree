@@ -16,6 +16,14 @@ icon = "{ICON}/feature.png"
 config = "{HOME}/etc/toml/feature.toml"
 
 [[group]]
+[[page]]
+title = "@addon_text"
+desc = "@setting_text_8"
+icon = "{ICON}/feature.png"
+config = "{HOME}/etc/toml/addon.toml"
+support = "glog Toff"
+
+[[group]]
 [[picker]]
 title = "@permis_text_2"
 desc = "@permis_text_5"
@@ -47,6 +55,7 @@ fi
 id = "chatbot"
 icon = "{ICON}/chatai.png"
 title = "Chatbot AI"
+desc = "@chat_gemini_text"
 chat-title = "Chatbot"
 user-title = "Bạn"
 placeholder = "Nhập tin nhắn…"

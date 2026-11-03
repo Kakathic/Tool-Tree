@@ -44,6 +44,14 @@ EOF
 
 [[group]]
 [[page]]
+title = "@setting_text"
+desc = "@home_text_1"
+icon = "{ICON}/settings.png"
+config = "{HOME}/etc/toml/settings.toml"
+support = "glog Toff"
+
+[[group]]
+[[page]]
 title = "@editor_apk"
 desc = "@setting_text_4"
 icon = "{ICON}/project2.png"

@@ -24,6 +24,14 @@ auto-restart = true
 get = "glog Ticon"
 set = "slog Ticon $state"
 
+[[switch]]
+title = "Bố cục 2 mục"
+icon = "{ICON}/icon_off.png"
+shell = "hidden"
+auto-restart = true
+get = "glog Toff"
+set = "slog Toff $state"
+
 [[group]]
 [[action]]
 title = "@project_text_12"
