@@ -63,8 +63,11 @@ max-lines = 8
 markdown = true
 greeting = "@chat_greeting"
 script = '''
-slog list_provider "$list_provider"
 chatbot --all --markdown --progress --stream --lang "$chatai_lang" --model "$ai_models" --provider "$list_provider" --instruction "$chatai_nextrule" --thinking "$models_thinking" --memory-file "$HOME/.cache/$CHAT_ID.sql" -p "$MSG"
+'''
+params-script = '''
+slog list_provider "$list_provider"
+slog ai_models "$ai_models"
 '''
 
 [[chat.menu]]
@@ -111,7 +114,7 @@ desc = "@api_model_desc"
 editable = true
 label = "Models"
 items = [ "gemini-3.5-flash-lite", "free" ]
-value = "gemini-3.5-flash-lite"
+value-sh = "glog ai_models gemini-3.5-flash-lite"
 
 [[chat.params]]
 name = "models_thinking"
