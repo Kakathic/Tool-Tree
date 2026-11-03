@@ -55,8 +55,7 @@ THINKING_UNSUPPORTED = set()
 RECENT_CONTEXT_CHARS = 16000
 SUMMARY_CHUNK_CHARS = 8000
 MAX_SUMMARY_CHARS = 6000
-DEFAULT_SHELL_TIMEOUT = 60
-DEFAULT_MAX_TOOL_STEPS = 12
+DEFAULT_SHELL_TIMEOUT = 0  # 0 = no time limit for commands
 MAX_COMMAND_OUTPUT_CHARS = 8000
 RUN_COMMAND_TOOL = {
   "type": "function",
@@ -291,6 +290,7 @@ UI_TEXT = {
     "goodbye": "Hẹn gặp lại lần sau.",
     "spinner": "AI đang tạo câu trả lời...",
     "tool_running": "AI đang thực hiện: {tool}",
+    "command_running": "Đang chạy lệnh #{number}: {command}",
     "help_title": "Các lệnh:",
     "help": "Hiển thị danh sách lệnh.",
     "thinking_help": "Thay đổi mức suy nghĩ.",
@@ -324,7 +324,6 @@ UI_TEXT = {
     "run_prompt": "Cho phép chạy lệnh này? [y = có / N = không / a = luôn cho phép]",
     "run_denied": "Đã từ chối chạy lệnh.",
     "run_non_tty": "Cần xác nhận nhưng không có terminal; dùng --yes để tự động cho phép.",
-    "tool_limit": "Vượt quá số bước chạy lệnh tối đa.",
     "files_help": "Bật/tắt công cụ đọc, sửa, ghi, tìm file.",
     "files_usage": "Cách dùng: /files on|off",
     "files_state": "Công cụ file: {value}",
@@ -335,8 +334,18 @@ UI_TEXT = {
     "all_state": "Tất cả: {value}",
     "stream_help": "Bật/tắt hiển thị câu trả lời dần dần (streaming).",
     "stream_usage": "Cách dùng: /stream on|off",
-    "stream_state": "Streaming: {value}",
-    "stream_label": "Streaming",
+    "stream_state": "Phát trực tiếp: {value}",
+    "stream_label": "Phát trực tiếp",
+    "provider_label": "Nhà cung cấp",
+    "state_on": "bật",
+    "state_off": "tắt",
+    "state_ask": "bật (hỏi trước)",
+    "state_auto": "tự động",
+    "language_name_vi": "Tiếng Việt",
+    "providers_title": "Các nhà cung cấp AI được hỗ trợ",
+    "websites_title": "Trang web nhà cung cấp và đăng ký khóa API",
+    "custom_service": "Tự cấu hình dịch vụ API của bạn",
+    "documentation": "Tài liệu",
     "throttle_wait": "Đang chờ để không vượt giới hạn yêu cầu:",
     "net_down": "Mất kết nối mạng hoặc máy chủ đã ngắt kết nối. Hãy kiểm tra Internet rồi thử lại. ({detail})",
     "net_timeout": "Hết thời gian chờ phản hồi. Mạng có thể đang yếu hoặc bị mất, hãy kiểm tra Internet rồi thử lại.",
@@ -358,6 +367,7 @@ UI_TEXT = {
     "goodbye": "See you next time.",
     "spinner": "AI is generating the answer...",
     "tool_running": "AI is running: {tool}",
+    "command_running": "Running command #{number}: {command}",
     "help_title": "Commands:",
     "help": "Show available commands.",
     "thinking_help": "Change thinking level.",
@@ -391,7 +401,6 @@ UI_TEXT = {
     "run_prompt": "Allow this command? [y = yes / N = no / a = always]",
     "run_denied": "Command was denied.",
     "run_non_tty": "Confirmation needed but no terminal; use --yes to auto-approve.",
-    "tool_limit": "Maximum number of command steps exceeded.",
     "files_help": "Turn file read/edit/write/search tools on/off.",
     "files_usage": "Usage: /files on|off",
     "files_state": "File tools: {value}",
@@ -404,6 +413,16 @@ UI_TEXT = {
     "stream_usage": "Usage: /stream on|off",
     "stream_state": "Streaming: {value}",
     "stream_label": "Streaming",
+    "provider_label": "Provider",
+    "state_on": "on",
+    "state_off": "off",
+    "state_ask": "on (ask)",
+    "state_auto": "auto",
+    "language_name_vi": "Vietnamese",
+    "providers_title": "Supported AI providers",
+    "websites_title": "Provider websites and API-key registration",
+    "custom_service": "Configure your own API service",
+    "documentation": "Documentation",
     "throttle_wait": "Waiting to stay under the request limit:",
     "net_down": "Network connection lost or the server closed the connection. Check your Internet and try again. ({detail})",
     "net_timeout": "Timed out waiting for a response. The network may be weak or offline; check your Internet and try again.",
@@ -432,6 +451,10 @@ def normalize_language(value):
   if key == "en":
     return "English"
   return value
+
+def display_language(language, ui):
+  """Show the language name in the CLI language (e.g. Tiếng Việt in the Vietnamese CLI)."""
+  return ui["language_name_vi"] if language == "Vietnamese" else language
 
 def get_cli_language(language):
   """Automatically match CLI interface language to the chatbot output language."""
@@ -620,7 +643,7 @@ class Spinner:
       frame = next(frames)
       sys.stdout.write(
         f"\r{COLORS.spinner(frame)} "
-        f"{COLORS.spinner(self.message)}"
+        f"{COLORS.spinner(self.message)}\033[K"
       )
       sys.stdout.flush()
       time.sleep(0.09)
@@ -785,13 +808,7 @@ def parse_args():
     "--shell-timeout",
     type=int,
     default=DEFAULT_SHELL_TIMEOUT,
-    help="Seconds before a command is killed (default 60).",
-  )
-  parser.add_argument(
-    "--max-tool-steps",
-    type=int,
-    default=DEFAULT_MAX_TOOL_STEPS,
-    help="Maximum command rounds per question (default 12).",
+    help="Seconds before a command is killed (default 0 = no limit).",
   )
   parser.add_argument(
     "--memory-file",
@@ -848,10 +865,8 @@ def parse_args():
     parser.error("--yes requires --shell or --files.")
   if args.rpm < 0 or args.max_retries < 0:
     parser.error("--rpm and --max-retries cannot be negative.")
-  if args.shell_timeout <= 0 or args.max_tool_steps <= 0:
-    parser.error(
-      "--shell-timeout and --max-tool-steps must be greater than 0."
-    )
+  if args.shell_timeout < 0:
+    parser.error("--shell-timeout cannot be negative (0 = no limit).")
   if args.provider == "custom" and not args.base_url and not (args.list_providers or args.list_websites):
     parser.error("--provider custom requires --base-url.")
   args.base_url = (args.base_url or PROVIDERS[args.provider]["base_url"]).rstrip("/")
@@ -1136,14 +1151,15 @@ def _compatible_read(opened, payload, stream_callback):
     raise RuntimeError(ACTIVE_PROVIDER["name"].title() + " returned neither text nor tool calls.")
   return answer, steps
 
-def list_providers(show_websites=False):
-  print("Supported AI providers" if not show_websites else "Provider websites and API-key registration")
+def list_providers(show_websites=False, ui=None):
+  ui = ui or UI_TEXT["en"]
+  print(ui["providers_title"] if not show_websites else ui["websites_title"])
   for key, item in PROVIDERS.items():
     if show_websites:
-      registration = item["key_url"] or "Configure your own API service"
+      registration = item["key_url"] or ui["custom_service"]
       print(f"  {item['label']:<30} {registration}")
       if item.get("website"):
-        print(f"    Documentation: {item['website']}")
+        print(f"    {ui['documentation']}: {item['website']}")
     else:
       print(f"  {key:<12} {item['label']}")
 
@@ -1569,7 +1585,6 @@ class ShellPolicy:
 
   def __init__(self, enabled=False, auto_approve=False,
                timeout=DEFAULT_SHELL_TIMEOUT,
-               max_steps=DEFAULT_MAX_TOOL_STEPS,
                files_enabled=False,
                allowed_roots=None,
                log_path=None):
@@ -1580,7 +1595,7 @@ class ShellPolicy:
     self.enabled = enabled
     self.auto_approve = auto_approve
     self.timeout = timeout
-    self.max_steps = max_steps
+    self.command_count = 0
 
 def _find_shell():
   for name in ("bash", "sh"):
@@ -1632,8 +1647,12 @@ def _collect_after_kill(proc):
     _clip((err or b"").decode("utf-8", errors="replace")),
   )
 
-def execute_command(command, timeout):
-  """Run a command in its own process group; return a JSON-able dict."""
+def execute_command(command, timeout, on_output=None):
+  """Run a command in its own process group; return a JSON-able dict.
+
+  on_output(bytes) is called from reader threads with each chunk of stdout/stderr as it
+  arrives, so the caller can show a live log. The full (clipped) output is still returned.
+  """
   shell = _find_shell()
   if not shell:
     return {"error": "No shell found on this device."}
@@ -1648,11 +1667,47 @@ def execute_command(command, timeout):
     )
   except OSError as exc:
     return {"error": f"Cannot run command: {exc}"}
+  chunks = {"out": [], "err": []}
+
+  def reader(pipe, key):
+    try:
+      fd = pipe.fileno()
+      while True:
+        data = os.read(fd, 4096)
+        if not data:
+          break
+        chunks[key].append(data)
+        if on_output:
+          try:
+            on_output(data)
+          except Exception:
+            pass
+    except (OSError, ValueError):
+      pass
+
+  threads = [
+    threading.Thread(target=reader, args=(proc.stdout, "out"), daemon=True),
+    threading.Thread(target=reader, args=(proc.stderr, "err"), daemon=True),
+  ]
+  for thread in threads:
+    thread.start()
+
+  def collect(wait):
+    # Pipes held open by orphaned background processes must not block us forever
+    deadline = time.time() + wait
+    for thread in threads:
+      thread.join(timeout=max(0.0, deadline - time.time()))
+    return (
+      _clip(b"".join(chunks["out"]).decode("utf-8", errors="replace")),
+      _clip(b"".join(chunks["err"]).decode("utf-8", errors="replace")),
+    )
+
   try:
-    out, err = proc.communicate(timeout=timeout)
+    proc.wait(timeout=timeout or None)
   except subprocess.TimeoutExpired:
     _kill_group(proc)
-    out, err = _collect_after_kill(proc)
+    proc.wait()
+    out, err = collect(2)
     return {
       "error": (
         f"Command timed out after {timeout}s; it and its child "
@@ -1663,17 +1718,67 @@ def execute_command(command, timeout):
     }
   except KeyboardInterrupt:
     _kill_group(proc)
-    out, err = _collect_after_kill(proc)
+    proc.wait()
+    out, err = collect(2)
     return {
       "error": "Interrupted by the user (Ctrl+C); the command was stopped.",
       "stdout": out,
       "stderr": err,
     }
+  out, err = collect(2)
   return {
     "exit_code": proc.returncode,
-    "stdout": _clip(out.decode("utf-8", errors="replace")),
-    "stderr": _clip(err.decode("utf-8", errors="replace")),
+    "stdout": out,
+    "stderr": err,
   }
+
+class LiveLog:
+  """Shows the last line of a running command's output as a transient status line.
+
+  With the spinner running (terminal) the line is the spinner message; with --progress
+  (pipe) it is a status line ending in a carriage return. Both are replaced or erased
+  once the AI answers, so only the final answer stays on screen.
+  """
+
+  ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07|[\x00-\x08\x0b-\x1f\x7f]")
+
+  def __init__(self, label_full, label_short):
+    self.label_full = label_full
+    self.label_short = label_short
+    self.lock = threading.Lock()
+    self.tail = ""
+    self.line = ""
+    self.last_shown = 0.0
+
+  def available(self):
+    spinner = ACTIVE_SPINNER["s"]
+    return bool(spinner and spinner.thread) or progress_enabled()
+
+  def _show(self, text):
+    spinner = ACTIVE_SPINNER["s"]
+    if spinner and spinner.thread:
+      spinner.message = _fit(text)
+    elif progress_enabled():
+      emit_progress(text)
+
+  def start(self):
+    self._show(self.label_full)
+
+  def feed(self, data):
+    with self.lock:
+      self.tail += data.decode("utf-8", errors="replace")
+      parts = re.split(r"[\r\n]+", self.tail)
+      # Keep only the unfinished last line; the newest non-empty piece is the live log
+      self.tail = parts[-1][-500:]
+      for part in reversed(parts):
+        part = self.ANSI.sub("", part).strip()
+        if part:
+          self.line = part
+          break
+      now = time.time()
+      if self.line and now - self.last_shown >= 0.1:
+        self.last_shown = now
+        self._show(f"{self.label_short} │ {self.line}")
 
 def _protected_target(arg, home, prefix):
   expanded = os.path.expandvars(os.path.expanduser(arg))
@@ -2203,7 +2308,19 @@ def run_tool_call(step, policy, ui):
         )
       }
     elif confirm_command(command, policy, ui):
-      result = execute_command(command, policy.timeout)
+      policy.command_count += 1
+      command_number = policy.command_count
+      live = LiveLog(
+        ui["command_running"].format(number=command_number, command=command),
+        ui["command_running"].format(number=command_number, command=_fit(command, 30)),
+      )
+      if live.available():
+        live.start()
+        result = execute_command(command, policy.timeout, live.feed)
+      else:
+        print(COLORS.label(live.label_full), flush=True)
+        result = execute_command(command, policy.timeout)
+      result["command_number"] = command_number
     else:
       result = {"error": "The user denied this command."}
       print(COLORS.error(ui["run_denied"]), file=sys.stderr)
@@ -2297,7 +2414,7 @@ def chat_turn(
   policy = policy or ShellPolicy()
   generated = []
   working = list(history)
-  for _ in range(policy.max_steps + 1):
+  while True:
     spinner = Spinner(spinner_text) if spinner_text else None
     ACTIVE_SPINNER["s"] = spinner
     if spinner:
@@ -2357,7 +2474,6 @@ def chat_turn(
       if spinner:
         spinner.stop()
       ACTIVE_SPINNER["s"] = None
-  raise RuntimeError(ui["tool_limit"] if ui else "Too many tool steps.")
 
 def get_memory_path(args):
   configured_path = (
@@ -2806,10 +2922,10 @@ def run():
     )
     return 2
   if args.list_providers:
-    list_providers()
+    list_providers(ui=ui)
     return 0
   if args.list_websites:
-    list_providers(show_websites=True)
+    list_providers(show_websites=True, ui=ui)
     return 0
   ACTIVE_PROVIDER["name"] = args.provider
   ACTIVE_PROVIDER["base_url"] = args.base_url
@@ -2865,7 +2981,6 @@ def run():
     enabled=args.shell,
     auto_approve=args.yes,
     timeout=args.shell_timeout,
-    max_steps=args.max_tool_steps,
     files_enabled=args.files,
     allowed_roots=(
       None
@@ -2889,18 +3004,21 @@ def run():
     ),
   )
 
+  def current_ui():
+    return ACTIVE_UI["ui"] or UI_TEXT["en"]
+
   def shell_status():
     if not policy.enabled:
-      return "off"
-    return "auto" if policy.auto_approve else "on (ask)"
+      return current_ui()["state_off"]
+    return current_ui()["state_auto" if policy.auto_approve else "state_ask"]
 
   def files_status():
-    return "on" if policy.files_enabled else "off"
+    return current_ui()["state_on" if policy.files_enabled else "state_off"]
 
   streaming = args.stream
 
   def stream_status():
-    return "on" if streaming else "off"
+    return current_ui()["state_on" if streaming else "state_off"]
 
   if one_shot:
     question = question.strip()
@@ -2994,11 +3112,11 @@ def run():
   print()
   provider_label = PROVIDERS[args.provider]["label"]
   status_rows = (
-    ("Provider", provider_label),
+    (ui["provider_label"], provider_label),
     (ui["mode_label"], ui["mode"]),
     (ui["model_label"], model),
     (ui["thinking"], thinking),
-    (ui["language"], language),
+    (ui["language"], display_language(language, ui)),
     (ui["shell_label"], shell_status()),
     (ui["files_label"], files_status()),
     (ui["stream_label"], stream_status()),
@@ -3006,7 +3124,7 @@ def run():
       ui["log_label"],
       policy.log_path
       if (policy.log_path and (policy.enabled or policy.files_enabled))
-      else "off",
+      else ui["state_off"],
     ),
   )
   label_width = max(
@@ -3078,7 +3196,7 @@ def run():
       print(
         COLORS.value(
           ui["language_changed"].format(
-            language=language
+            language=display_language(language, ui)
           )
         )
       )
