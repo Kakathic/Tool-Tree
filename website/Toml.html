@@ -1012,6 +1012,7 @@ type = "rows"
 [[action.params.rows]]
 text-sh = "chatbot --list-websites"
 line = true</code></pre>
+<div class="callout tip">If the first row of a <code>rows</code> block has <code>line = true</code>, the divider is drawn as a thin line at the top of the block (it no longer takes a whole text line), so the gap after the previous param stays the same as between other params.</div>
 <div class="callout tip">A <code>rows</code> block with no visible rows (or <code>support = false</code>) is skipped. A dialog counts only real inputs (not <code>rows</code> blocks) when deciding between the small dialog and the full-screen one (more than 4).</div>
 <h3>7.4. Demo</h3>
 <div class="demo-block"><div class="demo-label">Demo - params dialog</div><div class="demo-frame">

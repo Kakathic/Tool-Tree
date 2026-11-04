@@ -97,6 +97,13 @@ object RowsRenderHelper {
 
     private class BgState(val dyn: HashMap<Int, String>, val nodeDyn: String)
 
+    private val compactLeadingDividerViews: MutableSet<TextView> = Collections.newSetFromMap(WeakHashMap())
+
+    /** Khối rows trong params: đường kẻ ở đầu khối không chiếm cả một dòng chữ (tránh khoảng trống gấp đôi). */
+    fun markCompactLeadingDivider(rowsView: TextView?) {
+        if (rowsView != null) compactLeadingDividerViews.add(rowsView)
+    }
+
     private val bgViews = WeakHashMap<TextView, ImageView>()
     private val bgStates = WeakHashMap<TextView, BgState>()
 
@@ -330,7 +337,11 @@ object RowsRenderHelper {
                     rowsView.append("\n")
                 }
                 val dividerLine = SpannableString(" ")
-                dividerLine.setSpan(DividerSpan(context), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                if (compactLeadingDividerViews.contains(rowsView) && rowsView.length() == 0) {
+                    dividerLine.setSpan(CompactDividerSpan(context, dpToPx(context, 9)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                } else {
+                    dividerLine.setSpan(DividerSpan(context), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
                 rowsView.append(dividerLine)
                 rowsView.append("\n")
             } else if (rowsView.length() > 0) {
@@ -1019,6 +1030,24 @@ object RowsRenderHelper {
         override fun drawLeadingMargin(canvas: Canvas, paint: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int, text: CharSequence?, start: Int, end: Int, first: Boolean, layout: Layout?) {
             val strokePaint = BlurEngine.getStrokePaint(context)
             val y = top + (bottom - top) * 0.65f
+            val right = (layout?.width ?: 0).toFloat()
+            canvas.drawLine(0f, y, right, y, strokePaint)
+        }
+    }
+
+    private class CompactDividerSpan(private val context: Context, private val heightPx: Int) : LeadingMarginSpan, LineHeightSpan {
+        override fun getLeadingMargin(first: Boolean): Int = 0
+
+        override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
+            fm.ascent = -heightPx
+            fm.top = -heightPx
+            fm.descent = 0
+            fm.bottom = 0
+        }
+
+        override fun drawLeadingMargin(canvas: Canvas, paint: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int, text: CharSequence?, start: Int, end: Int, first: Boolean, layout: Layout?) {
+            val strokePaint = BlurEngine.getStrokePaint(context)
+            val y = top + strokePaint.strokeWidth.coerceAtLeast(1f)
             val right = (layout?.width ?: 0).toFloat()
             canvas.drawLine(0f, y, right, y, strokePaint)
         }

@@ -678,6 +678,7 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
             box.addView(photoView, 0)
         }
 
+        RowsRenderHelper.markCompactLeadingDivider(textView)
         RowsRenderHelper.bind(context, textView, photoView, info.rows, config)
         linearLayout.addView(layout)
         info.name?.let { rowViews[it] = layout }
