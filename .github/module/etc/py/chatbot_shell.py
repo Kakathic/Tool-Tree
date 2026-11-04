@@ -45,7 +45,7 @@ PROVIDERS = {
   "openrouter": {"label": "OpenRouter", "env": "OPENROUTER_API_KEY", "base_url": "https://openrouter.ai/api/v1", "default_model": OPENROUTER_DEFAULT_MODEL, "key_url": "https://openrouter.ai/settings/keys", "website": "https://openrouter.ai/docs"},
   "groq": {"label": "Groq", "env": "GROQ_API_KEY", "base_url": "https://api.groq.com/openai/v1", "default_model": "openai/gpt-oss-120b", "key_url": "https://console.groq.com/keys", "website": "https://console.groq.com/docs"},
   "together": {"label": "Together AI", "env": "TOGETHER_API_KEY", "base_url": "https://api.together.ai/v1", "default_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "key_url": "https://api.together.ai/settings/api-keys", "website": "https://docs.together.ai"},
-  "custom": {"label": "Custom OpenAI-compatible", "env": "CUSTOM_API_KEY", "base_url": "", "default_model": "", "key_url": "", "website": "https://platform.openai.com/docs/api-reference"},
+  "deepseek": {"label": "DeepSeek", "env": "DEEPSEEK_API_KEY", "base_url": "https://api.deepseek.com", "default_model": "deepseek-v4-flash", "key_url": "https://platform.deepseek.com/api_keys", "website": "https://api-docs.deepseek.com/"},
 }
 ACTIVE_PROVIDER = {"name": "gemini", "base_url": ""}
 DEFAULT_LANGUAGE = "English"
@@ -88,7 +88,18 @@ ACTIVE_SPINNER = {"s": None}
 # through a pipe, so the spinner cannot run). Enabled with --progress / GEMINI_CLI_PROGRESS=1.
 # A status line ends with "\r": a reader that honors carriage returns replaces it with the next
 # output, so it never becomes part of the answer.
-PROGRESS = {"enabled": False, "pending": False, "col0": True}
+# The status line is cumulative: every step of the current request is kept on the one line
+# ("A › B › C │ newest log line") until the answer replaces it. "steps" holds those steps.
+# Some providers (e.g. Groq, behind Cloudflare) reject the default "Python-urllib" User-Agent
+# with HTTP 403 "error code: 1010". Send a normal User-Agent on every request instead.
+USER_AGENT = "Mozilla/5.0 (Linux; Android) ChatbotCLI/1.0 (+https://github.com/Zenlua/Tool-Tree)"
+_opener = urllib.request.build_opener()
+_opener.addheaders = [("User-Agent", USER_AGENT)]
+urllib.request.install_opener(_opener)
+
+PROGRESS_MAX_CHARS = 4000  # status line length cap when output is a pipe (effectively no cut)
+# "single": True = old style, one status line per step (each replaces the previous one).
+PROGRESS = {"enabled": False, "pending": False, "col0": True, "steps": [], "single": False}
 
 def progress_enabled():
   return PROGRESS["enabled"] and not sys.stdout.isatty()
@@ -99,17 +110,53 @@ def _fit(text, limit=None):
     if sys.stdout.isatty():
       limit = max(20, shutil.get_terminal_size((80, 24)).columns - 4)
     else:
-      limit = 120
+      limit = PROGRESS_MAX_CHARS
   return text if len(text) <= limit else text[:limit - 1] + "…"
 
-def emit_progress(text):
+def _step_key(text):
+  """Same step with a changing countdown ("... 12s") counts as one step."""
+  return re.sub(r"\d+s$", "#", str(text).rstrip("."))
+
+def _render_steps(steps, limit=PROGRESS_MAX_CHARS):
+  """Join the steps into one line; the oldest are dropped first so the newest stays visible."""
+  who = WHO.get("label", "")
+  parts = []
+  for index, text in enumerate(steps):
+    text = " ".join(str(text).split())
+    if index > 0 and who:
+      text = text.replace(who, "AI")
+    if index < len(steps) - 1:
+      text = text.rstrip(".").rstrip("…")
+    parts.append(text)
+  prefix = ""
+  while len(parts) > 1 and len(prefix + " › ".join(parts)) > limit:
+    parts.pop(0)
+    prefix = "… › "
+  return _fit(prefix + " › ".join(parts), limit)
+
+def emit_progress(text, update=None):
+  """Add a step to the status line, or (update=True, or text with " │ " live detail) replace
+  the newest step. With update=None the choice is automatic."""
   if not progress_enabled() or not text:
     return
+  if not PROGRESS["pending"]:
+    PROGRESS["steps"] = []  # the previous status line is gone (answer written): start fresh
+  steps = PROGRESS["steps"]
+  if update is None:
+    update = " │ " in text
+  if steps and (update or _step_key(steps[-1]) == _step_key(text)):
+    steps[-1] = text
+  else:
+    steps.append(text)
+  del steps[:-40]
+  if PROGRESS["single"]:
+    steps[:] = [text]  # old style: only the newest step is shown
   if not PROGRESS["col0"]:
     # Do not overwrite a half-written answer line: commit it first
     sys.stdout.write("\n")
     PROGRESS["col0"] = True
-  sys.stdout.write(_fit(text) + "\r")
+  limit = max(20, shutil.get_terminal_size((80, 24)).columns - 4) if sys.stdout.isatty() else PROGRESS_MAX_CHARS
+  sys.stdout.write(_render_steps(steps, limit) + "\r")
   sys.stdout.flush()
   PROGRESS["pending"] = True
 
@@ -291,6 +338,26 @@ UI_TEXT = {
     "spinner": "AI đang tạo câu trả lời...",
     "tool_running": "AI đang thực hiện: {tool}",
     "command_running": "Đang chạy lệnh #{number}: {command}",
+    "responding": "{who} đang phản hồi...",
+    "sending_result": "{detail} xong, đang gửi kết quả cho {who}...",
+    "sending_request": "Đang gửi yêu cầu tới {who}...",
+    "receiving": "Đang nhận phản hồi từ {who}...",
+    "thinking_stage": "{who} đang suy nghĩ...",
+    "composing_call": "{who} đang soạn lệnh/công cụ...",
+    "processing": "Đã nhận phản hồi từ {who}, đang xử lý...",
+    "result_exit": "Lệnh #{n} (mã thoát {code})",
+    "result_error": "{tool} lỗi",
+    "result_ok": "{tool}",
+    "tools_parallel": "AI đang chạy song song {n} tác vụ đọc: {detail}",
+    "result_file": "{tool}: {path}",
+    "edited_title": "Tệp đã thay đổi:",
+    "edited_created": "tạo mới",
+    "edited_overwritten": "ghi đè",
+    "edited_edited": "sửa",
+    "edited_verified": "đã kiểm tra lại trên đĩa",
+    "edited_unchanged": "nội dung không đổi",
+    "edited_failed": "kiểm tra thất bại, tệp có thể chưa đúng",
+    "edited_restored": "kiểm tra thất bại, đã khôi phục bản gốc",
     "help_title": "Các lệnh:",
     "help": "Hiển thị danh sách lệnh.",
     "thinking_help": "Thay đổi mức suy nghĩ.",
@@ -313,6 +380,20 @@ UI_TEXT = {
     "api_valid": "API key: HỢP LỆ",
     "model_accessible": "Model: CÓ THỂ TRUY CẬP",
     "model_name": "Tên model",
+    "check_title": "Kiểm tra API — {provider}",
+    "check_connect": "Kết nối tới {host}",
+    "check_connect_fail": "Không kết nối được tới {host}: {error}",
+    "check_key_ok": "API key hợp lệ ({key})",
+    "check_key_bad": "API key bị từ chối ({key}): {error}",
+    "check_key_skip": "API key: chưa kiểm tra",
+    "check_server_error": "Máy chủ trả lỗi: {error}",
+    "check_model_ok": "Model {model}: có thể truy cập",
+    "check_model_later": "Model {model}: sẽ kiểm tra ở lần hỏi đầu tiên",
+    "check_model_missing": "Model {model}: không có trong danh sách của nhà cung cấp",
+    "check_model_error": "Model {model}: {error}",
+    "check_model_skip": "Model {model}: chưa kiểm tra",
+    "check_result_ok": "Kết quả: HỢP LỆ",
+    "check_result_fail": "Kết quả: THẤT BẠI",
     "api_check_failed": "Kiểm tra API thất bại",
     "error": "Lỗi",
     "warning": "Cảnh báo: chưa thể cập nhật bộ nhớ tóm tắt",
@@ -344,7 +425,6 @@ UI_TEXT = {
     "language_name_vi": "Tiếng Việt",
     "providers_title": "Các nhà cung cấp AI được hỗ trợ",
     "websites_title": "Trang web nhà cung cấp và đăng ký khóa API",
-    "custom_service": "Tự cấu hình dịch vụ API của bạn",
     "documentation": "Tài liệu",
     "throttle_wait": "Đang chờ để không vượt giới hạn yêu cầu:",
     "net_down": "Mất kết nối mạng hoặc máy chủ đã ngắt kết nối. Hãy kiểm tra Internet rồi thử lại. ({detail})",
@@ -368,6 +448,26 @@ UI_TEXT = {
     "spinner": "AI is generating the answer...",
     "tool_running": "AI is running: {tool}",
     "command_running": "Running command #{number}: {command}",
+    "responding": "{who} is responding...",
+    "sending_result": "{detail} done, sending the result to {who}...",
+    "sending_request": "Sending request to {who}...",
+    "receiving": "Receiving response from {who}...",
+    "thinking_stage": "{who} is thinking...",
+    "composing_call": "{who} is composing a command/tool call...",
+    "processing": "Response received from {who}, processing...",
+    "result_exit": "Command #{n} (exit code {code})",
+    "result_error": "{tool} failed",
+    "result_ok": "{tool}",
+    "tools_parallel": "AI is running {n} read operations in parallel: {detail}",
+    "result_file": "{tool}: {path}",
+    "edited_title": "Files changed:",
+    "edited_created": "created",
+    "edited_overwritten": "overwritten",
+    "edited_edited": "edited",
+    "edited_verified": "re-read from disk and confirmed",
+    "edited_unchanged": "content unchanged",
+    "edited_failed": "verification failed, the file may be wrong",
+    "edited_restored": "verification failed, the original was restored",
     "help_title": "Commands:",
     "help": "Show available commands.",
     "thinking_help": "Change thinking level.",
@@ -390,6 +490,20 @@ UI_TEXT = {
     "api_valid": "API key: VALID",
     "model_accessible": "Model: ACCESSIBLE",
     "model_name": "Model name",
+    "check_title": "API check — {provider}",
+    "check_connect": "Connect to {host}",
+    "check_connect_fail": "Cannot connect to {host}: {error}",
+    "check_key_ok": "API key valid ({key})",
+    "check_key_bad": "API key rejected ({key}): {error}",
+    "check_key_skip": "API key: not checked",
+    "check_server_error": "Server returned an error: {error}",
+    "check_model_ok": "Model {model}: accessible",
+    "check_model_later": "Model {model}: will be checked on the first request",
+    "check_model_missing": "Model {model}: not in the provider's model list",
+    "check_model_error": "Model {model}: {error}",
+    "check_model_skip": "Model {model}: not checked",
+    "check_result_ok": "Result: VALID",
+    "check_result_fail": "Result: FAILED",
     "api_check_failed": "API check failed",
     "error": "Error",
     "warning": "Warning: memory summarization was deferred",
@@ -421,7 +535,6 @@ UI_TEXT = {
     "language_name_vi": "Vietnamese",
     "providers_title": "Supported AI providers",
     "websites_title": "Provider websites and API-key registration",
-    "custom_service": "Configure your own API service",
     "documentation": "Documentation",
     "throttle_wait": "Waiting to stay under the request limit:",
     "net_down": "Network connection lost or the server closed the connection. Check your Internet and try again. ({detail})",
@@ -675,7 +788,7 @@ def parse_args():
     )
   )
   parser.add_argument("--provider", choices=tuple(PROVIDERS), default="gemini", help="API provider.")
-  parser.add_argument("--base-url", help="Base URL for a custom OpenAI-compatible API.")
+  parser.add_argument("--base-url", help="Override the API base URL of the selected provider.")
   parser.add_argument("--model", help="Model ID; use --list-models to view available models.")
   parser.add_argument("--list-providers", action="store_true", help="List supported API providers.")
   parser.add_argument("--list-websites", action="store_true", help="List provider websites and API-key registration pages.")
@@ -735,6 +848,16 @@ def parse_args():
     help=(
       "Allow Markdown in answers: removes the instruction that tells the AI to "
       "answer in plain text (also: GEMINI_CLI_MARKDOWN=1)."
+    ),
+  )
+  parser.add_argument(
+    "--progress-single",
+    default=None,
+    metavar="0|1",
+    help=(
+      "1 = cumulative status line that keeps every step until the answer arrives. "
+      "0 or omitted = status line shows only the current step (each step replaces the previous "
+      "one) (also: GEMINI_CLI_PROGRESS_SINGLE=1). Only affects --progress output."
     ),
   )
   parser.add_argument(
@@ -867,8 +990,6 @@ def parse_args():
     parser.error("--rpm and --max-retries cannot be negative.")
   if args.shell_timeout < 0:
     parser.error("--shell-timeout cannot be negative (0 = no limit).")
-  if args.provider == "custom" and not args.base_url and not (args.list_providers or args.list_websites):
-    parser.error("--provider custom requires --base-url.")
   args.base_url = (args.base_url or PROVIDERS[args.provider]["base_url"]).rstrip("/")
   args.model = args.model or PROVIDERS[args.provider]["default_model"]
   if args.provider == "openrouter":
@@ -990,7 +1111,10 @@ def build_system_instruction(
       "correct a failure. Before every additional shell call, check whether the "
       "remaining independent operations can also be included. "
       "For file work, read multiple required files in the same tool round and group "
-      "independent edits or searches when the API supports it. Execute dependent "
+      "independent edits or searches when the API supports it. Read-only calls "
+      "(read_file, search_files) issued in the same round run in parallel, so put "
+      "all independent reads and searches in one round; shell commands and file "
+      "edits always run one after another in the order given. Execute dependent "
       "actions sequentially, using each result before deciding the next step. "
       "Never batch in a way that obscures errors, weakens safety or bypasses "
       "confirmation. Keep output concise and relevant. "
@@ -1032,6 +1156,8 @@ def _compatible_messages(history, instruction):
       text_parts = [part.get("text", "") for part in item.get("content", []) if isinstance(part, dict) and part.get("type") == "text"]
       if text_parts:
         messages.append({"role": "assistant", "content": "\n".join(text_parts)})
+        if item.get("reasoning_content"):
+          messages[-1]["reasoning_content"] = item["reasoning_content"]
     elif kind == "function_call":
       call_id = str(item.get("id") or "call_missing_id")
       arguments = item.get("arguments") or {}
@@ -1049,10 +1175,18 @@ def _compatible_messages(history, instruction):
       elif last.get("role") == "assistant":
         last["tool_calls"] = [tool_call]
       else:
-        messages.append({"role": "assistant", "content": None, "tool_calls": [tool_call]})
+        last = {"role": "assistant", "content": None, "tool_calls": [tool_call]}
+        messages.append(last)
+      if item.get("reasoning_content"):
+        last["reasoning_content"] = item["reasoning_content"]
     elif kind == "function_result":
       result_parts = [part.get("text", "") for part in item.get("result", []) if isinstance(part, dict) and part.get("type") == "text"]
       messages.append({"role": "tool", "tool_call_id": str(item.get("call_id") or "call_missing_id"), "name": item.get("name", ""), "content": "\n".join(result_parts)})
+  # DeepSeek thinking mode: reasoning_content must be sent back only on assistant messages
+  # that made tool calls (omitting it there gives HTTP 400); elsewhere it is dropped.
+  for message in messages:
+    if message.get("role") == "assistant" and not message.get("tool_calls"):
+      message.pop("reasoning_content", None)
   return messages
 
 def _compatible_tools(shell_enabled, files_enabled):
@@ -1065,6 +1199,7 @@ def _compatible_urlopen(request, timeout, status_callback=None):
   while True:
     RATE_LIMITER.wait(status_callback)
     try:
+      _stage(status_callback, "sending_request")
       return urllib.request.urlopen(request, timeout=timeout)
     except urllib.error.HTTPError as exc:
       body = exc.read().decode("utf-8", errors="replace")
@@ -1113,14 +1248,17 @@ def call_compatible_api(api_key, model, history, instruction, language, thinking
     else:
       raise
   try:
-    return _compatible_read(opened, payload, stream_callback)
+    _stage(status_callback, "receiving")
+    return _compatible_read(opened, payload, stream_callback, status_callback)
   except NETWORK_ERRORS as exc:
     raise _net_error(exc, PROVIDERS[ACTIVE_PROVIDER["name"]]["label"]) from exc
 
-def _compatible_read(opened, payload, stream_callback):
+def _compatible_read(opened, payload, stream_callback, status_callback=None):
   with opened as response:
     if payload["stream"]:
       pieces = []
+      live_state = {}
+      reasoning = ""
       for raw in response:
         line = raw.decode("utf-8", errors="replace").strip()
         if not line.startswith("data:"):
@@ -1140,11 +1278,18 @@ def _compatible_read(opened, payload, stream_callback):
         if isinstance(piece, str) and piece:
           pieces.append(piece)
           stream_callback(piece)
+        elif not pieces and (delta.get("reasoning") or delta.get("reasoning_content")):
+          part = delta.get("reasoning") or delta.get("reasoning_content")
+          if isinstance(part, str):
+            reasoning = (reasoning + part)[-600:]
+            _live_line(status_callback, "thinking_stage", reasoning, live_state)
       answer = "".join(pieces).strip()
       if not answer:
         raise RuntimeError(ACTIVE_PROVIDER["name"].title() + " returned no text.")
       return answer, [{"type": "model_output", "content": [{"type": "text", "text": answer}]}]
-    data = json.loads(response.read().decode("utf-8"))
+    raw_body = response.read().decode("utf-8")
+    _stage(status_callback, "processing")
+    data = json.loads(raw_body)
   choices = data.get("choices") or []
   if not choices:
     raise RuntimeError(ACTIVE_PROVIDER["name"].title() + " returned no choices: " + json.dumps(data, ensure_ascii=False)[:1200])
@@ -1163,6 +1308,9 @@ def _compatible_read(opened, payload, stream_callback):
     steps.insert(0, {"type": "model_output", "content": [{"type": "text", "text": answer}]})
   if not steps:
     raise RuntimeError(ACTIVE_PROVIDER["name"].title() + " returned neither text nor tool calls.")
+  reasoning = message.get("reasoning_content")
+  if isinstance(reasoning, str) and reasoning:
+    steps[0]["reasoning_content"] = reasoning
   return answer, steps
 
 def list_providers(show_websites=False, ui=None):
@@ -1170,10 +1318,8 @@ def list_providers(show_websites=False, ui=None):
   print(ui["providers_title"] if not show_websites else ui["websites_title"])
   for key, item in PROVIDERS.items():
     if show_websites:
-      registration = item["key_url"] or ui["custom_service"]
-      print(f"  {item['label']:<30} {registration}")
-      if item.get("website"):
-        print(f"    {ui['documentation']}: {item['website']}")
+      registration = item["key_url"]
+      print(f"\n  {item['label']}: {registration}")
     else:
       print(f"  {key:<12} {item['label']}")
 
@@ -1271,6 +1417,89 @@ def check_api_key_model(api_key, model, timeout):
     raise RuntimeError("Model information is incomplete.")
   return model_info
 
+def _mask_key(key):
+  key = (key or "").strip()
+  return "***" if len(key) <= 8 else key[:4] + "…" + key[-4:]
+
+def _http_code(exc):
+  match = re.match(r"HTTP (\d{3})", str(exc))
+  return int(match.group(1)) if match else None
+
+def run_api_check(args, api_key, ui):
+  """Check the API key and model step by step and print one line per step."""
+  provider = args.provider
+  label = PROVIDERS[provider]["label"]
+  gemini_models = "https://generativelanguage.googleapis.com/v1beta/models"
+  base = gemini_models if provider == "gemini" else args.base_url
+  host = urllib.parse.urlparse(base).netloc or base
+  model = args.model
+  masked = _mask_key(api_key)
+  connect = key = model_ok = None  # True / False / None (not checked)
+  key_error = server_error = connect_error = model_error = ""
+  models = []
+
+  try:
+    if provider == "gemini":
+      _fetch_json(gemini_models + "?pageSize=1", api_key, args.timeout, gemini=True)
+    elif provider == "openrouter":
+      _fetch_json(base.rstrip("/") + "/key", api_key, args.timeout)
+    else:
+      models = fetch_provider_models(provider, api_key, base, args.timeout)
+    connect = key = True
+  except (RuntimeError, ValueError) as exc:
+    code = _http_code(exc)
+    if code is None:
+      connect, connect_error = False, str(exc)
+    else:
+      connect = True
+      if code in (400, 401, 403):
+        key, key_error = False, str(exc)
+      else:
+        server_error = str(exc)
+
+  if key:
+    if provider == "gemini":
+      name = model.strip()
+      name = name[len("models/"):] if name.startswith("models/") else name
+      try:
+        _fetch_json(gemini_models + "/" + urllib.parse.quote(name, safe="-._~"), api_key, args.timeout, gemini=True)
+        model_ok = True
+      except (RuntimeError, ValueError) as exc:
+        model_ok = False
+        model_error = "" if _http_code(exc) == 404 else str(exc)
+    elif provider == "openrouter":
+      model_ok = None  # model access is only known on the first request
+    else:
+      model_ok = any(item["id"] == model for item in models)
+
+  ok = bool(connect and key and model_ok is not False)
+  good, bad, skip = COLORS.value("✔"), COLORS.error("✘"), "•"
+  print(COLORS.label(ui["check_title"].format(provider=label)))
+  if connect:
+    print(f"  {good} {ui['check_connect'].format(host=host)}")
+  else:
+    print(f"  {bad} {ui['check_connect_fail'].format(host=host, error=connect_error)}")
+  if key:
+    print(f"  {good} {ui['check_key_ok'].format(key=masked)}")
+  elif key is False:
+    print(f"  {bad} {ui['check_key_bad'].format(key=masked, error=key_error)}")
+  elif server_error:
+    print(f"  {bad} {ui['check_server_error'].format(error=server_error)}")
+  else:
+    print(f"  {skip} {ui['check_key_skip']}")
+  if model_ok is True:
+    print(f"  {good} {ui['check_model_ok'].format(model=model)}")
+  elif model_ok is False and model_error:
+    print(f"  {bad} {ui['check_model_error'].format(model=model, error=model_error)}")
+  elif model_ok is False:
+    print(f"  {bad} {ui['check_model_missing'].format(model=model)}")
+  elif key and provider == "openrouter":
+    print(f"  {skip} {ui['check_model_later'].format(model=model)}")
+  else:
+    print(f"  {skip} {ui['check_model_skip'].format(model=model)}")
+  print((COLORS.value if ok else COLORS.error)(ui["check_result_ok" if ok else "check_result_fail"]))
+  return 0 if ok else 1
+
 def extract_text(data):
   output_text = data.get("output_text")
   if isinstance(output_text, str) and output_text.strip():
@@ -1291,6 +1520,70 @@ DEFAULT_MAX_RETRIES = 3
 MAX_RETRY_WAIT = 120
 RETRY = {"max": DEFAULT_MAX_RETRIES}
 ACTIVE_UI = {"ui": None}
+
+WHO = {"label": ""}
+
+def _stage(status, key):
+  """Show a stage of the request (sending, receiving, thinking...) on the status line."""
+  if status is None:
+    return
+  try:
+    status(_ui_text(key, who=WHO["label"]))
+  except Exception:
+    pass
+
+MEMORY_PENDING = "[No answer yet: the request was still running or was interrupted]"
+
+def failure_marker(exc):
+  """Text stored in place of an answer when a request fails, so the question is never lost."""
+  return "[Request failed, no answer was produced: " + _fit(str(exc) or type(exc).__name__, 300) + "]"
+
+def _last_line(text):
+  for part in reversed(re.split(r"[\r\n]+", str(text))):
+    part = part.strip()
+    if part:
+      return part
+  return ""
+
+def _live_line(status, key, text, state):
+  """Show the newest line of what the model is sending (thought, command being written)
+  on the status line instead of only a fixed label. Throttled to 10 updates per second."""
+  if status is None:
+    return
+  now = time.time()
+  if now - state.get("t", 0.0) < 0.1:
+    return
+  line = _last_line(text)
+  if not line:
+    return
+  state["t"] = now
+  try:
+    label = _ui_text(key, who=WHO["label"]).rstrip(".")
+    status(f"{label} │ {line}")
+  except Exception:
+    pass
+
+def result_summary(result_step, ui):
+  """Short text about a finished tool call: command number and exit code, or tool name."""
+  name = str(result_step.get("name") or "tool")
+  try:
+    data = json.loads(result_step["result"][0]["text"])
+  except Exception:
+    return ui["result_ok"].format(tool=name)
+  if isinstance(data, dict):
+    if "exit_code" in data:
+      return ui["result_exit"].format(n=data.get("command_number", "?"), code=data["exit_code"])
+    if data.get("error"):
+      return ui["result_error"].format(tool=name)
+    if data.get("verified") and data.get("path"):
+      return ui["result_file"].format(tool=name, path=data["path"])
+  return ui["result_ok"].format(tool=name)
+
+def responder_label(model):
+  """Provider and model that answer the request, e.g. "Google Gemini · gemini-3.5-flash-lite"."""
+  name = ACTIVE_PROVIDER.get("name", "")
+  label = PROVIDERS.get(name, {}).get("label", name)
+  return f"{label} · {model}" if model else label
 
 def _ui_text(key, **values):
   ui = ACTIVE_UI["ui"] or UI_TEXT["en"]
@@ -1374,13 +1667,17 @@ def _send_request(request, timeout, stream_callback, status):
   while True:
     RATE_LIMITER.wait(status)
     try:
+      _stage(status, "sending_request")
       with urllib.request.urlopen(
         request,
         timeout=timeout,
       ) as response:
+        _stage(status, "receiving")
         if stream_callback is not None:
-          return _read_stream(response, stream_callback)
-        return json.loads(response.read().decode("utf-8"))
+          return _read_stream(response, stream_callback, status)
+        raw_body = response.read().decode("utf-8")
+        _stage(status, "processing")
+        return json.loads(raw_body)
     except urllib.error.HTTPError as exc:
       error_body = exc.read().decode("utf-8", errors="replace")
       try:
@@ -1410,7 +1707,7 @@ def _send_request(request, timeout, stream_callback, status):
     except json.JSONDecodeError as exc:
       raise RuntimeError("Invalid JSON response.") from exc
 
-def _read_stream(response, on_text):
+def _read_stream(response, on_text, status=None):
   """Read a Server-Sent Events stream from the Interactions API.
 
   Text deltas are passed to on_text as they arrive. If the model starts
@@ -1420,8 +1717,20 @@ def _read_stream(response, on_text):
   parts = []
   step_types = {}
   saw_call = False
-  status = ""
+  final_status = ""
   event_name = ""
+  text_started = False
+  last_stage = ""
+  live_state = {}
+  live_buf = {"thought": "", "call": ""}
+
+  def stage(key):
+    nonlocal last_stage
+    if text_started or key == last_stage:
+      return
+    last_stage = key
+    _stage(status, key)
+
   for raw in response:
     line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
     if line.startswith("event:"):
@@ -1455,6 +1764,11 @@ def _read_stream(response, on_text):
         '"function_call"' in json.dumps(event)
       ):
         saw_call = True
+        live_buf["call"] = ""
+        stage("composing_call")
+      elif step_type == "thought":
+        live_buf["thought"] = ""
+        stage("thinking_stage")
     elif kind == "step.delta":
       delta = event.get("delta")
       if not isinstance(delta, dict):
@@ -1462,19 +1776,33 @@ def _read_stream(response, on_text):
       delta_type = delta.get("type")
       if delta_type == "arguments_delta":
         saw_call = True
+        stage("composing_call")
+        part = delta.get("arguments")
+        if isinstance(part, str) and not text_started:
+          live_buf["call"] = (live_buf["call"] + part)[-400:]
+          _live_line(status, "composing_call", live_buf["call"], live_state)
+      elif step_types.get(event.get("index")) == "thought":
+        # Thought summaries: show their newest line live; never part of the answer
+        content = delta.get("content")
+        part = delta.get("text") or (content.get("text") if isinstance(content, dict) else "")
+        if isinstance(part, str) and part and not text_started:
+          live_buf["thought"] = (live_buf["thought"] + part)[-600:]
+          _live_line(status, "thinking_stage", live_buf["thought"], live_state)
+        continue
       elif delta_type == "text":
         if step_types.get(event.get("index")) == "thought":
           continue
         piece = delta.get("text", "")
         if piece and not saw_call:
           parts.append(piece)
+          text_started = True
           on_text(piece)
     elif kind in ("interaction.completed", "interaction.status_update"):
       info = event.get("interaction")
       if not isinstance(info, dict):
         info = event
-      status = info.get("status", status) or status
-  if status == "requires_action":
+      final_status = info.get("status", final_status) or final_status
+  if final_status == "requires_action":
     saw_call = True
   text = "".join(parts)
   steps = []
@@ -1483,7 +1811,7 @@ def _read_stream(response, on_text):
       "type": "model_output",
       "content": [{"type": "text", "text": text}],
     })
-  return {"steps": steps, "status": status, "_saw_call": saw_call}
+  return {"steps": steps, "status": final_status, "_saw_call": saw_call}
 
 def call_gemini(
   api_key,
@@ -1610,6 +1938,7 @@ class ShellPolicy:
     self.auto_approve = auto_approve
     self.timeout = timeout
     self.command_count = 0
+    self.edited = []  # files changed during this turn, printed after the answer
 
 def _find_shell():
   for name in ("bash", "sh"):
@@ -1768,15 +2097,16 @@ class LiveLog:
     spinner = ACTIVE_SPINNER["s"]
     return bool(spinner and spinner.thread) or progress_enabled()
 
-  def _show(self, text):
+  def _show(self, text, update=None):
     spinner = ACTIVE_SPINNER["s"]
     if spinner and spinner.thread:
       spinner.message = _fit(text)
     elif progress_enabled():
-      emit_progress(text)
+      emit_progress(text, update)
 
   def start(self):
-    self._show(self.label_full)
+    # Replaces the "AI is running: ..." step of this same command
+    self._show(self.label_full, update=True)
 
   def feed(self, data):
     with self.lock:
@@ -1792,7 +2122,9 @@ class LiveLog:
       now = time.time()
       if self.line and now - self.last_shown >= 0.1:
         self.last_shown = now
-        self._show(f"{self.label_short} │ {self.line}")
+        spinner = ACTIVE_SPINNER["s"]
+        label = self.label_short if (spinner and spinner.thread) else self.label_full
+        self._show(f"{label} │ {self.line}")
 
 def _protected_target(arg, home, prefix):
   expanded = os.path.expandvars(os.path.expanduser(arg))
@@ -1916,26 +2248,100 @@ def check_path_allowed(path, policy):
     )
   }
 
+LOG_TEXT = {
+  "vi": {
+    "tool": "Công cụ", "approval": "Duyệt", "result": "Kết quả",
+    "command": "Lệnh", "path": "Đường dẫn", "pattern": "Mẫu tìm", "other": "Tham số",
+    "ok": "✔ xong", "fail": "✘ thất bại", "error": "✘ lỗi",
+    "chars": "ký tự", "matches": "khớp",
+    "decisions": {
+      "auto": "tự động", "approved": "đã duyệt", "approved-always": "duyệt cho cả phiên",
+      "denied": "từ chối", "denied-no-tty": "từ chối (không có terminal để hỏi)",
+      "blocked": "bị bộ lọc an toàn chặn", "n/a": "không cần",
+    },
+  },
+  "en": {
+    "tool": "Tool", "approval": "Approval", "result": "Result",
+    "command": "Command", "path": "Path", "pattern": "Pattern", "other": "Argument",
+    "ok": "✔ done", "fail": "✘ failed", "error": "✘ error",
+    "chars": "chars", "matches": "matches",
+    "decisions": {
+      "auto": "automatic", "approved": "approved", "approved-always": "approved for the session",
+      "denied": "denied", "denied-no-tty": "denied (no terminal to ask)",
+      "blocked": "blocked by the safety filter", "n/a": "not needed",
+    },
+  },
+}
+
+def _log_field(label, value, width):
+  """One "Label : value" row; extra lines of a multi-line value are indented under it."""
+  lines = str(value).splitlines() or [""]
+  pad = " " * (width + 3)
+  return f"{label.ljust(width)} : " + ("\n" + pad).join(lines)
+
+def format_log_block(record):
+  """Readable multi-line block for one action (written to actions.log)."""
+  text = LOG_TEXT["vi" if ACTIVE_UI["ui"] is UI_TEXT["vi"] else "en"]
+  rows = []
+  result = record.get("result") if isinstance(record.get("result"), dict) else {}
+  number = result.get("command_number")
+  tool = str(record.get("tool", ""))
+  rows.append((text["tool"], f"{tool} (#{number})" if number else tool))
+  decision = str(record.get("decision", "n/a"))
+  rows.append((text["approval"], text["decisions"].get(decision, decision)))
+  args = record.get("args") if isinstance(record.get("args"), dict) else {}
+  names = {"command": text["command"], "path": text["path"], "pattern": text["pattern"]}
+  for key, value in args.items():
+    if isinstance(value, (dict, list)):
+      value = json.dumps(value, ensure_ascii=False)
+    rows.append((names.get(key, f"{text['other']} {key}"), value))
+  if result.get("error"):
+    status = f"{text['error']} — {result['error']}"
+  elif "exit_code" in result:
+    status = f"{text['ok'] if result['exit_code'] == 0 else text['fail']} · exit {result['exit_code']}"
+  else:
+    status = text["ok"]
+  extras = []
+  for key, value in result.items():
+    if key in ("error", "exit_code", "command_number"):
+      continue
+    if key == "path" and value == args.get("path"):
+      continue
+    if key.endswith("_chars"):
+      extras.append(f"{key[:-6]} {value} {text['chars']}")
+    elif key == "match_count":
+      extras.append(f"{value} {text['matches']}")
+    else:
+      extras.append(f"{key}: {value}")
+  rows.append((text["result"], " · ".join([status] + extras)))
+  width = max(len(label) for label, _ in rows)
+  stamp = str(record.get("time", ""))[:19].replace("T", " ")
+  header = f"── {stamp} " + "─" * 30
+  return header + "\n" + "\n".join(_log_field(label, value, width) for label, value in rows) + "\n\n"
+
+LOG_LOCK = threading.Lock()
+
 def log_action(policy, record):
-  """Append one JSON line describing an action. Never raises."""
+  """Append one readable multi-line block describing an action. Never raises."""
   path = policy.log_path
   if not path:
     return
   record = {"time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **record}
   try:
-    directory = os.path.dirname(path)
-    if directory:
-      os.makedirs(directory, exist_ok=True)
-    if (
-      os.path.exists(path)
-      and os.path.getsize(path) > MAX_LOG_BYTES
-    ):
-      os.replace(path, path + ".1")
-    fd = os.open(
-      path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600
-    )
-    with os.fdopen(fd, "a", encoding="utf-8") as file:
-      file.write(json.dumps(record, ensure_ascii=False) + "\n")
+    with LOG_LOCK:
+      directory = os.path.dirname(path)
+      if directory:
+        os.makedirs(directory, exist_ok=True)
+      if (
+        os.path.exists(path)
+        and os.path.getsize(path) > MAX_LOG_BYTES
+      ):
+        os.replace(path, path + ".1")
+      fd = os.open(
+        path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600
+      )
+      with os.fdopen(fd, "a", encoding="utf-8") as file:
+        file.write(format_log_block(record))
   except OSError:
     pass
 
@@ -2053,11 +2459,16 @@ def _syntax_check(path, text):
     return f"{type(exc).__name__}: {exc}"
   return "ok"
 
-def _verified_result(path, expected, result):
-  """Read the file back; restore the backup if it differs."""
+def _verified_result(path, expected, result, original=None):
+  """Read the file back from disk; restore the backup if it differs.
+
+  Also reports whether the file really changed compared with its content before the write
+  (original is None for a new file)."""
   detail = ""
+  on_disk = None
   try:
-    ok = _read_text(path) == expected
+    on_disk = _read_text(path)
+    ok = on_disk == expected
     if not ok:
       detail = "content differs"
   except (OSError, UnicodeDecodeError) as exc:
@@ -2083,10 +2494,56 @@ def _verified_result(path, expected, result):
       )
     }
   result["verified"] = True
+  result["changed"] = original is None or on_disk != original
+  if not result["changed"]:
+    result["note"] = "The file content is identical to what it was before; nothing changed."
+  try:
+    result["size_bytes"] = os.path.getsize(path)
+  except OSError:
+    pass
   check = _syntax_check(path, expected)
   if check:
     result["syntax_check"] = check
   return result
+
+def _record_edited(policy, name, arguments, result):
+  """Remember a changed (or failed-to-verify) file so its path is printed after the answer."""
+  if result.get("verified") and result.get("path"):
+    if name == "edit_file":
+      action = "edited"
+    else:
+      action = "overwritten" if result.get("backup") else "created"
+    entry = {"path": result["path"], "action": action,
+             "state": "changed" if result.get("changed", True) else "unchanged"}
+  elif "Write verification failed" in str(result.get("error", "")):
+    restored = "was restored" in str(result.get("error", ""))
+    entry = {"path": _resolve(arguments.get("path")), "action": "edited",
+             "state": "restored" if restored else "failed"}
+  else:
+    return
+  policy.edited = [e for e in policy.edited if e["path"] != entry["path"]] + [entry]
+
+def print_edited_files(policy, ui):
+  """Print the path of every file changed in this turn, after the answer."""
+  items = getattr(policy, "edited", None)
+  if not items:
+    return
+  policy.edited = []
+  _clear_progress()
+  if not PROGRESS["col0"]:
+    sys.stdout.write("\n")
+    PROGRESS["col0"] = True
+  lines = [COLORS.label(ui["edited_title"])]
+  for item in items:
+    if item["state"] in ("failed", "restored"):
+      mark, note = "✘", ui["edited_" + item["state"]]
+    elif item["state"] == "unchanged":
+      mark, note = "•", ui["edited_unchanged"]
+    else:
+      mark, note = "✔", ui["edited_verified"]
+    lines.append(f"  {mark} {item['path']}  ({ui['edited_' + item['action']]}, {note})")
+  sys.stdout.write("\n".join(lines) + "\n")
+  sys.stdout.flush()
 
 def tool_read_file(args, policy):
   path = _resolve(args.get("path"))
@@ -2165,6 +2622,8 @@ def tool_edit_file(args, policy, ui):
     if replace_all
     else text.replace(old, new, 1)
   )
+  if updated == text:
+    return {"error": "old_text and new_text are identical; the file would not change."}
   preview = f"Edit {path}\n" + _diff_preview(text, updated, path)
   if not confirm_action(preview, policy, ui, "apply_prompt"):
     print(COLORS.error(ui["run_denied"]), file=sys.stderr)
@@ -2178,7 +2637,7 @@ def tool_edit_file(args, policy, ui):
     "path": path,
     "replacements": count if replace_all else 1,
     "backup": path + ".bak",
-  })
+  }, original=text)
 
 def tool_write_file(args, policy, ui):
   path = _resolve(args.get("path"))
@@ -2191,9 +2650,11 @@ def tool_write_file(args, policy, ui):
   if os.path.isdir(path):
     return {"error": f"Path is a directory: {path}"}
   existed = os.path.isfile(path)
+  original_text = None
   if existed:
     try:
       old = _read_text(path)
+      original_text = old
     except (OSError, UnicodeDecodeError):
       old = ""
     preview = f"Overwrite {path}\n" + _diff_preview(old, content, path)
@@ -2216,7 +2677,7 @@ def tool_write_file(args, policy, ui):
   result = {"path": path, "characters": len(content)}
   if existed:
     result["backup"] = path + ".bak"
-  return _verified_result(path, content, result)
+  return _verified_result(path, content, result, original=original_text)
 
 def tool_search_files(args, policy):
   pattern = str(args.get("pattern") or "")
@@ -2292,6 +2753,18 @@ def tool_search_files(args, policy):
     "truncated": len(matches) >= max_results,
   }
 
+READ_ONLY_TOOLS = ("read_file", "search_files")
+PARALLEL_WORKERS = 4
+
+def _is_read_only(step, policy):
+  return bool(policy.files_enabled) and str(step.get("name") or "") in READ_ONLY_TOOLS
+
+def run_read_calls_parallel(group, policy, ui):
+  """Run read-only tool calls at the same time; results keep the order of the calls."""
+  from concurrent.futures import ThreadPoolExecutor
+  with ThreadPoolExecutor(max_workers=min(PARALLEL_WORKERS, len(group))) as pool:
+    return list(pool.map(lambda call: run_tool_call(call, policy, ui), group))
+
 def run_tool_call(step, policy, ui):
   """Execute one function_call step; return a function_result step."""
   name = step.get("name", "")
@@ -2347,6 +2820,8 @@ def run_tool_call(step, policy, ui):
       result = tool_write_file(arguments, policy, ui)
     else:
       result = tool_search_files(arguments, policy)
+    if name in ("edit_file", "write_file"):
+      _record_edited(policy, name, arguments, result)
   else:
     result = {"error": f"Unknown or disabled tool: {name}"}
   log_action(policy, {
@@ -2428,20 +2903,33 @@ def chat_turn(
   policy = policy or ShellPolicy()
   generated = []
   working = list(history)
+  who = responder_label(model)
+  WHO["label"] = who
+  last_detail = ""
+  first_round = True
   while True:
-    spinner = Spinner(spinner_text) if spinner_text else None
+    # Status text: who is answering; after a tool ran, that the result is being sent back
+    if spinner_text and ui:
+      if first_round:
+        round_text = ui["responding"].format(who=who)
+      else:
+        round_text = ui["sending_result"].format(who=who, detail=last_detail)
+    else:
+      round_text = spinner_text
+    first_round = False
+    spinner = Spinner(round_text) if spinner_text else None
     ACTIVE_SPINNER["s"] = spinner
     if spinner:
       spinner.start()
       if spinner.thread is None:
-        emit_progress(spinner_text)
+        emit_progress(round_text)
 
     def on_text(piece, spinner=spinner):
       if spinner:
         spinner.stop()
       stream_out(piece)
 
-    def status(text, spinner=spinner, base=spinner_text):
+    def status(text, spinner=spinner, base=round_text):
       if spinner:
         spinner.message = text or base
         if spinner.thread is None:
@@ -2468,21 +2956,41 @@ def chat_turn(
       if not calls:
         return answer, generated
       results = []
-      for step in calls:
+      index = 0
+      while index < len(calls):
+        # Consecutive read-only calls form one group that runs in parallel
+        end = index + 1
+        if _is_read_only(calls[index], policy):
+          while end < len(calls) and _is_read_only(calls[end], policy):
+            end += 1
+        group = calls[index:end]
+        index = end
         if spinner:
-          tool_name = str(step.get("name") or "tool")
-          label = ui["tool_running"].format(tool=tool_name) if ui else f"AI is running: {tool_name}"
-          detail = describe_tool_call(step)
-          if detail:
-            label = f"{label} · {detail}"
+          if len(group) > 1:
+            detail = "; ".join(
+              f"{g.get('name')} {describe_tool_call(g)}".strip() for g in group
+            )
+            label = (ui["tools_parallel"] if ui else "AI is running {n} read operations in parallel: {detail}").format(n=len(group), detail=detail)
+          else:
+            step = group[0]
+            tool_name = str(step.get("name") or "tool")
+            label = ui["tool_running"].format(tool=tool_name) if ui else f"AI is running: {tool_name}"
+            detail = describe_tool_call(step)
+            if detail:
+              label = f"{label} · {detail}"
           spinner.message = _fit(label)
           if spinner.thread is None:
             if sys.stdout.isatty():
               spinner.start()
             else:
               emit_progress(label)
-        results.append(run_tool_call(step, policy, ui))
+        if len(group) > 1:
+          results.extend(run_read_calls_parallel(group, policy, ui))
+        else:
+          results.append(run_tool_call(group[0], policy, ui))
       generated.extend(results)
+      if ui and results:
+        last_detail = " · ".join(result_summary(r, ui) for r in results)
       working = working + steps + results
     finally:
       if spinner:
@@ -2628,21 +3136,37 @@ def save_memory(path, user_message, assistant_response):
       os.makedirs(directory, exist_ok=True)
     with closing(_connect_memory(path)) as connection:
       with connection:
-        connection.execute(
+        cursor = connection.execute(
           "INSERT INTO conversations "
           "(user_message, assistant_response) VALUES (?, ?)",
           (user_message, assistant_response),
         )
+        row_id = cursor.lastrowid
     try:
       os.chmod(path, 0o600)
     except OSError:
       pass
+    return row_id
   except (
     OSError,
     sqlite3.Error,
     TypeError,
     ValueError,
   ) as exc:
+    raise RuntimeError(
+      f"Cannot save SQLite memory database '{path}': {exc}"
+    ) from exc
+
+def update_memory_response(path, row_id, assistant_response):
+  """Replace the placeholder saved with the question by the real answer (or the failure note)."""
+  try:
+    with closing(_connect_memory(path)) as connection:
+      with connection:
+        connection.execute(
+          "UPDATE conversations SET assistant_response = ? WHERE id = ?",
+          (assistant_response, row_id),
+        )
+  except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
     raise RuntimeError(
       f"Cannot save SQLite memory database '{path}': {exc}"
     ) from exc
@@ -2900,6 +3424,10 @@ def trim_history(history, limit=INTERACTIVE_HISTORY_CHARS):
 def run():
   global ALLOW_MARKDOWN
   args = parse_args()
+  PROGRESS["single"] = not (
+    str(args.progress_single).strip() == "1"
+    or os.environ.get("GEMINI_CLI_PROGRESS_SINGLE", "").strip() == "1"
+  )
   PROGRESS["enabled"] = bool(args.progress) or (
     os.environ.get("GEMINI_CLI_PROGRESS", "").strip().lower() in ("1", "true", "yes", "on")
   )
@@ -2960,27 +3488,7 @@ def run():
       return 1
 
   if args.check_api_key:
-    try:
-      if args.provider == "gemini":
-        model_info = check_api_key_model(api_key=api_key, model=args.model, timeout=args.timeout)
-        display_name = model_info.get("displayName", model_info["name"])
-      elif args.provider == "openrouter":
-        check_request = urllib.request.Request(args.base_url + "/key", headers={"Authorization": "Bearer " + api_key}, method="GET")
-        with urllib.request.urlopen(check_request, timeout=args.timeout) as response:
-          json.loads(response.read().decode("utf-8"))
-        display_name = args.model + " (model access checked on first request)"
-      else:
-        available = fetch_provider_models(args.provider, api_key, args.base_url, args.timeout)
-        if not any(item["id"] == args.model for item in available):
-          raise RuntimeError(f"Model '{args.model}' was not found in the provider model list.")
-        display_name = args.model
-      print(COLORS.value(ui["api_valid"]))
-      print(COLORS.value(ui["model_accessible"]))
-      print(f"{ui['model_name']}: {display_name}")
-      return 0
-    except (RuntimeError, urllib.error.HTTPError, urllib.error.URLError, ValueError) as exc:
-      print(COLORS.error(f"{ui['api_check_failed']}: {exc}"), file=sys.stderr)
-      return 1
+    return run_api_check(args, api_key, ui)
   try:
     instruction = load_instruction(args)
   except (OSError, UnicodeError, ValueError) as exc:
@@ -3043,7 +3551,8 @@ def run():
       )
       return 2
     printer = StreamPrinter() if streaming else None
-    emit_progress(ui["spinner"])
+    emit_progress(ui["responding"].format(who=responder_label(model)))
+    pending_id = None
     try:
       memory_summary = None
       if args.no_memory:
@@ -3061,6 +3570,11 @@ def run():
           timeout=args.timeout,
         )
         request_history = recent_history + [{"type": "user_input", "content": question}]
+      # Save the question first so it is kept even if the request fails or is interrupted
+      try:
+        pending_id = save_memory(memory_path, question, MEMORY_PENDING)
+      except RuntimeError as exc:
+        print(COLORS.error(str(exc)), file=sys.stderr)
       answer, _ = chat_turn(
         api_key=api_key,
         model=model,
@@ -3075,18 +3589,34 @@ def run():
         spinner_text=ui["spinner"],
         stream_out=printer,
       )
-      save_memory(
-        memory_path,
-        question,
-        answer,
-      )
+      try:
+        if pending_id is not None:
+          update_memory_response(memory_path, pending_id, answer)
+        else:
+          save_memory(memory_path, question, answer)
+      except RuntimeError as exc:
+        # The answer was generated: still show it, only warn that it was not stored
+        print(COLORS.error(str(exc)), file=sys.stderr)
     except (RuntimeError, ValueError) as exc:
       _clear_progress()
+      print_edited_files(policy, ui)
+      if pending_id is not None:
+        try:
+          update_memory_response(memory_path, pending_id, failure_marker(exc))
+        except RuntimeError:
+          pass
       print(
         f"\n{ui['error']}: {exc}",
         file=sys.stderr,
       )
       return 1
+    except KeyboardInterrupt:
+      if pending_id is not None:
+        try:
+          update_memory_response(memory_path, pending_id, failure_marker("interrupted by the user"))
+        except RuntimeError:
+          pass
+      raise
     if printer is not None and printer.started:
       printer.flush_end()
       if not answer.endswith("\n"):
@@ -3100,6 +3630,7 @@ def run():
       if not answer_out.endswith("\n"):
         sys.stdout.write("\n")
     sys.stdout.flush()
+    print_edited_files(policy, ui)
     if not args.no_memory:
       try:
         rows, summary, checkpoint = load_memory(memory_path)
@@ -3339,21 +3870,30 @@ def run():
       history.extend(generated_steps)
       history = trim_history(history)
     except KeyboardInterrupt:
+      history.append({"type": "user_input", "content": message})
+      history.append({"type": "model_output", "content": [{"type": "text", "text": failure_marker("interrupted by the user")}]})
+      history = trim_history(history)
       ui = UI_TEXT[get_cli_language(language)]
       print(COLORS.error(f"\n{ui['cancelled']}"))
+      print_edited_files(policy, ui)
       print()
       continue
     except (RuntimeError, ValueError) as exc:
+      history.append({"type": "user_input", "content": message})
+      history.append({"type": "model_output", "content": [{"type": "text", "text": failure_marker(exc)}]})
+      history = trim_history(history)
       cli_language = get_cli_language(language)
       ui = UI_TEXT[cli_language]
       print(
         COLORS.error(f"\n{ui['error']}: {exc}"),
         file=sys.stderr,
       )
+      print_edited_files(policy, ui)
       print()
       continue
     if printer is not None and printer.started:
       printer.finish(2)
+      print_edited_files(policy, ui)
       continue
     cli_language = get_cli_language(language)
     answer_out = normalize_ansi(answer, close=True)
@@ -3373,6 +3913,7 @@ def run():
         f"{COLORS.gemini(provider_label)} ❯ {answer_out}"
       )
       print()
+    print_edited_files(policy, ui)
   return 0
 
 if __name__ == "__main__":

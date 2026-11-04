@@ -63,7 +63,7 @@ max-lines = 8
 markdown = true
 greeting = "@chat_greeting"
 script = '''
-chatbot --all --markdown --progress --stream --lang "$chatai_lang" --model "$ai_models" --provider "$list_provider" --instruction "$chatai_nextrule" --thinking "$models_thinking" --memory-file "$HOME/.cache/$CHAT_ID.sql" -p "$MSG"
+chatbot --all --markdown --progress --stream --lang "$chatai_lang" --model "$ai_models" --provider "$list_provider" --instruction "$chatai_nextrule" --thinking "$models_thinking" --memory-file "$HOME/.cache/$CHAT_ID.sql" --progress-single "$chatai_detail" -p "$MSG"
 '''
 params-shell = "hidden"
 params-script = '''
@@ -104,7 +104,7 @@ name = "list_provider"
 placeholder = "gemini"
 title = "@select_provider_title"
 label = "Provider"
-items = [ "gemini|Gemini", "openai|Openai", "openrouter|Openrouter", "groq|Groq", "together|Together", "custom" ]
+items = [ "gemini|Gemini", "openai|Openai", "openrouter|Openrouter", "groq|Groq", "together|Together", "deepseek|Deepseek" ]
 value-sh = "glog list_provider gemini"
 
 [[chat.params]]
@@ -116,6 +116,11 @@ editable = true
 label = "Models"
 options-sh = "glog list_ai_models gemini-3.5-flash-lite"
 value = "gemini-3.5-flash-lite"
+
+[[chat.params]]
+name = "chatai_detail"
+label = "Tiến trình chi tiết"
+type = "switch"
 
 [[chat.params]]
 name = "models_thinking"

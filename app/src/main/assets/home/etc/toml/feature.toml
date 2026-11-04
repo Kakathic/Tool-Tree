@@ -68,6 +68,7 @@ slog ai_models "$ai_models"
 [ "$OPENROUTER_API_KEY" ] && list_provider=openrouter chatbot -c
 [ "$GROQ_API_KEY" ] && list_provider=groq chatbot -c
 [ "$TOGETHER_API_KEY" ] && list_provider=together chatbot -c
+[ "$DEEPSEEK_API_KEY" ] && list_provider=deepseek chatbot -c
 '''
 
 [[action.params]]
@@ -106,9 +107,9 @@ type = "password"
 remember = false
 
 [[action.params]]
-name = "CUSTOM_API_KEY"
-label = "Custom"
-placeholder-sh = "list_provider=custom chatbot --show 2>/dev/null"
+name = "DEEPSEEK_API_KEY"
+label = "Deepseek"
+placeholder-sh = "list_provider=deepseek chatbot --show 2>/dev/null"
 type = "password"
 remember = false
 
@@ -130,7 +131,7 @@ name = "list_provider"
 placeholder = "gemini"
 title = "Chọn nhà cung cấp"
 label = "Provider"
-items = [ "gemini", "openai", "openrouter", "groq", "together", "custom" ]
+items = [ "gemini|Gemini", "openai|Openai", "openrouter|Openrouter", "groq|Groq", "together|Together", "deepseek|Deepseek" ]
 value = "gemini"
 
 [[action.params]]
