@@ -8,9 +8,6 @@ dumpsys(){ /system/bin/dumpsys "$@"; }
 find "$TMPDIR" -maxdepth 1 ! -path "$TMPDIR" ! -name '*.log' -exec rm -rf {} +
 rm -fr $TEMP/documents $TEMP/kr_download_* $START_DIR/icons/*
 
-# Lấy lại api đã lưu
-[ -z "$(glog api_genmini)" ] && transai -c &>/dev/null &
-
 {
 # Tự động cập nhật add-on
 taiveadd(){
