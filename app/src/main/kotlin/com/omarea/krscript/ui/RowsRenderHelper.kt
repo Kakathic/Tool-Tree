@@ -97,11 +97,15 @@ object RowsRenderHelper {
 
     private class BgState(val dyn: HashMap<Int, String>, val nodeDyn: String)
 
-    private val compactLeadingDividerViews: MutableSet<TextView> = Collections.newSetFromMap(WeakHashMap())
+    private val leadingDividerTopGapDp = WeakHashMap<TextView, Int>()
 
-    /** Khối rows trong params: đường kẻ ở đầu khối không chiếm cả một dòng chữ (tránh khoảng trống gấp đôi). */
-    fun markCompactLeadingDivider(rowsView: TextView?) {
-        if (rowsView != null) compactLeadingDividerViews.add(rowsView)
+    /**
+     * Đường kẻ ở đầu khối rows luôn được vẽ gọn (không chiếm cả một dòng chữ, tránh khoảng trống gấp đôi).
+     * [topGapDp] là khoảng đệm thêm phía trên đường kẻ, dùng khi khối rows nằm sát phần chữ phía trên
+     * (mặc định 0 vì các layout đã có sẵn khoảng cách).
+     */
+    fun markCompactLeadingDivider(rowsView: TextView?, topGapDp: Int = 0) {
+        if (rowsView != null) leadingDividerTopGapDp[rowsView] = topGapDp
     }
 
     private val bgViews = WeakHashMap<TextView, ImageView>()
@@ -337,8 +341,9 @@ object RowsRenderHelper {
                     rowsView.append("\n")
                 }
                 val dividerLine = SpannableString(" ")
-                if (compactLeadingDividerViews.contains(rowsView) && rowsView.length() == 0) {
-                    dividerLine.setSpan(CompactDividerSpan(context, dpToPx(context, 9)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                if (rowsView.length() == 0) {
+                    val topGapPx = dpToPx(context, leadingDividerTopGapDp[rowsView] ?: 0)
+                    dividerLine.setSpan(CompactDividerSpan(context, topGapPx, dpToPx(context, 9)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 } else {
                     dividerLine.setSpan(DividerSpan(context), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
@@ -1035,19 +1040,20 @@ object RowsRenderHelper {
         }
     }
 
-    private class CompactDividerSpan(private val context: Context, private val heightPx: Int) : LeadingMarginSpan, LineHeightSpan {
+    private class CompactDividerSpan(private val context: Context, private val topGapPx: Int, private val heightPx: Int) : LeadingMarginSpan, LineHeightSpan {
         override fun getLeadingMargin(first: Boolean): Int = 0
 
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
-            fm.ascent = -heightPx
-            fm.top = -heightPx
+            val total = topGapPx + heightPx
+            fm.ascent = -total
+            fm.top = -total
             fm.descent = 0
             fm.bottom = 0
         }
 
         override fun drawLeadingMargin(canvas: Canvas, paint: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int, text: CharSequence?, start: Int, end: Int, first: Boolean, layout: Layout?) {
             val strokePaint = BlurEngine.getStrokePaint(context)
-            val y = top + strokePaint.strokeWidth.coerceAtLeast(1f)
+            val y = top + topGapPx + strokePaint.strokeWidth.coerceAtLeast(1f)
             val right = (layout?.width ?: 0).toFloat()
             canvas.drawLine(0f, y, right, y, strokePaint)
         }

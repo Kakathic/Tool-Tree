@@ -22,6 +22,8 @@ class ListItemText(context: Context,
     }
 
     init {
+        // Khối rows của text chỉ cách phần mô tả 4dp, thêm 8dp phía trên đường kẻ đầu khối để đường kẻ không dính sát chữ
+        RowsRenderHelper.markCompactLeadingDivider(rowsView, 8)
         RowsRenderHelper.bind(context, rowsView, extraIconView, config.rows, config, rowsHtmlView, bgView)
     }
 }

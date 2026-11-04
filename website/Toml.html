@@ -1012,7 +1012,7 @@ type = "rows"
 [[action.params.rows]]
 text-sh = "chatbot --list-websites"
 line = true</code></pre>
-<div class="callout tip">If the first row of a <code>rows</code> block has <code>line = true</code>, the divider is drawn as a thin line at the top of the block (it no longer takes a whole text line), so the gap after the previous param stays the same as between other params.</div>
+<div class="callout tip">If the first row of any rows block (<code>[[action.params.rows]]</code>, <code>[[action.rows]]</code>, <code>[[text.rows]]</code>, <code>[[page.rows]]</code>, <code>[[download.rows]]</code>, <code>[[switch.rows]]</code>, <code>[[picker.rows]]</code>, <code>[[editor.rows]]</code>) has <code>line = true</code>, the divider is drawn as a thin line at the top of the block (it no longer takes a whole text line), so there is no double gap above it. A <code>line = true</code> in the middle of a block still takes its own line because it separates two text rows.</div>
 <div class="callout tip">A <code>rows</code> block with no visible rows (or <code>support = false</code>) is skipped. A dialog counts only real inputs (not <code>rows</code> blocks) when deciding between the small dialog and the full-screen one (more than 4).</div>
 <h3>7.4. Demo</h3>
 <div class="demo-block"><div class="demo-label">Demo - params dialog</div><div class="demo-frame">
