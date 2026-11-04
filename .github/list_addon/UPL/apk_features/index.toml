@@ -6,24 +6,6 @@ load-toml-sh = "menuadd $PAGE_CONFIG_DIR"
 title-sh = """
 [ -f $PAGE_CONFIG_DIR/lang/auto.bash ] && echo "@google_text"
 """
-
-[[action]]
-title = "@transai_text_1"
-desc = "@transai_text_2"
-script = """
-if [ -f "$FILE" ]; then
-  if transai -c; then
-  transai_file "$FILE" "${FILE%/*}/transai_file_new.txt"
-  echo "@transai_text_3 ${FILE%/*}/transai_file_new.txt"
-  fi
-fi
-"""
-[[action.params]]
-name = "FILE"
-type = "file"
-required = "true"
-
-[[group]]
 [[action]]
 title = "@check_ufs_text"
 summary = "{TEXT_ROOT}"

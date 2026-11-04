@@ -39,12 +39,13 @@ OPENROUTER_MODELS = {
   "nemotron-lightning": "nvidia/nemotron-3.5-lightning:free",
   "north-mini-code": "cohere/north-mini-code:free",
 }
+# Provider order is display order: providers with free models/tiers come first.
 PROVIDERS = {
   "gemini": {"label": "Google Gemini", "env": "GEMINI_API_KEY", "base_url": "https://generativelanguage.googleapis.com/v1beta", "default_model": DEFAULT_MODEL, "key_url": "https://aistudio.google.com/app/apikey", "website": "https://ai.google.dev/gemini-api/docs"},
-  "openai": {"label": "OpenAI", "env": "OPENAI_API_KEY", "base_url": "https://api.openai.com/v1", "default_model": "gpt-4.1-mini", "key_url": "https://platform.openai.com/api-keys", "website": "https://platform.openai.com/docs"},
   "openrouter": {"label": "OpenRouter", "env": "OPENROUTER_API_KEY", "base_url": "https://openrouter.ai/api/v1", "default_model": OPENROUTER_DEFAULT_MODEL, "key_url": "https://openrouter.ai/settings/keys", "website": "https://openrouter.ai/docs"},
   "groq": {"label": "Groq", "env": "GROQ_API_KEY", "base_url": "https://api.groq.com/openai/v1", "default_model": "openai/gpt-oss-120b", "key_url": "https://console.groq.com/keys", "website": "https://console.groq.com/docs"},
   "together": {"label": "Together AI", "env": "TOGETHER_API_KEY", "base_url": "https://api.together.ai/v1", "default_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "key_url": "https://api.together.ai/settings/api-keys", "website": "https://docs.together.ai"},
+  "openai": {"label": "OpenAI", "env": "OPENAI_API_KEY", "base_url": "https://api.openai.com/v1", "default_model": "gpt-4.1-mini", "key_url": "https://platform.openai.com/api-keys", "website": "https://platform.openai.com/docs"},
   "deepseek": {"label": "DeepSeek", "env": "DEEPSEEK_API_KEY", "base_url": "https://api.deepseek.com", "default_model": "deepseek-flash", "key_url": "https://platform.deepseek.com/api_keys", "website": "https://api-docs.deepseek.com/"},
 }
 ACTIVE_PROVIDER = {"name": "gemini", "base_url": ""}
@@ -1438,8 +1439,15 @@ def fetch_provider_models(provider, api_key, base_url, timeout):
     raise ModelListError("Provider returned an unsupported model-list format.")
   return sorted(({"id": item.get("id") or item.get("name", ""), "name": item.get("name", "")} for item in items if isinstance(item, dict) and (item.get("id") or item.get("name"))), key=lambda x: x["id"].lower())
 
+def _is_free_model(provider, model_id):
+  # Only OpenRouter exposes this in its model ids; other providers do not.
+  return provider == "openrouter" and (model_id.endswith(":free") or model_id == "openrouter/free")
+
 def print_models(provider, models, selected=None):
   print(f"Available models — {PROVIDERS[provider]['label']} ({len(models)})")
+  if provider == "openrouter":
+    # Free models first; the order inside each group is unchanged (alphabetical).
+    models = sorted(models, key=lambda item: not _is_free_model(provider, item["id"]))
   for item in models:
     model_id = item["id"]
     marker = " *" if model_id == selected else "  "

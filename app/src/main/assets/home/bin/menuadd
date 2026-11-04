@@ -30,7 +30,7 @@ if [ "$google_text" ] || [ "$transai" == "true" ]; then
   if [ "$(glog "transai_text_$id")" == 1 ] && [ "$transai" == "true" ]; then
     summ="$(checksum "$1/lang/default.bash")"
     if [ "$summ" != "$(glog "sum_$id")" ] || [ ! -f "$1/lang/auto.bash" ]; then
-      check_trans="$(transai < "$1/lang/default.bash")"
+      check_trans="$(transai -f "$1/lang/default.bash")"
       if [[ "$check_trans" ]]; then
       echo "$check_trans" > "$1/lang/auto.bash" 2>/dev/null
       slog "sum_$id" "$summ"
@@ -39,7 +39,7 @@ if [ "$google_text" ] || [ "$transai" == "true" ]; then
   fi
   echo '
   [[menu.items]]
-  title = "Gemini"
+  title = "AI Translation"
   get = "glog transai_text_'$id'"
   reload = true
   silent = true
@@ -49,7 +49,7 @@ if [ "$google_text" ] || [ "$transai" == "true" ]; then
   slog transai_text_'$id' 0
   rm -fr "'$1'/lang/auto.bash" 2>/dev/null
   else
-  [[ -n "$(glog api_genmini)" ]] && slog transai_text_'$id' 1 || showdialog -t "Gemini" -m "'$warn_gemini_text'" --id "gemini_api" -g 15 -o "'$ETC'/toml/feature.toml"
+  [[ -n "$(glog api_genmini)" ]] && slog transai_text_'$id' 1 || showdialog -t "AI Translation" -m "'$warn_gemini_text'" --id "gemini_api" -g 15 -o "'$ETC'/toml/feature.toml"
   fi
   """
   [[end]]

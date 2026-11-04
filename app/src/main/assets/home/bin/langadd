@@ -14,7 +14,7 @@ if [ "$(glog "transai_text_$id")" == 1 ]; then
   stringlg="$(sed -n '/# default/,/# other languages/{ /# default/d; /# other languages/q; p; }' "$fileprop")"
   sum_mm="$(checksum "$fileprop")"
   if [ "$sum_mm" != "$(glog "sum_$id")" ] || [ ! -f "$1/auto.bash" ]; then
-  check_trans="$(transai "$stringlg")"
+  check_trans="$(transai -p "$stringlg")"
     if [[ "$check_trans" ]]; then
     echo "$check_trans" > "$1/auto.bash"
     slog "sum_$id" "$sum_mm"

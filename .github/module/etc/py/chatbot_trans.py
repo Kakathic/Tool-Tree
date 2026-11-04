@@ -36,42 +36,24 @@ PROVIDERS = {
   "together": {"base_url": "https://api.together.xyz/v1", "api_key_env": "TOGETHER_API_KEY", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "type": "openai"},
   "deepseek": {"base_url": "https://api.deepseek.com", "api_key_env": "DEEPSEEK_API_KEY", "model": "deepseek-flash", "type": "openai"},
 }
-PROVIDER_WEBSITES = {
-  "gemini": {"name": "Google Gemini", "url": "https://aistudio.google.com/app/apikey"},
-  "openai": {"name": "OpenAI", "url": "https://platform.openai.com/api-keys"},
-  "openrouter": {"name": "OpenRouter", "url": "https://openrouter.ai/settings/keys"},
-  "groq": {"name": "Groq", "url": "https://console.groq.com/keys"},
-  "together": {"name": "Together AI", "url": "https://api.together.ai/settings/api-keys"},
-  "deepseek": {"name": "DeepSeek", "url": "https://platform.deepseek.com/api_keys"},
-}
 UI_TEXT = {
   "vi": {
-    "title": "AI Translator", "spinner": "AI đang dịch...",
+    "spinner": "AI đang dịch...",
     "timeout_error": "Timeout phải lớn hơn 0.",
     "missing_api_key": "Thiếu API key. Dùng --api-key hoặc biến môi trường tương ứng.",
     "question_empty": "Nội dung dịch không được để trống.",
-    "instruction_error": "Lỗi hướng dẫn", "api_valid": "API key: HỢP LỆ",
-    "model_accessible": "Model: CÓ THỂ TRUY CẬP",
-    "model_name": "Tên model", "api_check_failed": "Kiểm tra API thất bại",
-    "error": "Lỗi", "warning": "Cảnh báo", "providers": "Nhà cung cấp",
-    "models": "Danh sách model", "default_model": "Model mặc định",
-    "websites": "Website đăng ký API key",
+    "instruction_error": "Lỗi hướng dẫn",
+    "error": "Lỗi", "warning": "Cảnh báo",
     "chunk": "Đang dịch phần",
-    "stats": "Thời gian xử lý",
   },
   "en": {
-    "title": "AI Translator", "spinner": "AI is translating...",
+    "spinner": "AI is translating...",
     "timeout_error": "Timeout must be greater than zero.",
     "missing_api_key": "Missing API key. Use --api-key or the provider-specific environment variable.",
     "question_empty": "Translation input cannot be empty.",
-    "instruction_error": "Instruction error", "api_valid": "API key: VALID",
-    "model_accessible": "Model: ACCESSIBLE",
-    "model_name": "Model name", "api_check_failed": "API check failed",
-    "error": "Error", "warning": "Warning", "providers": "Providers",
-    "models": "Available models", "default_model": "Default model",
-    "websites": "API key registration websites",
+    "instruction_error": "Instruction error",
+    "error": "Error", "warning": "Warning",
     "chunk": "Translating part",
-    "stats": "Processing time",
   },
 }
 
@@ -96,19 +78,9 @@ def normalize_language(value):
     return "English"
   return value
 
-def get_cli_language(language="auto", target=None):
-  """Resolve the CLI interface language (vi or en)."""
-  if language in ("vi", "en"):
-    return language
-  system_language = (
-    os.environ.get("LC_ALL")
-    or os.environ.get("LC_MESSAGES")
-    or os.environ.get("LANG")
-    or ""
-  ).lower().replace("_", "-")
-  if system_language.startswith("vi") or target == "Vietnamese":
-    return "vi"
-  return "en"
+def get_cli_language(language):
+  """Automatically match the CLI interface language to the output language."""
+  return "vi" if language == "Vietnamese" else "en"
 
 # ============================================================
 # RETRY
@@ -234,19 +206,13 @@ def parse_args():
   parser.add_argument("--base-url", help="Override the provider's default API base URL (OpenAI-compatible providers).")
   parser.add_argument("--thinking", choices=THINKING_LEVELS, default="low", help="Gemini thinking level; ignored by OpenAI-compatible providers.")
   parser.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE, help=f"Temperature for OpenAI-compatible providers (default: {DEFAULT_TEMPERATURE}, -1 to omit); ignored by Gemini.")
-  parser.add_argument("--lang", default="en", metavar="LANG", help="Translation target language: any language name or code, e.g. vi, ja, zh-CN, pt-BR, French.")
-  parser.add_argument("--ui-lang", choices=("auto", "vi", "en"), default="auto", help="CLI interface language (default: auto).")
+  parser.add_argument("--lang", default="en", metavar="LANG", help="Output language: any language name or code, e.g. vi, ja, zh-CN, pt-BR, French (default: en). The CLI messages are Vietnamese for vi and English otherwise.")
   parser.add_argument("--chunk-size", type=int, default=DEFAULT_CHUNK_SIZE, metavar="CHARS", help=f"Maximum characters per request (default: {DEFAULT_CHUNK_SIZE}).")
   parser.add_argument("--strict", action="store_true", help="Fail if placeholders still differ after one retry (default: warn).")
-  parser.add_argument("--stats", action="store_true", help="Show processing time.")
   parser.add_argument("--instruction")
   parser.add_argument("--instruction-file")
   parser.add_argument("--api-key")
   parser.add_argument("--timeout", type=int, default=120)
-  parser.add_argument("--check-api-key", action="store_true", help="Check API key and model access.")
-  parser.add_argument("--list-providers", action="store_true", help="List supported providers.")
-  parser.add_argument("--list-websites", action="store_true", help="List provider websites for creating API keys.")
-  parser.add_argument("--list-models", action="store_true", help="List models available from the selected provider.")
   args = parser.parse_args()
   config = PROVIDERS[args.provider]
   args.model = args.model or config["model"]
@@ -254,23 +220,12 @@ def parse_args():
   has_input = args.prompt is not None or bool(args.file)
   if args.prompt is not None and args.file:
     parser.error("-p/--prompt and -f/--file cannot be used together.")
-  if args.list_providers or args.list_websites:
-    if args.list_providers and args.list_websites:
-      parser.error("--list-providers and --list-websites cannot be used together.")
-    if args.list_models or args.check_api_key or has_input:
-      parser.error("--list-providers/--list-websites cannot be combined with --list-models, --check-api-key, -p, or -f.")
-    return args
   if args.chunk_size < 500:
     parser.error("--chunk-size must be at least 500 characters.")
   if args.temperature != -1 and not 0 <= args.temperature <= 2:
     parser.error("--temperature must be between 0 and 2, or -1 to omit it.")
-  if args.list_models:
-    if has_input or args.check_api_key:
-      parser.error("--list-models cannot be combined with -p/--prompt, -f/--file, or --check-api-key.")
-  elif not args.check_api_key and not has_input:
+  if not has_input:
     parser.error("The -p/--prompt or -f/--file option is required.")
-  if args.check_api_key and has_input:
-    parser.error("--check-api-key cannot be combined with -p/--prompt or -f/--file.")
   return args
 
 # ============================================================
@@ -366,37 +321,6 @@ def placeholder_problem(source, translated):
 # ============================================================
 # GEMINI REST API
 # ============================================================
-def check_api_key_model(api_key, model, timeout):
-  base_url = "https://generativelanguage.googleapis.com/v1beta/models"
-
-  def request_model(url):
-    request = urllib.request.Request(url, headers={"x-goog-api-key": api_key}, method="GET")
-    try:
-      with urlopen_retry(request, timeout) as response:
-        return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-      body = exc.read().decode("utf-8", errors="replace")
-      message = parse_api_error(body)
-      raise RuntimeError(f"HTTP {exc.code}: {message}") from exc
-    except urllib.error.URLError as exc:
-      raise RuntimeError(f"Network error: {exc.reason}") from exc
-    except TimeoutError as exc:
-      raise RuntimeError("Request timed out.") from exc
-    except json.JSONDecodeError as exc:
-      raise RuntimeError("Invalid JSON response.") from exc
-
-  request_model(base_url + "?pageSize=1")
-  model_name = model.strip()
-  if model_name.startswith("models/"):
-    model_name = model_name[len("models/"):]
-  if not model_name:
-    raise RuntimeError("Model name cannot be empty.")
-  model_url = base_url + "/" + urllib.parse.quote(model_name, safe="-._~")
-  model_info = request_model(model_url)
-  if not isinstance(model_info, dict) or not model_info.get("name"):
-    raise RuntimeError("Model information is incomplete.")
-  return model_info
-
 def extract_text(data):
   output_text = data.get("output_text")
   if isinstance(output_text, str) and output_text.strip():
@@ -480,16 +404,6 @@ def openai_request(url, api_key, timeout, method="GET", payload=None):
   except json.JSONDecodeError as exc:
     raise RuntimeError("Invalid JSON response.") from exc
 
-def check_openai_compatible(api_key, base_url, model, timeout):
-  data = openai_request(api_endpoint(base_url, "/models"), api_key, timeout)
-  models = data.get("data", []) if isinstance(data, dict) else []
-  if not isinstance(models, list):
-    raise RuntimeError("Invalid models response.")
-  model_ids = [item.get("id") for item in models if isinstance(item, dict)]
-  if model_ids and model not in model_ids:
-    raise RuntimeError(f"API key is valid, but model '{model}' was not found in the model list.")
-  return True if model_ids else None
-
 def call_openai_compatible(api_key, base_url, model, question, instruction, language, timeout, temperature=DEFAULT_TEMPERATURE):
   payload = {
     "model": model,
@@ -511,52 +425,6 @@ def call_openai_compatible(api_key, base_url, model, question, instruction, lang
   if not isinstance(content, str) or not content.strip():
     raise RuntimeError("Provider returned empty translation text.")
   return content.strip()
-
-# ============================================================
-# PROVIDER AND MODEL LISTING
-# ============================================================
-def list_providers(ui_language="auto"):
-  ui = UI_TEXT[get_cli_language(ui_language)]
-  print(COLORS.title(ui["providers"]))
-  for name, config in PROVIDERS.items():
-    print(f"  {name:<12} {PROVIDER_WEBSITES[name]['name']}  ({ui['default_model']}: {config['model'] or '-'})")
-
-def list_provider_websites(ui_language="auto"):
-  ui = UI_TEXT[get_cli_language(ui_language)]
-  print(COLORS.title(ui["websites"]))
-  for item in PROVIDER_WEBSITES.values():
-    print(f"  {item['name']:<32} {item['url']}")
-
-def list_provider_models(api_key, provider, base_url, timeout):
-  if provider["type"] == "gemini":
-    url = "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000"
-    models = []
-    while url:
-      request = urllib.request.Request(url, headers={"x-goog-api-key": api_key}, method="GET")
-      try:
-        with urlopen_retry(request, timeout) as response:
-          data = json.loads(response.read().decode("utf-8"))
-      except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"HTTP {exc.code}: {parse_api_error(exc.read().decode('utf-8', errors='replace'))}") from exc
-      except urllib.error.URLError as exc:
-        raise RuntimeError(f"Network error: {exc.reason}") from exc
-      except TimeoutError as exc:
-        raise RuntimeError("Request timed out.") from exc
-      except json.JSONDecodeError as exc:
-        raise RuntimeError("Invalid JSON response.") from exc
-      for item in data.get("models", []):
-        if isinstance(item, dict) and item.get("name"):
-          methods = item.get("supportedGenerationMethods", [])
-          if not methods or "generateContent" in methods:
-            models.append((item["name"].removeprefix("models/"), item.get("displayName", "")))
-      token = data.get("nextPageToken")
-      url = "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&pageToken=" + urllib.parse.quote(token, safe="") if token else None
-    return models
-  data = openai_request(api_endpoint(base_url, "/models"), api_key, timeout)
-  items = data.get("data", []) if isinstance(data, dict) else []
-  if not isinstance(items, list):
-    raise RuntimeError("Invalid models response.")
-  return [(item["id"], item.get("name", "")) for item in items if isinstance(item, dict) and item.get("id")]
 
 # ============================================================
 # TRANSLATION
@@ -609,58 +477,15 @@ def translate_text(provider, api_key, model, base_url, question, instruction, la
 def run():
   args = parse_args()
   language = normalize_language(args.lang)
-  ui_code = get_cli_language(args.ui_lang, language)
-  ui = UI_TEXT[ui_code]
-  if args.list_providers:
-    list_providers(ui_code)
-    return 0
-  if args.list_websites:
-    list_provider_websites(ui_code)
-    return 0
+  ui = UI_TEXT[get_cli_language(language)]
   if args.timeout <= 0:
     print(COLORS.error(ui["timeout_error"]), file=sys.stderr)
     return 2
   provider = PROVIDERS[args.provider]
   api_key = args.api_key or os.environ.get(provider["api_key_env"])
-  if args.list_models:
-    if not api_key:
-      print(COLORS.error(ui["missing_api_key"] + f" ({provider['api_key_env']})"), file=sys.stderr)
-      return 2
-    try:
-      models = list_provider_models(api_key, provider, args.base_url, args.timeout)
-      print(COLORS.title(f"{ui['models']} - {args.provider}"))
-      if not models:
-        print(COLORS.label("No models returned by provider."))
-      for model_id, display_name in models:
-        suffix = f" — {display_name}" if display_name and display_name != model_id else ""
-        default_mark = " *" if model_id == args.model or (provider["type"] == "gemini" and model_id == args.model.removeprefix("models/")) else ""
-        print(f"  {model_id}{default_mark}{suffix}")
-      return 0
-    except RuntimeError as exc:
-      print(COLORS.error(f"{ui['api_check_failed']}: {exc}"), file=sys.stderr)
-      return 1
   if not api_key:
     print(COLORS.error(ui["missing_api_key"] + f" ({provider['api_key_env']})"), file=sys.stderr)
     return 2
-  if args.check_api_key:
-    try:
-      if provider["type"] == "gemini":
-        model_info = check_api_key_model(api_key=api_key, model=args.model, timeout=args.timeout)
-        display_name = model_info.get("displayName", model_info["name"])
-        accessible = True
-      else:
-        accessible = check_openai_compatible(api_key, args.base_url, args.model, args.timeout)
-        display_name = args.model
-      print(COLORS.value(ui["api_valid"]))
-      if accessible is None:
-        print(COLORS.label("Model access could not be verified."))
-      else:
-        print(COLORS.value(ui["model_accessible"]))
-      print(f"{ui['model_name']}: {display_name}")
-      return 0
-    except RuntimeError as exc:
-      print(COLORS.error(f"{ui['api_check_failed']}: {exc}"), file=sys.stderr)
-      return 1
   try:
     instruction = load_instruction(args)
   except (OSError, UnicodeError, ValueError) as exc:
@@ -674,7 +499,6 @@ def run():
   if not question:
     print(COLORS.error(ui["question_empty"]), file=sys.stderr)
     return 2
-  started = time.monotonic()
   spinner = Spinner(ui["spinner"])
   spinner.start()
 
@@ -688,7 +512,7 @@ def run():
       print(COLORS.label(label), file=sys.stderr)
 
   try:
-    answer, chunk_count, warnings = translate_text(
+    answer, _chunk_count, warnings = translate_text(
       provider=provider, api_key=api_key, model=args.model,
       base_url=args.base_url, question=question,
       instruction=instruction, language=language,
@@ -708,9 +532,6 @@ def run():
   sys.stdout.flush()
   for warning in warnings:
     print(COLORS.error(f"{ui['warning']}: {warning}"), file=sys.stderr)
-  if args.stats:
-    elapsed = time.monotonic() - started
-    print(COLORS.label(f"{ui['stats']}: {elapsed:.2f}s | Chunks: {chunk_count}"), file=sys.stderr)
   return 0
 
 def main():

@@ -28,7 +28,7 @@ support = "glog Toff"
 title = "@permis_text_2"
 desc = "@permis_text_5"
 icon = "{ICON}/language.png"
-items = [ "|@default_text", "ai|Gemini AI", "en|English", "vi|Việt nam", "ru|Русский", "hu|Hungarian", "id|Indonesia", "es|Spanish" ]
+items = [ "|@default_text", "ai|Chatbot AI", "en|English", "vi|Việt nam", "ru|Русский", "hu|Hungarian", "id|Indonesia", "es|Spanish" ]
 get = "glog language_kkts"
 set = """
 if [ "$state" == "ai" ]; then

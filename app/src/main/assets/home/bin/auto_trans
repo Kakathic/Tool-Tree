@@ -4,8 +4,11 @@ if [ "$(glog language_kkts)" == 'ai' ]; then
   [ -f $ETC/lang/$LANGUAGE.bash ] && texgg=default.bash || texgg=vi.bash
   sumss="$(checksum $ETC/lang/$texgg)"
   if [[ "$sumss" != "$(glog sumss)" ]] || [[ ! -f $ETC/lang/auto.bash ]]; then
-    showtoast -a "Translating by Genmini..."
-    transai "$(cat $ETC/lang/$texgg)" > "$ETC/lang/auto.bash"
+    showtoast -a "Translating by AI..."
+    check_trans="$(transai -f "$ETC/lang/$texgg")"
+    if [[ "$check_trans" ]]; then
+    echo "$check_trans" > "$ETC/lang/auto.bash"
     slog sumss "$sumss"
+    fi
   fi
 fi
