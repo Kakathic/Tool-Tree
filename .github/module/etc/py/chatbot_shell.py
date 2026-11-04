@@ -214,7 +214,12 @@ PROTECTED_DIRS = {
   "/usr", "/bin", "/sbin", "/home", "/root", "/proc", "/dev",
   "/mnt", "/opt", "/var", "/lib", "/boot",
 }
-MAX_READ_LINES = 400
+MAX_READ_LINES = 1000
+CONTEXT_COMPACT_CHARS = 150000  # compact old tool results of a turn above this size
+OLD_RESULT_KEEP_CHARS = 1500    # results at most this long are never compacted
+MAX_IDENTICAL_FAILURES = 2      # the same failing call is not run a third time
+DEFAULT_READ_LINES = 500
+MAX_READ_CHARS = 40000
 MAX_SEARCH_RESULTS = 100
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".svn"}
 FILE_TOOLS = [
@@ -222,8 +227,9 @@ FILE_TOOLS = [
     "type": "function",
     "name": "read_file",
     "description": (
-      "Read a text file and return numbered lines. For long files "
-      "read in parts with offset and limit."
+      "Read a text file and return numbered lines (up to about 40000 "
+      "characters per call). Read the whole range you need in one call "
+      "with a large limit; use offset only when the result says more follows."
     ),
     "parameters": {
       "type": "object",
@@ -235,7 +241,7 @@ FILE_TOOLS = [
         },
         "limit": {
           "type": "integer",
-          "description": "Maximum lines to return. Default 200.",
+          "description": "Maximum lines to return. Default 500, maximum 1000.",
         },
       },
       "required": ["path"],
@@ -247,7 +253,9 @@ FILE_TOOLS = [
     "description": (
       "Replace exact text in an existing file. old_text must match "
       "the file exactly (including whitespace) and appear once, "
-      "unless replace_all is true. Read the file first."
+      "unless replace_all is true. Read the file first. To change "
+      "several places in the same file, pass them all in one call "
+      "as edits (applied in order, all or none)."
     ),
     "parameters": {
       "type": "object",
@@ -265,8 +273,24 @@ FILE_TOOLS = [
           "type": "boolean",
           "description": "Replace every occurrence. Default false.",
         },
+        "edits": {
+          "type": "array",
+          "description": (
+            "Several replacements for this file in one call; use "
+            "instead of old_text/new_text."
+          ),
+          "items": {
+            "type": "object",
+            "properties": {
+              "old_text": {"type": "string"},
+              "new_text": {"type": "string"},
+              "replace_all": {"type": "boolean"},
+            },
+            "required": ["old_text", "new_text"],
+          },
+        },
       },
-      "required": ["path", "old_text", "new_text"],
+      "required": ["path"],
     },
   },
   {
@@ -1084,39 +1108,54 @@ def build_system_instruction(
     parts.append(
       "You can use read_file, edit_file, write_file and search_files on the user's device. "
       "Always read a file before editing it and use exact old_text copied from the read "
-      "content. Prefer edit_file for localized changes; do not rewrite an entire file "
+      "content. Read each file once, fully, with a large limit, and read all needed files "
+      "in the same round. Put every change for one file into a single edit_file call "
+      "using edits. If edit_file reports that old_text was not found or is ambiguous, "
+      "re-read only the affected lines (offset and limit) and resend the corrected "
+      "complete edits list; do not re-read the whole file. "
+      "Prefer edit_file for localized changes; do not rewrite an entire file "
       "when a small edit is sufficient. Preserve existing features, behavior, structure, "
       "interfaces, naming conventions, encoding and line endings unless the request "
       "requires changing them. Change only what is necessary; do not remove, simplify "
       "or refactor unrelated code. Check directly dependent components when a change "
       "could affect them. Preserve the file's existing language and format unless the "
-      "user specifies otherwise. Do not overwrite user data or reveal secrets. Use "
-      "search_files instead of shell grep or find. If the user denies a change, do not "
-      "retry it in another form."
+      "user specifies otherwise. Do not overwrite user data or reveal secrets. "
+      + ("Use search_files instead of shell grep or find. " if shell_enabled else "")
+      + "If the user denies a change, do not retry it in another form."
     )
   if shell_enabled or files_enabled:
-    parts.append(
+    batch = (
       "Batch independent operations to minimize tool-call overhead. Before calling "
       "any tool, identify all currently known operations and group independent ones "
       "into the fewest possible tool calls. Do not execute independent operations "
       "one by one when they can safely be grouped. "
-      "For shell work, you MUST combine all currently known independent shell "
-      "commands into a single shell invocation whenever possible. Prefer one concise "
-      "multi-command script over multiple shell tool calls. Do not make a separate "
-      "shell call for each command when those commands can be executed together. "
-      "Use && when a command depends on the successful completion of the previous "
-      "command, and use ; or explicit status handling for independent commands that "
-      "should run regardless of previous failures. Preserve and report individual "
-      "command failures instead of silently ignoring them. "
-      "Only make another shell call when the next operation depends on a previous "
-      "result, requires information that was not available earlier, or is needed to "
-      "correct a failure. Before every additional shell call, check whether the "
-      "remaining independent operations can also be included. "
-      "For file work, read multiple required files in the same tool round and group "
-      "independent edits or searches when the API supports it. Read-only calls "
-      "(read_file, search_files) issued in the same round run in parallel, so put "
-      "all independent reads and searches in one round; shell commands and file "
-      "edits always run one after another in the order given. Execute dependent "
+    )
+    if shell_enabled:
+      batch += (
+        "For shell work, you MUST combine all currently known independent shell "
+        "commands into a single shell invocation whenever possible. Prefer one concise "
+        "multi-command script over multiple shell tool calls. Do not make a separate "
+        "shell call for each command when those commands can be executed together. "
+        "Use && when a command depends on the successful completion of the previous "
+        "command, and use ; or explicit status handling for independent commands that "
+        "should run regardless of previous failures. Preserve and report individual "
+        "command failures instead of silently ignoring them. "
+        "Only make another shell call when the next operation depends on a previous "
+        "result, requires information that was not available earlier, or is needed to "
+        "correct a failure. Before every additional shell call, check whether the "
+        "remaining independent operations can also be included. "
+      )
+    if files_enabled:
+      batch += (
+        "For file work, read multiple required files in the same tool round and group "
+        "independent edits or searches when the API supports it. Read-only calls "
+        "(read_file, search_files) issued in the same round run in parallel, so put "
+        "all independent reads and searches in one round; "
+        + ("shell commands and file edits" if shell_enabled else "file edits")
+        + " always run one after another in the order given. "
+      )
+    batch += (
+      "Execute dependent "
       "actions sequentially, using each result before deciding the next step. "
       "Never batch in a way that obscures errors, weakens safety or bypasses "
       "confirmation. Keep output concise and relevant. "
@@ -1127,17 +1166,45 @@ def build_system_instruction(
       "within scope, or explain the cause and current state. Do not claim an "
       "operation succeeded without evidence."
     )
-    parts.append(
-      "Before reporting completion, verify the actual result. Read back edited files "
-      "and confirm the intended content; run an appropriate syntax check or focused test "
-      "when available and proportionate to the change. Choose validators by file type "
-      "and available tools, such as Python compilation, JSON/TOML/YAML parsing, bash -n, "
-      "XML parsing, HTML validation or a relevant compiler/build task. Do not run a "
-      "full build for every minor edit when a focused check is sufficient. Never claim "
-      "a check was performed if it was not. In the final report, briefly state changed "
-      "files or components, the main change and verification status using PASS, FAIL "
-      "or NOT RUN; identify checks that could not be performed."
+    parts.append(batch)
+    if files_enabled:
+      verify = (
+        "Before reporting completion, verify the actual result without extra rounds. "
+        "edit_file and write_file already read the file back from disk and report "
+        "verified, changed and, for .py and .json files, syntax_check: do not re-read an "
+        "edited file or repeat a check that the result already reports. "
+      )
+      if shell_enabled:
+        verify += (
+          "Run an additional check only when a result reports an error, or for file "
+          "types without an automatic check (shell scripts, TOML, YAML, XML, HTML, "
+          "build files); then check all such files in ONE combined command, only when "
+          "proportionate. Do not run a full build for every minor edit. "
+        )
+      else:
+        verify += (
+          "For file types without an automatic check (shell scripts, TOML, YAML, XML, "
+          "HTML, build files) no validator is available here, so report the check as "
+          "NOT RUN instead of guessing. "
+        )
+    else:
+      verify = (
+        "Before reporting completion, verify the actual result. Read back edited files "
+        "and confirm the intended content; run an appropriate syntax check or focused "
+        "test when available and proportionate to the change, combining all checks into "
+        "ONE command. Choose validators by file type and available tools, such as "
+        "Python compilation, JSON/TOML/YAML parsing, bash -n, XML parsing, HTML "
+        "validation or a relevant compiler/build task. Do not run a full build for "
+        "every minor edit when a focused check is sufficient. "
+      )
+    verify += (
+      "Never claim a check was performed if it was not. When the last tool results "
+      "need no further action, write the final report in that same response without "
+      "another tool call. In the final report, briefly state changed files or "
+      "components, the main change and verification status using PASS, FAIL or NOT "
+      "RUN; identify checks that could not be performed."
     )
+    parts.append(verify)
   if memory_summary:
     parts.append(
       "Persistent conversation memory (use as background context; prefer newer messages "
@@ -1301,11 +1368,15 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
   for call in message.get("tool_calls") or []:
     function = call.get("function") or {}
     raw_args = function.get("arguments") or "{}"
+    invalid = False
     try:
       arguments = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
     except json.JSONDecodeError:
-      arguments = {}
-    steps.append({"type": "function_call", "id": call.get("id"), "name": function.get("name", ""), "arguments": arguments})
+      arguments, invalid = {}, True
+    step = {"type": "function_call", "id": call.get("id"), "name": function.get("name", ""), "arguments": arguments}
+    if invalid:
+      step["invalid_arguments"] = True
+    steps.append(step)
   if answer:
     steps.insert(0, {"type": "model_output", "content": [{"type": "text", "text": answer}]})
   if not steps:
@@ -1958,6 +2029,7 @@ class ShellPolicy:
     self.timeout = timeout
     self.command_count = 0
     self.edited = []  # files changed during this turn, printed after the answer
+    self.failed_calls = {}  # identical failing tool calls in this request -> count
 
 def _find_shell():
   for name in ("bash", "sh"):
@@ -2371,6 +2443,11 @@ def _log_args(name, arguments):
       shown["content_chars"] = len(value) if isinstance(value, str) else 0
     elif isinstance(value, str):
       shown[key] = value[:1000]
+    elif key == "edits" and isinstance(value, list):
+      shown[key] = [
+        {k: (v[:1000] if isinstance(v, str) else v) for k, v in item.items()}
+        for item in value[:50] if isinstance(item, dict)
+      ]
     else:
       shown[key] = value
   return shown
@@ -2573,11 +2650,12 @@ def tool_read_file(args, policy):
     return {"error": f"Not a file: {path}"}
   try:
     offset = max(1, int(args.get("offset") or 1))
-    limit = min(MAX_READ_LINES, max(1, int(args.get("limit") or 200)))
+    limit = min(MAX_READ_LINES, max(1, int(args.get("limit") or DEFAULT_READ_LINES)))
   except (TypeError, ValueError):
     return {"error": "offset and limit must be integers."}
   lines = []
   more = False
+  used = 0
   try:
     with open(path, "r", encoding="utf-8", errors="replace") as file:
       for number, line in enumerate(file, 1):
@@ -2589,58 +2667,80 @@ def tool_read_file(args, policy):
         text = line.rstrip("\n")
         if len(text) > 2000:
           text = text[:2000] + "...[line cut]"
-        lines.append(f"{number}\t{text}")
+        entry = f"{number}\t{text}"
+        # Stop at a whole line instead of cutting the middle out of the content
+        if lines and used + len(entry) + 1 > MAX_READ_CHARS:
+          more = True
+          break
+        lines.append(entry)
+        used += len(entry) + 1
   except OSError as exc:
     return {"error": f"Cannot read file: {exc}"}
   result = {
     "path": path,
     "first_line": offset,
-    "content": _clip("\n".join(lines)),
+    "content": "\n".join(lines),
   }
   if not lines:
     result["note"] = "No lines at this offset."
   elif more:
     result["note"] = (
-      f"More lines follow; call again with offset={offset + limit}."
+      f"More lines follow; call again with offset={offset + len(lines)}."
     )
   return result
 
 def tool_edit_file(args, policy, ui):
   path = _resolve(args.get("path"))
-  old = args.get("old_text")
-  new = args.get("new_text")
   denied = check_path_allowed(path, policy)
   if denied:
     return denied
-  if not isinstance(old, str) or not isinstance(new, str) or not old:
-    return {"error": "old_text and new_text must be strings; old_text cannot be empty."}
+  edits = args.get("edits")
+  if edits is None:
+    edits = [{
+      "old_text": args.get("old_text"),
+      "new_text": args.get("new_text"),
+      "replace_all": args.get("replace_all"),
+    }]
+  if not isinstance(edits, list) or not edits or not all(isinstance(item, dict) for item in edits):
+    return {"error": "edits must be a non-empty list of objects with old_text and new_text."}
   if not os.path.isfile(path):
     return {"error": f"Not a file: {path}"}
   try:
     text = _read_text(path)
   except (OSError, UnicodeDecodeError) as exc:
     return {"error": f"Cannot read file: {exc}"}
-  count = text.count(old)
-  if count == 0:
-    return {
-      "error": (
-        "old_text was not found. Read the file again and copy "
-        "the text exactly, including whitespace."
-      )
-    }
-  replace_all = bool(args.get("replace_all"))
-  if count > 1 and not replace_all:
-    return {
-      "error": (
-        f"old_text appears {count} times. Add surrounding context "
-        "to make it unique, or set replace_all to true."
-      )
-    }
-  updated = (
-    text.replace(old, new)
-    if replace_all
-    else text.replace(old, new, 1)
-  )
+  multi = len(edits) > 1
+  updated = text
+  replacements = 0
+  for number, item in enumerate(edits, 1):
+    old = item.get("old_text")
+    new = item.get("new_text")
+    prefix = f"Edit {number} of {len(edits)}: " if multi else ""
+    suffix = " No edit was applied." if multi else ""
+    if not isinstance(old, str) or not isinstance(new, str) or not old:
+      return {"error": prefix + "old_text and new_text must be strings; old_text cannot be empty." + suffix}
+    count = updated.count(old)
+    if count == 0:
+      return {
+        "error": (
+          prefix + "old_text was not found. Read the file again and copy "
+          "the text exactly, including whitespace." + suffix
+        )
+      }
+    replace_all = bool(item.get("replace_all"))
+    if count > 1 and not replace_all:
+      return {
+        "error": (
+          prefix + f"old_text appears {count} times. Add surrounding context "
+          "to make it unique, or set replace_all to true." + suffix
+        )
+      }
+    updated = (
+      updated.replace(old, new)
+      if replace_all
+      else updated.replace(old, new, 1)
+    )
+    replacements += count if replace_all else 1
   if updated == text:
     return {"error": "old_text and new_text are identical; the file would not change."}
   preview = f"Edit {path}\n" + _diff_preview(text, updated, path)
@@ -2654,7 +2754,7 @@ def tool_edit_file(args, policy, ui):
     return {"error": f"Cannot write file: {exc}"}
   return _verified_result(path, updated, {
     "path": path,
-    "replacements": count if replace_all else 1,
+    "replacements": replacements,
     "backup": path + ".bak",
   }, original=text)
 
@@ -2796,7 +2896,30 @@ def run_tool_call(step, policy, ui):
   if not isinstance(arguments, dict):
     arguments = {}
   policy.last_decision = "n/a"
-  if name == "run_command" and policy.enabled:
+  repeat_key = name + "\0" + json.dumps(arguments, sort_keys=True, ensure_ascii=False, default=str)
+  failed_calls = getattr(policy, "failed_calls", None)
+  if failed_calls is None:
+    failed_calls = policy.failed_calls = {}
+  counted = not step.get("invalid_arguments")
+  if counted and failed_calls.get(repeat_key, 0) >= MAX_IDENTICAL_FAILURES:
+    counted = False
+    result = {
+      "error": (
+        f"This exact call (same tool and arguments) already failed "
+        f"{failed_calls[repeat_key]} times in this request, so it was not run again. "
+        "Read the earlier error, do not repeat the call; change the command or approach, "
+        "or explain the problem to the user."
+      )
+    }
+  elif step.get("invalid_arguments"):
+    result = {
+      "error": (
+        "The tool arguments were cut off or were not valid JSON (the reply was probably "
+        "too long), so nothing was run. Retry with a much smaller call: split a large "
+        "write into several smaller edit_file/edits calls or shorter commands."
+      )
+    }
+  elif name == "run_command" and policy.enabled:
     command = str(arguments.get("command", "")).strip()
     reason = check_command_guard(command) if command else None
     if not command:
@@ -2843,6 +2966,14 @@ def run_tool_call(step, policy, ui):
       _record_edited(policy, name, arguments, result)
   else:
     result = {"error": f"Unknown or disabled tool: {name}"}
+  if counted:
+    exit_code = result.get("exit_code")
+    if result.get("error") or exit_code not in (0, None):
+      failed_calls[repeat_key] = failed_calls.get(repeat_key, 0) + 1
+    else:
+      failed_calls.pop(repeat_key, None)
+      if name in ("edit_file", "write_file"):
+        failed_calls.clear()  # files changed: earlier failures may no longer apply
   log_action(policy, {
     "tool": name,
     "args": _log_args(name, arguments),
@@ -2901,6 +3032,36 @@ class StreamPrinter:
       sys.stdout.write("\n" * extra_newlines)
       sys.stdout.flush()
 
+def compact_working(working, start, protect_from, limit=CONTEXT_COMPACT_CHARS):
+  """Shrink old tool results of the current turn when the conversation gets too large.
+
+  Only function_result items in working[start:protect_from] are replaced (oldest first,
+  largest results only); the results of the latest round and the stored steps are kept."""
+  def size(item):
+    return len(json.dumps(item, ensure_ascii=False, default=str))
+  total = sum(size(item) for item in working)
+  if total <= limit:
+    return working
+  working = list(working)
+  for index in range(start, min(protect_from, len(working))):
+    item = working[index]
+    if not isinstance(item, dict) or item.get("type") != "function_result":
+      continue
+    length = size(item)
+    if length <= OLD_RESULT_KEEP_CHARS:
+      continue
+    note = json.dumps({
+      "omitted": (
+        f"Old tool result removed to save context ({length} characters). "
+        "Run the tool again if you still need it."
+      )
+    }, ensure_ascii=False)
+    working[index] = dict(item, result=[{"type": "text", "text": note}])
+    total -= length - size(working[index])
+    if total <= limit:
+      break
+  return working
+
 def chat_turn(
   api_key,
   model,
@@ -2920,8 +3081,11 @@ def chat_turn(
   Returns (final_answer, all_generated_steps).
   """
   policy = policy or ShellPolicy()
+  policy.failed_calls = {}
   generated = []
   working = list(history)
+  turn_start = len(working)
+  protect_from = len(working)
   who = responder_label(model)
   WHO["label"] = who
   last_detail = ""
@@ -2936,6 +3100,7 @@ def chat_turn(
     else:
       round_text = spinner_text
     first_round = False
+    working = compact_working(working, turn_start, protect_from)
     spinner = Spinner(round_text) if spinner_text else None
     ACTIVE_SPINNER["s"] = spinner
     if spinner:
@@ -3011,6 +3176,7 @@ def chat_turn(
       if ui and results:
         last_detail = " · ".join(result_summary(r, ui) for r in results)
       working = working + steps + results
+      protect_from = len(working) - len(results)
     finally:
       if spinner:
         spinner.stop()
