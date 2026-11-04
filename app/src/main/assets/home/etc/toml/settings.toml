@@ -124,7 +124,6 @@ value = "gemini-3.5-flash-lite"
 
 [[chat.params]]
 name = "chatai_detail"
-title = "@detail_title"
 label = "@detail_label"
 type = "switch"
 
