@@ -45,7 +45,7 @@ PROVIDERS = {
   "openrouter": {"label": "OpenRouter", "env": "OPENROUTER_API_KEY", "base_url": "https://openrouter.ai/api/v1", "default_model": OPENROUTER_DEFAULT_MODEL, "key_url": "https://openrouter.ai/settings/keys", "website": "https://openrouter.ai/docs"},
   "groq": {"label": "Groq", "env": "GROQ_API_KEY", "base_url": "https://api.groq.com/openai/v1", "default_model": "openai/gpt-oss-120b", "key_url": "https://console.groq.com/keys", "website": "https://console.groq.com/docs"},
   "together": {"label": "Together AI", "env": "TOGETHER_API_KEY", "base_url": "https://api.together.ai/v1", "default_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "key_url": "https://api.together.ai/settings/api-keys", "website": "https://docs.together.ai"},
-  "deepseek": {"label": "DeepSeek", "env": "DEEPSEEK_API_KEY", "base_url": "https://api.deepseek.com", "default_model": "deepseek-v4-flash", "key_url": "https://platform.deepseek.com/api_keys", "website": "https://api-docs.deepseek.com/"},
+  "deepseek": {"label": "DeepSeek", "env": "DEEPSEEK_API_KEY", "base_url": "https://api.deepseek.com", "default_model": "deepseek-flash", "key_url": "https://platform.deepseek.com/api_keys", "website": "https://api-docs.deepseek.com/"},
 }
 ACTIVE_PROVIDER = {"name": "gemini", "base_url": ""}
 DEFAULT_LANGUAGE = "English"
@@ -387,6 +387,7 @@ UI_TEXT = {
     "check_key_bad": "API key bị từ chối ({key}): {error}",
     "check_key_skip": "API key: chưa kiểm tra",
     "check_server_error": "Máy chủ trả lỗi: {error}",
+    "check_models_notice": "Thông báo: không lấy được danh sách model ({error})",
     "check_model_ok": "Model {model}: có thể truy cập",
     "check_model_later": "Model {model}: sẽ kiểm tra ở lần hỏi đầu tiên",
     "check_model_missing": "Model {model}: không có trong danh sách của nhà cung cấp",
@@ -497,6 +498,7 @@ UI_TEXT = {
     "check_key_bad": "API key rejected ({key}): {error}",
     "check_key_skip": "API key: not checked",
     "check_server_error": "Server returned an error: {error}",
+    "check_models_notice": "Notice: could not fetch the model list ({error})",
     "check_model_ok": "Model {model}: accessible",
     "check_model_later": "Model {model}: will be checked on the first request",
     "check_model_missing": "Model {model}: not in the provider's model list",
@@ -1323,6 +1325,9 @@ def list_providers(show_websites=False, ui=None):
     else:
       print(f"  {key:<12} {item['label']}")
 
+class ModelListError(RuntimeError):
+  """The provider answered, but the reply is not a usable model list."""
+
 def _fetch_json(url, api_key, timeout, gemini=False):
   headers = {"x-goog-api-key": api_key} if gemini else ({"Authorization": "Bearer " + api_key} if api_key else {})
   request = urllib.request.Request(url, headers=headers, method="GET")
@@ -1341,7 +1346,7 @@ def _fetch_json(url, api_key, timeout, gemini=False):
   except NETWORK_ERRORS as exc:
     raise _net_error(exc) from exc
   except json.JSONDecodeError as exc:
-    raise RuntimeError("Invalid JSON response.") from exc
+    raise ModelListError("Invalid JSON response.") from exc
 
 def fetch_provider_models(provider, api_key, base_url, timeout):
   if provider == "gemini":
@@ -1359,7 +1364,7 @@ def fetch_provider_models(provider, api_key, base_url, timeout):
   data = _fetch_json(base_url.rstrip("/") + "/models", api_key, timeout)
   items = data.get("data", data.get("models", [])) if isinstance(data, dict) else data
   if not isinstance(items, list):
-    raise RuntimeError("Provider returned an unsupported model-list format.")
+    raise ModelListError("Provider returned an unsupported model-list format.")
   return sorted(({"id": item.get("id") or item.get("name", ""), "name": item.get("name", "")} for item in items if isinstance(item, dict) and (item.get("id") or item.get("name"))), key=lambda x: x["id"].lower())
 
 def print_models(provider, models, selected=None):
@@ -1435,7 +1440,7 @@ def run_api_check(args, api_key, ui):
   model = args.model
   masked = _mask_key(api_key)
   connect = key = model_ok = None  # True / False / None (not checked)
-  key_error = server_error = connect_error = model_error = ""
+  key_error = server_error = connect_error = model_error = models_notice = ""
   models = []
 
   try:
@@ -1448,7 +1453,14 @@ def run_api_check(args, api_key, ui):
     connect = key = True
   except (RuntimeError, ValueError) as exc:
     code = _http_code(exc)
-    if code is None:
+    if provider not in ("gemini", "openrouter") and (
+      isinstance(exc, ModelListError) or code in (404, 405, 501)
+    ):
+      # The key was not rejected; only the model list is unavailable.
+      connect = key = True
+      models = None
+      models_notice = str(exc)
+    elif code is None:
       connect, connect_error = False, str(exc)
     else:
       connect = True
@@ -1469,10 +1481,13 @@ def run_api_check(args, api_key, ui):
         model_error = "" if _http_code(exc) == 404 else str(exc)
     elif provider == "openrouter":
       model_ok = None  # model access is only known on the first request
+    elif models is None:
+      model_ok = None  # model list unavailable: notice only, not a failure
     else:
       model_ok = any(item["id"] == model for item in models)
 
-  ok = bool(connect and key and model_ok is not False)
+  # A model missing from the provider's list is only a notice, not a failure.
+  ok = bool(connect and key and not (model_ok is False and model_error))
   good, bad, skip = COLORS.value("✔"), COLORS.error("✘"), "•"
   print(COLORS.label(ui["check_title"].format(provider=label)))
   if connect:
@@ -1481,6 +1496,8 @@ def run_api_check(args, api_key, ui):
     print(f"  {bad} {ui['check_connect_fail'].format(host=host, error=connect_error)}")
   if key:
     print(f"  {good} {ui['check_key_ok'].format(key=masked)}")
+    if models_notice:
+      print(f"  ! {ui['check_models_notice'].format(error=models_notice)}")
   elif key is False:
     print(f"  {bad} {ui['check_key_bad'].format(key=masked, error=key_error)}")
   elif server_error:
@@ -1492,8 +1509,10 @@ def run_api_check(args, api_key, ui):
   elif model_ok is False and model_error:
     print(f"  {bad} {ui['check_model_error'].format(model=model, error=model_error)}")
   elif model_ok is False:
-    print(f"  {bad} {ui['check_model_missing'].format(model=model)}")
+    print(f"  ! {ui['check_model_missing'].format(model=model)}")
   elif key and provider == "openrouter":
+    print(f"  {skip} {ui['check_model_later'].format(model=model)}")
+  elif key and models_notice:
     print(f"  {skip} {ui['check_model_later'].format(model=model)}")
   else:
     print(f"  {skip} {ui['check_model_skip'].format(model=model)}")

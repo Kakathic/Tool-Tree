@@ -1593,6 +1593,7 @@ script = 'rm -f "$HOME/.cache/$CHAT_ID.sql"'
 <ul>
 <li>Every conversation is stored on the device (up to <strong>50</strong> per <code>[[chat]]</code> item, oldest dropped first). A chat item is identified by its page + <code>title</code>, so renaming <code>title</code> starts an empty history.</li>
 <li>Opening the page reopens the most recent conversation. The greeting bubble is not stored.</li>
+<li>A running script is <strong>not stopped</strong> when you leave the chat page (back button, swipe back) or the screen is rotated. It keeps running in the background while the app process is alive; opening the same chat again reattaches to it, shows the live output and the Stop button, and the finished reply is saved as usual. The script is only stopped by the <strong>Stop</strong> button, by clearing the chat or by switching/creating another session. If Android kills the app process, the running script ends and only the output received so far is kept.</li>
 <li>The toolbar <strong>sessions</strong> button (or a swipe from the right edge) opens a drawer listing the conversations, named after the first user message. Tap one to switch, <em>New session</em> to start another (does nothing while the current one is still empty), and the delete button (asks for confirmation) to remove one.</li>
 <li><code>$CHAT_ID</code> is unique per conversation and stays the same for its whole life, so a script can keep separate memory/context per conversation, e.g. <code>--memory-file "$HOME/.cache/$CHAT_ID.sql"</code>. Deleting a conversation does not delete files your script created.</li>
 <li>Switching conversation while a script is running stops that script.</li>
@@ -2170,6 +2171,7 @@ script = "sh $state"
 <ul>
 <li><code>[[text.rows]]</code>: new <code>autolink</code> (alias <code>auto-link</code>, default <code>true</code>) - bare <code>http(s)://</code> / <code>www.</code> links in row text become clickable; set <code>autolink = false</code> to disable.</li>
 <li><code>[[chat]]</code>: new <code>params-shell</code> (<code>default</code> / <code>hidden</code> / <code>bg-task</code>) - run <code>params-script</code> silently or in the background instead of the log dialog.</li>
+<li><code>[[chat]]</code>: a running script is no longer stopped when leaving the page; reopening the chat reattaches to the running output.</li>
 <li><code>[[chat]]</code>: removed the <em>Markdown</em> checkbox from the 3-dot menu; <code>markdown = true</code> now always renders replies as Markdown.</li>
 <li><code>[[editor]]</code>: swipe right to go back to the previous page (asks to save/discard when there are unsaved changes; ignored on the special-characters bar, during text selection / long-press drag and while the no-wrap editor is scrolled horizontally).</li>
 <li>Log dialog (<code>shell = "default"</code>): after the script has finished, swipe right to close it, same as the Exit button (locked while running; ignored during text selection / long-press drag and while the no-wrap log is scrolled horizontally).</li>

@@ -63,7 +63,12 @@ max-lines = 8
 markdown = true
 greeting = "@chat_greeting"
 script = '''
-chatbot --all --markdown --progress --stream --lang "$chatai_lang" --model "$ai_models" --provider "$list_provider" --instruction "$chatai_nextrule" --thinking "$models_thinking" --memory-file "$HOME/.cache/$CHAT_ID.sql" --progress-single "$chatai_detail" -p "$MSG"
+chatbot --all --any-path --markdown --progress \
+--lang "$chatai_lang" --model "$ai_models" \
+--provider "$list_provider" --instruction "$chatai_nextrule" \
+--thinking "$models_thinking" \
+--memory-file "$HOME/.cache/$CHAT_ID.sql" \
+--progress-single "$chatai_detail" -p "$MSG"
 '''
 params-shell = "hidden"
 params-script = '''
@@ -119,7 +124,8 @@ value = "gemini-3.5-flash-lite"
 
 [[chat.params]]
 name = "chatai_detail"
-label = "Tiến trình chi tiết"
+title = "@detail_title"
+label = "@detail_label"
 type = "switch"
 
 [[chat.params]]
