@@ -66,6 +66,7 @@ object RowsRenderHelper {
                 val delayMs = (rowsView.tag as? RowsRenderState)?.refreshIntervalMs ?: 0L
                 if (runnable != null && delayMs > 0L) {
                     rowsView.postDelayed(runnable, delayMs)
+                    startCountdown(rowsView)
                 }
             }
         }
@@ -98,6 +99,47 @@ object RowsRenderHelper {
 
     private val bgViews = WeakHashMap<TextView, ImageView>()
     private val bgStates = WeakHashMap<TextView, BgState>()
+
+    private class CountdownState {
+        var active = false
+        var runnable: Runnable? = null
+        var rows: List<TextNode.TextRow> = emptyList()
+    }
+
+    private val countdownStates = WeakHashMap<TextView, CountdownState>()
+    private const val COUNTDOWN_FRAME_MS = 250L
+
+    private fun countdownFraction(rowsView: TextView, rowIndex: Int, intervalSec: Int): Float? {
+        val cs = countdownStates[rowsView] ?: return null
+        if (!cs.active) return null
+        val st = rowsView.tag as? RowsRenderState ?: return null
+        val last = st.lastRefreshTimes[rowIndex] ?: return null
+        val tickMs = st.refreshIntervalMs
+        if (tickMs <= 0L || intervalSec <= 0) return null
+        val total = Math.ceil(intervalSec * 1000.0 / tickMs) * tickMs
+        val remain = total - (System.currentTimeMillis() - last)
+        return (remain / total).toFloat().coerceIn(0f, 1f)
+    }
+
+    private fun startCountdown(rowsView: TextView) {
+        val cs = countdownStates[rowsView] ?: return
+        val rows = cs.rows
+        val barRows = rows.indices.filter { rows[it].refreshBar && rows[it].refreshInterval > 0 }
+        if (barRows.isEmpty()) return
+        val st = rowsView.tag as? RowsRenderState
+        val now = System.currentTimeMillis()
+        barRows.forEach { st?.lastRefreshTimes?.set(it, now) }
+        cs.active = true
+        lateinit var frame: Runnable
+        frame = Runnable {
+            if (countdownStates[rowsView] !== cs || cs.runnable !== frame || !rowsView.isAttachedToWindow) return@Runnable
+            rowsView.invalidate()
+            rowsView.postDelayed(frame, COUNTDOWN_FRAME_MS)
+        }
+        cs.runnable = frame
+        rowsView.invalidate()
+        rowsView.postDelayed(frame, COUNTDOWN_FRAME_MS)
+    }
 
     private fun applyTextBg(context: Context, rowsView: TextView, rows: List<TextNode.TextRow>, config: NodeInfoBase) {
         val bgView = bgViews[rowsView] ?: return
@@ -227,6 +269,8 @@ object RowsRenderHelper {
         (rowsView.tag as? RowsRenderState)?.flashAnimators?.forEach { it.cancel() }
         val animatedRowIcons = ArrayList<Animatable>()
         (rowsView.getTag(R.id.kr_rows_refresh_runnable) as? Runnable)?.let { rowsView.removeCallbacks(it) }
+        countdownStates[rowsView]?.runnable?.let { rowsView.removeCallbacks(it) }
+        countdownStates[rowsView] = CountdownState().also { it.rows = rows }
         val allowCopy = rows.any { it.copy }
         rowsView.setTextIsSelectable(allowCopy)
         rowsView.movementMethod = BoundedLinkMovementMethod.instance
@@ -406,6 +450,7 @@ object RowsRenderHelper {
             rowsView.setTag(R.id.kr_rows_refresh_runnable, tickRunnable)
             if (pageReady) {
                 rowsView.postDelayed(tickRunnable, refreshIntervalMs)
+                startCountdown(rowsView)
             } else {
                 pendingRefreshViews.add(rowsView)
             }
@@ -627,6 +672,16 @@ object RowsRenderHelper {
             val trackColor = if (row.progressTrackColor != -1) row.progressTrackColor else 0x33888888
             val ratio = if (row.progressMax > 0f) effectiveProgress / row.progressMax else 0f
             spannableString.setSpan(ProgressBarSpan(progressWidthPx, progressHeightPx, ratio, fillColor, trackColor), progressIndex, progressIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (row.refreshBar && row.refreshInterval > 0 && length > 0) {
+            val barColor = if (row.refreshBarColor != -1) row.refreshBarColor else 0xFF4CAF50.toInt()
+            spannableString.setSpan(
+                RefreshCountdownSpan(dpToPx(context, 3), dpToPx(context, 4), barColor) {
+                    countdownFraction(rowsView, rowIndex, row.refreshInterval)
+                },
+                0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
         }
 
         if (row.underline) {
@@ -889,6 +944,44 @@ object RowsRenderHelper {
             if (fillWidth > 0f) {
                 val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = fillColor }
                 canvas.drawRoundRect(RectF(x, cy - halfH, x + fillWidth, cy + halfH), radius, radius, fillPaint)
+            }
+        }
+    }
+
+    private class RefreshCountdownSpan(
+        private val barHeightPx: Int,
+        private val gapPx: Int,
+        private val fillColor: Int,
+        private val fraction: () -> Float?
+    ) : LineBackgroundSpan, LineHeightSpan {
+        private val extraPx = barHeightPx + gapPx
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+        private fun isLastLine(text: CharSequence, lineEnd: Int): Boolean {
+            val spanned = text as? Spanned ?: return true
+            val spanEnd = spanned.getSpanEnd(this)
+            return spanEnd < 0 || lineEnd >= spanEnd
+        }
+
+        override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
+            if (isLastLine(text, end)) {
+                fm.descent += extraPx
+                fm.bottom += extraPx
+            }
+        }
+
+        override fun drawBackground(canvas: Canvas, p: Paint, left: Int, right: Int, top: Int, baseline: Int, bottom: Int, text: CharSequence, start: Int, end: Int, lnum: Int) {
+            if (!isLastLine(text, end)) return
+            val f = fraction() ?: return
+            val barBottom = bottom.toFloat()
+            val barTop = barBottom - barHeightPx
+            val radius = barHeightPx / 2f
+            paint.color = 0x33888888
+            canvas.drawRoundRect(RectF(left.toFloat(), barTop, right.toFloat(), barBottom), radius, radius, paint)
+            val fillWidth = (right - left) * f
+            if (fillWidth > 0f) {
+                paint.color = fillColor
+                canvas.drawRoundRect(RectF(left.toFloat(), barTop, left + fillWidth, barBottom), radius, radius, paint)
             }
         }
     }

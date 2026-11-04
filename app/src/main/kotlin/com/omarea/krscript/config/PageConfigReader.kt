@@ -1324,6 +1324,8 @@ class PageConfigReader {
         }
         tomlGet(table, *TomlKeys.CONFIRM_TEXT)?.let { row.confirm = StringResRef.resolve(context, it) }
         tomlGet(table, "refresh-interval", "refresh", "interval")?.let { row.refreshInterval = parseIntOr(it, row.refreshInterval) }
+        tomlGet(table, "refresh-bar", "refreshbar")?.let { row.refreshBar = tomlTruthy(it, "refresh-bar", "refreshbar") }
+        tomlGet(table, "refresh-bar-color", "refreshbarcolor")?.let { row.refreshBarColor = parseColorOr(it, row.refreshBarColor) }
         tomlGet(table, "reset")?.let {
             val v = it.trim()
             row.resetTarget = when {

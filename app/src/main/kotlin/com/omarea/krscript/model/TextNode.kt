@@ -66,6 +66,8 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
 
         internal var confirm: String = ""
         internal var refreshInterval: Int = 0
+        internal var refreshBar: Boolean = false
+        internal var refreshBarColor: Int = -1
         internal var resetTarget: Int = -1
         internal var progress: Float = -1f
         internal var progressSh: String = ""

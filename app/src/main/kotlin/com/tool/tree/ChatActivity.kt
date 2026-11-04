@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.text.Layout
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -79,6 +80,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private const val EXTRA_CHAT = "chat"
         private const val MAX_REPLY_CHARS = 20000
         private const val REFRESH_DELAY_MS = 60L
+        private const val TIMER_TICK_MS = 100L
         private val CLOSE_TYPES = setOf("exit", "finish", "close")
         private val UNSUPPORTED_TYPES = setOf("file", "folder", "spinner", "checkbox", "refresh", "reload", "restart", "killapp")
 
@@ -379,6 +381,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 ChatMessage(m.fromUser, m.text).apply {
                     ChatSpanCodec.apply(text, m.spans)
                     title = (if (m.fromUser) node.userTitle else node.chatTitle).ifEmpty { null }
+                    elapsedMs = m.durationMs
                 }
             )
         }
@@ -390,7 +393,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         if (id in deletedIds) return
         val snapshot = target.messages
             .filter { !it.transient && (it.fromUser || it.text.isNotEmpty()) }
-            .map { ChatSessionStore.Stored(it.fromUser, it.text.toString(), ChatSpanCodec.encode(it.text)) }
+            .map { ChatSessionStore.Stored(it.fromUser, it.text.toString(), ChatSpanCodec.encode(it.text), it.elapsedMs) }
         try {
             ioExecutor.execute { store.save(id, snapshot) }
         } catch (_: Exception) {
@@ -574,6 +577,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 running = false
                 stopRunnable = null
                 currentHandler = null
+                if (reply.startMs > 0) reply.elapsedMs = SystemClock.elapsedRealtime() - reply.startMs
                 reply.running = false
                 refreshNow(reply)
                 updateSendButton()
@@ -583,6 +587,11 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             quietEmpty
         )
         currentHandler = handler
+        if (!quietEmpty) {
+            reply.startMs = SystemClock.elapsedRealtime()
+            reply.elapsedMs = -1L
+            startTimer(reply)
+        }
         val params = HashMap(chatParams).apply {
             put("MSG", text)
             put("CHAT_ID", owner.id)
@@ -595,6 +604,18 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             }
             if (!started) uiHandler.post { handler.finishNow(-1) }
         }
+    }
+
+    /** Cập nhật đồng hồ trên tiêu đề bong bóng mỗi 100ms trong lúc script đang chạy (chỉ cập nhật tiêu đề) */
+    private fun startTimer(message: ChatMessage) {
+        val tick = object : Runnable {
+            override fun run() {
+                if (!message.running) return
+                adapter.timeChanged(message)
+                uiHandler.postDelayed(this, TIMER_TICK_MS)
+            }
+        }
+        uiHandler.postDelayed(tick, TIMER_TICK_MS)
     }
 
     private fun stopRunning() {
@@ -789,6 +810,15 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         var running = false
         var progressCur = 0
         var progressTotal = 0
+        var startMs = 0L
+        var elapsedMs = -1L
+
+        /** Thời gian chạy script (ms): đang chạy thì tính đến hiện tại, xong thì giá trị đã chốt; -1 nếu không có */
+        fun runMs(): Long = when {
+            running && startMs > 0 -> SystemClock.elapsedRealtime() - startMs
+            elapsedMs >= 0 -> elapsedMs
+            else -> -1L
+        }
     }
 
     private class ChatShellHandler(
@@ -907,6 +937,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private val onCopy: (CharSequence) -> Unit
     ) : RecyclerView.Adapter<ChatAdapter.VH>() {
         private var items = ArrayList<ChatMessage>()
+        private val PAYLOAD_TIME = Any()
 
         @android.annotation.SuppressLint("NotifyDataSetChanged")
         fun bind(list: ArrayList<ChatMessage>) {
@@ -1021,6 +1052,36 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             if (index >= 0) notifyItemChanged(index)
         }
 
+        fun timeChanged(message: ChatMessage) {
+            val index = items.indexOf(message)
+            if (index >= 0) notifyItemChanged(index, PAYLOAD_TIME)
+        }
+
+        private fun formatDuration(ms: Long): String {
+            val tenths = ms / 100
+            val totalSec = ms / 1000
+            return when {
+                totalSec < 60 -> String.format(java.util.Locale.US, "%d.%ds", tenths / 10, tenths % 10)
+                totalSec < 3600 -> String.format(java.util.Locale.US, "%dm %02ds", totalSec / 60, totalSec % 60)
+                else -> String.format(java.util.Locale.US, "%dh %02dm %02ds", totalSec / 3600, totalSec % 3600 / 60, totalSec % 60)
+            }
+        }
+
+        private fun titleText(m: ChatMessage): CharSequence? {
+            val label = m.title ?: return null
+            if (m.fromUser) return label
+            val ms = m.runMs()
+            return if (ms >= 0) "$label · ${formatDuration(ms)}" else label
+        }
+
+        override fun onBindViewHolder(holder: VH, position: Int, payloads: MutableList<Any>) {
+            if (payloads.isNotEmpty() && payloads.all { it === PAYLOAD_TIME }) {
+                holder.title.text = titleText(items[position])
+            } else {
+                super.onBindViewHolder(holder, position, payloads)
+            }
+        }
+
         private fun visibleText(text: SpannableStringBuilder): CharSequence {
             var end = text.length
             while (end > 0 && (text[end - 1] == '\n' || text[end - 1] == '\r')) end--
@@ -1079,7 +1140,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             val m = items[position]
             val label = m.title
             holder.title.visibility = if (label != null) View.VISIBLE else View.GONE
-            holder.title.text = label
+            holder.title.text = titleText(m)
             val visible = visibleText(m.text)
             val renderMd = activity.node.markdown && !m.fromUser && !m.running
             val showDots = visible.isEmpty() && m.running
