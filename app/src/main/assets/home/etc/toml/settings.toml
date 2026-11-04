@@ -114,7 +114,6 @@ value-sh = "glog list_provider gemini"
 
 [[chat.params]]
 name = "ai_models"
-placeholder = "gemini-3.5-flash-lite"
 title = "@api_model_title"
 desc = "@api_model_desc"
 editable = true

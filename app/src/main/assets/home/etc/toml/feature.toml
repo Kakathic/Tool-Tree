@@ -121,25 +121,33 @@ line = true
 [[group]]
 [[action]]
 allow-shortcut = false
-title = "Công cụ dịch thuật"
+title = "Tùy chỉnh dịch thuật"
 icon = "{ICON}/translation.png"
 script = '''
-slog ai_models "$ai_models"
+slog ai_models_trans "$ai_models_trans"
+slog list_provider_trans "$list_provider_trans"
+transai -p "Hello"
 '''
+[[chat.params]]
+name = "chatai_lang"
+title = "@reply_lang_title"
+label = "@permis_text_2"
+placeholder = "en-US"
+type = "text"
+value-sh = 'echo "$LANGUAGE-$COUNTRY"'
 
 [[action.params]]
-name = "list_provider"
+name = "list_provider_trans"
 placeholder = "gemini"
-title = "Chọn nhà cung cấp"
+title = "@select_provider_title"
 label = "Provider"
 items = [ "gemini|Gemini", "openai|Openai", "openrouter|Openrouter", "groq|Groq", "together|Together", "deepseek|Deepseek" ]
-value = "gemini"
+value-sh = "glog list_provider_trans gemini"
 
 [[action.params]]
-name = "ai_models"
-placeholder = "gemini-3.1-flash-lite"
+name = "ai_models_trans"
 title = "Models API"
 editable = true
 label = "Models"
-items = [ "gemini-3.5-flash-lite", "free" ]
-value-sh = "glog ai_models gemini-3.5-flash-lite"
+items = [ "gemini-3.5-flash-lite" ]
+value-sh = "glog ai_models_trans gemini-3.5-flash-lite"
