@@ -1118,11 +1118,6 @@ class PageConfigReader {
         }
         rowsShToml(table, action.rows)
 
-        for (rowTable in tomlEntries(table, "params-rows")) {
-            val atBottom = tomlGet(rowTable, "position")?.trim()?.lowercase(getDefault()) == "bottom"
-            textRowToml(if (atBottom) action.paramsRowsBottom else action.paramsRows, rowTable)
-        }
-
         tomlGet(table, "menu")?.let { action.menu = tomlTruthy(it, "menu") }
         tomlGet(table, "show")?.let { action.show = resolveBoolOrShell(it, "show") }
         tomlGet(table, "keep-dialog")?.let { action.keepParamsDialog = tomlTruthy(it) }
@@ -1211,6 +1206,20 @@ class PageConfigReader {
         tomlGet(table, "depend-readonly")?.let { p.dependReadonly = tomlTruthy(it) }
         tomlGet(table, "depend-sort")?.let { p.dependSort = p.dependReadonly && tomlTruthy(it) }
         tomlGet(table, "allow-no-selection", "no-select")?.let { p.allowNoSelection = tomlTruthy(it) }
+
+        if (p.type == "rows") {
+            p.remember = false
+            for (rowTable in tomlEntries(table, "rows")) {
+                textRowToml(p.rows, rowTable)
+            }
+            tomlGet(table, *TomlKeys.BG_COLOR)?.let { p.rowsBgColor = parseColorOr(it, 0) }
+            tomlGet(table, "stroke-color", "border-color")?.let { p.rowsStrokeColor = parseColorOr(it, 0) }
+            tomlGet(table, "stroke-width", "border-width")?.let { p.rowsStrokeWidth = parseIntOr(it, p.rowsStrokeWidth).coerceAtLeast(0) }
+            tomlGet(table, "radius", "corner")?.let { p.rowsRadius = parseIntOr(it, p.rowsRadius).coerceAtLeast(0) }
+            tomlGet(table, "padding")?.let { p.rowsPadding = parseIntOr(it, p.rowsPadding) }
+            tomlGet(table, "photo-position", "photo-pos")?.let { p.rowsPhotoTop = it.trim().lowercase(getDefault()) == "top" }
+            return if (p.supported && p.rows.isNotEmpty()) p else null
+        }
 
         val itemsArray = itemsOrStringOptions(table)
         if (itemsArray != null) {

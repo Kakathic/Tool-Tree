@@ -592,7 +592,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                 withContext(Dispatchers.Main) {
                     progressBarDialog.showDialog(getString(R.string.kr_params_render))
                     val render = ActionParamsLayoutRender(linearLayout, requireActivity())
-                    render.renderList(actionParamInfos, object : ParamsFileChooserRender.FileChooserInterface {
+                    render.renderList(actionParamInfos, action, object : ParamsFileChooserRender.FileChooserInterface {
                         override fun openFileChooser(callback: ParamsFileChooserRender.FileSelectedInterface): Boolean {
                             return krScriptActionHandler?.openFileChooser(callback) ?: false
                         }
@@ -611,7 +611,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                     }
 
                     if (customRunner != true) {
-                        val isLongList = actionParamInfos.size > 4
+                        val isLongList = actionParamInfos.count { it.type != "rows" } > 4
                         val dialogView = LayoutInflater.from(context).inflate(if (isLongList) R.layout.kr_dialog_params else R.layout.kr_dialog_params_small, null)
                         val center = dialogView.findViewById<ViewGroup>(R.id.kr_params_center)
                         center.removeAllViews()
@@ -646,22 +646,6 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                         } else {
                             dialogView.findViewById<TextView>(R.id.warn).text = action.warning
                         }
-
-                        RowsRenderHelper.bind(
-                            requireContext(),
-                            dialogView.findViewById<TextView>(R.id.kr_rows),
-                            dialogView.findViewById<android.widget.ImageView>(R.id.kr_rows_photo),
-                            action.paramsRows,
-                            action
-                        )
-                        // Hàng position = "bottom": cuối vùng cuộn, ngay dưới các tham số
-                        RowsRenderHelper.bind(
-                            requireContext(),
-                            dialogView.findViewById<TextView>(R.id.kr_rows_bottom),
-                            dialogView.findViewById<android.widget.ImageView>(R.id.kr_rows_bottom_photo),
-                            action.paramsRowsBottom,
-                            action
-                        )
 
                         dialogView.findViewById<View>(R.id.btn_cancel).setOnClickListener {
                             dialog?.dismiss()

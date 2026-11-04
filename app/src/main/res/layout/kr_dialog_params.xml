@@ -84,46 +84,12 @@
                 android:orientation="vertical"
                 android:paddingHorizontal="16dp">
 
-                <TextView
-                    android:id="@+id/kr_rows"
-                    style="@style/textSmall"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="-12dp"
-                    android:visibility="gone" />
-
-                <ImageView
-                    android:id="@+id/kr_rows_photo"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:adjustViewBounds="true"
-                    android:scaleType="fitCenter"
-                    android:visibility="gone" />
-
                 <FrameLayout
                     android:id="@+id/kr_params_center"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_marginTop="16dp" />
-
-                <TextView
-                    android:id="@+id/kr_rows_bottom"
-                    style="@style/textSmall"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="-12dp"
-                    android:visibility="gone" />
-
-                <ImageView
-                    android:id="@+id/kr_rows_bottom_photo"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:adjustViewBounds="true"
-                    android:scaleType="fitCenter"
-                    android:visibility="gone" />
 
             </LinearLayout>
         </ScrollView>

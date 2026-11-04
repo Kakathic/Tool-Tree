@@ -73,5 +73,13 @@ class ActionParamInfo : Serializable {
     var allowNoSelection: Boolean = false
 
     var remember: Boolean = true
+
+    val rows = ArrayList<TextNode.TextRow>()
+    var rowsBgColor: Int? = null
+    var rowsStrokeColor: Int? = null
+    var rowsStrokeWidth: Int = 1
+    var rowsRadius: Int = 12
+    var rowsPadding: Int = -1
+    var rowsPhotoTop: Boolean = false
     var applyScript: String? = null
 }

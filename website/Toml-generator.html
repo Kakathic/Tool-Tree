@@ -1971,7 +1971,6 @@ const TYPES = {
           { name:'seed', title:'Seed', label:'', type:'text', min:'', max:'', value:'42', desc:'', support:'true', extra:'', options:null, items:null, optMode:'tables', optionsShOn:false, optionsSh:'', sh:{ value:'gen_seed.sh' }, shOn:{ value:true }, dep:{ on:'run_in_background', value:'1', mode:'none' } },
         ],
         hint:'Add a card for one [[action.params]]. name → $env_var; title/label are labels. -sh switches text/shell. Dropdowns use options-sh / options / items. depend-* controls visibility. ↑ ↓ ✕ reorder.' },
-      { key:'paramsRows', label:'params-rows', type:'rowcards', default:'', emptyNote:'Each card becomes one [[action.params-rows]] table — rendered at the top of the params dialog, above the inputs.', hint:'Optional cards for [[action.params-rows]], shown above params inputs. Same row styles/keys as rows. ↑ ↓ ✕ reorder.' },
       { key:'paramsSh', label:'params-sh', type:'text', default:'', hint:'Shell that prints [[params]] TOML (inline) to build the param list dynamically. Runs at parse time; a non-empty valid result replaces the cards above, empty/error/invalid keeps them. Blank → omitted.' },
       { key:'confirm', label:'confirm before running', type:'checkbox', default:true },
       { key:'warn', label:'warn', type:'text', default:'Apply the selected governor?', sh:true, hint:'Confirm-dialog text — shown when confirm is on. -sh: warn-sh — the value becomes echo "…" auto. Blank = omitted.' },
@@ -1992,25 +1991,22 @@ const TYPES = {
       const keyLine = f.nodeKey ? `\nkey = "${tomlEsc(f.nodeKey)}"` : '';
       const scriptLine = (f.script||'').trim() ? `\nscript = "${tomlEsc(f.script)}"` : '';
       const rows = f.rows && f.rows.trim() ? rowsBlockToml('action', f.rows) : '';
-      const pRows = f.paramsRows && f.paramsRows.trim() ? rowsBlockToml('action', f.paramsRows, '.params-rows') : '';
       const params = f.paramList || [];
       const paramNamesOut = resolvedParamNames(params);
       return groupHeaderToml(f)
         + `[[action]]${titleLine(f)}${descLine(f)}${summaryLine(f)}${iconLine(f)}${photoLine(f)}${bgLine(f)}${mediaLines(f)}${resourceLines(f)}${keyLine}${supportLine(f)}`
         + `${f.confirm?`\nconfirm = true`:''}${warnLine(f)}${f.menu?`\nmenu = true`:''}${showLine(f)}${f.autoOff?`\nauto-off = true`:''}${f.autoFinish?`\nauto-finish = true`:''}${shellLine(f)}${f.interruptible?`\ninterruptible = true`:''}${f.needInput?`\nneed-input = true`:''}`
         + `${lockLine(f)}${runnableTail(f)}${gating(f)}`
-        + scriptLine + rowsShLine(f) + ((f.paramsSh||'').trim() ? `\nparams-sh = "${tomlEsc(f.paramsSh)}"` : '') + rows + params.map((q,i) => paramToToml(q, paramNamesOut[i])).join('') + pRows + '\n';
+        + scriptLine + rowsShLine(f) + ((f.paramsSh||'').trim() ? `\nparams-sh = "${tomlEsc(f.paramsSh)}"` : '') + rows + params.map((q,i) => paramToToml(q, paramNamesOut[i])).join('') + '\n';
     },
     demo: f => {
       const locked = !!(f.lock||'').trim();
       const plist = f.paramList || [];
       const paramRows = plist.map(paramToDemoRow).join('');
-      const pRowsHtml = f.paramsRows && f.paramsRows.trim() ? `<div class="d-richtext" style="margin:0 0 6px;">${rowsBlockDemoHtml(f.paramsRows)}</div>` : '';
       // the sample opens with its params dialog already visible; tapping the row toggles it
       const dialog = `
         <div class="d-dialog" id="actionDialog" style="display:${plist.length ? 'block' : 'none'};">
           <div class="d-dialog-title">${esc(f.title)}</div>
-          ${pRowsHtml}
           ${paramRows || '<p style="font-size:12px;color:var(--fg-muted);margin:0;">No params yet — add one in the action.params block.</p>'}
           <div class="d-dialog-btns"><span>CANCEL</span><span>RUN</span></div>
         </div>`;
@@ -2433,7 +2429,6 @@ lock = "{LOT}|Requires root access"`
       ['lock / lock-sh','lock-state','String','','<code>"1|message"</code> / <code>"1"</code> / a shell returning "1"; <code>lock-sh</code> checks it dynamically'],
       ['rows','','Array','','<code>[[action.rows]]</code> rich-text lines under the action row in the list'],
       ['rows-sh','','String','','<span class="badge shell">shell</span> Script printing <code>[[rows]]</code> inline TOML — builds the rows dynamically (parse time); non-empty valid result replaces static rows'],
-      ['params-rows','','Array','','<code>[[action.params-rows]]</code> rich-text lines shown ONLY inside the params dialog, above the inputs — same row kinds as rows (bold / mono / link / divider / progress / toggle, …); needs the dialog to open (params / confirm / warn)'],
     ],
     notes: [
       ['tip','<code>menu = true</code> moves the action out of the list into the toolbar; <code>show = true</code> auto-opens its dialog once per page enter — handy for a "start here" wizard.'],

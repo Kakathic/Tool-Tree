@@ -836,7 +836,6 @@ config = "/sdcard/Tool-Tree/advanced.toml"
 <tr><td class="field-name">params</td><td>-</td><td class="field-type">Array</td><td>List of input parameters - see <a href="#action-params">section 7</a></td></tr>
 <tr><td class="field-name">rows</td><td>-</td><td class="field-type">Array</td><td>Rich-text rows shown below the item - see <a href="#text-rows">section 11</a></td></tr>
 <tr><td class="field-name">rows-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that prints <code>[[rows]]</code> tables (inline TOML, also accepts <code>[[&lt;type&gt;.rows]]</code>) to build the rows dynamically. Runs during parse (batched); a non-empty valid result replaces the static <code>rows</code>, empty/<code>error</code>/invalid TOML keeps them</td></tr>
-<tr><td class="field-name">params-rows</td><td>-</td><td class="field-type">Array</td><td>Rows for the params dialog only (separate from <code>rows</code> which appear both in list and dialog). Each row may add <code>position = "bottom"</code> to be shown under the params instead of above them (default: top)</td></tr>
 <tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ all fields of RunnableNode, ClickableNode, NodeInfoBase (see <a href="#shared-fields">section 3</a>)</td></tr>
 </table>
 </div>
@@ -928,7 +927,7 @@ type = "password"
 <tr><td class="field-name">desc-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces desc</td></tr>
 <tr><td class="field-name">desc-on</td><td>on-desc, desc-checked</td><td class="field-type">String</td><td>Note shown SPECIFICALLY when the checkbox/switch is ON (only for type=bool/checkbox/switch)</td></tr>
 <tr><td class="field-name">desc-on-sh</td><td>on-desc-sh, desc-checked-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces desc-on</td></tr>
-<tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td>Input type: <code>text</code>/<code>int</code>/<code>number</code>/<code>bool</code>/<code>checkbox</code>/<code>switch</code>/<code>seekbar</code>/<code>file</code>/<code>folder</code>/<code>app</code>/<code>packages</code>/<code>spinner</code>/<code>single-select</code>/<code>multi-select</code>/<code>color</code>/<code>password</code></td></tr>
+<tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td>Input type: <code>text</code>/<code>int</code>/<code>number</code>/<code>bool</code>/<code>checkbox</code>/<code>switch</code>/<code>seekbar</code>/<code>file</code>/<code>folder</code>/<code>app</code>/<code>packages</code>/<code>spinner</code>/<code>single-select</code>/<code>multi-select</code>/<code>color</code>/<code>password</code>/<code>rows</code> (display-only block, see <a href="#params-rows-type">7.3</a>)</td></tr>
 <tr><td class="field-name">value</td><td>-</td><td class="field-type">String|Array</td><td>Default value. Also accepts a TOML array of strings (e.g. <code>value = ["a", "b"]</code>) for <code>multi-select</code> - each entry is one selected value, joined internally using <code>separator</code></td></tr>
 <tr><td class="field-name">value-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that fetches value dynamically (runs when dialog opens)</td></tr>
 <tr><td class="field-name">placeholder</td><td>-</td><td class="field-type">String</td><td>Hint when empty</td></tr>
@@ -971,9 +970,50 @@ type = "password"
 <tr><td><code>color</code></td><td>Color picker widget - accepts <code>#RRGGBB</code>/<code>#AARRGGBB</code> hex or a resource reference (<code>@color/name</code>, <code>@android:color/name</code>); an invalid value blocks OK</td><td><code>value</code> (default color)</td></tr>
 <tr><td><code>password</code></td><td>Single-line text field whose characters are hidden on screen; an eye icon beside it shows/hides the text. The value passed to the script is the real text. No fullscreen expand button. Note: <code>remember</code> still applies (default <code>true</code>)</td><td><code>value</code>, <code>placeholder</code>, <code>readonly</code></td></tr>
 <tr><td><code>packages</code></td><td>Alias of <code>app</code> - same app-chooser UI and behavior</td><td><code>multiple</code></td></tr>
+<tr><td><code>rows</code></td><td>Display-only block of rich-text rows and a photo placed between inputs (no input, no <code>name</code> needed, nothing is passed to the script) - see <a href="#params-rows-type">7.3</a></td><td><code>[[action.params.rows]]</code>, <code>bg-color</code>, <code>stroke-color</code>, <code>radius</code>, <code>padding</code>, <code>photo-position</code></td></tr>
 </table>
 </div>
-<h3>7.3. Demo</h3>
+<h3 id="params-rows-type">7.3. type = "rows" - text and image blocks inside the dialog</h3>
+<p>A param with <code>type = "rows"</code> is not an input: it renders its own <code>[[action.params.rows]]</code> (same row fields as <a href="#text-rows">section 11</a>: <code>text</code>, <code>text-sh</code>, <code>bold</code>, <code>color</code>, <code>link</code>, <code>line</code>, <code>photo</code>, <code>photo-sh</code>...). Its position is decided by <strong>its order in the TOML</strong>: put the block before, between or after the other params. Use several blocks to interleave text and images. It replaces the old <code>[[action.params-rows]]</code> (removed; the old <code>position = "bottom"</code> is now just "put the block last").</p>
+<div class="tbl-container">
+<table class="tbl cols-4">
+<tr><th>Field</th><th>Aliases</th><th>Type</th><th>Description</th></tr>
+<tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td>Must be <code>"rows"</code></td></tr>
+<tr><td class="field-name">name</td><td>-</td><td class="field-type">String</td><td>Optional. Only needed so <code>depend-on</code>/<code>support</code> rules can show or hide the block; its value is never sent to the script</td></tr>
+<tr><td class="field-name">rows</td><td>-</td><td class="field-type">Array</td><td><code>[[action.params.rows]]</code> tables. A block shows its text rows, then <strong>one</strong> photo (the last row that has <code>photo</code>/<code>photo-sh</code>)</td></tr>
+<tr><td class="field-name">photo-position</td><td>photo-pos</td><td class="field-type">String</td><td><code>top</code> = photo above the text; default <code>bottom</code></td></tr>
+<tr><td class="field-name">bg-color</td><td>bg, background, bgcolor</td><td class="field-type">Color</td><td>Optional background of the block (<code>#RRGGBB</code>/<code>#AARRGGBB</code>). Setting it (or <code>stroke-color</code>) turns the frame on</td></tr>
+<tr><td class="field-name">stroke-color</td><td>border-color</td><td class="field-type">Color</td><td>Optional border color</td></tr>
+<tr><td class="field-name">stroke-width</td><td>border-width</td><td class="field-type">Int (dp)</td><td>Border width (default 1)</td></tr>
+<tr><td class="field-name">radius</td><td>corner</td><td class="field-type">Int (dp)</td><td>Corner radius of the frame (default 12)</td></tr>
+<tr><td class="field-name">padding</td><td>-</td><td class="field-type">Int (dp)</td><td>Inner padding (default 12 when framed, 0 otherwise)</td></tr>
+</table>
+</div>
+<pre><code>[[action.params]]
+type = "rows"
+bg-color = "#1A2196F3"
+radius = 12
+photo-position = "top"
+
+[[action.params.rows]]
+photo = "{ICON}/guide.png"
+
+[[action.params.rows]]
+text = "Get your API key first"
+bold = true
+
+[[action.params]]
+name = "API_KEY"
+type = "password"
+
+[[action.params]]
+type = "rows"
+
+[[action.params.rows]]
+text-sh = "chatbot --list-websites"
+line = true</code></pre>
+<div class="callout tip">A <code>rows</code> block with no visible rows (or <code>support = false</code>) is skipped. A dialog counts only real inputs (not <code>rows</code> blocks) when deciding between the small dialog and the full-screen one (more than 4).</div>
+<h3>7.4. Demo</h3>
 <div class="demo-block"><div class="demo-label">Demo - params dialog</div><div class="demo-frame">
 <div class="d-toolbar"><span class="d-back">&lt;</span><span class="d-title">Set CPU max freq</span></div>
 <div class="d-body">
@@ -1027,7 +1067,7 @@ title = "Config file"
 type = "file"
 suffix = "conf"
 </code></pre>
-<h3>7.4. Dependencies (depend-*)</h3>
+<h3>7.5. Dependencies (depend-*)</h3>
 <p>A param can be hidden/shown (or switched to readonly) based on the value of another param. This is a large feature - see <a href="#depend">section 18</a> for details.</p>
 </section>
 <section id="switch">
@@ -1199,7 +1239,7 @@ bold = true
 [[rows]]
 text = "Temp: 41 C"
 </code></pre>
-<p>This is the <strong>most common</strong> display component: used in <code>[[text]]</code>, <code>[[action]]</code>, <code>[[page]]</code>, <code>[[download]]</code>, <code>[[action.params-rows]]</code> and <code>[[switch]]</code>, <code>[[picker]]</code>, <code>[[editor]]</code>. Each row is a single line of text that can have style, icon, toggle, photo, etc.</p>
+<p>This is the <strong>most common</strong> display component: used in <code>[[text]]</code>, <code>[[action]]</code>, <code>[[page]]</code>, <code>[[download]]</code>, <code>[[action.params.rows]]</code> and <code>[[switch]]</code>, <code>[[picker]]</code>, <code>[[editor]]</code>. Each row is a single line of text that can have style, icon, toggle, photo, etc.</p>
 <h3>11.1. Row fields</h3>
 <div class="tbl-container">
 <table class="tbl cols-5">

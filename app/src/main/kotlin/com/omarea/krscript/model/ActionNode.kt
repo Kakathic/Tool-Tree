@@ -6,9 +6,6 @@ class ActionNode(currentConfigXml: String) : RunnableNode(currentConfigXml){
     var params: ArrayList<ActionParamInfo>? = null
     var paramsSh: String = ""
     val rows = ArrayList<TextNode.TextRow>()
-    val paramsRows = ArrayList<TextNode.TextRow>()
-    // params-rows có position = "bottom": hiện ở cuối vùng cuộn, ngay dưới các tham số
-    val paramsRowsBottom = ArrayList<TextNode.TextRow>()
 
     var menu: Boolean = false
 

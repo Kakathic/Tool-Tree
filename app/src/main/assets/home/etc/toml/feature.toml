@@ -113,9 +113,11 @@ placeholder-sh = "list_provider=deepseek chatbot --show 2>/dev/null"
 type = "password"
 remember = false
 
-[[action.params-rows]]
+[[action.params]]
+type = "rows"
+
+[[action.params.rows]]
 text-sh = "chatbot --list-websites"
-position = "bottom"
 line = true
 
 [[group]]
@@ -128,7 +130,7 @@ slog ai_models_trans "$ai_models_trans"
 slog list_provider_trans "$list_provider_trans"
 transai -p "Hello"
 '''
-[[chat.params]]
+[[action.params]]
 name = "chatai_lang"
 title = "@reply_lang_title"
 label = "@permis_text_2"

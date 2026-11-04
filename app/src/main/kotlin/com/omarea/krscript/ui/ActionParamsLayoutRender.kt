@@ -15,6 +15,8 @@ import androidx.fragment.app.FragmentActivity
 import com.omarea.common.model.SelectItem
 import com.tool.tree.R
 import com.omarea.krscript.model.ActionParamInfo
+import com.omarea.krscript.model.NodeInfoBase
+import android.graphics.drawable.GradientDrawable
 import com.omarea.krscript.executor.ScriptEnvironmen
 import androidx.core.graphics.toColorInt
 
@@ -88,7 +90,7 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
     
     private val visibilityState = HashMap<String, Boolean>()
 
-    fun renderList(actionParamInfos: ArrayList<ActionParamInfo>, fileChooser: ParamsFileChooserRender.FileChooserInterface?) {
+    fun renderList(actionParamInfos: ArrayList<ActionParamInfo>, config: NodeInfoBase, fileChooser: ParamsFileChooserRender.FileChooserInterface?) {
         val seenNames = HashSet<String>()
         val duplicateNames = LinkedHashSet<String>()
         val dedupedParamInfos = ArrayList<ActionParamInfo>(actionParamInfos.size)
@@ -118,6 +120,10 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
         visibilityState.clear()
 
         for (actionParamInfo in dedupedParamInfos) {
+            if (actionParamInfo.type == "rows") {
+                addRowsBlock(actionParamInfo, config)
+                continue
+            }
             val options = actionParamInfo.optionsFromShell
             if (options != null && !(actionParamInfo.type == "app" || actionParamInfo.type == "packages")) {
                 if (actionParamInfo.multiple) {
@@ -649,6 +655,34 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
         }.start()
     }
 
+    private fun addRowsBlock(info: ActionParamInfo, config: NodeInfoBase) {
+        val layout = LayoutInflater.from(context).inflate(R.layout.kr_param_rows, null)
+        val box = layout.findViewById<LinearLayout>(R.id.kr_param_rows_box)
+        val textView = layout.findViewById<TextView>(R.id.kr_param_rows_text)
+        val photoView = layout.findViewById<ImageView>(R.id.kr_param_rows_photo)
+        val density = context.resources.displayMetrics.density
+
+        val hasFrame = info.rowsBgColor != null || info.rowsStrokeColor != null
+        if (hasFrame) {
+            box.background = GradientDrawable().apply {
+                cornerRadius = info.rowsRadius * density
+                info.rowsBgColor?.let { setColor(it) }
+                info.rowsStrokeColor?.let { setStroke((info.rowsStrokeWidth * density).toInt(), it) }
+            }
+        }
+        val padding = (((if (info.rowsPadding >= 0) info.rowsPadding else if (hasFrame) 12 else 0)) * density).toInt()
+        box.setPadding(padding, padding, padding, padding)
+
+        if (info.rowsPhotoTop) {
+            box.removeView(photoView)
+            box.addView(photoView, 0)
+        }
+
+        RowsRenderHelper.bind(context, textView, photoView, info.rows, config)
+        linearLayout.addView(layout)
+        info.name?.let { rowViews[it] = layout }
+    }
+
     private val hideLabelTypes = arrayOf("bool", "checkbox", "switch")
     private fun addToLayout(inputView: View, actionParamInfo: ActionParamInfo) {
         val layout = LayoutInflater.from(context).inflate(R.layout.kr_param_row, null)
@@ -705,7 +739,7 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
     fun readParamsValue(actionParamInfos: ArrayList<ActionParamInfo>): HashMap<String, String> {
         val params = HashMap<String, String>()
         for (actionParamInfo in actionParamInfos) {
-            if (actionParamInfo.name == null) {
+            if (actionParamInfo.name == null || actionParamInfo.type == "rows") {
                 continue
             }
 
