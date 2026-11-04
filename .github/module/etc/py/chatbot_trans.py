@@ -34,7 +34,7 @@ PROVIDERS = {
   "openrouter": {"base_url": "https://openrouter.ai/api/v1", "api_key_env": "OPENROUTER_API_KEY", "model": "openai/gpt-4.1-mini", "type": "openai"},
   "groq": {"base_url": "https://api.groq.com/openai/v1", "api_key_env": "GROQ_API_KEY", "model": "llama-3.3-70b-versatile", "type": "openai"},
   "together": {"base_url": "https://api.together.xyz/v1", "api_key_env": "TOGETHER_API_KEY", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "type": "openai"},
-  "custom": {"base_url": "", "api_key_env": "CUSTOM_API_KEY", "model": "", "type": "openai"},
+  "deepseek": {"base_url": "https://api.deepseek.com", "api_key_env": "DEEPSEEK_API_KEY", "model": "deepseek-flash", "type": "openai"},
 }
 PROVIDER_WEBSITES = {
   "gemini": {"name": "Google Gemini", "url": "https://aistudio.google.com/app/apikey"},
@@ -42,7 +42,7 @@ PROVIDER_WEBSITES = {
   "openrouter": {"name": "OpenRouter", "url": "https://openrouter.ai/settings/keys"},
   "groq": {"name": "Groq", "url": "https://console.groq.com/keys"},
   "together": {"name": "Together AI", "url": "https://api.together.ai/settings/api-keys"},
-  "custom": {"name": "Custom OpenAI-compatible API", "url": ""},
+  "deepseek": {"name": "DeepSeek", "url": "https://platform.deepseek.com/api_keys"},
 }
 UI_TEXT = {
   "vi": {
@@ -56,7 +56,6 @@ UI_TEXT = {
     "error": "Lỗi", "warning": "Cảnh báo", "providers": "Nhà cung cấp",
     "models": "Danh sách model", "default_model": "Model mặc định",
     "websites": "Website đăng ký API key",
-    "custom_website": "Tùy thuộc nhà cung cấp API của bạn",
     "chunk": "Đang dịch phần",
     "stats": "Thời gian xử lý",
   },
@@ -71,7 +70,6 @@ UI_TEXT = {
     "error": "Error", "warning": "Warning", "providers": "Providers",
     "models": "Available models", "default_model": "Default model",
     "websites": "API key registration websites",
-    "custom_website": "Depends on your API provider",
     "chunk": "Translating part",
     "stats": "Processing time",
   },
@@ -233,7 +231,7 @@ def parse_args():
   parser.add_argument("-f", "--file", help="Read the text to translate from a UTF-8 file.")
   parser.add_argument("--provider", choices=tuple(PROVIDERS), default="gemini", help="AI provider (default: gemini).")
   parser.add_argument("--model", help="Model name; defaults to the selected provider's default model.")
-  parser.add_argument("--base-url", help="OpenAI-compatible API base URL, mainly for custom providers.")
+  parser.add_argument("--base-url", help="Override the provider's default API base URL (OpenAI-compatible providers).")
   parser.add_argument("--thinking", choices=THINKING_LEVELS, default="low", help="Gemini thinking level; ignored by OpenAI-compatible providers.")
   parser.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE, help=f"Temperature for OpenAI-compatible providers (default: {DEFAULT_TEMPERATURE}, -1 to omit); ignored by Gemini.")
   parser.add_argument("--lang", default="en", metavar="LANG", help="Translation target language: any language name or code, e.g. vi, ja, zh-CN, pt-BR, French.")
@@ -262,10 +260,6 @@ def parse_args():
     if args.list_models or args.check_api_key or has_input:
       parser.error("--list-providers/--list-websites cannot be combined with --list-models, --check-api-key, -p, or -f.")
     return args
-  if args.provider == "custom" and not args.base_url:
-    parser.error("--base-url is required when --provider custom is selected.")
-  if args.provider == "custom" and not args.model and not args.list_models:
-    parser.error("--model is required when --provider custom is selected.")
   if args.chunk_size < 500:
     parser.error("--chunk-size must be at least 500 characters.")
   if args.temperature != -1 and not 0 <= args.temperature <= 2:
@@ -531,8 +525,7 @@ def list_provider_websites(ui_language="auto"):
   ui = UI_TEXT[get_cli_language(ui_language)]
   print(COLORS.title(ui["websites"]))
   for item in PROVIDER_WEBSITES.values():
-    url = item["url"] or ui["custom_website"]
-    print(f"  {item['name']:<32} {url}")
+    print(f"  {item['name']:<32} {item['url']}")
 
 def list_provider_models(api_key, provider, base_url, timeout):
   if provider["type"] == "gemini":

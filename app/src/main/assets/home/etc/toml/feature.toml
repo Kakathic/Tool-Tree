@@ -116,6 +116,7 @@ remember = false
 [[action.params-rows]]
 text-sh = "chatbot --list-websites"
 position = "bottom"
+line = true
 
 [[group]]
 [[action]]
