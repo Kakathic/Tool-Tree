@@ -1,3 +1,4 @@
+# app/src/main/assets/home/etc/demo/editor.toml
 [[toml]]
 load-key-sh = 'ETC="$ETC/demo" langpath'
 

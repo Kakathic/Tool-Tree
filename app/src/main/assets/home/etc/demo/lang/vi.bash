@@ -1,3 +1,4 @@
+# app/src/main/assets/home/etc/demo/lang/vi.bash
 # Kakathic demo language file
 
 # index.toml
