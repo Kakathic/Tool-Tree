@@ -1,6 +1,8 @@
 # app/src/main/assets/home/etc/demo/lang/vi.bash
 # Kakathic demo language file
 
+path_toml="Đường dẫn tệp:"
+
 # index.toml
 idx_001="Bộ mẫu TOML của Tool-Tree"
 idx_002="Mỗi trang con minh hoạ một loại node. Các mẫu chỉ chạy lệnh an toàn (echo, đọc thông tin), không sửa hệ thống."

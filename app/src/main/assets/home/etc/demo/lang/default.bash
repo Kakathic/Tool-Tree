@@ -1,6 +1,8 @@
 # app/src/main/assets/home/etc/demo/lang/default.bash
 # Kakathic demo language file
 
+path_toml="File path:"
+
 # index.toml
 idx_001="TOML samples for Tool-Tree"
 idx_002="Each sub-page demonstrates one node type. The samples only run safe commands (echo, reading info) and never modify the system."

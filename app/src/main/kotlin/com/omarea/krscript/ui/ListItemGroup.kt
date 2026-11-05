@@ -5,7 +5,6 @@ import android.animation.LayoutTransition
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import com.tool.tree.R
 import com.omarea.krscript.model.GroupNode
 
@@ -22,40 +21,6 @@ class ListItemGroup(context: Context,
 
     private val placeholderViews = ArrayList<View>()
 
-    // Item nằm trực tiếp ngoài group không có thẻ bo góc bao ngoài nên hiệu ứng nhấn mặc định bị vuông góc,
-    // đổi sang ripple bo góc (10dp, cùng bán kính với thẻ group). Item trong group giữ nguyên.
-    private fun applyRootPressEffect(item: ListItemView) {
-        if (!isRootGroup || item !is ListItemClickable) return
-        val view = item.getView()
-        if (view.foreground != null) {
-            view.foreground = ContextCompat.getDrawable(context, R.drawable.krscript_item_ripple_ac)
-        }
-        applyRootCompactSpacing(view)
-    }
-
-    // Item nằm trực tiếp ngoài group không có thẻ nền nên khoảng đệm trên/dưới mặc định (thiết kế cho item trong thẻ)
-    // làm khoảng cách giữa 2 mục liền kề quá lớn. Thu gọn margin dọc của phần nội dung và bỏ chiều cao tối thiểu.
-    // Item trong group không bị ảnh hưởng. Muốn chỉnh độ thưa/chặt thì đổi 2 hằng số bên dưới.
-    private val rootTrimTopDp = 7
-    private val rootTrimBottomDp = 4
-
-    private fun applyRootCompactSpacing(view: View) {
-        if (view.getTag(R.id.kr_layout_ac) != null) return
-        val content = view.findViewById<ViewGroup?>(R.id.kr_layout_ac) ?: return
-        val density = context.resources.displayMetrics.density
-        val trimTop = (rootTrimTopDp * density).toInt()
-        val trimBottom = (rootTrimBottomDp * density).toInt()
-        for (i in 0 until content.childCount) {
-            val child = content.getChildAt(i)
-            val lp = child.layoutParams as? ViewGroup.MarginLayoutParams ?: continue
-            lp.topMargin = (lp.topMargin - trimTop).coerceAtLeast(0)
-            lp.bottomMargin = (lp.bottomMargin - trimBottom).coerceAtLeast(0)
-            child.layoutParams = lp
-        }
-        view.minimumHeight = 0
-        view.setTag(R.id.kr_layout_ac, true)
-    }
-
     fun addPlaceholders(views: List<View>) {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         for (view in views) {
@@ -65,7 +30,6 @@ class ListItemGroup(context: Context,
     }
 
     fun addViewBeforePlaceholder(item: ListItemView): ListItemGroup {
-        applyRootPressEffect(item)
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         val placeholder = placeholderViews.firstOrNull()
         if (placeholder != null) {
@@ -91,7 +55,6 @@ class ListItemGroup(context: Context,
     }
 
     fun addView(item: ListItemView): ListItemGroup {
-        applyRootPressEffect(item)
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         content.addView(item.getView())
         children.add(item)
@@ -99,7 +62,6 @@ class ListItemGroup(context: Context,
     }
 
     fun addView(item: ListItemView, atIndex: Int): ListItemGroup {
-        applyRootPressEffect(item)
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         if (content.layoutTransition == null) {
             content.layoutTransition = LayoutTransition()

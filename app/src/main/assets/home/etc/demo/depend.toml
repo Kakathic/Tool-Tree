@@ -3,6 +3,7 @@
 load-key-sh = 'ETC="$ETC/demo" langpath'
 
 [[text]]
+title = "@path_toml"
 [[text.rows]]
 sh = 'echo "${PAGE_CONFIG_FILE:-$ETC/demo/depend.toml}"'
 monospace = true
