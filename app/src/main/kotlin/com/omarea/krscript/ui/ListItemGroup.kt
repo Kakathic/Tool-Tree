@@ -38,18 +38,24 @@ class ListItemGroup(context: Context,
         if (view.getTag(R.id.kr_layout_ac) != null) return
         val content = view.findViewById<ViewGroup>(R.id.kr_layout_ac) ?: return
         val d = context.resources.displayMetrics.density
-        val cutTop = (4 * d).toInt()
-        val cutBottom = (4 * d).toInt()
-        val startOld = (6 * d).toInt()
-        val startNew = (2 * d).toInt()
-        val endOld = (16 * d).toInt()
-        val endNew = (8 * d).toInt()
+    
+        // Định nghĩa giá trị cố định trực tiếp cho từng hướng
+        val newTop = (4 * d).toInt()
+        val newBottom = (4 * d).toInt()
+        val newStart = (1 * d).toInt()
+        val newEnd = (1 * d).toInt()
+    
         for (i in 0 until content.childCount) {
-            val lp = content.getChildAt(i).layoutParams as? ViewGroup.MarginLayoutParams ?: continue
-            lp.topMargin = (lp.topMargin - cutTop).coerceAtLeast(0)
-            lp.bottomMargin = (lp.bottomMargin - cutBottom).coerceAtLeast(0)
-            if (lp.marginStart == startOld) lp.marginStart = startNew
-            if (lp.marginEnd == endOld) lp.marginEnd = endNew
+            val child = content.getChildAt(i)
+            val lp = child.layoutParams as? ViewGroup.MarginLayoutParams ?: continue
+            
+            // Trực tiếp đặt giá trị mới cho 4 hướng
+            lp.topMargin = newTop
+            lp.bottomMargin = newBottom
+            lp.marginStart = newStart
+            lp.marginEnd = newEnd
+            
+            child.requestLayout() // Cập nhật lại layout hiển thị
         }
         view.setTag(R.id.kr_layout_ac, true)
     }
