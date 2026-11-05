@@ -41,6 +41,8 @@
     <LinearLayout
         android:id="@+id/bottom_buttons"
         android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="4dp"
+        android:layout_marginBottom="4dp"
         android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
