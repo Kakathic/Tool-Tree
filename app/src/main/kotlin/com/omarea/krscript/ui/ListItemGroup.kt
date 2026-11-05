@@ -9,6 +9,21 @@ import androidx.core.content.ContextCompat
 import com.tool.tree.R
 import com.omarea.krscript.model.GroupNode
 
+// Lề (dp) của các item nằm trực tiếp ngoài group, chỉnh tại đây.
+// ITEM_*: item clickable (Action, Page, Picker, Editor, Terminal, Chat, Switch, Download).
+// TEXT_*: item text. TEXT_START mặc định = ITEM_START + TITLE_INSET để chữ text thẳng hàng với tiêu đề item.
+object RootItemSpacing {
+    const val ITEM_TOP_DP = 10
+    const val ITEM_BOTTOM_DP = 0
+    const val ITEM_START_DP = 1
+    const val ITEM_END_DP = 1
+
+    const val TEXT_TOP_DP = 8
+    const val TEXT_BOTTOM_DP = 2
+    const val TEXT_START_DP = ITEM_START_DP
+    const val TEXT_END_DP = ITEM_END_DP
+}
+
 class ListItemGroup(context: Context,
                     var isRootGroup: Boolean,
                     config: GroupNode) :
@@ -35,24 +50,32 @@ class ListItemGroup(context: Context,
         if (view.getTag(R.id.kr_layout_ac) != null) return
         val content = view.findViewById<ViewGroup>(R.id.kr_layout_ac) ?: return
         val d = context.resources.displayMetrics.density
-    
-        // Định nghĩa giá trị cố định trực tiếp cho từng hướng
-        val newTop = (10 * d).toInt()
-        val newBottom = (0 * d).toInt()
-        val newStart = (1 * d).toInt()
-        val newEnd = (1 * d).toInt()
-    
+        fun px(dp: Int) = (dp * d).toInt()
+
+        var row: ViewGroup.MarginLayoutParams? = null
         for (i in 0 until content.childCount) {
             val child = content.getChildAt(i)
-            val lp = child.layoutParams as? ViewGroup.MarginLayoutParams ?: continue
-            
-            // Trực tiếp đặt giá trị mới cho 4 hướng
-            lp.topMargin = newTop
-            lp.bottomMargin = newBottom
-            lp.marginStart = newStart
-            lp.marginEnd = newEnd
-            
-            child.requestLayout() // Cập nhật lại layout hiển thị
+            if (child is ViewGroup) {
+                row = child.layoutParams as? ViewGroup.MarginLayoutParams
+                break
+            }
+        }
+        if (row == null) return
+        val rowTop = row.topMargin
+        val rowBottom = row.bottomMargin
+
+        for (i in 0 until content.childCount) {
+            val lp = content.getChildAt(i).layoutParams as? ViewGroup.MarginLayoutParams ?: continue
+            if (lp === row) {
+                lp.topMargin = px(RootItemSpacing.ITEM_TOP_DP)
+                lp.bottomMargin = px(RootItemSpacing.ITEM_BOTTOM_DP)
+                lp.marginStart = px(RootItemSpacing.ITEM_START_DP)
+            } else {
+                // Nút / switch / vòng tải bên phải: giữ độ lệch so với khối tiêu đề như layout gốc để vẫn thẳng hàng
+                lp.topMargin = (px(RootItemSpacing.ITEM_TOP_DP) + lp.topMargin - rowTop).coerceAtLeast(0)
+                lp.bottomMargin = (px(RootItemSpacing.ITEM_BOTTOM_DP) + lp.bottomMargin - rowBottom).coerceAtLeast(0)
+                lp.marginEnd = px(RootItemSpacing.ITEM_END_DP)
+            }
         }
         view.setTag(R.id.kr_layout_ac, true)
     }

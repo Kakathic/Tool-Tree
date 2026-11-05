@@ -24,9 +24,11 @@ class ListItemText(context: Context,
 
     init {
         if (compact) {
-            // Text nằm trực tiếp ngoài group: lề ngang 12dp để thẳng hàng với tiêu đề item clickable ngoài group (2dp lề + 10dp), padding trên 8dp, dưới 2dp; trong group giữ padding của layout
+            // Text nằm trực tiếp ngoài group: lề lấy từ RootItemSpacing (ListItemGroup.kt)
             val d = context.resources.displayMetrics.density
-            layout.findViewById<View?>(R.id.kr_text_content)?.setPadding((1 * d).toInt(), (8 * d).toInt(), (1 * d).toInt(), (2 * d).toInt())
+            layout.findViewById<View?>(R.id.kr_text_content)?.setPadding(
+                (RootItemSpacing.TEXT_START_DP * d).toInt(), (RootItemSpacing.TEXT_TOP_DP * d).toInt(),
+                (RootItemSpacing.TEXT_END_DP * d).toInt(), (RootItemSpacing.TEXT_BOTTOM_DP * d).toInt())
         }
         // Khối rows của text chỉ cách phần mô tả 4dp, thêm 8dp phía trên đường kẻ đầu khối để đường kẻ không dính sát chữ
         RowsRenderHelper.markCompactLeadingDivider(rowsView, 8)
