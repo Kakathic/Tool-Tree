@@ -1,109 +1,112 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Ẩn/hiện theo một tham số"
+title = "@dep_001"
 [[action]]
 title = "depend-on, depend-value"
-desc = "Chọn chế độ để hiện đúng ô nhập tương ứng"
+desc = "@dep_002"
 script = '''
-echo "che_do = $che_do"
-echo "tep_nguon = $tep_nguon"
-echo "thu_muc_dich = $thu_muc_dich"
+echo "mode_choice = $mode_choice"
+echo "src_file = $src_file"
+echo "dest_folder = $dest_folder"
 '''
 [[action.params]]
-name = "che_do"
-title = "Chế độ sao lưu"
+name = "mode_choice"
+title = "@dep_003"
 type = "spinner"
 value = "file"
-items = ["file|Một tệp", "folder|Cả thư mục"]
+items = ["@dep_004", "@dep_005"]
 [[action.params]]
-name = "tep_nguon"
-title = "Tệp nguồn"
+name = "src_file"
+title = "@dep_006"
 type = "file"
-depend-on = "che_do"
+depend-on = "mode_choice"
 depend-value = "file"
 [[action.params]]
-name = "thu_muc_dich"
-title = "Thư mục đích"
+name = "dest_folder"
+title = "@dep_007"
 type = "folder"
-depend-on = "che_do"
+depend-on = "mode_choice"
 depend-value = "folder"
 
 [[action]]
 title = "depend-mode = hide"
-desc = "Ẩn khi giá trị khớp"
-script = 'echo "tat = $tat / ghi_chu = $ghi_chu"'
+desc = "@dep_008"
+script = 'echo "disable_notes = $disable_notes / notes = $notes"'
 [[action.params]]
-name = "tat"
-title = "Tắt ghi chú"
+name = "disable_notes"
+title = "@dep_009"
 type = "switch"
 value = "0"
 [[action.params]]
-name = "ghi_chu"
-title = "Ghi chú"
+name = "notes"
+title = "@prm_014"
 type = "text"
-depend-on = "tat"
+depend-on = "disable_notes"
 depend-value = "1"
 depend-mode = "hide"
 
 [[group]]
-title = "Mờ và khoá thay vì ẩn"
+title = "@dep_010"
 [[action]]
 title = "depend-readonly, depend-sort"
-desc = "Khi không khớp, ô chỉ bị mờ và khoá"
-script = 'echo "cho_phep = $cho_phep / gia_tri = $gia_tri"'
+desc = "@dep_011"
+script = 'echo "allow = $allow / val_field = $val_field"'
 [[action.params]]
-name = "cho_phep"
-title = "Cho phép sửa"
+name = "allow"
+title = "@dep_012"
 type = "switch"
 value = "0"
 [[action.params]]
-name = "gia_tri"
-title = "Giá trị"
+name = "val_field"
+title = "@dep_013"
 type = "text"
 value = "abc"
-depend-on = "cho_phep"
+depend-on = "allow"
 depend-value = "1"
 depend-readonly = true
 depend-sort = true
 
 [[group]]
-title = "Nhiều tham số cha (depend-logic)"
+title = "@dep_014"
 [[action]]
-title = "and (mặc định)"
-desc = "Cần cả hai công tắc đều bật"
+title = "@dep_015"
+desc = "@dep_016"
 script = 'echo ok'
 [[action.params]]
 name = "and_a"
-title = "Điều kiện A"
+title = "@dep_017"
 type = "switch"
 value = "0"
 [[action.params]]
 name = "and_b"
-title = "Điều kiện B"
+title = "@dep_018"
 type = "switch"
 value = "0"
 [[action.params]]
-name = "and_kq"
-title = "Hiện khi A và B cùng bật"
+name = "and_result"
+title = "@dep_019"
 type = "text"
 depend-on = "and_a|and_b"
 depend-value = "1|1"
 [[action]]
 title = "or / priority"
-desc = "Chỉ cần một điều kiện khớp"
+desc = "@dep_020"
 script = 'echo ok'
 [[action.params]]
 name = "or_a"
-title = "Điều kiện A"
+title = "@dep_017"
 type = "switch"
 value = "0"
 [[action.params]]
 name = "or_b"
-title = "Điều kiện B"
+title = "@dep_018"
 type = "switch"
 value = "0"
 [[action.params]]
-name = "or_kq"
-title = "Hiện khi A hoặc B bật"
+name = "or_result"
+title = "@dep_021"
 type = "text"
 depend-on = "or_a|or_b"
 depend-value = "1|1"
@@ -111,150 +114,150 @@ depend-logic = "or"
 depend-default = "hide"
 [[action]]
 title = "xor"
-desc = "Đúng một điều kiện khớp"
+desc = "@dep_022"
 script = 'echo ok'
 [[action.params]]
 name = "xor_a"
-title = "Điều kiện A"
+title = "@dep_017"
 type = "switch"
 value = "0"
 [[action.params]]
 name = "xor_b"
-title = "Điều kiện B"
+title = "@dep_018"
 type = "switch"
 value = "0"
 [[action.params]]
-name = "xor_kq"
-title = "Hiện khi chỉ một trong hai bật"
+name = "xor_result"
+title = "@dep_023"
 type = "text"
 depend-on = "xor_a|xor_b"
 depend-value = "1|1"
 depend-logic = "xor"
 [[action]]
 title = "nand"
-desc = "Ẩn khi cả hai cùng khớp"
+desc = "@dep_024"
 script = 'echo ok'
 [[action.params]]
 name = "nand_a"
-title = "Điều kiện A"
+title = "@dep_017"
 type = "switch"
 value = "0"
 [[action.params]]
 name = "nand_b"
-title = "Điều kiện B"
+title = "@dep_018"
 type = "switch"
 value = "0"
 [[action.params]]
-name = "nand_kq"
-title = "Hiện trừ khi A và B cùng bật"
+name = "nand_result"
+title = "@dep_025"
 type = "text"
 depend-on = "nand_a|nand_b"
 depend-value = "1|1"
 depend-logic = "nand"
 [[action]]
 title = "depend-threshold"
-desc = "Cần ít nhất 67% điều kiện khớp (2 trên 3)"
+desc = "@dep_026"
 script = 'echo ok'
 [[action.params]]
 name = "th_a"
-title = "Điều kiện A"
+title = "@dep_017"
 type = "switch"
 value = "0"
 [[action.params]]
 name = "th_b"
-title = "Điều kiện B"
+title = "@dep_018"
 type = "switch"
 value = "0"
 [[action.params]]
 name = "th_c"
-title = "Điều kiện C"
+title = "@dep_027"
 type = "switch"
 value = "0"
 [[action.params]]
-name = "th_kq"
-title = "Hiện khi ít nhất hai điều kiện bật"
+name = "th_result"
+title = "@dep_028"
 type = "text"
 depend-on = "th_a|th_b|th_c"
 depend-value = "1|1|1"
 depend-threshold = 67
 
 [[group]]
-title = "Giá trị khớp nhiều lựa chọn"
+title = "@dep_029"
 [[action]]
-title = "depend-value có dấu phẩy"
-desc = "Hiện khi chọn b hoặc c, hỗ trợ ký tự đại diện"
+title = "@dep_030"
+desc = "@dep_031"
 script = 'echo ok'
 [[action.params]]
-name = "loai"
-title = "Loại"
+name = "type_sel"
+title = "@dep_032"
 type = "spinner"
 value = "a"
-items = ["a|Loại A", "b|Loại B", "c|Loại C", "dd1|Loại DD1"]
+items = ["@dep_033", "@dep_034", "@dep_035", "@dep_036"]
 [[action.params]]
-name = "loai_bc"
-title = "Chỉ hiện với B hoặc C"
+name = "type_bc"
+title = "@dep_037"
 type = "text"
-depend-on = "loai"
+depend-on = "type_sel"
 depend-value = "b,c"
 [[action.params]]
-name = "loai_dd"
-title = "Khớp mẫu dd*"
+name = "type_dd"
+title = "@dep_038"
 type = "text"
-depend-on = "loai"
+depend-on = "type_sel"
 depend-value = "dd*"
 
 [[group]]
-title = "Tuỳ chọn khác"
+title = "@dep_039"
 [[action]]
 title = "depend-negate, depend-initial, depend-cascade"
-script = 'echo "an = $an_chua / hien = $hien_con"'
+script = 'echo "an = $hidden_sent / hien = $child_text"'
 [[action.params]]
-name = "goc"
-title = "Công tắc gốc"
+name = "root_sw"
+title = "@dep_040"
 type = "switch"
 value = "1"
 [[action.params]]
-name = "dao"
-title = "depend-negate: hiện khi gốc TẮT"
+name = "inverse"
+title = "@dep_041"
 type = "text"
-depend-on = "goc"
+depend-on = "root_sw"
 depend-value = "1"
 depend-negate = true
 depend-initial = "hide"
 [[action.params]]
-name = "cha"
-title = "Tham số cha (hiện khi gốc bật)"
+name = "parent"
+title = "@dep_042"
 type = "switch"
 value = "1"
-depend-on = "goc"
+depend-on = "root_sw"
 depend-value = "1"
 [[action.params]]
-name = "hien_con"
-title = "Con: ẩn theo cha (depend-cascade)"
+name = "child_text"
+title = "@dep_043"
 type = "text"
-depend-on = "cha"
+depend-on = "parent"
 depend-value = "1"
 depend-cascade = true
 [[action.params]]
-name = "an_chua"
-title = "Ẩn nhưng vẫn gửi giá trị"
+name = "hidden_sent"
+title = "@dep_044"
 type = "text"
-value = "vẫn gửi"
-depend-on = "goc"
+value = "@dep_045"
+depend-on = "root_sw"
 depend-value = "1"
 depend-include-hidden = true
 [[action]]
 title = "depend-onchange"
-desc = "Chạy script mỗi khi trạng thái hiện/ẩn đổi"
+desc = "@dep_046"
 script = 'echo ok'
 [[action.params]]
 name = "oc_goc"
-title = "Công tắc"
+title = "@prm_022"
 type = "switch"
 value = "0"
 [[action.params]]
 name = "oc_con"
-title = "Ô theo dõi"
+title = "@dep_047"
 type = "text"
 depend-on = "oc_goc"
 depend-value = "1"

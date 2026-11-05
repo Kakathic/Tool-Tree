@@ -1,46 +1,49 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Tải tệp"
+title = "@dl_001"
 [[download]]
-title = "Tải tệp PDF mẫu"
-desc = "url tĩnh, script nhận $state là đường dẫn tệp"
+title = "@dl_002"
+desc = "@dl_003"
 url = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
 script = '''
-echo "Đã tải về: $state"
+echo "@dl_004"
 ls -l "$state"
 '''
 [[download]]
 title = "url-sh"
-desc = "URL sinh bằng script, chạy một lần khi bấm"
+desc = "@dl_005"
 url-sh = 'echo "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"'
-script = 'echo "Tệp: $state"'
+script = 'echo "@dl_006"'
 
 [[group]]
-title = "Tuỳ chọn khi tải"
+title = "@dl_007"
 [[download]]
-title = "confirm và warn"
-desc = "Hỏi trước khi tải"
+title = "@dl_008"
+desc = "@dl_009"
 confirm = true
-warn = "Tệp sẽ được tải vào bộ nhớ đệm của ứng dụng"
+warn = "@dl_010"
 url = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-script = 'echo "Tệp: $state"'
+script = 'echo "@dl_006"'
 [[download]]
 title = "auto-off"
-desc = "Tự đóng log sau khi chạy xong script"
+desc = "@dl_011"
 auto-off = true
 url = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-script = 'echo "Xong"'
+script = 'echo "Done"'
 [[download]]
 title = "lock"
-lock = "1|Mục tải đang bị khoá"
+lock = "@dl_012"
 url = "https://example.com/file.zip"
 
 [[group]]
-title = "rows dưới mục tải"
+title = "@dl_013"
 [[download]]
-title = "Tải có dòng phụ"
+title = "@dl_014"
 url = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-script = 'echo "Tệp: $state"'
+script = 'echo "@dl_006"'
 [[download.rows]]
-text = "Dòng chú thích dưới mục download"
+text = "@dl_015"
 italic = true
 size = 12

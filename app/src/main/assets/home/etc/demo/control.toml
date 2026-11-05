@@ -1,75 +1,78 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Lựa chọn trong hộp thoại log"
+title = "@ctl_001"
 [[action]]
 title = "choose:[...]"
-desc = "Hiện hàng nút bấm, giá trị gửi về stdin"
+desc = "@ctl_002"
 script = '''
-echo "choose:[performance|Hiệu năng,balanced|Cân bằng,powersave|Tiết kiệm]"
-read che_do
-echo "Bạn đã chọn: $che_do"
+echo "@ctl_003"
+read mode_choice
+echo "@ctl_004"
 '''
 [[action]]
 title = "pick:[...] / pickv / pickh"
-desc = "Liên kết bấm được ngay trong dòng log"
+desc = "@ctl_005"
 script = '''
-echo "Chọn mức chi tiết:"
-echo "pickh:[1|Thấp,2|Vừa,3|Cao]"
-read muc
-echo "Mức đã chọn: $muc"
-echo "Chọn lần nữa (xếp dọc):"
-echo "pickv:[x|Mục X,y|Mục Y]"
-read muc2
-echo "Mục đã chọn: $muc2"
+echo "@ctl_006"
+echo "@ctl_007"
+read level
+echo "@ctl_008"
+echo "@ctl_009"
+echo "@ctl_010"
+read level2
+echo "@ctl_011"
 '''
 
 [[group]]
-title = "Nhập văn bản"
+title = "@ctl_012"
 [[action]]
 title = "input:[...]"
-desc = "Hiện ô nhập, nội dung gửi về stdin"
+desc = "@ctl_013"
 script = '''
-echo "input:[Nhập tên bản sao lưu]"
-read ten
-echo "Tên đã nhập: $ten"
+echo "@ctl_014"
+read user_name
+echo "@ctl_015"
 '''
 
 [[group]]
-title = "Thanh tiến trình"
+title = "@ctl_016"
 [[action]]
-title = "progress:[hiện tại/tổng]"
-desc = "Cập nhật thanh tiến trình đầu hộp thoại"
+title = "@ctl_017"
+desc = "@ctl_018"
 script = '''
 total=10
 echo "progress:[-1/100]"
 sleep 1
 for i in 1 2 3 4 5 6 7 8 9 10; do
-  echo "Đã xong $i/$total"
+  echo "@ctl_019"
   echo "progress:[$i/$total]"
   sleep 0.3
 done
 echo "progress:[$total/$total]"
-echo "Hoàn tất"
+echo "@ctl_020"
 '''
 
 [[group]]
-title = "Gửi Intent"
+title = "@ctl_021"
 [[action]]
 title = "am:[start ...]"
-desc = "Mở màn hình Cài đặt phát triển"
+desc = "@ctl_022"
 script = 'echo "am:[start -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS]"'
 [[action]]
 title = "am:[help]"
-desc = "In cú pháp đầy đủ của lệnh am"
+desc = "@ctl_023"
 script = 'echo "am:[help]"'
 
 [[group]]
-title = "Khởi động lại ứng dụng"
+title = "@ctl_024"
 [[action]]
 title = "exit:[restart]"
-desc = "Khởi động lại app, dòng sau tag không được xử lý"
+desc = "@ctl_025"
 confirm = true
-warn = "Ứng dụng sẽ khởi động lại"
+warn = "@ctl_026"
 script = '''
-echo "Đang khởi động lại..."
+echo "@ctl_027"
 echo "exit:[restart]"
 '''

@@ -1,69 +1,76 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[text]]
 [[text.rows]]
-line = true
-[[text.rows]]
-text = "Node nằm trước [[group]] đầu tiên không có khung nhóm. Hàng line = true ở đầu khối vẽ một đường kẻ mảnh để tách khỏi phần bên dưới."
+text = "@grp_001"
 size = 12
 alpha = 0.85
+[[text.rows]]
+line = true
 
 [[group]]
-title = "Nhóm cơ bản"
+title = "@grp_002"
 [[action]]
-title = "Mục 1 trong nhóm"
-desc = "Mọi node sau [[group]] thuộc nhóm này"
-script = 'echo "Mục 1"'
+title = "@grp_003"
+desc = "@grp_004"
+script = 'echo "@grp_005"'
 [[action]]
-title = "Mục 2 trong nhóm"
-script = 'echo "Mục 2"'
+title = "@grp_006"
+script = 'echo "@grp_007"'
 
 [[group]]
-title = "Nhóm khác kiểu node"
+title = "@grp_008"
 [[switch]]
-title = "Công tắc trong nhóm"
+title = "@grp_009"
 get = "glog demo_group_switch"
 set = 'slog demo_group_switch "$state"'
 [[picker]]
-title = "Picker trong nhóm"
-items = ["a|Lựa chọn A", "b|Lựa chọn B"]
+title = "@grp_010"
+items = ["@grp_011", "@grp_012"]
 get = "glog demo_group_picker"
 set = 'slog demo_group_picker "$state"'
 
 [[group]]
-title-sh = 'echo "Tiêu đề nhóm tạo bằng title-sh"'
+title-sh = 'echo "@grp_013"'
 [[action]]
-title = "Nhóm có title-sh"
+title = "@grp_014"
 script = 'echo ok'
 
 [[group]]
-title = "Nhóm ẩn bằng support (ẩn luôn các mục con)"
+title = "@grp_015"
 support = "false"
 [[action]]
-title = "Mục này không hiện vì nhóm bị ẩn"
+title = "@grp_016"
 script = 'echo hidden'
 
 [[group]]
-title = "Nhóm không có tiêu đề bên dưới"
+title = "@grp_017"
 [[action]]
-title = "Mục trong nhóm"
+title = "@grp_018"
 script = 'echo ok'
 
 [[end]]
 
 [[text]]
 [[text.rows]]
-line = true
-[[text.rows]]
-text = "Từ [[end]] trở xuống node hiển thị trực tiếp trên trang, không bọc nhóm. Khối này mở đầu bằng line = true để tách khỏi nhóm phía trên."
+text = "@grp_019"
 size = 12
 alpha = 0.85
+[[text.rows]]
+line = true
 
 [[action]]
-title = "Action không bọc nhóm"
-desc = "Đứng riêng sau [[end]]"
-script = 'echo "Không bọc nhóm"'
+title = "@grp_020"
+desc = "@grp_021"
+script = 'echo "@grp_022"'
+
+[[text]]
+[[text.rows]]
+line = true
 
 [[group]]
-title = "Nhóm mở lại sau [[end]]"
+title = "@grp_023"
 [[action]]
-title = "Mục trong nhóm mới"
+title = "@grp_024"
 script = 'echo ok'

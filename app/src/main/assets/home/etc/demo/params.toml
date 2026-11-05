@@ -1,281 +1,284 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Nhập văn bản và số"
+title = "@prm_001"
 [[action]]
 title = "text, int, number, password"
-desc = "Điền rồi bấm xác nhận để xem giá trị"
+desc = "@prm_002"
 script = '''
-echo "ten = $ten"
-echo "tuoi = $tuoi"
-echo "he_so = $he_so"
-echo "mat_khau có ${#mat_khau} ký tự"
+echo "user_name = $user_name"
+echo "age = $age"
+echo "factor = $factor"
+echo "@prm_003"
 '''
 [[action.params]]
-name = "ten"
-title = "Tên"
-label = "Văn bản"
-desc = "type = text, có required và maxlength"
+name = "user_name"
+title = "@act_037"
+label = "@prm_004"
+desc = "@prm_005"
 type = "text"
 value = "Tool-Tree"
-placeholder = "Nhập tên"
+placeholder = "@prm_006"
 required = true
 maxlength = 30
 [[action.params]]
-name = "tuoi"
-title = "Tuổi"
+name = "age"
+title = "@prm_007"
 type = "int"
 min = 1
 max = 120
 value = "18"
 [[action.params]]
-name = "he_so"
-title = "Hệ số"
+name = "factor"
+title = "@prm_008"
 type = "number"
-placeholder = "Số thập phân"
+placeholder = "@prm_009"
 [[action.params]]
-name = "mat_khau"
-title = "Mật khẩu"
+name = "password"
+title = "@prm_010"
 type = "password"
-placeholder = "Ẩn ký tự"
+placeholder = "@prm_011"
 
 [[group]]
-title = "Văn bản nhiều dòng"
+title = "@prm_012"
 [[action]]
 title = "max-lines"
-desc = "Ô nhập cao dần tới 5 dòng rồi cuộn"
-script = 'echo "$ghi_chu"'
+desc = "@prm_013"
+script = 'echo "$notes"'
 [[action.params]]
-name = "ghi_chu"
-title = "Ghi chú"
+name = "notes"
+title = "@prm_014"
 type = "text"
 max-lines = 5
-placeholder = "Nhập nhiều dòng"
+placeholder = "@prm_015"
 
 [[group]]
-title = "Công tắc và hộp kiểm"
+title = "@prm_016"
 [[action]]
 title = "bool, checkbox, switch"
-desc = "desc-on hiện khi bật"
+desc = "@prm_017"
 script = '''
-echo "dong_y = $dong_y"
-echo "chay_nen = $chay_nen"
-echo "tu_dong = $tu_dong"
+echo "agree = $agree"
+echo "run_bg = $run_bg"
+echo "auto_on = $auto_on"
 '''
 [[action.params]]
-name = "dong_y"
-title = "Hộp kiểm"
+name = "agree"
+title = "@prm_018"
 type = "checkbox"
 value = "1"
-desc = "Đang tắt"
-desc-on = "Đang bật"
+desc = "@prm_019"
+desc-on = "@prm_020"
 [[action.params]]
-name = "chay_nen"
-title = "Kiểu bool"
+name = "run_bg"
+title = "@prm_021"
 type = "bool"
 value = "0"
 [[action.params]]
-name = "tu_dong"
-title = "Công tắc"
+name = "auto_on"
+title = "@prm_022"
 type = "switch"
 value = "1"
-desc = "Tự động"
-desc-on = "Tự động đang bật"
+desc = "@prm_023"
+desc-on = "@prm_024"
 
 [[group]]
-title = "Thanh trượt"
+title = "@prm_025"
 [[action]]
 title = "seekbar"
-script = 'echo "do_sang = $do_sang"'
+script = 'echo "brightness = $brightness"'
 [[action.params]]
-name = "do_sang"
-title = "Độ sáng"
+name = "brightness"
+title = "@prm_026"
 type = "seekbar"
 min = 0
 max = 100
 value = "40"
 
 [[group]]
-title = "Chọn một giá trị (spinner / single-select)"
+title = "@prm_027"
 [[action]]
-title = "Bảng options"
-desc = "Dùng [[action.params.options]]"
+title = "@prm_028"
+desc = "@prm_029"
 script = 'echo "cpu = $cpu"'
 [[action.params]]
 name = "cpu"
-title = "Chế độ CPU"
+title = "@prm_030"
 type = "spinner"
 value = "balanced"
 [[action.params.options]]
-title = "Hiệu năng"
+title = "@prm_031"
 value = "performance"
 [[action.params.options]]
-title = "Cân bằng"
+title = "@prm_032"
 value = "balanced"
 [[action.params.options]]
-title = "Tiết kiệm"
+title = "@prm_033"
 value = "powersave"
 [[action]]
-title = "items - khai báo ngắn"
-script = 'echo "ngon_ngu = $ngon_ngu"'
+title = "@prm_034"
+script = 'echo "lang_sel = $lang_sel"'
 [[action.params]]
-name = "ngon_ngu"
-title = "Ngôn ngữ"
+name = "lang_sel"
+title = "@prm_035"
 type = "single-select"
 items = ["vi|Tiếng Việt", "en|English", "ru|Русский"]
 value = "vi"
 [[action]]
 title = "options-sh, editable, allow-no-selection"
-script = 'echo "kieu_dong = $kieu_dong / tu_go = $tu_go"'
+script = 'echo "list_item = $list_item / typed = $typed"'
 [[action.params]]
-name = "kieu_dong"
-title = "Danh sách sinh bằng script"
+name = "list_item"
+title = "@prm_036"
 type = "spinner"
 options-sh = '''
-echo "1|Mục một"
-echo "2|Mục hai"
-echo "3|Mục ba"
+echo "@prm_037"
+echo "@prm_038"
+echo "@prm_039"
 '''
 allow-no-selection = true
 [[action.params]]
-name = "tu_go"
-title = "Vừa chọn vừa gõ"
+name = "typed"
+title = "@prm_040"
 type = "spinner"
 editable = true
 items = ["abc", "xyz"]
 
 [[group]]
-title = "Chọn nhiều giá trị (multi-select)"
+title = "@prm_041"
 [[action]]
 title = "multi-select"
-desc = "Giá trị cách nhau bằng separator"
-script = 'echo "tinh_nang = $tinh_nang"'
+desc = "@prm_042"
+script = 'echo "features = $features"'
 [[action.params]]
-name = "tinh_nang"
-title = "Tính năng"
+name = "features"
+title = "@prm_043"
 type = "multi-select"
 multiple = true
 separator = ","
 value = ["a", "c"]
-items = ["a|Tính năng A", "b|Tính năng B", "c|Tính năng C", "d|Tính năng D"]
+items = ["@prm_044", "@prm_045", "@prm_046", "@prm_047"]
 
 [[group]]
-title = "Tệp, thư mục và ứng dụng"
+title = "@prm_048"
 [[action]]
 title = "file, folder"
 script = '''
-echo "tep = $tep"
-echo "thu_muc = $thu_muc"
-echo "tep_sua_duoc = $tep_sua_duoc"
+echo "pick_file = $pick_file"
+echo "pick_folder = $pick_folder"
+echo "typed_path = $typed_path"
 '''
 [[action.params]]
-name = "tep"
-title = "Chọn tệp"
+name = "pick_file"
+title = "@prm_049"
 type = "file"
 suffix = "zip,apk"
 path-home = "/sdcard"
 [[action.params]]
-name = "thu_muc"
-title = "Chọn thư mục"
+name = "pick_folder"
+title = "@prm_050"
 type = "folder"
 path-home = "/sdcard"
 [[action.params]]
-name = "tep_sua_duoc"
-title = "Đường dẫn gõ tay được"
+name = "typed_path"
+title = "@prm_051"
 type = "file"
 editable = true
 [[action]]
 title = "app, packages"
-script = 'echo "ung_dung = $ung_dung"'
+script = 'echo "apps = $apps"'
 [[action.params]]
-name = "ung_dung"
-title = "Ứng dụng"
+name = "apps"
+title = "@prm_052"
 type = "app"
 multiple = true
 separator = ","
 
 [[group]]
-title = "Màu sắc"
+title = "@prm_053"
 [[action]]
 title = "color"
-script = 'echo "mau = $mau"'
+script = 'echo "color = $color"'
 [[action.params]]
-name = "mau"
-title = "Màu nền"
+name = "color"
+title = "@prm_054"
 type = "color"
 value = "#0DBDA2"
 
 [[group]]
-title = "Giá trị động và ghi nhớ"
+title = "@prm_055"
 [[action]]
 title = "value-sh, placeholder-sh, label-sh, desc-sh, title-sh"
-script = 'echo "gio = $gio"'
+script = 'echo "clock = $clock"'
 [[action.params]]
-name = "gio"
-title-sh = 'echo "Tiêu đề động"'
-label-sh = 'echo "Nhãn động"'
-desc-sh = 'echo "Mô tả động"'
-placeholder-sh = 'echo "Gợi ý động"'
+name = "clock"
+title-sh = 'echo "@prm_056"'
+label-sh = 'echo "@prm_057"'
+desc-sh = 'echo "@prm_058"'
+placeholder-sh = 'echo "@prm_059"'
 type = "text"
 value-sh = 'date +%H:%M:%S'
 [[action]]
 title = "remember"
-desc = "Nhớ giá trị lần nhập cuối"
-script = 'echo "nho = $nho"'
+desc = "@prm_060"
+script = 'echo "remembered = $remembered"'
 [[action.params]]
-name = "nho"
-title = "Giá trị được nhớ"
+name = "remembered"
+title = "@prm_061"
 type = "text"
 remember = true
 [[action]]
 title = "remember = false"
-script = 'echo "khong_nho = $khong_nho"'
+script = 'echo "not_remembered = $not_remembered"'
 [[action.params]]
-name = "khong_nho"
-title = "Luôn quay về giá trị mặc định"
+name = "not_remembered"
+title = "@prm_062"
 type = "text"
-value = "mặc định"
+value = "@prm_063"
 remember = false
 
 [[group]]
-title = "readonly, sort và apply"
+title = "@prm_064"
 [[action]]
-title = "readonly và sort"
-desc = "Tham số chỉ đọc được đẩy xuống cuối"
-script = 'echo "a = $a_sua / b = $b_khoa"'
+title = "@prm_065"
+desc = "@prm_066"
+script = 'echo "a = $a_edit / b = $b_locked"'
 [[action.params]]
-name = "b_khoa"
-title = "Chỉ đọc"
+name = "b_locked"
+title = "@prm_067"
 type = "text"
-value = "Không sửa được"
+value = "@prm_068"
 readonly = true
 sort = true
 [[action.params]]
-name = "a_sua"
-title = "Sửa được"
+name = "a_edit"
+title = "@prm_069"
 type = "text"
-value = "Sửa đi"
+value = "@prm_070"
 [[action]]
-title = "apply - script gắn theo tham số"
-desc = "Chạy trước script chính, theo thứ tự tham số"
-script = 'echo "Script chính: $buoc2"'
+title = "@prm_071"
+desc = "@prm_072"
+script = 'echo "@prm_073"'
 [[action.params]]
-name = "buoc1"
-title = "Bước 1"
+name = "step1"
+title = "@prm_074"
 type = "text"
-value = "một"
-apply = 'echo "apply bước 1: $buoc1"'
+value = "@prm_075"
+apply = 'echo "@prm_076"'
 [[action.params]]
-name = "buoc2"
-title = "Bước 2"
+name = "step2"
+title = "@prm_077"
 type = "text"
 value = "hai"
-apply = 'echo "apply bước 2: $buoc2"'
+apply = 'echo "@prm_078"'
 
 [[group]]
-title = "Khối rows trong hộp thoại"
+title = "@prm_079"
 [[action]]
 title = "type = rows"
-desc = "Chèn chữ và ảnh giữa các ô nhập"
-script = 'echo "khoa_api = $khoa_api"'
+desc = "@prm_080"
+script = 'echo "api_key = $api_key"'
 [[action.params]]
 type = "rows"
 bg-color = "#1A2196F3"
@@ -283,20 +286,20 @@ stroke-color = "#552196F3"
 radius = 12
 padding = 12
 [[action.params.rows]]
-text = "Lấy khoá API trước khi nhập"
+text = "@prm_081"
 bold = true
 [[action.params.rows]]
-text = "Khối này chỉ hiển thị, không gửi giá trị cho script."
+text = "@prm_082"
 size = 12
 break = true
 [[action.params]]
-name = "khoa_api"
-title = "Khoá API"
+name = "api_key"
+title = "@prm_083"
 type = "password"
 [[action.params]]
 type = "rows"
 [[action.params.rows]]
-line = true
-[[action.params.rows]]
-text = "Khối thứ hai nằm sau ô nhập, mở đầu bằng đường kẻ."
+text = "@prm_084"
 size = 12
+[[action.params.rows]]
+line = true

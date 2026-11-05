@@ -1,9 +1,12 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Trường -sh sinh bằng script"
+title = "@dyn_001"
 [[action]]
-title-sh = 'echo "Tiêu đề: $(date +%H:%M)"'
-desc-sh = 'echo "Mô tả: máy $(getprop ro.product.model)"'
-summary-sh = 'echo "Phụ: Android $(getprop ro.build.version.release)"'
+title-sh = 'echo "@dyn_002"'
+desc-sh = 'echo "@dyn_003"'
+summary-sh = 'echo "@dyn_004"'
 script = 'echo ok'
 [[action]]
 title = "icon-sh"
@@ -11,55 +14,55 @@ icon-sh = 'echo "{ICON}/info.png"'
 script = 'echo ok'
 [[action]]
 title = "lock-sh"
-desc = "Khoá khi script trả về 1"
+desc = "@act_056"
 lock-sh = 'echo 0'
-script = 'echo "Không bị khoá"'
+script = 'echo "@dyn_005"'
 
 [[group]]
-title = "support - ẩn hiện theo điều kiện"
+title = "@dyn_006"
 [[action]]
 title = "support = shell"
-desc = "Chỉ hiện khi script trả về đúng 1"
+desc = "@dyn_007"
 support = 'echo 1'
 script = 'echo ok'
 [[action]]
-title = "Hiện khi máy có root"
-desc = "{ROT} bằng 1 nếu đã root"
+title = "@dyn_008"
+desc = "{ROT} @dyn_009"
 support = "[ {ROT} = 1 ] && echo 1"
-script = 'echo "Máy có root"'
+script = 'echo "@dyn_010"'
 [[action]]
-title = "Khoá khi chưa root"
-desc = "lock dùng {LOT}"
-lock = "{LOT}|Cần quyền root"
-script = 'echo "Có root"'
+title = "@dyn_011"
+desc = "@dyn_012 {LOT}"
+lock = "{LOT}|@dyn_013"
+script = 'echo "@dyn_014"'
 
 [[group]]
-title = "Tải chậm bằng load-after"
+title = "@dyn_015"
 [[action]]
-title = "Mục dựng sau khi trang đã hiện"
+title = "@dyn_016"
 desc = "load-after = true"
 load-after = true
-title-sh = 'sleep 1; echo "Dựng xong sau 1 giây"'
+title-sh = 'sleep 1; echo "@dyn_017"'
 script = 'echo ok'
 
 [[group]]
-title = "Biến sẵn có"
+title = "@dyn_018"
 [[text]]
 [[text.rows]]
-text = "Root: {ROT} (1 là đã root)"
+text = "Root: {ROT} @dyn_019"
 [[text.rows]]
-text = "Không root: {LOT}"
+text = "@dyn_020 {LOT}"
 break = true
 [[text.rows]]
-text = "Nhãn root: {TEXT_ROOT}"
+text = "@dyn_021 {TEXT_ROOT}"
 break = true
 
 [[end]]
 
 [[text]]
 [[text.rows]]
-line = true
-[[text.rows]]
-text = "Khối ngoài nhóm: có thể khai báo load-key, load-text, load-toml ở đầu tệp để thay chuỗi hoặc chèn TOML động (xem tài liệu mục 2.7)."
+text = "@dyn_022"
 size = 12
 alpha = 0.85
+[[text.rows]]
+line = true

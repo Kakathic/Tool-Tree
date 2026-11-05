@@ -1,91 +1,94 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Cơ bản"
+title = "@act_001"
 [[action]]
-title = "Action đơn giản"
-desc = "Chạy script và hiện log"
+title = "@act_002"
+desc = "@act_003"
 script = '''
-echo "Xin chào từ action"
+echo "@act_004"
 date
 '''
 [[action]]
-title = "summary và key"
-desc = "desc là dòng mô tả chính"
-summary = "summary là dòng phụ chữ nhỏ"
+title = "@act_005"
+desc = "@act_006"
+summary = "@act_007"
 key = "demo_action_key"
 script = 'echo "key = demo_action_key"'
 
 [[group]]
-title = "Xác nhận và cảnh báo"
+title = "@act_008"
 [[action]]
 title = "confirm = true"
-desc = "Hỏi xác nhận mặc định trước khi chạy"
+desc = "@act_009"
 confirm = true
-script = 'echo "Đã xác nhận"'
+script = 'echo "@act_010"'
 [[action]]
 title = "confirm-text"
-confirm-text = "Bạn có chắc muốn chạy mục này không?"
-script = 'echo "Đã xác nhận"'
+confirm-text = "@act_011"
+script = 'echo "@act_010"'
 [[action]]
 title = "warn"
-desc = "Hiện cảnh báo trong hộp thoại xác nhận"
+desc = "@act_012"
 confirm = true
-warn = "Thao tác minh hoạ, không thay đổi hệ thống"
-script = 'echo "Xong"'
+warn = "@act_013"
+script = 'echo "Done"'
 [[action]]
 title = "warn-sh"
 confirm = true
-warn-sh = 'echo "Cảnh báo sinh lúc mở: $(date +%S)s"'
-script = 'echo "Xong"'
+warn-sh = 'echo "@act_014"'
+script = 'echo "Done"'
 
 [[group]]
-title = "Chế độ chạy"
+title = "@act_015"
 [[action]]
-title = "Mặc định (hộp thoại log)"
+title = "@act_016"
 script = '''
-echo "Dòng 1"
+echo "@act_017"
 sleep 1
-echo "Dòng 2"
+echo "@act_018"
 '''
 [[action]]
 title = "auto-off"
-desc = "Tự đóng log khi chạy xong"
+desc = "@act_019"
 auto-off = true
-script = 'echo "Sẽ tự đóng"; sleep 1'
+script = 'echo "@act_020"; sleep 1'
 [[action]]
 title = "shell = bg-task"
-desc = "Chạy nền, không hiện hộp thoại"
+desc = "@act_021"
 shell = "bg-task"
 script = 'sleep 2; echo done'
 [[action]]
 title = "shell = hidden"
-desc = "Chạy im lặng"
+desc = "@act_022"
 shell = "hidden"
 script = 'echo hidden'
 [[action]]
 title = "interruptible"
-desc = "Cho phép dừng giữa chừng"
+desc = "@act_023"
 interruptible = true
 script = '''
 for i in 1 2 3 4 5 6 7 8 9 10; do
-  echo "Bước $i"
+  echo "@act_024"
   sleep 1
 done
 '''
 [[action]]
 title = "need-input"
-desc = "Script dùng read để nhận phím gõ"
+desc = "@act_025"
 need-input = true
 script = '''
-echo "Nhập tên của bạn:"
-read ten
-echo "Xin chào $ten"
+echo "@act_026"
+read user_name
+echo "@act_027"
 '''
 
 [[group]]
 title = "shell-by, shell-value, shell-mode"
 [[action]]
-title = "Chọn chế độ theo tham số"
-desc = "Tham số mode quyết định cách chạy"
+title = "@act_028"
+desc = "@act_029"
 shell = "default"
 shell-by = "mode"
 shell-value = "bg|hid"
@@ -93,47 +96,47 @@ shell-mode = "bg-task|hidden"
 script = 'echo "mode = $mode"'
 [[action.params]]
 name = "mode"
-title = "Chế độ"
+title = "@act_030"
 type = "spinner"
 value = "log"
-items = ["log|Hộp thoại log", "bg|Chạy nền", "hid|Im lặng"]
+items = ["@act_031", "@act_032", "@act_033"]
 
 [[group]]
-title = "Tham số và hộp thoại"
+title = "@act_034"
 [[action]]
 title = "keep-dialog"
-desc = "Giữ hộp thoại tham số phía sau log"
+desc = "@act_035"
 keep-dialog = true
-script = 'echo "Giá trị: $ten"'
+script = 'echo "@act_036"'
 [[action.params]]
-name = "ten"
-title = "Tên"
+name = "user_name"
+title = "@act_037"
 type = "text"
 value = "Tool-Tree"
 [[action]]
-title = "params-sh - tham số sinh bằng script"
-script = 'echo "$kieu"'
+title = "@act_038"
+script = 'echo "$kind"'
 params-sh = '''
 cat << 'TOMLEND'
 [[params]]
-name = "kieu"
-title = "Kiểu sinh động"
+name = "kind"
+title = "@act_039"
 type = "spinner"
-items = ["x|Kiểu X", "y|Kiểu Y"]
+items = ["@act_040", "@act_041"]
 TOMLEND
 '''
 
 [[group]]
-title = "rows dưới mục action"
+title = "@act_042"
 [[action]]
-title = "rows tĩnh"
+title = "@act_043"
 script = 'echo ok'
 [[action.rows]]
-text = "Dòng chú thích dưới action"
+text = "@act_044"
 italic = true
 size = 12
 [[action.rows]]
-text = "Dòng thứ hai"
+text = "@act_045"
 bold = true
 size = 12
 [[action]]
@@ -142,39 +145,39 @@ script = 'echo ok'
 rows-sh = '''
 cat << TOMLEND
 [[rows]]
-text = "Dòng sinh bằng rows-sh"
+text = "@act_046"
 [[rows]]
-text = "Giờ hiện tại: $(date +%H:%M)"
+text = "@act_047"
 TOMLEND
 '''
 
 [[group]]
-title = "Tải lại sau khi chạy"
+title = "@act_048"
 [[switch]]
 key = "demo_reload_sw"
-title = "Công tắc được làm mới"
+title = "@act_049"
 get = "glog demo_reload_sw"
 set = 'slog demo_reload_sw "$state"'
 [[action]]
 title = "reload = id"
-desc = "Chỉ làm mới mục demo_reload_sw"
-script = 'slog demo_reload_sw 1; echo "Đã bật công tắc"'
+desc = "@act_050"
+script = 'slog demo_reload_sw 1; echo "@act_051"'
 reload = "demo_reload_sw"
 [[action]]
 title = "reload-page"
-desc = "Tải lại cả trang sau khi chạy"
-script = 'echo "Tải lại trang"'
+desc = "@act_052"
+script = 'echo "@act_053"'
 reload-page = true
 
 [[group]]
-title = "Khoá, ẩn và lối tắt"
+title = "@act_054"
 [[action]]
 title = "lock"
-lock = "1|Mục này bị khoá"
+lock = "@act_055"
 script = 'echo ok'
 [[action]]
 title = "lock-sh"
-desc = "Khoá khi script trả về 1"
+desc = "@act_056"
 lock-sh = 'echo 1'
 script = 'echo ok'
 [[action]]
@@ -185,4 +188,4 @@ script = 'echo ok'
 title = "min-sdk / max-sdk"
 min-sdk = 21
 max-sdk = 100
-script = 'echo "Hiện khi SDK trong khoảng"'
+script = 'echo "@act_057"'

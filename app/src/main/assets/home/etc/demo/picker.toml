@@ -1,72 +1,75 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Chọn một giá trị"
+title = "@pk_001"
 [[picker]]
-title = "Bảng options"
-desc = "Dùng [[picker.options]]"
+title = "@prm_028"
+desc = "@pk_002"
 get = "glog demo_picker_opt"
-set = 'slog demo_picker_opt "$state"; echo "Đã chọn: $state"'
+set = 'slog demo_picker_opt "$state"; echo "@pk_003"'
 [[picker.options]]
-title = "Hiệu năng"
+title = "@prm_031"
 value = "performance"
 [[picker.options]]
-title = "Cân bằng"
+title = "@prm_032"
 value = "balanced"
 [[picker.options]]
-title = "Tiết kiệm"
+title = "@prm_033"
 value = "powersave"
 [[picker]]
-title = "items - khai báo ngắn"
-desc = "Mỗi phần tử có dạng giá trị|tiêu đề"
+title = "@prm_034"
+desc = "@pk_004"
 items = ["vi|Tiếng Việt", "en|English", "ru|Русский", "fr"]
 get = "glog demo_picker_items"
-set = 'slog demo_picker_items "$state"; echo "Đã chọn: $state"'
+set = 'slog demo_picker_items "$state"; echo "@pk_003"'
 [[picker]]
 title = "option-sh"
-desc = "Danh sách sinh bằng script"
+desc = "@prm_036"
 option-sh = '''
 for n in 1 2 3 4 5; do
-  echo "$n|Mục số $n"
+  echo "@pk_005"
 done
 '''
 get = "glog demo_picker_sh"
-set = 'slog demo_picker_sh "$state"; echo "Đã chọn: $state"'
+set = 'slog demo_picker_sh "$state"; echo "@pk_003"'
 
 [[group]]
-title = "Chọn nhiều giá trị"
+title = "@pk_006"
 [[picker]]
 title = "multiple = true"
-desc = "Các giá trị cách nhau bằng separator"
+desc = "@pk_007"
 multiple = true
 separator = ","
-items = ["a|Tính năng A", "b|Tính năng B", "c|Tính năng C", "d|Tính năng D"]
+items = ["@prm_044", "@prm_045", "@prm_046", "@prm_047"]
 get = "glog demo_picker_multi"
-set = 'slog demo_picker_multi "$state"; echo "Đã chọn: $state"'
+set = 'slog demo_picker_multi "$state"; echo "@pk_003"'
 
 [[group]]
-title = "Tuỳ chọn khác"
+title = "@dep_039"
 [[picker]]
 title = "confirm"
 confirm = true
-items = ["x|Tuỳ chọn X", "y|Tuỳ chọn Y"]
+items = ["@pk_008", "@pk_009"]
 get = "glog demo_picker_confirm"
-set = 'slog demo_picker_confirm "$state"; echo "Đã chọn: $state"'
+set = 'slog demo_picker_confirm "$state"; echo "@pk_003"'
 [[picker]]
 title = "bg-task"
-desc = "Chạy nền, không hộp thoại"
+desc = "@sw_011"
 shell = "bg-task"
-items = ["x|Tuỳ chọn X", "y|Tuỳ chọn Y"]
+items = ["@pk_008", "@pk_009"]
 get = "glog demo_picker_bg"
 set = 'slog demo_picker_bg "$state"'
 [[picker]]
 title = "lock"
-lock = "1|Mục đang bị khoá"
-items = ["x|Tuỳ chọn X"]
+lock = "@pk_010"
+items = ["@pk_008"]
 [[picker]]
-title = "Picker có rows"
-items = ["x|Tuỳ chọn X", "y|Tuỳ chọn Y"]
+title = "@pk_011"
+items = ["@pk_008", "@pk_009"]
 get = "glog demo_picker_rows"
 set = 'slog demo_picker_rows "$state"'
 [[picker.rows]]
-text = "Dòng chú thích dưới picker"
+text = "@pk_012"
 italic = true
 size = 12

@@ -1,73 +1,76 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Công tắc cơ bản"
+title = "@sw_001"
 [[switch]]
-title = "Công tắc đơn giản"
-desc = "get đọc trạng thái, set nhận $state"
+title = "@sw_002"
+desc = "@sw_003"
 get = "glog demo_switch_basic"
 set = 'slog demo_switch_basic "$state"'
 [[switch]]
-title = "Không có get"
-desc = "Luôn khởi đầu ở trạng thái tắt"
+title = "@sw_004"
+desc = "@sw_005"
 set = 'echo "state = $state"'
 [[switch]]
-title = "Không có set"
-desc = "Đổi trạng thái không chạy script"
+title = "@sw_006"
+desc = "@sw_007"
 get = "echo 1"
 
 [[group]]
-title = "Hiện kết quả"
+title = "@sw_008"
 [[switch]]
-title = "Hiện log sau khi gạt"
+title = "@sw_009"
 get = "glog demo_switch_log"
 set = '''
 slog demo_switch_log "$state"
-echo "Đã đặt trạng thái: $state"
+echo "@sw_010"
 '''
 [[switch]]
 title = "auto-off"
-desc = "Tự đóng log khi chạy xong"
+desc = "@act_019"
 auto-off = true
 get = "glog demo_switch_auto"
 set = '''
 slog demo_switch_auto "$state"
-echo "Sẽ tự đóng"
+echo "@act_020"
 '''
 [[switch]]
 title = "shell = bg-task"
-desc = "Chạy nền, không hộp thoại"
+desc = "@sw_011"
 shell = "bg-task"
 get = "glog demo_switch_bg"
 set = 'slog demo_switch_bg "$state"'
 
 [[group]]
-title = "Xác nhận và khoá"
+title = "@sw_012"
 [[switch]]
 title = "confirm"
-desc = "Hỏi trước khi đổi"
+desc = "@sw_013"
 confirm = true
 get = "glog demo_switch_confirm"
 set = 'slog demo_switch_confirm "$state"'
 [[switch]]
 title = "lock"
-lock = "1|Công tắc đang bị khoá"
+lock = "@sw_014"
 get = "echo 1"
 [[switch]]
 title = "reload-page"
-desc = "Tải lại cả trang sau khi gạt"
+desc = "@sw_015"
 reload-page = true
 get = "glog demo_switch_reload"
 set = 'slog demo_switch_reload "$state"'
 
 [[group]]
-title = "rows dưới công tắc"
+title = "@sw_016"
 [[switch]]
-title = "Công tắc có dòng phụ"
+title = "@sw_017"
 get = "glog demo_switch_rows"
 set = 'slog demo_switch_rows "$state"'
 [[switch.rows]]
-text = "Dòng chú thích nằm dưới công tắc"
+text = "@sw_018"
 italic = true
 size = 12
 [[switch.rows]]
-sh = "echo Trạng thái lưu: $(glog demo_switch_rows)"
+sh = "echo @sw_019 $(glog demo_switch_rows)"
 size = 12

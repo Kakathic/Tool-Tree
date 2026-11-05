@@ -1,90 +1,93 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Tạo và sửa tệp"
+title = "@ed_001"
 [[editor]]
-title = "Tệp văn bản mới"
-desc = "value chỉ ghi khi tệp chưa tồn tại"
-file = "{HOME}/demo_files/ghi_chu.txt"
-placeholder = "Nhập nội dung..."
-value = "Đây là nội dung khởi tạo.\nSửa rồi bấm lưu."
+title = "@ed_002"
+desc = "@ed_003"
+file = "{HOME}/demo_files/notes.txt"
+placeholder = "@ed_004"
+value = "@ed_005\n@ed_006"
 run = false
 [[editor]]
-title = "Script có nút Run"
-desc = "Tệp .sh có thể chạy trực tiếp trong trình soạn thảo"
-file = "{HOME}/demo_files/chao.sh"
+title = "@ed_007"
+desc = "@ed_008"
+file = "{HOME}/demo_files/hello.sh"
 value = '''#!/system/bin/sh
-echo "Xin chào từ editor"
+echo "@ed_009"
 date
 '''
 [[editor]]
-title = "Script cần nhập phím"
-desc = "need-input cho phép dùng read"
-file = "{HOME}/demo_files/nhap.sh"
+title = "@ed_010"
+desc = "@ed_011"
+file = "{HOME}/demo_files/input.sh"
 need-input = true
 value = '''#!/system/bin/sh
-echo "Nhập tên:"
-read ten
-echo "Xin chào $ten"
+echo "@ed_012"
+read user_name
+echo "@act_027"
 '''
 
 [[group]]
-title = "Chạy tệp TOML như một trang"
+title = "@ed_013"
 [[editor]]
-title = "Soạn trang TOML mẫu"
-desc = "Bấm Run để mở tệp như một trang Tool-Tree"
-file = "{HOME}/demo_files/trang_thu.toml"
+title = "@ed_014"
+desc = "@ed_015"
+file = "{HOME}/demo_files/test_page.toml"
 placeholder = "[[toml]]"
 value = '''# toml
 [[group]]
-title = "Trang thử"
+title = "@ed_016"
 [[switch]]
-title = "Công tắc thử"
+title = "@ed_017"
 get = "glog demo_editor_page_sw"
 set = 'slog demo_editor_page_sw "$state"'
 [[action]]
-title = "Action thử"
-script = 'echo "Chạy từ trang thử"'
+title = "@ed_018"
+script = 'echo "@ed_019"'
 '''
 
 [[group]]
-title = "Tuỳ chọn hiển thị"
+title = "@ed_020"
 [[editor]]
 title = "wrap = false"
-desc = "Không tự xuống dòng"
-file = "{HOME}/demo_files/dai.txt"
+desc = "@ed_021"
+file = "{HOME}/demo_files/long.txt"
 wrap = false
 run = false
-value = "Một dòng rất dài để thử tắt tự xuống dòng trong trình soạn thảo, kéo ngang để đọc hết nội dung của nó."
+value = "@ed_022"
 [[editor]]
 title = "readonly = true"
-desc = "Chỉ xem, không sửa"
-file = "{HOME}/demo_files/ghi_chu.txt"
+desc = "@ed_023"
+file = "{HOME}/demo_files/notes.txt"
 readonly = true
 run = false
 [[editor]]
-title = "readonly bằng shell"
-desc = "Khoá khi script trả về 1"
-file = "{HOME}/demo_files/ghi_chu.txt"
+title = "@ed_024"
+desc = "@act_056"
+file = "{HOME}/demo_files/notes.txt"
 readonly = "echo 1"
 run = false
 [[editor]]
 title = "file-sh"
-desc = "Đường dẫn tệp sinh bằng script"
-file-sh = 'echo "$HOME/demo_files/ghi_chu.txt"'
+desc = "@ed_025"
+file-sh = 'echo "$HOME/demo_files/notes.txt"'
 run = false
 [[editor]]
 title = "value-sh"
-desc = "Nội dung khởi tạo sinh bằng script"
-file = "{HOME}/demo_files/gio_tao.txt"
-value-sh = "date '+Tạo lúc %H:%M:%S ngày %d/%m/%Y'"
+desc = "@ed_026"
+file = "{HOME}/demo_files/created_at.txt"
+value-sh = "date '+@ed_027 %H:%M:%S @ed_028 %d/%m/%Y'"
 run = false
 
 [[group]]
-title = "rows dưới editor"
+title = "@ed_029"
 [[editor]]
-title = "Editor có dòng phụ"
-file = "{HOME}/demo_files/ghi_chu.txt"
+title = "@ed_030"
+file = "{HOME}/demo_files/notes.txt"
 run = false
 [[editor.rows]]
-text = "Dòng chú thích dưới mục editor"
+text = "@ed_031"
 italic = true
 size = 12

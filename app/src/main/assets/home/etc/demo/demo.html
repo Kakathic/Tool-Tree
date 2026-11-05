@@ -11,9 +11,17 @@
 </style>
 </head>
 <body>
-  <h3>Trang HTML nội tuyến</h3>
-  <p>Khối này nằm trong một WebView bên dưới hàng văn bản.</p>
-  <button onclick="document.getElementById('kq').textContent = new Date().toLocaleTimeString()">Xem giờ</button>
+  <h3 id="t"></h3>
+  <p id="d"></p>
+  <button id="b"></button>
   <p id="kq"></p>
+<script>
+  var vi = (navigator.language || '').toLowerCase().indexOf('vi') === 0;
+  document.getElementById('t').textContent = vi ? 'Trang HTML nội tuyến' : 'Inline HTML page';
+  document.getElementById('d').textContent = vi ? 'Khối này nằm trong một WebView bên dưới hàng văn bản.' : 'This block lives in a WebView below the text row.';
+  var b = document.getElementById('b');
+  b.textContent = vi ? 'Xem giờ' : 'Show time';
+  b.onclick = function () { document.getElementById('kq').textContent = new Date().toLocaleTimeString(); };
+</script>
 </body>
 </html>

@@ -1,45 +1,48 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Terminal cơ bản"
+title = "@tm_001"
 [[terminal]]
-title = "Terminal mặc định"
-desc = "Bash tương tác, bắt đầu ở thư mục home"
+title = "@tm_002"
+desc = "@tm_003"
 cwd = "{HOME}"
 [[terminal]]
-title = "Chạy lệnh khi mở"
-desc = "cmd chạy xong, shell vẫn mở"
+title = "@tm_004"
+desc = "@tm_005"
 cmd = "ip addr"
 font-size = 12
 
 [[group]]
-title = "Chạy một lần"
+title = "@tm_006"
 [[terminal]]
 title = "close-on-exit"
-desc = "Thoát ngay khi cmd chạy xong (mã 0 tự đóng)"
-cmd = "echo Xong việc; sleep 1"
+desc = "@tm_007"
+cmd = "echo @tm_008; sleep 1"
 close-on-exit = true
 [[terminal]]
 title = "exit-on-back"
-desc = "Nút Back dừng hẳn phiên đang xem"
-cmd = "echo Bấm Back để dừng phiên"
+desc = "@tm_009"
+cmd = "echo @tm_010"
 exit-on-back = true
 
 [[group]]
-title = "Thư mục và quyền"
+title = "@tm_011"
 [[terminal]]
-title = "cwd theo thư mục trang"
-desc = "{PAGE_CONFIG_DIR} là thư mục chứa tệp toml này"
+title = "@tm_012"
+desc = "@tm_013"
 cwd = "{PAGE_CONFIG_DIR}"
 cmd = "ls -la"
 [[terminal]]
 title = "root = false"
-desc = "Luôn chạy bằng quyền của ứng dụng"
+desc = "@tm_014"
 root = false
 cmd = "id"
 
 [[group]]
-title = "Màn hình"
+title = "@tm_015"
 [[terminal]]
 title = "keep-screen-on"
-desc = "Giữ màn hình sáng khi dùng terminal"
+desc = "@tm_016"
 keep-screen-on = true
-cmd = "echo Màn hình được giữ sáng"
+cmd = "echo @tm_017"

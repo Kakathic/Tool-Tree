@@ -1,95 +1,98 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Mở trang con"
+title = "@pg_001"
 [[page]]
-title = "config - tệp toml khác"
-desc = "Đường dẫn tuyệt đối với {HOME}"
+title = "@pg_002"
+desc = "@pg_003"
 config = "{HOME}/etc/demo/switch.toml"
 [[page]]
-title = "config tương đối"
-desc = "Đường dẫn tính từ thư mục của trang hiện tại"
+title = "@pg_004"
+desc = "@pg_005"
 config = "text.toml"
 [[page]]
 title = "process = true"
-desc = "Dựng từng mục một, có thanh tiến trình và khung chờ"
+desc = "@pg_006"
 config = "{HOME}/etc/demo/picker.toml"
 process = true
 placeholder-count = 3
 
 [[group]]
-title = "config-sh - trang tạo bằng script"
+title = "@pg_007"
 [[page]]
-title = "TOML nội tuyến"
-desc = "Script in ra nội dung TOML"
+title = "@pg_008"
+desc = "@pg_009"
 config-sh = '''
 cat << 'TOMLEND'
 [[toml]]
 
 [[group]]
-title = "Trang sinh bởi config-sh"
+title = "@pg_010"
 [[text]]
 [[text.rows]]
-text = "Nội dung này được script in ra lúc mở trang."
+text = "@pg_011"
 [[text.rows]]
-sh = "date '+Bây giờ: %H:%M:%S'"
+sh = "date '+@pg_012 %H:%M:%S'"
 [[action]]
-title = "Action trong trang động"
-script = 'echo "Chạy từ trang động"'
+title = "@pg_013"
+script = 'echo "@pg_014"'
 TOMLEND
 '''
 [[page]]
-title = "Script trả về đường dẫn .toml"
-desc = "Kết quả kết thúc bằng .toml được coi là đường dẫn"
+title = "@pg_015"
+desc = "@pg_016"
 config-sh = 'echo "$HOME/etc/demo/switch.toml"'
 
 [[group]]
-title = "Liên kết ngoài"
+title = "@pg_017"
 [[page]]
 title = "link"
-desc = "Mở trình duyệt hệ thống"
+desc = "@pg_018"
 link = "https://kakathic.github.io/Tool-Tree/website/Toml.html"
 [[page]]
 title = "html"
-desc = "Mở URL trong WebView"
+desc = "@pg_019"
 html = "https://kakathic.github.io/Tool-Tree/website/Toml.html"
 [[page]]
 title = "activity"
-desc = "Mở màn hình Cài đặt của Android"
+desc = "@pg_020"
 activity = "android.settings.SETTINGS"
 
 [[group]]
-title = "Vòng đời trang (before-load, after-load, load-ok, load-fail)"
+title = "@pg_021"
 [[page]]
-title = "Gọi script khi nạp trang"
-desc = "Kết quả ghi vào glog demo_page_event"
+title = "@pg_022"
+desc = "@pg_023"
 config = "{HOME}/etc/demo/switch.toml"
 before-load = 'slog demo_page_event "before-load"'
 after-load = 'slog demo_page_event "after-load"'
 load-ok = 'slog demo_page_event "load-ok"'
 load-fail = 'slog demo_page_event "load-fail"'
 [[page]]
-title = "Trang có rows bên dưới"
-desc = "page hỗ trợ rows như action"
+title = "@pg_024"
+desc = "@pg_025"
 config = "{HOME}/etc/demo/text.toml"
 [[page.rows]]
-text = "Dòng chú thích dưới mục page"
+text = "@pg_026"
 italic = true
 size = 12
 
 [[group]]
-title = "Khoá và giới hạn"
+title = "@pg_027"
 [[page]]
-title = "lock - khoá tĩnh"
-desc = "Bấm sẽ hiện thông báo"
-lock = "1|Mục này bị khoá để minh hoạ"
+title = "@pg_028"
+desc = "@pg_029"
+lock = "@pg_030"
 config = "{HOME}/etc/demo/switch.toml"
 [[page]]
 title = "min-sdk = 99"
-desc = "Cần Android SDK cao hơn máy hiện tại"
+desc = "@pg_031"
 min-sdk = 99
 config = "{HOME}/etc/demo/switch.toml"
 [[page]]
 title = "key + allow-shortcut"
-desc = "Nhấn giữ để tạo lối tắt"
+desc = "@pg_032"
 key = "demo_page_shortcut"
 allow-shortcut = true
 config = "{HOME}/etc/demo/switch.toml"

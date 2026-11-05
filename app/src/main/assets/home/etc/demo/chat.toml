@@ -1,59 +1,62 @@
-[[group]]
-title = "Chat cơ bản"
-[[chat]]
-title = "Chat nhắc lại"
-desc = "Script in lại tin nhắn $MSG"
-chat-title = "Bot nhắc lại"
-user-title = "Bạn"
-greeting = "Xin chào! Gõ gì đó rồi gửi."
-placeholder = "Nhập tin nhắn"
-script = 'echo "Bạn vừa gõ: $MSG"'
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
 
 [[group]]
-title = "Markdown, nhiều dòng và lời chào động"
+title = "@ch_001"
+[[chat]]
+title = "@ch_002"
+desc = "@ch_003"
+chat-title = "@ch_004"
+user-title = "@ch_005"
+greeting = "@ch_006"
+placeholder = "@ch_007"
+script = 'echo "@ch_008"'
+
+[[group]]
+title = "@ch_009"
 [[chat]]
 title = "Chat Markdown"
-desc = "Hiển thị câu trả lời dạng Markdown"
+desc = "@ch_010"
 chat-title = "Bot Markdown"
-user-title = "Bạn"
+user-title = "@ch_005"
 markdown = true
 max-lines = 4
-greeting-sh = 'echo "Chào bạn! Bây giờ là **$(date +%H:%M)**."'
+greeting-sh = 'echo "@ch_011"'
 script = '''
-echo "**Bạn nói:** $MSG"
+echo "@ch_012"
 echo
-echo "- Mã cuộc trò chuyện: \`$CHAT_ID\`"
+echo "@ch_013 \`$CHAT_ID\`"
 '''
 
 [[group]]
-title = "Tham số, menu 3 chấm và thực thi lệnh"
+title = "@ch_014"
 [[chat]]
-title = "Chat đầy đủ"
-desc = "Có nút tuỳ chọn, menu và thực thi lệnh"
+title = "@ch_015"
+desc = "@ch_016"
 chat-title = "Shell helper"
-user-title = "Bạn"
+user-title = "@ch_005"
 markdown = true
-greeting = "Gõ tên một lệnh, ví dụ: date"
-params-title = "Cài đặt chat"
+greeting = "@ch_017"
+params-title = "@ch_018"
 params-shell = "hidden"
 params-script = 'echo "MODE=$MODE"'
 script = '''
-echo "[$MODE] Đang chạy: $MSG"
+echo "@ch_019"
 sh -c "$MSG" 2>&1
 '''
 [[chat.params]]
 name = "MODE"
-title = "Chế độ"
+title = "@act_030"
 type = "spinner"
 value = "safe"
-items = ["safe|An toàn", "fast|Nhanh"]
+items = ["@ch_020", "fast|Fast"]
 [[chat.menu]]
-title = "Xoá lịch sử"
+title = "@ch_021"
 type = "clear"
 [[chat.menu]]
-title = "Xoá bộ nhớ"
-script = 'echo "Đã xoá bộ nhớ của $CHAT_ID"'
+title = "@ch_022"
+script = 'echo "@ch_023"'
 silent = true
 [[chat.menu]]
-title = "Đóng"
+title = "@ch_024"
 type = "close"

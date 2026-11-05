@@ -26,6 +26,12 @@ set = "slog test_log_nut $state"
 """
 
 [[group]]
+[[page]]
+title = "Demo"
+icon = "{ICON}/search.png"
+config = "{HOME}/etc/demo/index.toml"
+
+[[group]]
 [[editor]]
 id = "shella"
 title = "@home_text_5"

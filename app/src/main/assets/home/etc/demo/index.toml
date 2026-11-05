@@ -1,94 +1,97 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[text]]
 [[text.rows]]
-line = true
-[[text.rows]]
-text = "Bộ mẫu TOML của Tool-Tree"
+text = "@idx_001"
 bold = true
 size = 15
 [[text.rows]]
-text = "Mỗi trang con minh hoạ một loại node. Các mẫu chỉ chạy lệnh an toàn (echo, đọc thông tin), không sửa hệ thống."
+text = "@idx_002"
 break = true
 size = 12
 alpha = 0.8
+[[text.rows]]
+line = true
 
 [[group]]
-title = "Bố cục và điều hướng"
+title = "@idx_003"
 [[page]]
-title = "group và đường kẻ ngăn cách"
-desc = "Bọc nhóm, [[end]], line"
+title = "@idx_004"
+desc = "@idx_005"
 config = "{HOME}/etc/demo/group.toml"
 [[page]]
 title = "page"
-desc = "config, config-sh, link, process, vòng đời"
+desc = "@idx_006"
 config = "{HOME}/etc/demo/page.toml"
 
 [[group]]
-title = "Thực thi"
+title = "@idx_007"
 [[page]]
 title = "action"
-desc = "Xác nhận, chế độ chạy, shell-by, rows"
+desc = "@idx_008"
 config = "{HOME}/etc/demo/action.toml"
 [[page]]
 title = "action.params"
-desc = "Tất cả kiểu tham số"
+desc = "@idx_009"
 config = "{HOME}/etc/demo/params.toml"
 [[page]]
 title = "depend-*"
-desc = "Ẩn/hiện tham số theo điều kiện"
+desc = "@idx_010"
 config = "{HOME}/etc/demo/depend.toml"
 [[page]]
-title = "Mã điều khiển đầu ra"
+title = "@idx_011"
 desc = "choose, pick, input, progress, am, exit"
 config = "{HOME}/etc/demo/control.toml"
 
 [[group]]
-title = "Trạng thái và lựa chọn"
+title = "@idx_012"
 [[page]]
 title = "switch"
-desc = "Công tắc bật/tắt"
+desc = "@idx_013"
 config = "{HOME}/etc/demo/switch.toml"
 [[page]]
 title = "picker"
-desc = "Chọn một hoặc nhiều giá trị"
+desc = "@idx_014"
 config = "{HOME}/etc/demo/picker.toml"
 
 [[group]]
-title = "Hiển thị văn bản"
+title = "@idx_015"
 [[page]]
-title = "text và text.rows"
-desc = "Kiểu chữ, markdown, căn lề, biểu tượng"
+title = "@idx_016"
+desc = "@idx_017"
 config = "{HOME}/etc/demo/text.toml"
 [[page]]
-title = "rows nâng cao"
+title = "@idx_018"
 desc = "reset, progress, toggle, refresh, html"
 config = "{HOME}/etc/demo/rows.toml"
 
 [[group]]
-title = "Công cụ"
+title = "@idx_019"
 [[page]]
 title = "editor"
-desc = "Mở tệp trong trình soạn thảo"
+desc = "@idx_020"
 config = "{HOME}/etc/demo/editor.toml"
 [[page]]
 title = "terminal"
-desc = "Terminal tương tác"
+desc = "@idx_021"
 config = "{HOME}/etc/demo/terminal.toml"
 [[page]]
 title = "chat"
-desc = "Trang trò chuyện chạy script"
+desc = "@idx_022"
 config = "{HOME}/etc/demo/chat.toml"
 [[page]]
 title = "download"
-desc = "Tải tệp qua HTTP"
+desc = "@idx_023"
 config = "{HOME}/etc/demo/download.toml"
 
 [[group]]
-title = "Khác"
+title = "@idx_024"
 [[page]]
-title = "menu và fab"
-desc = "Menu 3 chấm và nút nổi"
+title = "@idx_025"
+desc = "@idx_026"
 config = "{HOME}/etc/demo/menu_fab.toml"
 [[page]]
-title = "Trường động (-sh) và biến"
+title = "@idx_027"
 desc = "title-sh, support, lock, load-key, {ROT}"
 config = "{HOME}/etc/demo/dynamic.toml"

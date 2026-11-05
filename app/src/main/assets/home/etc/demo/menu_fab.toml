@@ -1,67 +1,70 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Nội dung trang"
+title = "@mf_001"
 [[text]]
 [[text.rows]]
-text = "Mở menu 3 chấm trên thanh công cụ và nút nổi ở góc dưới để thử."
+text = "@mf_002"
 [[text.rows]]
-sh = "echo Lần chạy gần nhất: $(glog demo_menu_last)"
+sh = "echo @mf_003 $(glog demo_menu_last)"
 break = true
 reset = "self"
 underline = true
 
 [[action]]
-title = "Action hiện cả trên thanh công cụ"
-desc = "menu = true: biểu tượng riêng trên toolbar, không nằm trong danh sách"
+title = "@mf_004"
+desc = "@mf_005"
 menu = true
 key = "demo_action_menu"
-script = 'echo "Chạy từ nút trên toolbar"'
+script = 'echo "@mf_006"'
 
 [[menu]]
 handler = 'slog demo_menu_last "$menu_id"; echo "Menu: $menu_id"'
 [[menu.items]]
-title = "Tải lại trang"
+title = "@act_053"
 type = "refresh"
 [[menu.items]]
-title = "Hộp kiểm trong menu"
+title = "@mf_007"
 type = "checkbox"
 get = "glog demo_menu_check"
-script = 'slog demo_menu_check "$state"; echo "Hộp kiểm: $state"'
+script = 'slog demo_menu_check "$state"; echo "@mf_008"'
 [[menu.items]]
-title = "Chọn chế độ"
+title = "@mf_009"
 type = "spinner"
-items = ["performance|Hiệu năng", "balanced|Cân bằng", "powersave|Tiết kiệm"]
+items = ["@mf_010", "@mf_011", "@mf_012"]
 get = "glog demo_menu_mode"
-script = 'slog demo_menu_mode "$state"; echo "Chế độ: $state"'
+script = 'slog demo_menu_mode "$state"; echo "@mf_013"'
 [[menu.items]]
-title = "Mục dùng handler chung"
+title = "@mf_014"
 [[menu.items]]
-title = "Chạy im lặng"
+title = "@act_022"
 script = 'slog demo_menu_last silent'
 silent = true
 [[menu.items]]
-title = "Chọn tệp"
+title = "@prm_049"
 type = "file"
 suffix = "txt,zip"
 path-home = "/sdcard"
-script = 'echo "Tệp đã chọn: $file"'
+script = 'echo "@mf_015"'
 [[menu.items]]
-title = "Mở trang con"
+title = "@pg_001"
 config = "{HOME}/etc/demo/switch.toml"
 [[menu.items]]
-title = "Mở trình duyệt"
+title = "@mf_016"
 link = "https://kakathic.github.io/Tool-Tree/website/Toml.html"
 [[menu.items]]
-title = "Đóng trang"
+title = "@mf_017"
 type = "finish"
 
 [[fab]]
 [[fab.items]]
-title = "Thêm nhanh"
+title = "@mf_018"
 key = "demo_fab_add"
-script = 'echo "Bấm nút nổi"'
+script = 'echo "@mf_019"'
 fab-spin = true
 [[fab.items]]
-title = "Chọn tệp .txt"
+title = "@mf_020"
 type = "file"
 suffix = "txt"
-script = 'echo "Tệp: $state"'
+script = 'echo "@dl_006"'

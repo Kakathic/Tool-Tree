@@ -1,74 +1,77 @@
+[[toml]]
+load-key-sh = 'ETC="$ETC/demo" langpath'
+
 [[group]]
-title = "Kiểu chữ"
+title = "@txt_001"
 [[text]]
-title = "Định dạng cơ bản"
+title = "@txt_002"
 [[text.rows]]
-text = "Chữ đậm"
+text = "@txt_003"
 bold = true
 [[text.rows]]
-text = "Chữ nghiêng"
+text = "@txt_004"
 italic = true
 break = true
 [[text.rows]]
-text = "Gạch chân"
+text = "@txt_005"
 underline = true
 break = true
 [[text.rows]]
-text = "Gạch ngang"
+text = "@txt_006"
 strikethrough = true
 break = true
 [[text.rows]]
-text = "Phông đơn cách: ls -la /sdcard"
+text = "@txt_007"
 monospace = true
 break = true
 [[text.rows]]
-text = "Chữ màu và cỡ lớn"
+text = "@txt_008"
 foreground = "#E91E63"
 size = 18
 break = true
 [[text.rows]]
-text = "Nền màu cho dòng"
+text = "@txt_009"
 bg-color = "#332196F3"
 break = true
 [[text.rows]]
-text = "Mờ 50%"
+text = "@txt_010"
 alpha = 0.5
 break = true
 [[text.rows]]
-text = "Giãn chữ và giãn dòng"
+text = "@txt_011"
 letter-spacing = 0.1
 line-height = 1.6
 break = true
 
 [[group]]
-title = "Đường kẻ và khoảng cách"
+title = "@txt_012"
 [[text]]
 [[text.rows]]
-text = "Dòng phía trên đường kẻ"
+text = "@txt_013"
 [[text.rows]]
 line = true
 [[text.rows]]
-text = "Dòng phía dưới đường kẻ"
+text = "@txt_014"
 [[text.rows]]
-text = "Cách trên 16dp"
+text = "@txt_015"
 margin-top = 16
 break = true
 [[text.rows]]
-text = "Cách dưới 16dp"
+text = "@txt_016"
 margin-bottom = 16
 break = true
 [[text.rows]]
-text = "Dòng cuối"
+text = "@txt_017"
 break = true
 
 [[group]]
-title = "Căn lề và chia cột"
+title = "@txt_018"
 [[text]]
 [[text.rows]]
-text = "Căn giữa"
+text = "@txt_019"
 align = "center"
 [[text.rows]]
-text = "Căn phải"
+text = "@txt_020"
 align = "right"
 break = true
 [[text.rows]]
@@ -78,57 +81,57 @@ break = true
 text = "68°C"
 align = "center"
 [[text.rows]]
-text = "Chi tiết"
+text = "@txt_021"
 align = "right"
 link = "https://kakathic.github.io/Tool-Tree/website/Toml.html"
 
 [[group]]
-title = "Markdown nội tuyến"
+title = "@txt_022"
 [[text]]
 [[text.rows]]
-text = "**đậm**, *nghiêng*, ~~gạch ngang~~, {chữ đỏ}(red), {chữ #0DBDA2}(#0DBDA2)"
+text = "@txt_023"
 markdown = true
 [[text.rows]]
-text = "Liên kết: [mở tài liệu](https://kakathic.github.io/Tool-Tree/website/Toml.html)"
-markdown = true
-break = true
-[[text.rows]]
-text = "Khung mã: `echo hello` và `{OK}(green)`, bo góc lớn: `big|20`"
+text = "@txt_024"
 markdown = true
 break = true
 [[text.rows]]
-text = "Hiện nguyên ký hiệu: ```**không đậm**```"
+text = "@txt_025"
+markdown = true
+break = true
+[[text.rows]]
+text = "@txt_026"
 markdown = true
 break = true
 
 [[group]]
-title = "Liên kết và sao chép"
+title = "@txt_027"
 [[text]]
 [[text.rows]]
-text = "Tự nhận liên kết: https://kakathic.github.io/Tool-Tree"
+text = "@txt_028"
 [[text.rows]]
-text = "Tắt tự nhận liên kết: https://example.com"
+text = "@txt_029"
 autolink = false
 break = true
 [[text.rows]]
-text = "Bấm để mở trang web"
+text = "@txt_030"
 link = "https://example.com"
 underline = true
 break = true
 [[text.rows]]
-text = "Nhấn giữ để chọn và sao chép nội dung khối này"
+text = "@txt_031"
 copy = true
 break = true
 
 [[group]]
-title = "Biểu tượng và ảnh"
+title = "@txt_032"
 [[text]]
 [[text.rows]]
-text = "Dòng có biểu tượng trước chữ"
+text = "@txt_033"
 icon = "{ICON}/info.png"
 icon-size = 20
 [[text.rows]]
-text = "Dòng có biểu tượng sau chữ"
+text = "@txt_034"
 icon = "{ICON}/info.png"
 icon-position = "after"
 icon-size = 20
@@ -138,31 +141,31 @@ photo = "{ICON}/info.png"
 break = true
 
 [[group]]
-title = "Mục text có tiêu đề và mô tả"
+title = "@txt_035"
 [[text]]
-title = "Tiêu đề khối"
-desc = "text hỗ trợ cả title, desc, summary"
-summary = "Dòng phụ chữ nhỏ"
+title = "@txt_036"
+desc = "@txt_037"
+summary = "@txt_038"
 [[text.rows]]
-text = "Nội dung bên trong khối"
+text = "@txt_039"
 
 [[group]]
-title = "Hàng chạy script"
+title = "@txt_040"
 [[text]]
 [[text.rows]]
-text = "Bấm để chạy script (hiện log)"
-script = 'echo "Hàng này vừa được bấm"'
+text = "@txt_041"
+script = 'echo "@txt_042"'
 underline = true
 [[text.rows]]
-text = "Bấm để chạy và hiện Toast"
-script = 'echo "Xong"'
+text = "@txt_043"
+script = 'echo "Done"'
 toast = true
 underline = true
 break = true
 [[text.rows]]
-text = "Bấm có xác nhận"
-script = 'echo "Đã xác nhận"'
-confirm-text = "Chạy hàng này?"
+text = "@txt_044"
+script = 'echo "@act_010"'
+confirm-text = "@txt_045"
 underline = true
 break = true
 
@@ -170,8 +173,8 @@ break = true
 
 [[text]]
 [[text.rows]]
-line = true
-[[text.rows]]
-text = "Khối này nằm ngoài nhóm. Hàng line = true ở đầu tạo đường kẻ ngăn cách với phần phía trên."
+text = "@txt_046"
 size = 12
 alpha = 0.85
+[[text.rows]]
+line = true
