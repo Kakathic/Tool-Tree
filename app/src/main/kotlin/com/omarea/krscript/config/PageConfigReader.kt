@@ -1278,8 +1278,8 @@ class PageConfigReader {
         tomlGet(table, "monospace", "mono", "code")?.let { row.monospace = tomlTruthy(it, "monospace", "mono", "code") }
         tomlGet(table, "letter-spacing", "letterspacing", "spacing")?.let { row.letterSpacing = it.trim().toFloatOrNull() ?: row.letterSpacing }
         tomlGet(table, "line-height", "lineheight", "row-height")?.let { row.lineHeight = it.trim().toFloatOrNull() ?: row.lineHeight }
-        tomlGet(table, "margin-top", "spacing-top", "top-margin")?.let { row.marginTop = parseIntOr(it, row.marginTop) }
-        tomlGet(table, "margin-bottom", "spacing-bottom", "bottom-margin")?.let { row.marginBottom = parseIntOr(it, row.marginBottom) }
+        tomlGet(table, "margin-top", "spacing-top", "top-margin")?.let { row.marginTop = parseIntOr(it, row.marginTop); row.marginTopSet = true }
+        tomlGet(table, "margin-bottom", "spacing-bottom", "bottom-margin")?.let { row.marginBottom = parseIntOr(it, row.marginBottom); row.marginBottomSet = true }
         tomlGet(table, "alpha", "opacity")?.let {
             val v = it.trim().toFloatOrNull()
             if (v != null) {

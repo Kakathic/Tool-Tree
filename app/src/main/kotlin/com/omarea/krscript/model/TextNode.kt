@@ -22,6 +22,8 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         internal var lineHeight: Float = 0f
         internal var marginTop: Int = 0
         internal var marginBottom: Int = 0
+        internal var marginTopSet: Boolean = false
+        internal var marginBottomSet: Boolean = false
         internal var alpha: Float = -1f
         internal var breakRow: Boolean = false
         internal var line: Boolean = false
