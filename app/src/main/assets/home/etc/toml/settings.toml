@@ -83,6 +83,7 @@ silent = true
 script = '''
 rm -f "$HOME/.cache/$CHAT_ID.sql" 2>/dev/null
 rm -f "$HOME/.cache/actions.log" 2>/dev/null
+rm -f "$HOME/.cache/api.log" 2>/dev/null
 '''
 
 [[chat.menu]]

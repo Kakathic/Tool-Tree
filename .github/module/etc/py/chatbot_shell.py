@@ -29,6 +29,7 @@ import signal
 import math
 import collections
 import atexit
+import hashlib
 from contextlib import closing
 
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
@@ -80,6 +81,16 @@ RUN_COMMAND_TOOL = {
 }
 DATA_DIR = os.path.join(os.path.expanduser("~"), ".cache")
 DEFAULT_LOG_FILE = os.path.join(DATA_DIR, "actions.log")
+# API log (on by default; --no-api-log turns it off): requests, token usage and model thoughts.
+# The file is capped at API_LOG_MAX_BYTES; the oldest whole blocks are dropped first.
+DEFAULT_API_LOG_FILE = os.path.join(DATA_DIR, "api.log")
+API_LOG_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+API_LOG_MAX_BYTES_FULL = 20 * 1024 * 1024  # 20 MB when --api-log-full is on
+API_LOG_TRIM_TO = 0.9  # when over the cap, cut down to 90% so the file is not rewritten on every entry
+API_LOG_TEXT_LIMIT = 3000
+API_LOG = {"path": None, "full": False, "last_system": None, "t0": None}
+API_TURN = {}
+API_LOG_LOCK = threading.Lock()
 INTERACTIVE_HISTORY_CHARS = 60000
 POWER_PROGRAMS = {"reboot", "shutdown", "poweroff", "halt"}
 DISK_PROGRAMS = {"wipefs", "fdisk", "sgdisk", "parted", "fastboot"}
@@ -926,16 +937,13 @@ def parse_args():
     help="Let the file tools use any path. Not covered by --all.",
   )
   parser.add_argument(
-    "--log-file",
-    help=(
-      "Where to record commands and file changes "
-      f"(default {DEFAULT_LOG_FILE})."
-    ),
-  )
-  parser.add_argument(
-    "--no-log",
+    "--api-log-full",
     action="store_true",
-    help="Do not record commands and file changes.",
+    help=(
+      "Also write the complete request JSON (large; may contain file contents, including the system "
+      f"prompt). While on, the API log limit is {API_LOG_MAX_BYTES_FULL // (1024 * 1024)} MB instead of "
+      f"{API_LOG_MAX_BYTES // (1024 * 1024)} MB."
+    ),
   )
   parser.add_argument(
     "--rpm",
@@ -1312,6 +1320,7 @@ def _compatible_urlopen(request, timeout, status_callback=None):
         message = error.get("message", body) if isinstance(error, dict) else str(error)
       except json.JSONDecodeError:
         message = body
+      api_log("ERROR", f"{provider} HTTP {exc.code}: " + _api_clip(message, 1500))
       if exc.code in (429, 503) and attempt < RETRY["max"]:
         delay = _retry_delay(exc, message, body, attempt)
         if delay <= MAX_RETRY_WAIT:
@@ -1332,6 +1341,10 @@ def call_compatible_api(api_key, model, history, instruction, language, thinking
   if tools:
     payload["tools"] = tools
     payload["tool_choice"] = "auto"
+  api_log_request(
+    ACTIVE_PROVIDER["name"], model, system_instruction, history, tools,
+    thinking, payload["stream"], payload,
+  )
   headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
   if ACTIVE_PROVIDER["name"] == "openrouter":
     headers.update({"HTTP-Referer": "https://github.com/Zenlua/Tool-Tree", "X-Title": "Chatbot CLI"})
@@ -1363,6 +1376,8 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
       pieces = []
       live_state = {}
       reasoning = ""
+      reasoning_all = []
+      usage_seen = None
       for raw in response:
         line = raw.decode("utf-8", errors="replace").strip()
         if not line.startswith("data:"):
@@ -1376,6 +1391,8 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
           continue
         if event.get("error"):
           raise RuntimeError(ACTIVE_PROVIDER["name"].title() + " stream error: " + str(event["error"]))
+        if isinstance(event.get("usage"), dict):
+          usage_seen = event["usage"]
         choices = event.get("choices") or []
         delta = choices[0].get("delta", {}) if choices else {}
         piece = delta.get("content")
@@ -1385,12 +1402,15 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
         elif not pieces and (delta.get("reasoning") or delta.get("reasoning_content")):
           part = delta.get("reasoning") or delta.get("reasoning_content")
           if isinstance(part, str):
+            reasoning_all.append(part)
             reasoning = (reasoning + part)[-600:]
             _live_line(status_callback, "thinking_stage", reasoning, live_state)
       answer = "".join(pieces).strip()
       if not answer:
         raise RuntimeError(ACTIVE_PROVIDER["name"].title() + " returned no text.")
-      return answer, [{"type": "model_output", "content": [{"type": "text", "text": answer}]}]
+      stream_steps = [{"type": "model_output", "content": [{"type": "text", "text": answer}]}]
+      api_log_response_compat(usage_seen, stream_steps, "".join(reasoning_all))
+      return answer, stream_steps
     raw_body = response.read().decode("utf-8")
     _stage(status_callback, "processing")
     data = json.loads(raw_body)
@@ -1419,6 +1439,7 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
   reasoning = message.get("reasoning_content")
   if isinstance(reasoning, str) and reasoning:
     steps[0]["reasoning_content"] = reasoning
+  api_log_response_compat(data.get("usage"), steps)
   return answer, steps
 
 def list_providers(show_websites=False, ui=None):
@@ -1819,6 +1840,7 @@ def _send_request(request, timeout, stream_callback, status):
         )
       except (json.JSONDecodeError, AttributeError):
         error_message = error_body
+      api_log("ERROR", f"HTTP {exc.code}: " + _api_clip(error_message, 1500))
       if exc.code in (429, 503) and attempt < RETRY["max"]:
         delay = _retry_delay(exc, error_message, error_body, attempt)
         if delay <= MAX_RETRY_WAIT:
@@ -1855,6 +1877,8 @@ def _read_stream(response, on_text, status=None):
   last_stage = ""
   live_state = {}
   live_buf = {"thought": "", "call": ""}
+  usage = None
+  thought_all = []
 
   def stage(key):
     nonlocal last_stage
@@ -1917,6 +1941,8 @@ def _read_stream(response, on_text, status=None):
         # Thought summaries: show their newest line live; never part of the answer
         content = delta.get("content")
         part = delta.get("text") or (content.get("text") if isinstance(content, dict) else "")
+        if isinstance(part, str) and part:
+          thought_all.append(part)
         if isinstance(part, str) and part and not text_started:
           live_buf["thought"] = (live_buf["thought"] + part)[-600:]
           _live_line(status, "thinking_stage", live_buf["thought"], live_state)
@@ -1934,6 +1960,8 @@ def _read_stream(response, on_text, status=None):
       if not isinstance(info, dict):
         info = event
       final_status = info.get("status", final_status) or final_status
+      if isinstance(info.get("usage"), dict):
+        usage = info["usage"]
   if final_status == "requires_action":
     saw_call = True
   text = "".join(parts)
@@ -1943,7 +1971,10 @@ def _read_stream(response, on_text, status=None):
       "type": "model_output",
       "content": [{"type": "text", "text": text}],
     })
-  return {"steps": steps, "status": final_status, "_saw_call": saw_call}
+  return {
+    "steps": steps, "status": final_status, "_saw_call": saw_call,
+    "usage": usage, "_thought": "".join(thought_all),
+  }
 
 def call_gemini(
   api_key,
@@ -1992,6 +2023,13 @@ def call_gemini(
     payload["generation_config"] = {
       "thinking_level": thinking
     }
+  if API_LOG["path"]:
+    # Ask for thought summaries so the API log can show what the model was thinking.
+    payload.setdefault("generation_config", {})["thinking_summaries"] = "auto"
+  api_log_request(
+    "gemini", model, payload.get("system_instruction"), history, tools,
+    thinking, "stream" in payload, payload,
+  )
   body = json.dumps(
     payload,
     ensure_ascii=False,
@@ -2011,6 +2049,7 @@ def call_gemini(
     stream_callback,
     status_callback,
   )
+  api_log_response(data)
   if data.get("_saw_call") or (
     stream_callback is not None and not extract_text(data)
   ):
@@ -2453,6 +2492,195 @@ def format_log_block(record):
   return header + "\n" + "\n".join(_log_field(label, value, width) for label, value in rows) + "\n\n"
 
 LOG_LOCK = threading.Lock()
+
+def api_log(title, body=""):
+  """Append one block to the API log; when the file exceeds API_LOG_MAX_BYTES, drop the oldest
+  whole blocks so it stays within the limit."""
+  path = API_LOG["path"]
+  if not path:
+    return
+  limit = API_LOG_MAX_BYTES_FULL if API_LOG["full"] else API_LOG_MAX_BYTES
+  header = f"── {time.strftime('%Y-%m-%d %H:%M:%S')} {title} " + "─" * 20
+  block = header + "\n" + (str(body).rstrip("\n") + "\n" if body else "") + "\n"
+  data = block.encode("utf-8", errors="replace")
+  if len(data) > limit:
+    # A single block larger than the whole limit: keep only its newest part.
+    data = data[-int(limit * API_LOG_TRIM_TO):]
+  try:
+    with API_LOG_LOCK:
+      directory = os.path.dirname(path)
+      if directory:
+        os.makedirs(directory, exist_ok=True)
+      fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+      with os.fdopen(fd, "ab") as file:
+        file.write(data)
+      if os.path.getsize(path) <= limit:
+        return
+      with open(path, "rb") as file:
+        content = file.read()
+      keep = content[-int(limit * API_LOG_TRIM_TO):]
+      # Start at the next whole block so no entry begins in the middle.
+      marker = "\n── ".encode("utf-8")
+      cut = keep.find(marker)
+      if cut != -1:
+        keep = keep[cut + 1:]
+      tmp = path + ".tmp"
+      fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+      with os.fdopen(fd, "wb") as file:
+        file.write(keep)
+      os.replace(tmp, path)
+  except OSError:
+    pass
+
+def _api_clip(value, limit=API_LOG_TEXT_LIMIT):
+  text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str)
+  return text if len(text) <= limit else text[:limit] + f"… [+{len(text) - limit} chars]"
+
+def _collect_text(value, out):
+  """Collect every "text" string below value (thought summaries, message parts); skip signatures."""
+  if isinstance(value, dict):
+    text = value.get("text")
+    if isinstance(text, str) and text:
+      out.append(text)
+    for key, item in value.items():
+      if key not in ("text", "signature"):
+        _collect_text(item, out)
+  elif isinstance(value, list):
+    for item in value:
+      _collect_text(item, out)
+
+def _usage_counts(usage):
+  """Token counts from a Gemini reply (total_*_tokens) or an OpenAI-style reply (prompt/completion)."""
+  if not isinstance(usage, dict):
+    return {}
+  def number(*keys):
+    for key in keys:
+      value = usage.get(key)
+      if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return int(value)
+    return 0
+  prompt_details = usage.get("prompt_tokens_details")
+  completion_details = usage.get("completion_tokens_details")
+  prompt_details = prompt_details if isinstance(prompt_details, dict) else {}
+  completion_details = completion_details if isinstance(completion_details, dict) else {}
+  counts = {
+    "input": number("total_input_tokens", "prompt_tokens", "input_tokens"),
+    "output": number("total_output_tokens", "completion_tokens", "output_tokens"),
+    "thought": number("total_thought_tokens") or int(completion_details.get("reasoning_tokens") or 0),
+    "cached": number("total_cached_tokens") or int(prompt_details.get("cached_tokens") or 0),
+    "tool": number("total_tool_use_tokens"),
+    "total": number("total_tokens"),
+  }
+  counts["total"] = counts["total"] or counts["input"] + counts["output"]
+  return counts
+
+def _usage_line(usage):
+  counts = _usage_counts(usage)
+  if not counts or not any(counts.values()):
+    return "tokens: not reported"
+  API_TURN["requests"] = API_TURN.get("requests", 0) + 1
+  for key, value in counts.items():
+    API_TURN[key] = API_TURN.get(key, 0) + value
+  cached = f" (cached {counts['cached']})" if counts["cached"] else ""
+  tool = f" · tool-use {counts['tool']}" if counts["tool"] else ""
+  return (
+    f"tokens: input {counts['input']}{cached} · output {counts['output']} · "
+    f"thought {counts['thought']}{tool} · total {counts['total']}"
+  )
+
+def _api_elapsed():
+  started = API_LOG.get("t0")
+  return f"{time.time() - started:.1f}s" if started else "?"
+
+def _api_describe_input(item):
+  kind = item.get("type")
+  texts = []
+  if kind == "function_result":
+    _collect_text(item.get("result"), texts)
+    return f"[function_result {item.get('name', '')}] " + "\n".join(texts)
+  content = item.get("content")
+  if isinstance(content, str):
+    return f"[{kind}] {content}"
+  _collect_text(content, texts)
+  return f"[{kind}] " + "\n".join(texts)
+
+def _api_trailing_input(history):
+  """The newest user input or tool results: what this request adds to the conversation."""
+  items = []
+  for item in reversed(history):
+    if isinstance(item, dict) and item.get("type") in ("user_input", "function_result"):
+      items.append(item)
+    else:
+      break
+  return list(reversed(items))
+
+def api_log_request(provider, model, system_text, history, tools, thinking, stream, payload):
+  if not API_LOG["path"]:
+    return
+  API_LOG["t0"] = time.time()
+  system_text = system_text or ""
+  history_chars = len(json.dumps(history, ensure_ascii=False, default=str))
+  names = ", ".join(
+    str(tool.get("name") or (tool.get("function") or {}).get("name", "?")) for tool in tools
+  ) or "none"
+  rows = [
+    f"{provider} · model {model} · thinking {thinking} · stream {'on' if stream else 'off'}",
+    f"tools   : {names}",
+    f"history : {len(history)} items · {history_chars} chars",
+  ]
+  for item in _api_trailing_input(history):
+    rows.append("  input " + _api_clip(_api_describe_input(item)))
+  if API_LOG["full"]:
+    rows.append("full request: " + json.dumps(payload, ensure_ascii=False, default=str))
+  api_log("REQUEST", "\n".join(rows))
+
+def _api_describe_steps(steps, thought_text=""):
+  lines = []
+  for step in steps or []:
+    if not isinstance(step, dict):
+      continue
+    kind = step.get("type", "?")
+    texts = []
+    if kind == "function_call":
+      lines.append(f"  call    {step.get('name', '')} " + _api_clip(step.get("arguments") or {}, 1500))
+    elif kind == "model_output":
+      _collect_text(step.get("content"), texts)
+      lines.append("  text    " + _api_clip("\n".join(texts)))
+    elif kind == "thought":
+      _collect_text(step, texts)
+      lines.append("  thought " + (_api_clip("\n".join(texts)) if texts else "(no summary returned, signature only)"))
+    else:
+      lines.append(f"  {kind} " + _api_clip(step, 600))
+    if step.get("reasoning_content"):
+      lines.append("  thought " + _api_clip(step["reasoning_content"]))
+  if thought_text:
+    lines.append("  thought " + _api_clip(thought_text))
+  return lines
+
+def api_log_response(data):
+  """Log one Gemini reply: status, tokens and every step."""
+  if not API_LOG["path"] or not isinstance(data, dict):
+    return
+  rows = [f"status {data.get('status') or '?'} · elapsed {_api_elapsed()} · {_usage_line(data.get('usage'))}"]
+  rows += _api_describe_steps(data.get("steps"), data.get("_thought", ""))
+  if data.get("_saw_call"):
+    rows.append("  note    a function call was detected while streaming; the request is repeated without streaming")
+  api_log("RESPONSE", "\n".join(rows))
+
+def api_log_response_compat(usage, steps, reasoning=""):
+  if not API_LOG["path"]:
+    return
+  rows = [f"elapsed {_api_elapsed()} · {_usage_line(usage)}"] + _api_describe_steps(steps, reasoning)
+  api_log("RESPONSE", "\n".join(rows))
+
+def api_log_turn_total():
+  if not API_LOG["path"] or not API_TURN.get("requests"):
+    return
+  t = API_TURN
+  api_log("TURN TOTAL", (
+    f"requests {t['requests']} · input {t.get('input', 0)} (cached {t.get('cached', 0)}) · "
+    f"output {t.get('output', 0)} · thought {t.get('thought', 0)} · total {t.get('total', 0)}"
+  ))
 
 def log_action(policy, record):
   """Append one readable multi-line block describing an action. Never raises."""
@@ -3163,6 +3391,7 @@ def chat_turn(
   """
   policy = policy or ShellPolicy()
   policy.failed_calls = {}
+  API_TURN.clear()
   generated = []
   working = list(history)
   turn_start = len(working)
@@ -3219,6 +3448,7 @@ def chat_turn(
       generated.extend(steps)
       calls = [step for step in steps if isinstance(step, dict) and step.get("type") == "function_call"]
       if not calls:
+        api_log_turn_total()
         return answer, generated
       results = []
       index = 0
@@ -3700,6 +3930,14 @@ def run():
   ALLOW_MARKDOWN = bool(args.markdown) or (
     os.environ.get("GEMINI_CLI_MARKDOWN", "").strip().lower() in ("1", "true", "yes", "on")
   )
+  env_target = os.environ.get("GEMINI_CLI_API_LOG", "").strip()
+  # On by default in ~/.cache/api.log; GEMINI_CLI_API_LOG=0/false/no/off turns it off.
+  if env_target.lower() not in ("0", "false", "no", "off"):
+    api_log_target = "" if env_target.lower() in ("", "1", "true", "yes", "on") else env_target
+    API_LOG["path"] = os.path.abspath(os.path.expanduser(api_log_target or DEFAULT_API_LOG_FILE))
+  API_LOG["full"] = bool(args.api_log_full) or (
+    os.environ.get("GEMINI_CLI_API_LOG_FULL", "").strip().lower() in ("1", "true", "yes", "on")
+  )
   question = (
     args.prompt
     if args.prompt is not None
@@ -3779,15 +4017,9 @@ def run():
         for item in args.allow_path
       ]
     ),
-    log_path=(
-      None
-      if args.no_log
-      else os.path.abspath(
-        os.path.expanduser(
-          args.log_file
-          or os.environ.get("GEMINI_CLI_LOG_FILE")
-          or DEFAULT_LOG_FILE
-        )
+    log_path=os.path.abspath(
+      os.path.expanduser(
+        os.environ.get("GEMINI_CLI_LOG_FILE") or DEFAULT_LOG_FILE
       )
     ),
   )
