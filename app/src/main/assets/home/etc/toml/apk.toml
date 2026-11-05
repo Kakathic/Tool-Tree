@@ -12,6 +12,7 @@ SDCARD=${PTAD/$SDCARD_PATH/\/sdcard}"
 shell = "hidden"
 reload = true
 menu = true
+show = true
 title = "@projects_text"
 desc = "@path_text: @PTAD"
 script = """

@@ -336,8 +336,12 @@ object RowsRenderHelper {
         for (group in lineGroups) {
             val firstRow = rows[group.first()]
 
+            // Row có line=true chỉ là đường kẻ: nếu không có nội dung hiển thị riêng thì không
+            // tính vào dòng chữ phía dưới, tránh tạo ô rỗng kèm dấu cách đẩy cả dòng sang phải 1 ô
+            val contentRows = group.filter { idx -> !rows[idx].line || rows[idx].hasVisibleContent() }
+
             if (firstRow.line) {
-                if (rowsView.length() > 0) {
+                if (rowsView.length() > 0 && rowsView.text[rowsView.length() - 1] != '\n') {
                     rowsView.append("\n")
                 }
                 val dividerLine = SpannableString(" ")
@@ -349,16 +353,20 @@ object RowsRenderHelper {
                     dividerLine.setSpan(CompactDividerSpan(context, dpToPx(context, 6), dpToPx(context, 9)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
                 rowsView.append(dividerLine)
-                rowsView.append("\n")
-            } else if (rowsView.length() > 0) {
+                // Divider là row cuối (nhóm không còn nội dung) thì không nối "\n", nếu không
+                // TextView sẽ render thêm một dòng trống ngay dưới đường kẻ
+                if (contentRows.isNotEmpty()) {
+                    rowsView.append("\n")
+                }
+            } else if (rowsView.length() > 0 && rowsView.text[rowsView.length() - 1] != '\n') {
                 rowsView.append("\n")
             }
 
             val groupTextStart = rowsView.length()
 
-            val leftIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_NORMAL }
-            val centerIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_CENTER }
-            val rightIdx = group.filter { rows[it].align == Layout.Alignment.ALIGN_OPPOSITE }
+            val leftIdx = contentRows.filter { rows[it].align == Layout.Alignment.ALIGN_NORMAL }
+            val centerIdx = contentRows.filter { rows[it].align == Layout.Alignment.ALIGN_CENTER }
+            val rightIdx = contentRows.filter { rows[it].align == Layout.Alignment.ALIGN_OPPOSITE }
             val zoneEligible = leftIdx.size <= 4 && centerIdx.size <= 4 && rightIdx.size <= 4 &&
                 (centerIdx.isNotEmpty() || rightIdx.isNotEmpty())
 
@@ -401,14 +409,16 @@ object RowsRenderHelper {
                     }
                 }
             } else {
-                group.forEachIndexed { i, idx ->
-                    if (i > 0) {
+                var appendedAny = false
+                contentRows.forEach { idx ->
+                    if (appendedAny) {
                         rowsView.append(" ")
                     }
                     val result = buildRowSpan(context, rowsView, extraIconView, rows, config, htmlContainer, rows[idx], idx, dynamicTextResults, dynamicIconResults, dynamicProgressResults, animatedRowIcons)
                     val start = rowsView.length()
                     rowsView.append(result.spannable)
                     rowRanges[idx] = intArrayOf(start, rowsView.length())
+                    appendedAny = true
                 }
                 if (firstRow.align != Layout.Alignment.ALIGN_NORMAL) {
                     (rowsView.text as? Spannable)?.setSpan(AlignmentSpan.Standard(firstRow.align), groupTextStart, rowsView.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -658,6 +668,12 @@ object RowsRenderHelper {
             rowsView.invalidate()
         }
     }
+
+    // Row line=true vẫn giữ vai trò nội dung nếu tự nó có thứ hiển thị được (chữ, icon, toggle, progress...);
+    // ngược lại nó chỉ là đường kẻ trống và bị loại khỏi dòng chữ bên dưới divider
+    private fun TextNode.TextRow.hasVisibleContent(): Boolean =
+        text.isNotEmpty() || dynamicTextSh.isNotEmpty() || toggle.isNotEmpty() ||
+            icon.isNotEmpty() || iconSh.isNotEmpty() || progress >= 0f || progressSh.isNotEmpty()
 
     private fun splitIntoLineGroups(rows: List<TextNode.TextRow>): List<List<Int>> {
         val groups = ArrayList<List<Int>>()
