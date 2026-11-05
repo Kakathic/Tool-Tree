@@ -130,7 +130,7 @@ class PageLayoutRender(private val mContext: Context,
             } else if (it is DownloadNode) {
                 uiRender = createDownloadItem(it)
             } else if (it is TextNode) {
-                uiRender = if (parent.isRootGroup) createTextItem(it) else createTextItemWhite(it)
+                uiRender = createTextItem(it, parent.isRootGroup)
             } else if (it is EditorNode) {
                 uiRender = createEditorItem(it)
             } else if (it is TerminalNode) {
@@ -234,12 +234,8 @@ class PageLayoutRender(private val mContext: Context,
         renderNode(subGroup, node, at)
     }
 
-    private fun createTextItem(node: TextNode): ListItemView {
-        return ListItemText(mContext, R.layout.kr_text_list_item, node)
-    }
-
-    private fun createTextItemWhite(node: TextNode): ListItemView {
-        return ListItemText(mContext, R.layout.kr_text_list_item_white, node)
+    private fun createTextItem(node: TextNode, compact: Boolean): ListItemView {
+        return ListItemText(mContext, node, compact)
     }
 
     private fun createListItem(node: PickerNode): ListItemView {

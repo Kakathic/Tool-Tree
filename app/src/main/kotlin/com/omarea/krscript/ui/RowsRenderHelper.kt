@@ -97,6 +97,9 @@ object RowsRenderHelper {
 
     private class BgState(val dyn: HashMap<Int, String>, val nodeDyn: String)
 
+    private const val DIVIDER_ABOVE_DP = 4
+    private const val DIVIDER_BELOW_DP = 4
+
     private val leadingDividerTopGapDp = WeakHashMap<TextView, Int>()
 
     /**
@@ -347,10 +350,10 @@ object RowsRenderHelper {
                 val dividerLine = SpannableString(" ")
                 if (rowsView.length() == 0) {
                     val topGapPx = dpToPx(context, leadingDividerTopGapDp[rowsView] ?: 0)
-                    dividerLine.setSpan(CompactDividerSpan(context, topGapPx, dpToPx(context, 9)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    dividerLine.setSpan(CompactDividerSpan(context, topGapPx, dpToPx(context, DIVIDER_BELOW_DP)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 } else {
-                    // Đường kẻ giữa khối: dùng dạng gọn (chiều cao cố định) thay vì chiếm cả một dòng chữ
-                    dividerLine.setSpan(CompactDividerSpan(context, dpToPx(context, 6), dpToPx(context, 9)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    // Đường kẻ giữa khối: chỉ chiếm vài dp (trên + dưới), không chiếm cả một dòng chữ
+                    dividerLine.setSpan(CompactDividerSpan(context, dpToPx(context, DIVIDER_ABOVE_DP), dpToPx(context, DIVIDER_BELOW_DP)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
                 rowsView.append(dividerLine)
                 // Divider là row cuối (nhóm không còn nội dung) thì không nối "\n", nếu không

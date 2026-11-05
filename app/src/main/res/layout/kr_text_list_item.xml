@@ -12,29 +12,32 @@
         android:visibility="gone" />
 
 <LinearLayout
+    android:id="@+id/kr_text_content"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:gravity="center_vertical"
-    android:paddingLeft="4dp"
-    android:paddingTop="4dp"
-    android:paddingRight="4dp"
-    android:paddingBottom="8dp">
+    android:orientation="vertical"
+    android:paddingLeft="16dp"
+    android:paddingTop="6dp"
+    android:paddingRight="16dp"
+    android:paddingBottom="10dp">
 
     <TextView
         android:id="@id/kr_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        style="@style/textTitle"
         android:visibility="gone"
-        style="@style/textTitle" />
+        android:breakStrategy="simple" />
 
     <TextView
         android:id="@id/kr_desc"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
+        style="@style/textSmall"
         android:visibility="gone"
-        style="@style/textSmall" />
+        android:breakStrategy="simple" />
 
     <TextView
         android:id="@id/kr_summary"
@@ -42,16 +45,18 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:textColor="?android:colorAccent"
+        style="@style/textSmall"
         android:visibility="gone"
-        style="@style/textSmall" />
+        android:breakStrategy="simple" />
 
     <TextView
         android:id="@id/kr_rows"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:visibility="gone"
         android:layout_marginTop="4dp"
-        style="@style/textSmall" />
+        style="@style/textSmall"
+        android:visibility="gone"
+        android:breakStrategy="simple" />
 
     <FrameLayout
         android:id="@+id/kr_rows_html"
@@ -68,7 +73,6 @@
         android:layout_marginTop="4dp"
         android:scaleType="fitCenter"
         android:visibility="gone" />
-        
 </LinearLayout>
 
 </FrameLayout>

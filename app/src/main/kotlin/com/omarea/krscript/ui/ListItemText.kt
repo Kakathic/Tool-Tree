@@ -1,6 +1,7 @@
 package com.omarea.krscript.ui
 
 import android.content.Context
+import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
@@ -8,8 +9,8 @@ import com.tool.tree.R
 import com.omarea.krscript.model.TextNode
 
 class ListItemText(context: Context,
-                   layoutId: Int,
-                   private val config: TextNode) : ListItemView(context, layoutId, config) {
+                   private val config: TextNode,
+                   compact: Boolean = false) : ListItemView(context, R.layout.kr_text_list_item, config) {
 
     private val rowsView = layout.findViewById<TextView?>(R.id.kr_rows)
     protected var extraIconView = layout.findViewById<ImageView?>(R.id.kr_extra_icon_text)
@@ -22,6 +23,11 @@ class ListItemText(context: Context,
     }
 
     init {
+        if (compact) {
+            // Text nằm trực tiếp ngoài group: padding nhỏ (4dp ngang/trên, 8dp dưới), trong group giữ padding của layout
+            val d = context.resources.displayMetrics.density
+            layout.findViewById<View?>(R.id.kr_text_content)?.setPadding((4 * d).toInt(), (4 * d).toInt(), (4 * d).toInt(), (8 * d).toInt())
+        }
         // Khối rows của text chỉ cách phần mô tả 4dp, thêm 8dp phía trên đường kẻ đầu khối để đường kẻ không dính sát chữ
         RowsRenderHelper.markCompactLeadingDivider(rowsView, 8)
         RowsRenderHelper.bind(context, rowsView, extraIconView, config.rows, config, rowsHtmlView, bgView)

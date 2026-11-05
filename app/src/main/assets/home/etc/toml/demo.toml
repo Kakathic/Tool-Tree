@@ -27,7 +27,7 @@ set = "slog test_log_nut $state"
 
 [[group]]
 [[page]]
-title = "Demo"
+title = "Demo TOML"
 icon = "{ICON}/search.png"
 config = "{HOME}/etc/demo/index.toml"
 

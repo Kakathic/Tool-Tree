@@ -22,14 +22,28 @@ class ListItemGroup(context: Context,
 
     private val placeholderViews = ArrayList<View>()
 
-    // Item nằm trực tiếp ngoài group không có thẻ bo góc bao ngoài nên hiệu ứng nhấn mặc định bị vuông góc,
-    // đổi sang ripple bo góc (10dp, cùng bán kính với thẻ group). Item trong group giữ nguyên.
+    // Item clickable nằm trực tiếp ngoài group: ripple bo góc 10dp (cùng bán kính thẻ group) và thu gọn padding dọc
+    // (margin trên 15dp -> 8dp, dưới 10dp -> 6dp) cho giống item text. Item trong group giữ nguyên.
     private fun applyRootPressEffect(item: ListItemView) {
         if (!isRootGroup || item !is ListItemClickable) return
         val view = item.getView()
         if (view.foreground != null) {
             view.foreground = ContextCompat.getDrawable(context, R.drawable.krscript_item_ripple_ac)
         }
+        compactRootPadding(view)
+    }
+
+    private fun compactRootPadding(view: View) {
+        if (view.getTag(R.id.kr_layout_ac) != null) return
+        val content = view.findViewById<ViewGroup>(R.id.kr_layout_ac) ?: return
+        val cutTop = (7 * context.resources.displayMetrics.density).toInt()
+        val cutBottom = (4 * context.resources.displayMetrics.density).toInt()
+        for (i in 0 until content.childCount) {
+            val lp = content.getChildAt(i).layoutParams as? ViewGroup.MarginLayoutParams ?: continue
+            lp.topMargin = (lp.topMargin - cutTop).coerceAtLeast(0)
+            lp.bottomMargin = (lp.bottomMargin - cutBottom).coerceAtLeast(0)
+        }
+        view.setTag(R.id.kr_layout_ac, true)
     }
 
     fun addPlaceholders(views: List<View>) {
