@@ -22,9 +22,6 @@ class ListItemGroup(context: Context,
 
     private val placeholderViews = ArrayList<View>()
 
-    // Item clickable nằm trực tiếp ngoài group: ripple bo góc 10dp (cùng bán kính thẻ group), thu gọn padding dọc
-    // (margin trên 15dp -> 8dp, dưới 10dp -> 6dp) và lề hai bên (lề trái nội dung 6dp -> 2dp, lề phải nút/switch 16dp -> 8dp)
-    // cho giống item text. Lề của khối rows giữ nguyên vì độ rộng khối rows đã được dùng để canh zone khi dựng.
     private fun applyRootPressEffect(item: ListItemView) {
         if (!isRootGroup || item !is ListItemClickable) return
         val view = item.getView()
@@ -40,8 +37,8 @@ class ListItemGroup(context: Context,
         val d = context.resources.displayMetrics.density
     
         // Định nghĩa giá trị cố định trực tiếp cho từng hướng
-        val newTop = (4 * d).toInt()
-        val newBottom = (4 * d).toInt()
+        val newTop = (10 * d).toInt()
+        val newBottom = (0 * d).toInt()
         val newStart = (1 * d).toInt()
         val newEnd = (1 * d).toInt()
     
