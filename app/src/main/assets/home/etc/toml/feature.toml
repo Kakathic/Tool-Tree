@@ -115,32 +115,32 @@ remember = false
 
 [[action.params]]
 type = "rows"
-
 [[action.params.rows]]
 text-sh = "chatbot --list-websites"
 line = true
 
 [[group]]
 [[action]]
-allow-shortcut = false
-title = "Tùy chỉnh dịch thuật"
+title = "@trans_custom_title"
 icon = "{ICON}/translation.png"
 script = '''
 slog ai_models_trans "$ai_models_trans"
+slog transai_lang "$transai_lang"
+slog transai_hd "$transai_hd"
 slog list_provider_trans "$list_provider_trans"
-transai -p "Hello"
+transai -p "$transai_demo"
 '''
+
 [[action.params]]
-name = "chatai_lang"
+name = "transai_lang"
 title = "@reply_lang_title"
 label = "@permis_text_2"
 placeholder = "en-US"
 type = "text"
-value-sh = 'echo "$LANGUAGE-$COUNTRY"'
+value-sh = 'glog transai_lang "$LANGUAGE-$COUNTRY"'
 
 [[action.params]]
 name = "list_provider_trans"
-placeholder = "gemini"
 title = "@select_provider_title"
 label = "Provider"
 items = [ "gemini|Gemini", "openai|Openai", "openrouter|Openrouter", "groq|Groq", "together|Together", "deepseek|Deepseek" ]
@@ -148,8 +148,22 @@ value-sh = "glog list_provider_trans gemini"
 
 [[action.params]]
 name = "ai_models_trans"
-title = "Models API"
+title = "@select_provider_title"
 editable = true
 label = "Models"
 items = [ "gemini-3.5-flash-lite" ]
 value-sh = "glog ai_models_trans gemini-3.5-flash-lite"
+
+[[action.params]]
+name = "transai_hd"
+title = "@trans_guide_title"
+type = "text"
+max-lines = 6
+value-sh = "glog transai_hd"
+
+[[action.params]]
+name = "transai_demo"
+title = "@trans_demo_title"
+type = "text"
+value = "Hello world !"
+max-lines = 6

@@ -149,7 +149,6 @@ Homeadd() {
   else
     text_line='[[page.rows]]
     text = "'$description'"
-    margin-top = 2
     line = true'
   fi
   

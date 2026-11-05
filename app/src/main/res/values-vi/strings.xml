@@ -233,7 +233,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="terminal_more">Thêm...</string>
     <string name="terminal_more_title">Tùy chọn terminal</string>
     <string name="terminal_wakelock">WakeLock (giữ CPU)</string>
-    <string name="terminal_mono_toolbar">Font monospace cho phím</string>
+    <string name="terminal_mono_toolbar">Font mono thanh công cụ</string>
     <string name="terminal_url_list">Danh sách URL</string>
     <string name="terminal_url_empty">Không tìm thấy URL</string>
     <string name="terminal_url_open_fail">Không có app mở được link</string>

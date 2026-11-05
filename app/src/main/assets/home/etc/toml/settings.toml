@@ -28,7 +28,7 @@ support = "glog Toff"
 title = "@permis_text_2"
 desc = "@permis_text_5"
 icon = "{ICON}/language.png"
-items = [ "|@default_text", "ai|Chatbot AI", "en|English", "vi|Việt nam", "ru|Русский", "hu|Hungarian", "id|Indonesia", "es|Spanish" ]
+items = [ "|@default_text", "ai|AI Translation", "en|English", "vi|Việt nam", "ru|Русский", "hu|Hungarian", "id|Indonesia", "es|Spanish" ]
 get = "glog language_kkts"
 set = """
 if [ "$state" == "ai" ]; then
@@ -82,6 +82,7 @@ type = "clear"
 silent = true
 script = '''
 rm -f "$HOME/.cache/$CHAT_ID.sql" 2>/dev/null
+rm -f "$HOME/.cache/actions.log" 2>/dev/null
 '''
 
 [[chat.menu]]

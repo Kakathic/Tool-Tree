@@ -317,9 +317,10 @@ FILE_TOOLS = [
     "type": "function",
     "name": "search_files",
     "description": (
-      "Search a directory tree. mode 'name' matches file names with "
-      "a glob such as *.smali; mode 'content' finds lines matching "
-      "a case-insensitive regular expression."
+      "Search a directory tree (recursive), or a single file when path is a file. "
+      "mode 'name' matches file names with "
+      "a glob such as *.smali (use it to list or find files); mode 'content' "
+      "finds lines matching a case-insensitive regular expression."
     ),
     "parameters": {
       "type": "object",
@@ -1097,7 +1098,9 @@ def build_system_instruction(
     parts.append(
       "You can run shell commands on the user's device with the run_command tool. "
       "Current directory: " + os.getcwd() + ". System: " + platform.system() + ". "
-      "Run only commands needed for the task and prefer read-only inspection first. "
+      "Run only commands needed for the task. If the user gave a specific path, "
+      "inspect only that path; do not run ls, find or wc on parent or unrelated "
+      "directories. Prefer read-only inspection only of what the task needs. "
       "Check and report each command's exit code; a command is not successful merely "
       "because execution ended, and a nonzero exit code must not be reported as success. "
       "Avoid unrelated side effects and destructive operations such as deleting data, "
@@ -1114,6 +1117,11 @@ def build_system_instruction(
       "using edits. If edit_file reports that old_text was not found or is ambiguous, "
       "re-read only the affected lines (offset and limit) and resend the corrected "
       "complete edits list; do not re-read the whole file. "
+      "When the user names a specific directory or file, work only inside that "
+      "path. Do not list, count, search or read its parent directories, sibling "
+      "directories or the current directory unless the task clearly requires "
+      "them (for example to resolve an import or a reference found in the code). "
+      "Do not scan directories just to get an overview. "
       "Prefer edit_file for localized changes; do not rewrite an entire file "
       "when a small edit is sufficient. Preserve existing features, behavior, structure, "
       "interfaces, naming conventions, encoding and line endings unless the request "
@@ -1170,10 +1178,19 @@ def build_system_instruction(
     parts.append(batch)
     if files_enabled:
       verify = (
-        "Before reporting completion, verify the actual result without extra rounds. "
+        "Before reporting completion, verify the actual result without unnecessary rounds. "
         "edit_file and write_file already read the file back from disk and report "
         "verified, changed and, for .py and .json files, syntax_check: do not re-read an "
         "edited file or repeat a check that the result already reports. "
+        "Exception: they do not detect duplicates. When an edit adds keys, variables, "
+        "entries, functions or similar named items, each must exist exactly once in the "
+        "file. Before editing, check the content you already read for an existing "
+        "definition of the same name and update that one instead of adding another. "
+        "After editing, run ONE round of search_files (mode content, path set to each "
+        "edited file, a pattern that matches all added names, for example name1|name2) "
+        "and confirm that every added name appears exactly once; if a name appears twice "
+        "unintentionally, remove the extra copy with edit_file. Batch these searches for "
+        "all edited files in the same round. "
       )
       if shell_enabled:
         verify += (
@@ -1201,10 +1218,27 @@ def build_system_instruction(
     verify += (
       "Never claim a check was performed if it was not. When the last tool results "
       "need no further action, write the final report in that same response without "
-      "another tool call. In the final report, briefly state changed files or "
-      "components, the main change and verification status using PASS, FAIL or NOT "
-      "RUN; identify checks that could not be performed."
+      "another tool call. "
     )
+    if files_enabled:
+      verify += (
+        "In the final report, briefly state the main change and the verification "
+        "status using PASS, FAIL or NOT RUN; identify checks that could not be "
+        "performed. Do not list the changed files or their paths: the application "
+        "automatically prints the list of files changed with edit_file and write_file "
+        "after your answer. "
+      )
+      if shell_enabled:
+        verify += (
+          "Only name a file that you changed through a shell command, because the "
+          "application does not list those."
+        )
+    else:
+      verify += (
+        "In the final report, briefly state changed files or components, the main "
+        "change and verification status using PASS, FAIL or NOT RUN; identify checks "
+        "that could not be performed."
+      )
     parts.append(verify)
   if memory_summary:
     parts.append(
@@ -2697,6 +2731,22 @@ def tool_read_file(args, policy):
     )
   return result
 
+def _nearest_lines(text, old, limit=3):
+  """Lines of the file most similar to old_text, as 'number: line' hints for a failed edit."""
+  lines = text.splitlines()
+  first = next((l.strip() for l in old.splitlines() if l.strip()), "")
+  if not first:
+    return []
+  # Same key / identifier (text before "=" or ":") first, then plain similarity.
+  key = re.split(r"[=:]", first, 1)[0].strip()
+  found = []
+  if len(key) >= 3:
+    found = [n for n, line in enumerate(lines, 1) if key in line]
+  if not found:
+    close = difflib.get_close_matches(first, [l.strip() for l in lines], n=limit, cutoff=0.6)
+    found = [n for n, line in enumerate(lines, 1) if line.strip() in close]
+  return [f"{n}: {lines[n - 1][:200]}" for n in found[:limit]]
+
 def tool_edit_file(args, policy, ui):
   path = _resolve(args.get("path"))
   denied = check_path_allowed(path, policy)
@@ -2720,6 +2770,7 @@ def tool_edit_file(args, policy, ui):
   multi = len(edits) > 1
   updated = text
   replacements = 0
+  crlf = text.count("\r\n") * 2 > text.count("\n")
   for number, item in enumerate(edits, 1):
     old = item.get("old_text")
     new = item.get("new_text")
@@ -2728,13 +2779,23 @@ def tool_edit_file(args, policy, ui):
     if not isinstance(old, str) or not isinstance(new, str) or not old:
       return {"error": prefix + "old_text and new_text must be strings; old_text cannot be empty." + suffix}
     count = updated.count(old)
+    if count == 0 and crlf and "\r\n" not in old:
+      # The file uses Windows line endings but the model wrote plain newlines.
+      crlf_old = old.replace("\n", "\r\n")
+      if updated.count(crlf_old):
+        old = crlf_old
+        count = updated.count(old)
+    if crlf and "\r\n" not in new:
+      new = new.replace("\n", "\r\n")
     if count == 0:
-      return {
-        "error": (
-          prefix + "old_text was not found. Read the file again and copy "
-          "the text exactly, including whitespace." + suffix
-        )
-      }
+      hint = _nearest_lines(updated, old)
+      message = (
+        prefix + "old_text was not found. Read the file again and copy "
+        "the text exactly, including whitespace."
+      )
+      if hint:
+        message += " Closest lines in the file (line: text): " + " | ".join(hint) + "."
+      return {"error": message + suffix}
     replace_all = bool(item.get("replace_all"))
     if count > 1 and not replace_all:
       return {
@@ -2814,9 +2875,11 @@ def tool_search_files(args, policy):
   denied = check_path_allowed(root, policy)
   if denied:
     return denied
-  if not os.path.isdir(root):
+  single_file = os.path.isfile(root)
+  if not single_file and not os.path.isdir(root):
     return {"error": f"Not a directory: {root}"}
-  mode = args.get("mode") or "content"
+  explicit_mode = args.get("mode")
+  mode = explicit_mode or "content"
   if mode not in ("name", "content"):
     return {"error": "mode must be 'name' or 'content'."}
   include = args.get("include")
@@ -2833,13 +2896,23 @@ def tool_search_files(args, policy):
     try:
       regex = re.compile(pattern, re.IGNORECASE)
     except re.error as exc:
-      return {"error": f"Invalid regex: {exc}"}
+      if explicit_mode:
+        return {"error": f"Invalid regex: {exc}"}
+      # No mode given and the pattern is not a valid regex (for example "*" or "*.py"):
+      # the model meant a file-name glob, so search by name instead of failing.
+      mode = "name"
+      regex = None
   matches = []
-  for dirpath, dirnames, filenames in os.walk(root):
+  if single_file:
+    # The model passed a file instead of a directory: search just that file.
+    walker = [(os.path.dirname(root), [], [os.path.basename(root)])]
+  else:
+    walker = os.walk(root)
+  for dirpath, dirnames, filenames in walker:
     dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
     for name in sorted(filenames):
       full = os.path.join(dirpath, name)
-      if name.lower().endswith(".bak") and (
+      if not single_file and name.lower().endswith(".bak") and (
         mode == "content" or skip_bak
       ):
         continue
@@ -2847,7 +2920,7 @@ def tool_search_files(args, policy):
         if fnmatch.fnmatch(name.lower(), pattern.lower()):
           matches.append(full)
       else:
-        if include and not fnmatch.fnmatch(name, include):
+        if include and not single_file and not fnmatch.fnmatch(name, include):
           continue
         try:
           if check_path_allowed(full, policy):
