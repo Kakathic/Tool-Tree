@@ -5,6 +5,7 @@ import android.animation.LayoutTransition
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import com.tool.tree.R
 import com.omarea.krscript.model.GroupNode
 
@@ -21,6 +22,16 @@ class ListItemGroup(context: Context,
 
     private val placeholderViews = ArrayList<View>()
 
+    // Item nằm trực tiếp ngoài group không có thẻ bo góc bao ngoài nên hiệu ứng nhấn mặc định bị vuông góc,
+    // đổi sang ripple bo góc (10dp, cùng bán kính với thẻ group). Item trong group giữ nguyên.
+    private fun applyRootPressEffect(item: ListItemView) {
+        if (!isRootGroup || item !is ListItemClickable) return
+        val view = item.getView()
+        if (view.foreground != null) {
+            view.foreground = ContextCompat.getDrawable(context, R.drawable.krscript_item_ripple_ac)
+        }
+    }
+
     fun addPlaceholders(views: List<View>) {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         for (view in views) {
@@ -30,6 +41,7 @@ class ListItemGroup(context: Context,
     }
 
     fun addViewBeforePlaceholder(item: ListItemView): ListItemGroup {
+        applyRootPressEffect(item)
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         val placeholder = placeholderViews.firstOrNull()
         if (placeholder != null) {
@@ -55,6 +67,7 @@ class ListItemGroup(context: Context,
     }
 
     fun addView(item: ListItemView): ListItemGroup {
+        applyRootPressEffect(item)
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         content.addView(item.getView())
         children.add(item)
@@ -62,6 +75,7 @@ class ListItemGroup(context: Context,
     }
 
     fun addView(item: ListItemView, atIndex: Int): ListItemGroup {
+        applyRootPressEffect(item)
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         if (content.layoutTransition == null) {
             content.layoutTransition = LayoutTransition()
