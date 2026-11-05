@@ -367,13 +367,10 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
             if (!changedThisPass) break
         }
 
-        // A row that is still collapsing but should be visible again: stop the collapse first
         for ((name, animator) in ArrayList(collapsingAnimators.entries)) {
             if (working[name] != false) animator.cancel()
         }
 
-        // Rows that go visible -> hidden are collapsed by height (see collapseRow) instead of being
-        // removed in a ChangeBounds transition, which clips the rows below while they slide up
         val hidingNames = HashSet<String>()
         var showingAny = false
         for (info in currentParamInfos) {
@@ -390,14 +387,16 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
 
         if (previousState.isNotEmpty()) {
             if (hidingNames.isEmpty() && collapsingAnimators.isEmpty()) {
-                TransitionManager.beginDelayedTransition(linearLayout, buildRowVisibilityTransition())
+                TransitionManager.beginDelayedTransition(linearLayout, excludeRowChildren(buildRowVisibilityTransition()))
             } else if (showingAny) {
                 TransitionManager.beginDelayedTransition(
                     linearLayout,
-                    TransitionSet()
-                        .addTransition(Fade(Fade.IN))
-                        .setDuration(ROW_ANIM_DURATION_MS)
-                        .setInterpolator(standardMotionInterpolator())
+                    excludeRowChildren(
+                        TransitionSet()
+                            .addTransition(Fade(Fade.IN))
+                            .setDuration(ROW_ANIM_DURATION_MS)
+                            .setInterpolator(standardMotionInterpolator())
+                    )
                 )
             }
         }
@@ -515,6 +514,21 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
                 context.getString(R.string.kr_duplicate_param_name, ex.message ?: ""),
                 Toast.LENGTH_LONG
             ).show()
+        }
+    }
+
+    // Transition chỉ tác động lên cả hàng, không đụng tới view con (tránh EditText bị ép cao ~0 làm lệch scrollY)
+    private fun excludeRowChildren(set: TransitionSet): TransitionSet {
+        for (row in rowViews.values) set.excludeChildren(row, true)
+        return set
+    }
+
+    private fun resetInputScroll(view: View) {
+        if (view is EditText) {
+            view.scrollTo(0, 0)
+            view.requestLayout()
+        } else if (view is ViewGroup) {
+            for (i in 0 until view.childCount) resetInputScroll(view.getChildAt(i))
         }
     }
 
@@ -674,6 +688,7 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
                 view.alpha = origAlpha
                 view.visibility = View.GONE
                 view.layoutParams = lp
+                resetInputScroll(view)
             }
         })
         collapsingAnimators[name] = animator
@@ -695,9 +710,11 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
             if (collapse) {
                 collapseRow(name, view)
             } else if (collapsingAnimators.containsKey(name) && !shouldShow) {
-                // already collapsing toward hidden, let it finish
             } else {
                 view.visibility = if (shouldShow) View.VISIBLE else View.GONE
+                if (shouldShow && oldState == false) {
+                    view.postDelayed({ resetInputScroll(view) }, ROW_ANIM_DURATION_MS + 50L)
+                }
             }
         }
 
