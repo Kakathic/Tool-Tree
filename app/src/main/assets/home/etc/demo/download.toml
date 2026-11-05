@@ -1,0 +1,46 @@
+[[group]]
+title = "Tải tệp"
+[[download]]
+title = "Tải tệp PDF mẫu"
+desc = "url tĩnh, script nhận $state là đường dẫn tệp"
+url = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+script = '''
+echo "Đã tải về: $state"
+ls -l "$state"
+'''
+[[download]]
+title = "url-sh"
+desc = "URL sinh bằng script, chạy một lần khi bấm"
+url-sh = 'echo "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"'
+script = 'echo "Tệp: $state"'
+
+[[group]]
+title = "Tuỳ chọn khi tải"
+[[download]]
+title = "confirm và warn"
+desc = "Hỏi trước khi tải"
+confirm = true
+warn = "Tệp sẽ được tải vào bộ nhớ đệm của ứng dụng"
+url = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+script = 'echo "Tệp: $state"'
+[[download]]
+title = "auto-off"
+desc = "Tự đóng log sau khi chạy xong script"
+auto-off = true
+url = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+script = 'echo "Xong"'
+[[download]]
+title = "lock"
+lock = "1|Mục tải đang bị khoá"
+url = "https://example.com/file.zip"
+
+[[group]]
+title = "rows dưới mục tải"
+[[download]]
+title = "Tải có dòng phụ"
+url = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+script = 'echo "Tệp: $state"'
+[[download.rows]]
+text = "Dòng chú thích dưới mục download"
+italic = true
+size = 12

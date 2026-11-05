@@ -1,0 +1,188 @@
+[[group]]
+title = "Cơ bản"
+[[action]]
+title = "Action đơn giản"
+desc = "Chạy script và hiện log"
+script = '''
+echo "Xin chào từ action"
+date
+'''
+[[action]]
+title = "summary và key"
+desc = "desc là dòng mô tả chính"
+summary = "summary là dòng phụ chữ nhỏ"
+key = "demo_action_key"
+script = 'echo "key = demo_action_key"'
+
+[[group]]
+title = "Xác nhận và cảnh báo"
+[[action]]
+title = "confirm = true"
+desc = "Hỏi xác nhận mặc định trước khi chạy"
+confirm = true
+script = 'echo "Đã xác nhận"'
+[[action]]
+title = "confirm-text"
+confirm-text = "Bạn có chắc muốn chạy mục này không?"
+script = 'echo "Đã xác nhận"'
+[[action]]
+title = "warn"
+desc = "Hiện cảnh báo trong hộp thoại xác nhận"
+confirm = true
+warn = "Thao tác minh hoạ, không thay đổi hệ thống"
+script = 'echo "Xong"'
+[[action]]
+title = "warn-sh"
+confirm = true
+warn-sh = 'echo "Cảnh báo sinh lúc mở: $(date +%S)s"'
+script = 'echo "Xong"'
+
+[[group]]
+title = "Chế độ chạy"
+[[action]]
+title = "Mặc định (hộp thoại log)"
+script = '''
+echo "Dòng 1"
+sleep 1
+echo "Dòng 2"
+'''
+[[action]]
+title = "auto-off"
+desc = "Tự đóng log khi chạy xong"
+auto-off = true
+script = 'echo "Sẽ tự đóng"; sleep 1'
+[[action]]
+title = "shell = bg-task"
+desc = "Chạy nền, không hiện hộp thoại"
+shell = "bg-task"
+script = 'sleep 2; echo done'
+[[action]]
+title = "shell = hidden"
+desc = "Chạy im lặng"
+shell = "hidden"
+script = 'echo hidden'
+[[action]]
+title = "interruptible"
+desc = "Cho phép dừng giữa chừng"
+interruptible = true
+script = '''
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  echo "Bước $i"
+  sleep 1
+done
+'''
+[[action]]
+title = "need-input"
+desc = "Script dùng read để nhận phím gõ"
+need-input = true
+script = '''
+echo "Nhập tên của bạn:"
+read ten
+echo "Xin chào $ten"
+'''
+
+[[group]]
+title = "shell-by, shell-value, shell-mode"
+[[action]]
+title = "Chọn chế độ theo tham số"
+desc = "Tham số mode quyết định cách chạy"
+shell = "default"
+shell-by = "mode"
+shell-value = "bg|hid"
+shell-mode = "bg-task|hidden"
+script = 'echo "mode = $mode"'
+[[action.params]]
+name = "mode"
+title = "Chế độ"
+type = "spinner"
+value = "log"
+items = ["log|Hộp thoại log", "bg|Chạy nền", "hid|Im lặng"]
+
+[[group]]
+title = "Tham số và hộp thoại"
+[[action]]
+title = "keep-dialog"
+desc = "Giữ hộp thoại tham số phía sau log"
+keep-dialog = true
+script = 'echo "Giá trị: $ten"'
+[[action.params]]
+name = "ten"
+title = "Tên"
+type = "text"
+value = "Tool-Tree"
+[[action]]
+title = "params-sh - tham số sinh bằng script"
+script = 'echo "$kieu"'
+params-sh = '''
+cat << 'TOMLEND'
+[[params]]
+name = "kieu"
+title = "Kiểu sinh động"
+type = "spinner"
+items = ["x|Kiểu X", "y|Kiểu Y"]
+TOMLEND
+'''
+
+[[group]]
+title = "rows dưới mục action"
+[[action]]
+title = "rows tĩnh"
+script = 'echo ok'
+[[action.rows]]
+text = "Dòng chú thích dưới action"
+italic = true
+size = 12
+[[action.rows]]
+text = "Dòng thứ hai"
+bold = true
+size = 12
+[[action]]
+title = "rows-sh"
+script = 'echo ok'
+rows-sh = '''
+cat << TOMLEND
+[[rows]]
+text = "Dòng sinh bằng rows-sh"
+[[rows]]
+text = "Giờ hiện tại: $(date +%H:%M)"
+TOMLEND
+'''
+
+[[group]]
+title = "Tải lại sau khi chạy"
+[[switch]]
+key = "demo_reload_sw"
+title = "Công tắc được làm mới"
+get = "glog demo_reload_sw"
+set = 'slog demo_reload_sw "$state"'
+[[action]]
+title = "reload = id"
+desc = "Chỉ làm mới mục demo_reload_sw"
+script = 'slog demo_reload_sw 1; echo "Đã bật công tắc"'
+reload = "demo_reload_sw"
+[[action]]
+title = "reload-page"
+desc = "Tải lại cả trang sau khi chạy"
+script = 'echo "Tải lại trang"'
+reload-page = true
+
+[[group]]
+title = "Khoá, ẩn và lối tắt"
+[[action]]
+title = "lock"
+lock = "1|Mục này bị khoá"
+script = 'echo ok'
+[[action]]
+title = "lock-sh"
+desc = "Khoá khi script trả về 1"
+lock-sh = 'echo 1'
+script = 'echo ok'
+[[action]]
+title = "support = false"
+support = "false"
+script = 'echo ok'
+[[action]]
+title = "min-sdk / max-sdk"
+min-sdk = 21
+max-sdk = 100
+script = 'echo "Hiện khi SDK trong khoảng"'

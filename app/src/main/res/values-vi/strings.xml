@@ -60,7 +60,7 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="select_all">Chọn tất cả</string>
     <string name="help_title">Hướng dẫn</string>
     <string name="confirm_message">Nội dung nhắc nhở</string>
-    <string name="confirm_title">Tiêu đề nhắc nhở</string>
+    <string name="confirm_title">Thông báo nhắc nhở</string>
     <string name="shell_executor">Trình thực thi script</string>
     <string name="btn_skip">Bỏ qua</string>
     <string name="btn_exit">Trở lại</string>

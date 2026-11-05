@@ -19,7 +19,7 @@
     <string name="check_time">Teljes idő</string>
     <string name="completed">Kész</string>
     <string name="confirm_message">Megerősítő üzenet</string>
-    <string name="confirm_title">Megerősítés címe</string>
+    <string name="confirm_title">Emlékeztető</string>
     <string name="copy_fail">Sikertelen másolás</string>
     <string name="copy_success">Sikeres másolás</string>
     <string name="debug_text_delay">A próbaidőszak lejárt, az alkalmazás leállt.</string>

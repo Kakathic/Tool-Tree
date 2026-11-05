@@ -1,0 +1,67 @@
+[[group]]
+title = "Nội dung trang"
+[[text]]
+[[text.rows]]
+text = "Mở menu 3 chấm trên thanh công cụ và nút nổi ở góc dưới để thử."
+[[text.rows]]
+sh = "echo Lần chạy gần nhất: $(glog demo_menu_last)"
+break = true
+reset = "self"
+underline = true
+
+[[action]]
+title = "Action hiện cả trên thanh công cụ"
+desc = "menu = true: biểu tượng riêng trên toolbar, không nằm trong danh sách"
+menu = true
+key = "demo_action_menu"
+script = 'echo "Chạy từ nút trên toolbar"'
+
+[[menu]]
+handler = 'slog demo_menu_last "$menu_id"; echo "Menu: $menu_id"'
+[[menu.items]]
+title = "Tải lại trang"
+type = "refresh"
+[[menu.items]]
+title = "Hộp kiểm trong menu"
+type = "checkbox"
+get = "glog demo_menu_check"
+script = 'slog demo_menu_check "$state"; echo "Hộp kiểm: $state"'
+[[menu.items]]
+title = "Chọn chế độ"
+type = "spinner"
+items = ["performance|Hiệu năng", "balanced|Cân bằng", "powersave|Tiết kiệm"]
+get = "glog demo_menu_mode"
+script = 'slog demo_menu_mode "$state"; echo "Chế độ: $state"'
+[[menu.items]]
+title = "Mục dùng handler chung"
+[[menu.items]]
+title = "Chạy im lặng"
+script = 'slog demo_menu_last silent'
+silent = true
+[[menu.items]]
+title = "Chọn tệp"
+type = "file"
+suffix = "txt,zip"
+path-home = "/sdcard"
+script = 'echo "Tệp đã chọn: $file"'
+[[menu.items]]
+title = "Mở trang con"
+config = "{HOME}/etc/demo/switch.toml"
+[[menu.items]]
+title = "Mở trình duyệt"
+link = "https://kakathic.github.io/Tool-Tree/website/Toml.html"
+[[menu.items]]
+title = "Đóng trang"
+type = "finish"
+
+[[fab]]
+[[fab.items]]
+title = "Thêm nhanh"
+key = "demo_fab_add"
+script = 'echo "Bấm nút nổi"'
+fab-spin = true
+[[fab.items]]
+title = "Chọn tệp .txt"
+type = "file"
+suffix = "txt"
+script = 'echo "Tệp: $state"'

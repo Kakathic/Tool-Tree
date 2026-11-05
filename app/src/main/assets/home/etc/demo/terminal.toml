@@ -1,0 +1,45 @@
+[[group]]
+title = "Terminal cơ bản"
+[[terminal]]
+title = "Terminal mặc định"
+desc = "Bash tương tác, bắt đầu ở thư mục home"
+cwd = "{HOME}"
+[[terminal]]
+title = "Chạy lệnh khi mở"
+desc = "cmd chạy xong, shell vẫn mở"
+cmd = "ip addr"
+font-size = 12
+
+[[group]]
+title = "Chạy một lần"
+[[terminal]]
+title = "close-on-exit"
+desc = "Thoát ngay khi cmd chạy xong (mã 0 tự đóng)"
+cmd = "echo Xong việc; sleep 1"
+close-on-exit = true
+[[terminal]]
+title = "exit-on-back"
+desc = "Nút Back dừng hẳn phiên đang xem"
+cmd = "echo Bấm Back để dừng phiên"
+exit-on-back = true
+
+[[group]]
+title = "Thư mục và quyền"
+[[terminal]]
+title = "cwd theo thư mục trang"
+desc = "{PAGE_CONFIG_DIR} là thư mục chứa tệp toml này"
+cwd = "{PAGE_CONFIG_DIR}"
+cmd = "ls -la"
+[[terminal]]
+title = "root = false"
+desc = "Luôn chạy bằng quyền của ứng dụng"
+root = false
+cmd = "id"
+
+[[group]]
+title = "Màn hình"
+[[terminal]]
+title = "keep-screen-on"
+desc = "Giữ màn hình sáng khi dùng terminal"
+keep-screen-on = true
+cmd = "echo Màn hình được giữ sáng"

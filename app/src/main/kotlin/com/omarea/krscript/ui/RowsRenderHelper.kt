@@ -118,7 +118,7 @@ object RowsRenderHelper {
     }
 
     private val countdownStates = WeakHashMap<TextView, CountdownState>()
-    private const val COUNTDOWN_FRAME_MS = 250L
+    private const val COUNTDOWN_FRAME_MS = 33L
 
     private fun countdownFraction(rowsView: TextView, rowIndex: Int, intervalSec: Int): Float? {
         val cs = countdownStates[rowsView] ?: return null
@@ -345,7 +345,8 @@ object RowsRenderHelper {
                     val topGapPx = dpToPx(context, leadingDividerTopGapDp[rowsView] ?: 0)
                     dividerLine.setSpan(CompactDividerSpan(context, topGapPx, dpToPx(context, 9)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 } else {
-                    dividerLine.setSpan(DividerSpan(context), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    // Đường kẻ giữa khối: dùng dạng gọn (chiều cao cố định) thay vì chiếm cả một dòng chữ
+                    dividerLine.setSpan(CompactDividerSpan(context, dpToPx(context, 6), dpToPx(context, 9)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
                 rowsView.append(dividerLine)
                 rowsView.append("\n")
@@ -453,8 +454,10 @@ object RowsRenderHelper {
                         if (r.refreshInterval > 0) {
                             val last = (rowsView.tag as? RowsRenderState)?.lastRefreshTimes?.get(idx) ?: 0L
                             if (tick - last >= r.refreshInterval * 1000L) {
-                                resetRow(context, rowsView, extraIconView, rows, config, idx, htmlContainer)
                                 (rowsView.tag as? RowsRenderState)?.lastRefreshTimes?.set(idx, tick)
+                                resetRowAsync(context, rowsView, extraIconView, rows, config, idx, htmlContainer) {
+                                    rowsView.isAttachedToWindow && rowsView.getTag(R.id.kr_rows_refresh_runnable) === tickRunnable
+                                }
                             }
                         }
                     }
@@ -475,6 +478,30 @@ object RowsRenderHelper {
         }
     }
 
+    private class RowFetch(val results: Map<String, String>, val bgPath: String?, val photoPath: String?)
+
+    private val rowRefreshInFlight = WeakHashMap<TextView, MutableSet<Int>>()
+
+    private fun isRowPatchable(rowsView: TextView, rowIndex: Int): Boolean {
+        val state = rowsView.tag as? RowsRenderState
+        val range = state?.rowRanges?.get(rowIndex)
+        val editable = rowsView.text as? Editable
+        return !(state == null || range == null || editable == null || state.zoneGroupRows.contains(rowIndex) ||
+            range[0] < 0 || range[1] > editable.length || range[0] > range[1])
+    }
+
+    // Chạy các script động của một row (có thể gọi ở luồng nền, không đụng tới View)
+    private fun fetchRowScripts(context: Context, row: TextNode.TextRow, config: NodeInfoBase, hasPhotoView: Boolean): RowFetch {
+        val scripts = LinkedHashMap<String, String>()
+        if (row.dynamicTextSh.isNotEmpty()) scripts["text"] = row.dynamicTextSh
+        if (row.iconSh.isNotEmpty()) scripts["icon"] = row.iconSh
+        if (row.progressSh.isNotEmpty()) scripts["progress"] = row.progressSh
+        val results: Map<String, String> = if (scripts.isEmpty()) emptyMap() else ScriptEnvironmen.executeMultipleResultRoot(context, scripts, config)
+        val bg = if (row.bgImageSh.isNotEmpty()) ScriptEnvironmen.executeResultRoot(context, row.bgImageSh, config) else null
+        val photo = if (hasPhotoView && row.photoSh.isNotEmpty()) ScriptEnvironmen.executeResultRoot(context, row.photoSh, config) else null
+        return RowFetch(results, bg, photo)
+    }
+
     fun resetRow(
         context: Context,
         rowsView: TextView?,
@@ -487,22 +514,71 @@ object RowsRenderHelper {
         if (rowsView == null || rowIndex !in rows.indices) {
             return
         }
-        val state = rowsView.tag as? RowsRenderState
-        val range = state?.rowRanges?.get(rowIndex)
-        val editable = rowsView.text as? Editable
-        if (state == null || range == null || editable == null || state.zoneGroupRows.contains(rowIndex) ||
-            range[0] < 0 || range[1] > editable.length || range[0] > range[1]
-        ) {
+        if (!isRowPatchable(rowsView, rowIndex)) {
             bind(context, rowsView, extraIconView, rows, config, htmlContainer)
             return
         }
+        val fetched = fetchRowScripts(context, rows[rowIndex], config, extraIconView != null)
+        applyRowReset(context, rowsView, extraIconView, rows, config, rowIndex, htmlContainer, fetched)
+    }
+
+    /**
+     * Làm mới định kỳ: script chạy ở luồng nền rồi mới cập nhật giao diện, tránh đứng hình mỗi lần làm mới.
+     * [stillValid] được kiểm tra lại trước khi áp dụng kết quả (trang đã bind lại / bị đóng thì bỏ qua).
+     */
+    private fun resetRowAsync(
+        context: Context,
+        rowsView: TextView,
+        extraIconView: ImageView?,
+        rows: List<TextNode.TextRow>,
+        config: NodeInfoBase,
+        rowIndex: Int,
+        htmlContainer: FrameLayout?,
+        stillValid: () -> Boolean
+    ) {
+        if (rowIndex !in rows.indices) return
+        if (!isRowPatchable(rowsView, rowIndex)) {
+            bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+            return
+        }
+        val inFlight = rowRefreshInFlight.getOrPut(rowsView) { HashSet() }
+        if (!inFlight.add(rowIndex)) return
+        val row = rows[rowIndex]
+        Thread {
+            val fetched = try {
+                fetchRowScripts(context, row, config, extraIconView != null)
+            } catch (e: Exception) {
+                null
+            }
+            rowsView.post {
+                rowRefreshInFlight[rowsView]?.remove(rowIndex)
+                if (fetched != null && stillValid()) {
+                    applyRowReset(context, rowsView, extraIconView, rows, config, rowIndex, htmlContainer, fetched)
+                }
+            }
+        }.start()
+    }
+
+    private fun applyRowReset(
+        context: Context,
+        rowsView: TextView,
+        extraIconView: ImageView?,
+        rows: List<TextNode.TextRow>,
+        config: NodeInfoBase,
+        rowIndex: Int,
+        htmlContainer: FrameLayout?,
+        fetched: RowFetch
+    ) {
+        if (!isRowPatchable(rowsView, rowIndex)) {
+            bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+            return
+        }
+        val state = rowsView.tag as RowsRenderState
+        val range = state.rowRanges[rowIndex]!!
+        val editable = rowsView.text as Editable
 
         val row = rows[rowIndex]
-        val scripts = LinkedHashMap<String, String>()
-        if (row.dynamicTextSh.isNotEmpty()) scripts["text"] = row.dynamicTextSh
-        if (row.iconSh.isNotEmpty()) scripts["icon"] = row.iconSh
-        if (row.progressSh.isNotEmpty()) scripts["progress"] = row.progressSh
-        val results = if (scripts.isEmpty()) emptyMap() else ScriptEnvironmen.executeMultipleResultRoot(context, scripts, config)
+        val results = fetched.results
         val textMap = results["text"]?.let { mapOf(rowIndex to it) } ?: emptyMap()
         val iconMap = results["icon"]?.let { mapOf(rowIndex to it) } ?: emptyMap()
         val progressMap = results["progress"]?.let { mapOf(rowIndex to it) } ?: emptyMap()
@@ -513,6 +589,10 @@ object RowsRenderHelper {
         val start = range[0]
         val end = range[1]
         val oldText = editable.subSequence(start, end).toString()
+        // Gỡ hẳn các span chiều cao của row cũ trước khi thay, tránh span cũ còn sót làm dòng cao dần sau mỗi lần làm mới
+        editable.getSpans(start, end, RefreshCountdownSpan::class.java).forEach { editable.removeSpan(it) }
+        editable.getSpans(start, end, TopExtraSpaceSpan::class.java).forEach { editable.removeSpan(it) }
+        editable.getSpans(start, end, BottomExtraSpaceSpan::class.java).forEach { editable.removeSpan(it) }
         editable.replace(start, end, rendered.spannable)
         rowsView.visibility = if (editable.isEmpty()) View.GONE else View.VISIBLE
         val delta = rendered.spannable.length - (end - start)
@@ -537,20 +617,18 @@ object RowsRenderHelper {
         state.animatedIcons.addAll(animated)
         rowsView.tag = RowsRenderState(state.animatedIcons, newRanges, state.zoneGroupRows, state.flashAnimators, state.lastRefreshTimes, state.refreshIntervalMs)
 
-        if (row.bgImageSh.isNotEmpty()) {
-            bgStates[rowsView]?.dyn?.set(rowIndex, ScriptEnvironmen.executeResultRoot(context, row.bgImageSh, config))
+        if (fetched.bgPath != null) {
+            bgStates[rowsView]?.dyn?.set(rowIndex, fetched.bgPath)
             applyTextBg(context, rowsView, rows, config)
         }
 
-        if (extraIconView != null && row.photoSh.isNotEmpty()) {
-            val effectivePhoto = ScriptEnvironmen.executeResultRoot(context, row.photoSh, config)
-            if (effectivePhoto.isNotEmpty()) {
-                IconPathAnalysis().loadtextPhoto(context, effectivePhoto, row, config.pageConfigDir)?.run {
-                    extraIconView.setImageDrawable(this)
-                    extraIconView.visibility = View.VISIBLE
-                    applyPhotoRealSize(extraIconView, row.photoRealSize)
-                    GifPlaybackHelper.bind(extraIconView, row.photoGifAutoplay, row.photoGifLoopCount)
-                }
+        val effectivePhoto = fetched.photoPath
+        if (extraIconView != null && !effectivePhoto.isNullOrEmpty()) {
+            IconPathAnalysis().loadtextPhoto(context, effectivePhoto, row, config.pageConfigDir)?.run {
+                extraIconView.setImageDrawable(this)
+                extraIconView.visibility = View.VISIBLE
+                applyPhotoRealSize(extraIconView, row.photoRealSize)
+                GifPlaybackHelper.bind(extraIconView, row.photoGifAutoplay, row.photoGifLoopCount)
             }
         }
     }
@@ -930,7 +1008,7 @@ object RowsRenderHelper {
         if (confirmMessage.isEmpty()) {
             action()
         } else {
-            DialogHelper.confirm(context, message = confirmMessage, onConfirm = Runnable { action() })
+            DialogHelper.confirm(context, title = context.getString(R.string.confirm_title), message = confirmMessage, onConfirm = Runnable { action() })
         }
     }
 

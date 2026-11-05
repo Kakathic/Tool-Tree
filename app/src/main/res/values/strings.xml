@@ -72,7 +72,7 @@ If you agree, press the confirm button to continue."</string>
     <string name="select_all">Select all</string>
     <string name="help_title">Instructions</string>
     <string name="confirm_message">Reminder message</string>
-    <string name="confirm_title">Reminder title</string>
+    <string name="confirm_title">Reminder notice</string>
     <string name="shell_executor">Script Executor</string>
     <string name="btn_skip">Skip</string>
     <string name="btn_exit">Exit</string>

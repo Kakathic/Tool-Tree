@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: sans-serif; margin: 12px; }
+  h3 { margin: 0 0 6px; }
+  p { margin: 4px 0; }
+  button { padding: 6px 12px; }
+</style>
+</head>
+<body>
+  <h3>Trang HTML nội tuyến</h3>
+  <p>Khối này nằm trong một WebView bên dưới hàng văn bản.</p>
+  <button onclick="document.getElementById('kq').textContent = new Date().toLocaleTimeString()">Xem giờ</button>
+  <p id="kq"></p>
+</body>
+</html>

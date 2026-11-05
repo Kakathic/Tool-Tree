@@ -1,0 +1,134 @@
+[[group]]
+title = "Dòng động (sh / text-sh)"
+[[text]]
+[[text.rows]]
+sh = "date '+Giờ hệ thống: %H:%M:%S'"
+[[text.rows]]
+text = "Nhiệt độ: --"
+sh = "echo Kiểu máy: $(getprop ro.product.model)"
+break = true
+
+[[group]]
+title = "reset - làm mới một hàng"
+[[text]]
+[[text.rows]]
+sh = "date '+Giờ: %H:%M:%S'"
+[[text.rows]]
+text = "Làm mới hàng trên"
+align = "right"
+reset = 0
+underline = true
+[[text.rows]]
+text = "Bấm để làm mới chính hàng này"
+sh = "date '+Lần chạy: %S giây'"
+reset = "self"
+underline = true
+break = true
+[[text.rows]]
+text = "Làm mới toàn bộ khối"
+reset = "all"
+underline = true
+break = true
+[[text.rows]]
+text = "Chạy script rồi làm mới hàng đầu"
+script = 'echo "Script chạy trước"'
+toast = true
+reset = 0
+underline = true
+break = true
+
+[[group]]
+title = "Thanh tiến trình nội tuyến"
+[[text]]
+[[text.rows]]
+text = "Tĩnh 60%"
+progress = 60
+progress-color = "#4CAF50"
+[[text.rows]]
+text = "Dung lượng /data"
+sh = "df -h /data | tail -1 | awk '{print $5}'"
+progress-sh = '''df /data | tail -1 | awk '{gsub("%",""); print $5}' '''
+progress-max = 100
+progress-color = "#FF9800"
+progress-track-color = "#33888888"
+progress-width = 140
+progress-height = 8
+break = true
+[[text.rows]]
+text = "Tải lại"
+align = "right"
+reset = "all"
+underline = true
+break = true
+
+[[group]]
+title = "Tự làm mới theo chu kỳ"
+[[text]]
+[[text.rows]]
+sh = "date '+Đồng hồ: %H:%M:%S'"
+refresh-interval = 5
+refresh-bar = true
+refresh-bar-color = "#0DBDA2"
+
+[[group]]
+title = "Công tắc ngay trên hàng"
+[[text]]
+[[text.rows]]
+text = "Công tắc dạng switch"
+toggle = "switch"
+get = "glog demo_row_switch"
+set = 'slog demo_row_switch "$state"'
+[[text.rows]]
+text = "Hộp kiểm dạng checkbox"
+toggle = "checkbox"
+get = "glog demo_row_check"
+set = 'slog demo_row_check "$state"'
+toast = true
+break = true
+[[text.rows]]
+text = "Công tắc có xác nhận"
+toggle = "switch"
+confirm-text = "Đổi trạng thái?"
+get = "glog demo_row_confirm"
+set = 'slog demo_row_confirm "$state"'
+break = true
+
+[[group]]
+title = "Hàng ẩn theo điều kiện"
+[[text]]
+[[text.rows]]
+text = "Luôn hiện"
+[[text.rows]]
+text = "Ẩn bằng support = false"
+support = "false"
+break = true
+[[text.rows]]
+text = "Hiện khi script trả về 1"
+support = "echo 1"
+break = true
+
+[[group]]
+title = "Khối HTML nội tuyến"
+[[text]]
+[[text.rows]]
+text = "Trang HTML cục bộ"
+bold = true
+[[text.rows]]
+html-file = "{HOME}/etc/demo/demo.html"
+html-height = 200
+break = true
+
+[[group]]
+title = "Rows động bằng rows-sh"
+[[text]]
+rows-sh = '''
+cat << TOMLEND
+[[rows]]
+text = "Khối sinh bằng rows-sh"
+bold = true
+
+[[rows]]
+text = "Giờ hiện tại: $(date +%H:%M:%S)"
+break = true
+TOMLEND
+'''

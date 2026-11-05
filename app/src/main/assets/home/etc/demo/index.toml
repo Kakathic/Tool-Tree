@@ -1,0 +1,94 @@
+[[text]]
+[[text.rows]]
+line = true
+[[text.rows]]
+text = "Bộ mẫu TOML của Tool-Tree"
+bold = true
+size = 15
+[[text.rows]]
+text = "Mỗi trang con minh hoạ một loại node. Các mẫu chỉ chạy lệnh an toàn (echo, đọc thông tin), không sửa hệ thống."
+break = true
+size = 12
+alpha = 0.8
+
+[[group]]
+title = "Bố cục và điều hướng"
+[[page]]
+title = "group và đường kẻ ngăn cách"
+desc = "Bọc nhóm, [[end]], line"
+config = "{HOME}/etc/demo/group.toml"
+[[page]]
+title = "page"
+desc = "config, config-sh, link, process, vòng đời"
+config = "{HOME}/etc/demo/page.toml"
+
+[[group]]
+title = "Thực thi"
+[[page]]
+title = "action"
+desc = "Xác nhận, chế độ chạy, shell-by, rows"
+config = "{HOME}/etc/demo/action.toml"
+[[page]]
+title = "action.params"
+desc = "Tất cả kiểu tham số"
+config = "{HOME}/etc/demo/params.toml"
+[[page]]
+title = "depend-*"
+desc = "Ẩn/hiện tham số theo điều kiện"
+config = "{HOME}/etc/demo/depend.toml"
+[[page]]
+title = "Mã điều khiển đầu ra"
+desc = "choose, pick, input, progress, am, exit"
+config = "{HOME}/etc/demo/control.toml"
+
+[[group]]
+title = "Trạng thái và lựa chọn"
+[[page]]
+title = "switch"
+desc = "Công tắc bật/tắt"
+config = "{HOME}/etc/demo/switch.toml"
+[[page]]
+title = "picker"
+desc = "Chọn một hoặc nhiều giá trị"
+config = "{HOME}/etc/demo/picker.toml"
+
+[[group]]
+title = "Hiển thị văn bản"
+[[page]]
+title = "text và text.rows"
+desc = "Kiểu chữ, markdown, căn lề, biểu tượng"
+config = "{HOME}/etc/demo/text.toml"
+[[page]]
+title = "rows nâng cao"
+desc = "reset, progress, toggle, refresh, html"
+config = "{HOME}/etc/demo/rows.toml"
+
+[[group]]
+title = "Công cụ"
+[[page]]
+title = "editor"
+desc = "Mở tệp trong trình soạn thảo"
+config = "{HOME}/etc/demo/editor.toml"
+[[page]]
+title = "terminal"
+desc = "Terminal tương tác"
+config = "{HOME}/etc/demo/terminal.toml"
+[[page]]
+title = "chat"
+desc = "Trang trò chuyện chạy script"
+config = "{HOME}/etc/demo/chat.toml"
+[[page]]
+title = "download"
+desc = "Tải tệp qua HTTP"
+config = "{HOME}/etc/demo/download.toml"
+
+[[group]]
+title = "Khác"
+[[page]]
+title = "menu và fab"
+desc = "Menu 3 chấm và nút nổi"
+config = "{HOME}/etc/demo/menu_fab.toml"
+[[page]]
+title = "Trường động (-sh) và biến"
+desc = "title-sh, support, lock, load-key, {ROT}"
+config = "{HOME}/etc/demo/dynamic.toml"

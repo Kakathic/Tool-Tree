@@ -1,0 +1,90 @@
+[[group]]
+title = "Tạo và sửa tệp"
+[[editor]]
+title = "Tệp văn bản mới"
+desc = "value chỉ ghi khi tệp chưa tồn tại"
+file = "{HOME}/demo_files/ghi_chu.txt"
+placeholder = "Nhập nội dung..."
+value = "Đây là nội dung khởi tạo.\nSửa rồi bấm lưu."
+run = false
+[[editor]]
+title = "Script có nút Run"
+desc = "Tệp .sh có thể chạy trực tiếp trong trình soạn thảo"
+file = "{HOME}/demo_files/chao.sh"
+value = '''#!/system/bin/sh
+echo "Xin chào từ editor"
+date
+'''
+[[editor]]
+title = "Script cần nhập phím"
+desc = "need-input cho phép dùng read"
+file = "{HOME}/demo_files/nhap.sh"
+need-input = true
+value = '''#!/system/bin/sh
+echo "Nhập tên:"
+read ten
+echo "Xin chào $ten"
+'''
+
+[[group]]
+title = "Chạy tệp TOML như một trang"
+[[editor]]
+title = "Soạn trang TOML mẫu"
+desc = "Bấm Run để mở tệp như một trang Tool-Tree"
+file = "{HOME}/demo_files/trang_thu.toml"
+placeholder = "[[toml]]"
+value = '''# toml
+[[group]]
+title = "Trang thử"
+[[switch]]
+title = "Công tắc thử"
+get = "glog demo_editor_page_sw"
+set = 'slog demo_editor_page_sw "$state"'
+[[action]]
+title = "Action thử"
+script = 'echo "Chạy từ trang thử"'
+'''
+
+[[group]]
+title = "Tuỳ chọn hiển thị"
+[[editor]]
+title = "wrap = false"
+desc = "Không tự xuống dòng"
+file = "{HOME}/demo_files/dai.txt"
+wrap = false
+run = false
+value = "Một dòng rất dài để thử tắt tự xuống dòng trong trình soạn thảo, kéo ngang để đọc hết nội dung của nó."
+[[editor]]
+title = "readonly = true"
+desc = "Chỉ xem, không sửa"
+file = "{HOME}/demo_files/ghi_chu.txt"
+readonly = true
+run = false
+[[editor]]
+title = "readonly bằng shell"
+desc = "Khoá khi script trả về 1"
+file = "{HOME}/demo_files/ghi_chu.txt"
+readonly = "echo 1"
+run = false
+[[editor]]
+title = "file-sh"
+desc = "Đường dẫn tệp sinh bằng script"
+file-sh = 'echo "$HOME/demo_files/ghi_chu.txt"'
+run = false
+[[editor]]
+title = "value-sh"
+desc = "Nội dung khởi tạo sinh bằng script"
+file = "{HOME}/demo_files/gio_tao.txt"
+value-sh = "date '+Tạo lúc %H:%M:%S ngày %d/%m/%Y'"
+run = false
+
+[[group]]
+title = "rows dưới editor"
+[[editor]]
+title = "Editor có dòng phụ"
+file = "{HOME}/demo_files/ghi_chu.txt"
+run = false
+[[editor.rows]]
+text = "Dòng chú thích dưới mục editor"
+italic = true
+size = 12

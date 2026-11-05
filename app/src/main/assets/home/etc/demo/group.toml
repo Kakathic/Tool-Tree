@@ -1,0 +1,69 @@
+[[text]]
+[[text.rows]]
+line = true
+[[text.rows]]
+text = "Node nằm trước [[group]] đầu tiên không có khung nhóm. Hàng line = true ở đầu khối vẽ một đường kẻ mảnh để tách khỏi phần bên dưới."
+size = 12
+alpha = 0.85
+
+[[group]]
+title = "Nhóm cơ bản"
+[[action]]
+title = "Mục 1 trong nhóm"
+desc = "Mọi node sau [[group]] thuộc nhóm này"
+script = 'echo "Mục 1"'
+[[action]]
+title = "Mục 2 trong nhóm"
+script = 'echo "Mục 2"'
+
+[[group]]
+title = "Nhóm khác kiểu node"
+[[switch]]
+title = "Công tắc trong nhóm"
+get = "glog demo_group_switch"
+set = 'slog demo_group_switch "$state"'
+[[picker]]
+title = "Picker trong nhóm"
+items = ["a|Lựa chọn A", "b|Lựa chọn B"]
+get = "glog demo_group_picker"
+set = 'slog demo_group_picker "$state"'
+
+[[group]]
+title-sh = 'echo "Tiêu đề nhóm tạo bằng title-sh"'
+[[action]]
+title = "Nhóm có title-sh"
+script = 'echo ok'
+
+[[group]]
+title = "Nhóm ẩn bằng support (ẩn luôn các mục con)"
+support = "false"
+[[action]]
+title = "Mục này không hiện vì nhóm bị ẩn"
+script = 'echo hidden'
+
+[[group]]
+title = "Nhóm không có tiêu đề bên dưới"
+[[action]]
+title = "Mục trong nhóm"
+script = 'echo ok'
+
+[[end]]
+
+[[text]]
+[[text.rows]]
+line = true
+[[text.rows]]
+text = "Từ [[end]] trở xuống node hiển thị trực tiếp trên trang, không bọc nhóm. Khối này mở đầu bằng line = true để tách khỏi nhóm phía trên."
+size = 12
+alpha = 0.85
+
+[[action]]
+title = "Action không bọc nhóm"
+desc = "Đứng riêng sau [[end]]"
+script = 'echo "Không bọc nhóm"'
+
+[[group]]
+title = "Nhóm mở lại sau [[end]]"
+[[action]]
+title = "Mục trong nhóm mới"
+script = 'echo ok'

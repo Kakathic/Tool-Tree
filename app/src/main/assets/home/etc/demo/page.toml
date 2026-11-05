@@ -1,0 +1,95 @@
+[[group]]
+title = "Mở trang con"
+[[page]]
+title = "config - tệp toml khác"
+desc = "Đường dẫn tuyệt đối với {HOME}"
+config = "{HOME}/etc/demo/switch.toml"
+[[page]]
+title = "config tương đối"
+desc = "Đường dẫn tính từ thư mục của trang hiện tại"
+config = "text.toml"
+[[page]]
+title = "process = true"
+desc = "Dựng từng mục một, có thanh tiến trình và khung chờ"
+config = "{HOME}/etc/demo/picker.toml"
+process = true
+placeholder-count = 3
+
+[[group]]
+title = "config-sh - trang tạo bằng script"
+[[page]]
+title = "TOML nội tuyến"
+desc = "Script in ra nội dung TOML"
+config-sh = '''
+cat << 'TOMLEND'
+[[toml]]
+
+[[group]]
+title = "Trang sinh bởi config-sh"
+[[text]]
+[[text.rows]]
+text = "Nội dung này được script in ra lúc mở trang."
+[[text.rows]]
+sh = "date '+Bây giờ: %H:%M:%S'"
+[[action]]
+title = "Action trong trang động"
+script = 'echo "Chạy từ trang động"'
+TOMLEND
+'''
+[[page]]
+title = "Script trả về đường dẫn .toml"
+desc = "Kết quả kết thúc bằng .toml được coi là đường dẫn"
+config-sh = 'echo "$HOME/etc/demo/switch.toml"'
+
+[[group]]
+title = "Liên kết ngoài"
+[[page]]
+title = "link"
+desc = "Mở trình duyệt hệ thống"
+link = "https://kakathic.github.io/Tool-Tree/website/Toml.html"
+[[page]]
+title = "html"
+desc = "Mở URL trong WebView"
+html = "https://kakathic.github.io/Tool-Tree/website/Toml.html"
+[[page]]
+title = "activity"
+desc = "Mở màn hình Cài đặt của Android"
+activity = "android.settings.SETTINGS"
+
+[[group]]
+title = "Vòng đời trang (before-load, after-load, load-ok, load-fail)"
+[[page]]
+title = "Gọi script khi nạp trang"
+desc = "Kết quả ghi vào glog demo_page_event"
+config = "{HOME}/etc/demo/switch.toml"
+before-load = 'slog demo_page_event "before-load"'
+after-load = 'slog demo_page_event "after-load"'
+load-ok = 'slog demo_page_event "load-ok"'
+load-fail = 'slog demo_page_event "load-fail"'
+[[page]]
+title = "Trang có rows bên dưới"
+desc = "page hỗ trợ rows như action"
+config = "{HOME}/etc/demo/text.toml"
+[[page.rows]]
+text = "Dòng chú thích dưới mục page"
+italic = true
+size = 12
+
+[[group]]
+title = "Khoá và giới hạn"
+[[page]]
+title = "lock - khoá tĩnh"
+desc = "Bấm sẽ hiện thông báo"
+lock = "1|Mục này bị khoá để minh hoạ"
+config = "{HOME}/etc/demo/switch.toml"
+[[page]]
+title = "min-sdk = 99"
+desc = "Cần Android SDK cao hơn máy hiện tại"
+min-sdk = 99
+config = "{HOME}/etc/demo/switch.toml"
+[[page]]
+title = "key + allow-shortcut"
+desc = "Nhấn giữ để tạo lối tắt"
+key = "demo_page_shortcut"
+allow-shortcut = true
+config = "{HOME}/etc/demo/switch.toml"

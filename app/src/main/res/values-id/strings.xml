@@ -57,7 +57,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="select_all">Pilih semua</string>
     <string name="help_title">Panduan</string>
     <string name="confirm_message">Konten pengingat</string>
-    <string name="confirm_title">Judul pengingat</string>
+    <string name="confirm_title">Pengingat</string>
     <string name="shell_executor">Eksekutor skrip</string>
     <string name="btn_skip">Lewati</string>
     <string name="btn_exit">Kembali</string>

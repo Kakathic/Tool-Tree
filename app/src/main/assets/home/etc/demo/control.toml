@@ -1,0 +1,75 @@
+[[group]]
+title = "Lựa chọn trong hộp thoại log"
+[[action]]
+title = "choose:[...]"
+desc = "Hiện hàng nút bấm, giá trị gửi về stdin"
+script = '''
+echo "choose:[performance|Hiệu năng,balanced|Cân bằng,powersave|Tiết kiệm]"
+read che_do
+echo "Bạn đã chọn: $che_do"
+'''
+[[action]]
+title = "pick:[...] / pickv / pickh"
+desc = "Liên kết bấm được ngay trong dòng log"
+script = '''
+echo "Chọn mức chi tiết:"
+echo "pickh:[1|Thấp,2|Vừa,3|Cao]"
+read muc
+echo "Mức đã chọn: $muc"
+echo "Chọn lần nữa (xếp dọc):"
+echo "pickv:[x|Mục X,y|Mục Y]"
+read muc2
+echo "Mục đã chọn: $muc2"
+'''
+
+[[group]]
+title = "Nhập văn bản"
+[[action]]
+title = "input:[...]"
+desc = "Hiện ô nhập, nội dung gửi về stdin"
+script = '''
+echo "input:[Nhập tên bản sao lưu]"
+read ten
+echo "Tên đã nhập: $ten"
+'''
+
+[[group]]
+title = "Thanh tiến trình"
+[[action]]
+title = "progress:[hiện tại/tổng]"
+desc = "Cập nhật thanh tiến trình đầu hộp thoại"
+script = '''
+total=10
+echo "progress:[-1/100]"
+sleep 1
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  echo "Đã xong $i/$total"
+  echo "progress:[$i/$total]"
+  sleep 0.3
+done
+echo "progress:[$total/$total]"
+echo "Hoàn tất"
+'''
+
+[[group]]
+title = "Gửi Intent"
+[[action]]
+title = "am:[start ...]"
+desc = "Mở màn hình Cài đặt phát triển"
+script = 'echo "am:[start -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS]"'
+[[action]]
+title = "am:[help]"
+desc = "In cú pháp đầy đủ của lệnh am"
+script = 'echo "am:[help]"'
+
+[[group]]
+title = "Khởi động lại ứng dụng"
+[[action]]
+title = "exit:[restart]"
+desc = "Khởi động lại app, dòng sau tag không được xử lý"
+confirm = true
+warn = "Ứng dụng sẽ khởi động lại"
+script = '''
+echo "Đang khởi động lại..."
+echo "exit:[restart]"
+'''

@@ -725,7 +725,7 @@ script = "..."</code></pre>
 <tr><td class="field-name">confirm-text</td><td>confirm-message</td><td class="field-type">String</td><td>Message of the confirmation dialog instead of <code>desc</code> (implies <code>confirm = true</code>). Legacy: <code>confirm = "text"</code> also works</td></tr>
 <tr><td class="field-name">warn</td><td>warning</td><td class="field-type">String</td><td>Warning text shown in the confirmation dialog</td></tr>
 <tr><td class="field-name">warn-sh</td><td>warning-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that produces warning dynamically</td></tr>
-<tr><td class="field-name">auto-off</td><td>auto-close</td><td class="field-type">Bool</td><td>Auto-close the log dialog after running. Without it, once the script has finished the log dialog can also be closed by swiping right (locked while the script is running; ignored during text selection / long-press drag and while the no-wrap log is scrolled horizontally)</td></tr>
+<tr><td class="field-name">auto-off</td><td>auto-close</td><td class="field-type">Bool</td><td>Auto-close the log dialog after running.</td></tr>
 <tr><td class="field-name">auto-finish</td><td>-</td><td class="field-type">Bool</td><td>Auto-close the page after running</td></tr>
 <tr><td class="field-name">auto-kill</td><td>-</td><td class="field-type">Bool</td><td>Auto-kill related processes</td></tr>
 <tr><td class="field-name">auto-restart</td><td>-</td><td class="field-type">Bool</td><td>Auto-restart the service</td></tr>
@@ -1300,7 +1300,7 @@ text = "Temp: 41 C"
 <tr><td class="field-name">confirm</td><td>-</td><td class="field-type">Bool</td><td>false</td><td>Same meaning as on nodes: ask before running <code>script</code> or before applying a toggle change (<code>set</code>). <code>true</code> shows the default question; legacy: a string value is still accepted as the message</td></tr>
 <tr><td class="field-name">confirm-text</td><td>confirm-message</td><td class="field-type">String</td><td>""</td><td>Message of the confirmation (implies <code>confirm = true</code>)</td></tr>
 <tr><td class="field-name">refresh-interval</td><td>refresh, interval</td><td class="field-type">Int</td><td>0</td><td>Seconds interval to automatically re-run this row's <code>sh</code>/<code>icon-sh</code>/<code>photo-sh</code> and redraw it, without waiting for the whole item to rebind (e.g. list scroll). 0 (default) = no auto refresh; when several rows declare it, the shortest interval wins</td></tr>
-<tr><td class="field-name">refresh-bar</td><td>refreshbar</td><td class="field-type">Bool</td><td>false</td><td>Show a thin countdown bar under this row that drains from full to empty until the next automatic refresh. Needs <code>refresh-interval</code> &gt; 0. The bar only appears and starts counting <strong>after the page has finished loading</strong>, and refills each time the row refreshes. It is updated about 4 times per second. Best used on a row that sits on its own line; when several rows share one line the bar spans the whole line</td></tr>
+<tr><td class="field-name">refresh-bar</td><td>refreshbar</td><td class="field-type">Bool</td><td>false</td><td>Show a thin countdown bar under this row that drains from full to empty until the next automatic refresh. Needs <code>refresh-interval</code> &gt; 0. The bar only appears and starts counting <strong>after the page has finished loading</strong>, and refills each time the row refreshes. It is redrawn about 30 times per second so the bar drains smoothly. Best used on a row that sits on its own line; when several rows share one line the bar spans the whole line</td></tr>
 <tr><td class="field-name">refresh-bar-color</td><td>refreshbarcolor</td><td class="field-type">String</td><td>green</td><td>Fill color of the countdown bar (e.g. <code>#4CAF50</code>). Default: green <code>#4CAF50</code></td></tr>
 <tr><td class="field-name">progress</td><td>-</td><td class="field-type">Float</td><td>-1</td><td>-1 (default) = no progress bar; any value &gt;= 0 draws a small inline progress bar <strong>right after the row's text/icon</strong>, filled to <code>progress / progress-max</code></td></tr>
 <tr><td class="field-name">progress-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that produces the progress value dynamically (output must be a number). Re-runs on every rows render (batched with <code>text-sh</code>/<code>icon-sh</code>/<code>photo-sh</code>) and on <code>reset</code> refreshes; overrides <code>progress</code></td></tr>
@@ -1482,7 +1482,7 @@ reset = "all"
 </section>
 <section id="editor">
 <h2>12. [[editor]] - Open file in the text editor</h2>
-<p><code>[[editor]]</code> lets the user open a file in the built-in text editor (<code>TextEditorActivity</code>) to view or edit it. If the file does not exist, the editor creates it when the user saves. Swiping right anywhere on the editor goes back to the previous page, like Back: with unsaved changes the page slides back and the save/discard dialog appears. The swipe is ignored in places where it would conflict with text gestures: the special-characters bar, an active text selection, a long-press drag, and the no-wrap editor while it is scrolled horizontally.</p>
+<p><code>[[editor]]</code> lets the user open a file in the built-in text editor (<code>TextEditorActivity</code>) to view or edit it. If the file does not exist, the editor creates it when the user saves.</p>
 <h3>12.1. Editor fields</h3>
 <div class="tbl-container">
 <table class="tbl cols-5">
@@ -2208,14 +2208,11 @@ script = "sh $state"
 </section>
 <section id="changelog">
 <h2>27. Changelog - recently added fields</h2>
-<p>Fields marked with the badge throughout this guide are summarized here, grouped by section, for quick reference when upgrading an existing config.</p>
+<p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
-<li><code>[[text.rows]]</code>: new <code>autolink</code> (alias <code>auto-link</code>, default <code>true</code>) - bare <code>http(s)://</code> / <code>www.</code> links in row text become clickable; set <code>autolink = false</code> to disable.</li>
-<li><code>[[chat]]</code>: new <code>params-shell</code> (<code>default</code> / <code>hidden</code> / <code>bg-task</code>) - run <code>params-script</code> silently or in the background instead of the log dialog.</li>
-<li><code>[[chat]]</code>: a running script is no longer stopped when leaving the page; reopening the chat reattaches to the running output.</li>
-<li><code>[[chat]]</code>: removed the <em>Markdown</em> checkbox from the 3-dot menu; <code>markdown = true</code> now always renders replies as Markdown.</li>
-<li><code>[[editor]]</code>: swipe right to go back to the previous page (asks to save/discard when there are unsaved changes; ignored on the special-characters bar, during text selection / long-press drag and while the no-wrap editor is scrolled horizontally).</li>
-<li>Log dialog (<code>shell = "default"</code>): after the script has finished, swipe right to close it, same as the Exit button (locked while running; ignored during text selection / long-press drag and while the no-wrap log is scrolled horizontally).</li>
+<li>2026-11-04 - <code>[[text.rows]]</code>: new <code>autolink</code> (alias <code>auto-link</code>, default <code>true</code>) - bare <code>http(s)://</code> / <code>www.</code> links in row text become clickable; set <code>autolink = false</code> to disable.</li>
+<li>2026-11-04 - <code>[[chat]]</code>: new <code>params-shell</code> (<code>default</code> / <code>hidden</code> / <code>bg-task</code>) - run <code>params-script</code> silently or in the background instead of the log dialog.</li>
+<li>2026-11-04 - <code>[[chat]]</code>: a running script is no longer stopped when leaving the page; reopening the chat reattaches to the running output.</li>
 </ul>
 </section>
 </main>

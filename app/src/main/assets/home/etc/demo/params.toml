@@ -1,0 +1,302 @@
+[[group]]
+title = "Nhập văn bản và số"
+[[action]]
+title = "text, int, number, password"
+desc = "Điền rồi bấm xác nhận để xem giá trị"
+script = '''
+echo "ten = $ten"
+echo "tuoi = $tuoi"
+echo "he_so = $he_so"
+echo "mat_khau có ${#mat_khau} ký tự"
+'''
+[[action.params]]
+name = "ten"
+title = "Tên"
+label = "Văn bản"
+desc = "type = text, có required và maxlength"
+type = "text"
+value = "Tool-Tree"
+placeholder = "Nhập tên"
+required = true
+maxlength = 30
+[[action.params]]
+name = "tuoi"
+title = "Tuổi"
+type = "int"
+min = 1
+max = 120
+value = "18"
+[[action.params]]
+name = "he_so"
+title = "Hệ số"
+type = "number"
+placeholder = "Số thập phân"
+[[action.params]]
+name = "mat_khau"
+title = "Mật khẩu"
+type = "password"
+placeholder = "Ẩn ký tự"
+
+[[group]]
+title = "Văn bản nhiều dòng"
+[[action]]
+title = "max-lines"
+desc = "Ô nhập cao dần tới 5 dòng rồi cuộn"
+script = 'echo "$ghi_chu"'
+[[action.params]]
+name = "ghi_chu"
+title = "Ghi chú"
+type = "text"
+max-lines = 5
+placeholder = "Nhập nhiều dòng"
+
+[[group]]
+title = "Công tắc và hộp kiểm"
+[[action]]
+title = "bool, checkbox, switch"
+desc = "desc-on hiện khi bật"
+script = '''
+echo "dong_y = $dong_y"
+echo "chay_nen = $chay_nen"
+echo "tu_dong = $tu_dong"
+'''
+[[action.params]]
+name = "dong_y"
+title = "Hộp kiểm"
+type = "checkbox"
+value = "1"
+desc = "Đang tắt"
+desc-on = "Đang bật"
+[[action.params]]
+name = "chay_nen"
+title = "Kiểu bool"
+type = "bool"
+value = "0"
+[[action.params]]
+name = "tu_dong"
+title = "Công tắc"
+type = "switch"
+value = "1"
+desc = "Tự động"
+desc-on = "Tự động đang bật"
+
+[[group]]
+title = "Thanh trượt"
+[[action]]
+title = "seekbar"
+script = 'echo "do_sang = $do_sang"'
+[[action.params]]
+name = "do_sang"
+title = "Độ sáng"
+type = "seekbar"
+min = 0
+max = 100
+value = "40"
+
+[[group]]
+title = "Chọn một giá trị (spinner / single-select)"
+[[action]]
+title = "Bảng options"
+desc = "Dùng [[action.params.options]]"
+script = 'echo "cpu = $cpu"'
+[[action.params]]
+name = "cpu"
+title = "Chế độ CPU"
+type = "spinner"
+value = "balanced"
+[[action.params.options]]
+title = "Hiệu năng"
+value = "performance"
+[[action.params.options]]
+title = "Cân bằng"
+value = "balanced"
+[[action.params.options]]
+title = "Tiết kiệm"
+value = "powersave"
+[[action]]
+title = "items - khai báo ngắn"
+script = 'echo "ngon_ngu = $ngon_ngu"'
+[[action.params]]
+name = "ngon_ngu"
+title = "Ngôn ngữ"
+type = "single-select"
+items = ["vi|Tiếng Việt", "en|English", "ru|Русский"]
+value = "vi"
+[[action]]
+title = "options-sh, editable, allow-no-selection"
+script = 'echo "kieu_dong = $kieu_dong / tu_go = $tu_go"'
+[[action.params]]
+name = "kieu_dong"
+title = "Danh sách sinh bằng script"
+type = "spinner"
+options-sh = '''
+echo "1|Mục một"
+echo "2|Mục hai"
+echo "3|Mục ba"
+'''
+allow-no-selection = true
+[[action.params]]
+name = "tu_go"
+title = "Vừa chọn vừa gõ"
+type = "spinner"
+editable = true
+items = ["abc", "xyz"]
+
+[[group]]
+title = "Chọn nhiều giá trị (multi-select)"
+[[action]]
+title = "multi-select"
+desc = "Giá trị cách nhau bằng separator"
+script = 'echo "tinh_nang = $tinh_nang"'
+[[action.params]]
+name = "tinh_nang"
+title = "Tính năng"
+type = "multi-select"
+multiple = true
+separator = ","
+value = ["a", "c"]
+items = ["a|Tính năng A", "b|Tính năng B", "c|Tính năng C", "d|Tính năng D"]
+
+[[group]]
+title = "Tệp, thư mục và ứng dụng"
+[[action]]
+title = "file, folder"
+script = '''
+echo "tep = $tep"
+echo "thu_muc = $thu_muc"
+echo "tep_sua_duoc = $tep_sua_duoc"
+'''
+[[action.params]]
+name = "tep"
+title = "Chọn tệp"
+type = "file"
+suffix = "zip,apk"
+path-home = "/sdcard"
+[[action.params]]
+name = "thu_muc"
+title = "Chọn thư mục"
+type = "folder"
+path-home = "/sdcard"
+[[action.params]]
+name = "tep_sua_duoc"
+title = "Đường dẫn gõ tay được"
+type = "file"
+editable = true
+[[action]]
+title = "app, packages"
+script = 'echo "ung_dung = $ung_dung"'
+[[action.params]]
+name = "ung_dung"
+title = "Ứng dụng"
+type = "app"
+multiple = true
+separator = ","
+
+[[group]]
+title = "Màu sắc"
+[[action]]
+title = "color"
+script = 'echo "mau = $mau"'
+[[action.params]]
+name = "mau"
+title = "Màu nền"
+type = "color"
+value = "#0DBDA2"
+
+[[group]]
+title = "Giá trị động và ghi nhớ"
+[[action]]
+title = "value-sh, placeholder-sh, label-sh, desc-sh, title-sh"
+script = 'echo "gio = $gio"'
+[[action.params]]
+name = "gio"
+title-sh = 'echo "Tiêu đề động"'
+label-sh = 'echo "Nhãn động"'
+desc-sh = 'echo "Mô tả động"'
+placeholder-sh = 'echo "Gợi ý động"'
+type = "text"
+value-sh = 'date +%H:%M:%S'
+[[action]]
+title = "remember"
+desc = "Nhớ giá trị lần nhập cuối"
+script = 'echo "nho = $nho"'
+[[action.params]]
+name = "nho"
+title = "Giá trị được nhớ"
+type = "text"
+remember = true
+[[action]]
+title = "remember = false"
+script = 'echo "khong_nho = $khong_nho"'
+[[action.params]]
+name = "khong_nho"
+title = "Luôn quay về giá trị mặc định"
+type = "text"
+value = "mặc định"
+remember = false
+
+[[group]]
+title = "readonly, sort và apply"
+[[action]]
+title = "readonly và sort"
+desc = "Tham số chỉ đọc được đẩy xuống cuối"
+script = 'echo "a = $a_sua / b = $b_khoa"'
+[[action.params]]
+name = "b_khoa"
+title = "Chỉ đọc"
+type = "text"
+value = "Không sửa được"
+readonly = true
+sort = true
+[[action.params]]
+name = "a_sua"
+title = "Sửa được"
+type = "text"
+value = "Sửa đi"
+[[action]]
+title = "apply - script gắn theo tham số"
+desc = "Chạy trước script chính, theo thứ tự tham số"
+script = 'echo "Script chính: $buoc2"'
+[[action.params]]
+name = "buoc1"
+title = "Bước 1"
+type = "text"
+value = "một"
+apply = 'echo "apply bước 1: $buoc1"'
+[[action.params]]
+name = "buoc2"
+title = "Bước 2"
+type = "text"
+value = "hai"
+apply = 'echo "apply bước 2: $buoc2"'
+
+[[group]]
+title = "Khối rows trong hộp thoại"
+[[action]]
+title = "type = rows"
+desc = "Chèn chữ và ảnh giữa các ô nhập"
+script = 'echo "khoa_api = $khoa_api"'
+[[action.params]]
+type = "rows"
+bg-color = "#1A2196F3"
+stroke-color = "#552196F3"
+radius = 12
+padding = 12
+[[action.params.rows]]
+text = "Lấy khoá API trước khi nhập"
+bold = true
+[[action.params.rows]]
+text = "Khối này chỉ hiển thị, không gửi giá trị cho script."
+size = 12
+break = true
+[[action.params]]
+name = "khoa_api"
+title = "Khoá API"
+type = "password"
+[[action.params]]
+type = "rows"
+[[action.params.rows]]
+line = true
+[[action.params.rows]]
+text = "Khối thứ hai nằm sau ô nhập, mở đầu bằng đường kẻ."
+size = 12

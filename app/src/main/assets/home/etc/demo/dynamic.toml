@@ -1,0 +1,65 @@
+[[group]]
+title = "Trường -sh sinh bằng script"
+[[action]]
+title-sh = 'echo "Tiêu đề: $(date +%H:%M)"'
+desc-sh = 'echo "Mô tả: máy $(getprop ro.product.model)"'
+summary-sh = 'echo "Phụ: Android $(getprop ro.build.version.release)"'
+script = 'echo ok'
+[[action]]
+title = "icon-sh"
+icon-sh = 'echo "{ICON}/info.png"'
+script = 'echo ok'
+[[action]]
+title = "lock-sh"
+desc = "Khoá khi script trả về 1"
+lock-sh = 'echo 0'
+script = 'echo "Không bị khoá"'
+
+[[group]]
+title = "support - ẩn hiện theo điều kiện"
+[[action]]
+title = "support = shell"
+desc = "Chỉ hiện khi script trả về đúng 1"
+support = 'echo 1'
+script = 'echo ok'
+[[action]]
+title = "Hiện khi máy có root"
+desc = "{ROT} bằng 1 nếu đã root"
+support = "[ {ROT} = 1 ] && echo 1"
+script = 'echo "Máy có root"'
+[[action]]
+title = "Khoá khi chưa root"
+desc = "lock dùng {LOT}"
+lock = "{LOT}|Cần quyền root"
+script = 'echo "Có root"'
+
+[[group]]
+title = "Tải chậm bằng load-after"
+[[action]]
+title = "Mục dựng sau khi trang đã hiện"
+desc = "load-after = true"
+load-after = true
+title-sh = 'sleep 1; echo "Dựng xong sau 1 giây"'
+script = 'echo ok'
+
+[[group]]
+title = "Biến sẵn có"
+[[text]]
+[[text.rows]]
+text = "Root: {ROT} (1 là đã root)"
+[[text.rows]]
+text = "Không root: {LOT}"
+break = true
+[[text.rows]]
+text = "Nhãn root: {TEXT_ROOT}"
+break = true
+
+[[end]]
+
+[[text]]
+[[text.rows]]
+line = true
+[[text.rows]]
+text = "Khối ngoài nhóm: có thể khai báo load-key, load-text, load-toml ở đầu tệp để thay chuỗi hoặc chèn TOML động (xem tài liệu mục 2.7)."
+size = 12
+alpha = 0.85

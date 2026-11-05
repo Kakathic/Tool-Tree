@@ -1,0 +1,72 @@
+[[group]]
+title = "Chọn một giá trị"
+[[picker]]
+title = "Bảng options"
+desc = "Dùng [[picker.options]]"
+get = "glog demo_picker_opt"
+set = 'slog demo_picker_opt "$state"; echo "Đã chọn: $state"'
+[[picker.options]]
+title = "Hiệu năng"
+value = "performance"
+[[picker.options]]
+title = "Cân bằng"
+value = "balanced"
+[[picker.options]]
+title = "Tiết kiệm"
+value = "powersave"
+[[picker]]
+title = "items - khai báo ngắn"
+desc = "Mỗi phần tử có dạng giá trị|tiêu đề"
+items = ["vi|Tiếng Việt", "en|English", "ru|Русский", "fr"]
+get = "glog demo_picker_items"
+set = 'slog demo_picker_items "$state"; echo "Đã chọn: $state"'
+[[picker]]
+title = "option-sh"
+desc = "Danh sách sinh bằng script"
+option-sh = '''
+for n in 1 2 3 4 5; do
+  echo "$n|Mục số $n"
+done
+'''
+get = "glog demo_picker_sh"
+set = 'slog demo_picker_sh "$state"; echo "Đã chọn: $state"'
+
+[[group]]
+title = "Chọn nhiều giá trị"
+[[picker]]
+title = "multiple = true"
+desc = "Các giá trị cách nhau bằng separator"
+multiple = true
+separator = ","
+items = ["a|Tính năng A", "b|Tính năng B", "c|Tính năng C", "d|Tính năng D"]
+get = "glog demo_picker_multi"
+set = 'slog demo_picker_multi "$state"; echo "Đã chọn: $state"'
+
+[[group]]
+title = "Tuỳ chọn khác"
+[[picker]]
+title = "confirm"
+confirm = true
+items = ["x|Tuỳ chọn X", "y|Tuỳ chọn Y"]
+get = "glog demo_picker_confirm"
+set = 'slog demo_picker_confirm "$state"; echo "Đã chọn: $state"'
+[[picker]]
+title = "bg-task"
+desc = "Chạy nền, không hộp thoại"
+shell = "bg-task"
+items = ["x|Tuỳ chọn X", "y|Tuỳ chọn Y"]
+get = "glog demo_picker_bg"
+set = 'slog demo_picker_bg "$state"'
+[[picker]]
+title = "lock"
+lock = "1|Mục đang bị khoá"
+items = ["x|Tuỳ chọn X"]
+[[picker]]
+title = "Picker có rows"
+items = ["x|Tuỳ chọn X", "y|Tuỳ chọn Y"]
+get = "glog demo_picker_rows"
+set = 'slog demo_picker_rows "$state"'
+[[picker.rows]]
+text = "Dòng chú thích dưới picker"
+italic = true
+size = 12

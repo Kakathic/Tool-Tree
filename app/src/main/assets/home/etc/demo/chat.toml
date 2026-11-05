@@ -1,0 +1,59 @@
+[[group]]
+title = "Chat cơ bản"
+[[chat]]
+title = "Chat nhắc lại"
+desc = "Script in lại tin nhắn $MSG"
+chat-title = "Bot nhắc lại"
+user-title = "Bạn"
+greeting = "Xin chào! Gõ gì đó rồi gửi."
+placeholder = "Nhập tin nhắn"
+script = 'echo "Bạn vừa gõ: $MSG"'
+
+[[group]]
+title = "Markdown, nhiều dòng và lời chào động"
+[[chat]]
+title = "Chat Markdown"
+desc = "Hiển thị câu trả lời dạng Markdown"
+chat-title = "Bot Markdown"
+user-title = "Bạn"
+markdown = true
+max-lines = 4
+greeting-sh = 'echo "Chào bạn! Bây giờ là **$(date +%H:%M)**."'
+script = '''
+echo "**Bạn nói:** $MSG"
+echo
+echo "- Mã cuộc trò chuyện: \`$CHAT_ID\`"
+'''
+
+[[group]]
+title = "Tham số, menu 3 chấm và thực thi lệnh"
+[[chat]]
+title = "Chat đầy đủ"
+desc = "Có nút tuỳ chọn, menu và thực thi lệnh"
+chat-title = "Shell helper"
+user-title = "Bạn"
+markdown = true
+greeting = "Gõ tên một lệnh, ví dụ: date"
+params-title = "Cài đặt chat"
+params-shell = "hidden"
+params-script = 'echo "MODE=$MODE"'
+script = '''
+echo "[$MODE] Đang chạy: $MSG"
+sh -c "$MSG" 2>&1
+'''
+[[chat.params]]
+name = "MODE"
+title = "Chế độ"
+type = "spinner"
+value = "safe"
+items = ["safe|An toàn", "fast|Nhanh"]
+[[chat.menu]]
+title = "Xoá lịch sử"
+type = "clear"
+[[chat.menu]]
+title = "Xoá bộ nhớ"
+script = 'echo "Đã xoá bộ nhớ của $CHAT_ID"'
+silent = true
+[[chat.menu]]
+title = "Đóng"
+type = "close"

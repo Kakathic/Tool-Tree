@@ -1,0 +1,177 @@
+[[group]]
+title = "Kiểu chữ"
+[[text]]
+title = "Định dạng cơ bản"
+[[text.rows]]
+text = "Chữ đậm"
+bold = true
+[[text.rows]]
+text = "Chữ nghiêng"
+italic = true
+break = true
+[[text.rows]]
+text = "Gạch chân"
+underline = true
+break = true
+[[text.rows]]
+text = "Gạch ngang"
+strikethrough = true
+break = true
+[[text.rows]]
+text = "Phông đơn cách: ls -la /sdcard"
+monospace = true
+break = true
+[[text.rows]]
+text = "Chữ màu và cỡ lớn"
+foreground = "#E91E63"
+size = 18
+break = true
+[[text.rows]]
+text = "Nền màu cho dòng"
+bg-color = "#332196F3"
+break = true
+[[text.rows]]
+text = "Mờ 50%"
+alpha = 0.5
+break = true
+[[text.rows]]
+text = "Giãn chữ và giãn dòng"
+letter-spacing = 0.1
+line-height = 1.6
+break = true
+
+[[group]]
+title = "Đường kẻ và khoảng cách"
+[[text]]
+[[text.rows]]
+text = "Dòng phía trên đường kẻ"
+[[text.rows]]
+line = true
+[[text.rows]]
+text = "Dòng phía dưới đường kẻ"
+[[text.rows]]
+text = "Cách trên 16dp"
+margin-top = 16
+break = true
+[[text.rows]]
+text = "Cách dưới 16dp"
+margin-bottom = 16
+break = true
+[[text.rows]]
+text = "Dòng cuối"
+break = true
+
+[[group]]
+title = "Căn lề và chia cột"
+[[text]]
+[[text.rows]]
+text = "Căn giữa"
+align = "center"
+[[text.rows]]
+text = "Căn phải"
+align = "right"
+break = true
+[[text.rows]]
+text = "CPU"
+break = true
+[[text.rows]]
+text = "68°C"
+align = "center"
+[[text.rows]]
+text = "Chi tiết"
+align = "right"
+link = "https://kakathic.github.io/Tool-Tree/website/Toml.html"
+
+[[group]]
+title = "Markdown nội tuyến"
+[[text]]
+[[text.rows]]
+text = "**đậm**, *nghiêng*, ~~gạch ngang~~, {chữ đỏ}(red), {chữ #0DBDA2}(#0DBDA2)"
+markdown = true
+[[text.rows]]
+text = "Liên kết: [mở tài liệu](https://kakathic.github.io/Tool-Tree/website/Toml.html)"
+markdown = true
+break = true
+[[text.rows]]
+text = "Khung mã: `echo hello` và `{OK}(green)`, bo góc lớn: `big|20`"
+markdown = true
+break = true
+[[text.rows]]
+text = "Hiện nguyên ký hiệu: ```**không đậm**```"
+markdown = true
+break = true
+
+[[group]]
+title = "Liên kết và sao chép"
+[[text]]
+[[text.rows]]
+text = "Tự nhận liên kết: https://kakathic.github.io/Tool-Tree"
+[[text.rows]]
+text = "Tắt tự nhận liên kết: https://example.com"
+autolink = false
+break = true
+[[text.rows]]
+text = "Bấm để mở trang web"
+link = "https://example.com"
+underline = true
+break = true
+[[text.rows]]
+text = "Nhấn giữ để chọn và sao chép nội dung khối này"
+copy = true
+break = true
+
+[[group]]
+title = "Biểu tượng và ảnh"
+[[text]]
+[[text.rows]]
+text = "Dòng có biểu tượng trước chữ"
+icon = "{ICON}/info.png"
+icon-size = 20
+[[text.rows]]
+text = "Dòng có biểu tượng sau chữ"
+icon = "{ICON}/info.png"
+icon-position = "after"
+icon-size = 20
+break = true
+[[text.rows]]
+photo = "{ICON}/info.png"
+break = true
+
+[[group]]
+title = "Mục text có tiêu đề và mô tả"
+[[text]]
+title = "Tiêu đề khối"
+desc = "text hỗ trợ cả title, desc, summary"
+summary = "Dòng phụ chữ nhỏ"
+[[text.rows]]
+text = "Nội dung bên trong khối"
+
+[[group]]
+title = "Hàng chạy script"
+[[text]]
+[[text.rows]]
+text = "Bấm để chạy script (hiện log)"
+script = 'echo "Hàng này vừa được bấm"'
+underline = true
+[[text.rows]]
+text = "Bấm để chạy và hiện Toast"
+script = 'echo "Xong"'
+toast = true
+underline = true
+break = true
+[[text.rows]]
+text = "Bấm có xác nhận"
+script = 'echo "Đã xác nhận"'
+confirm-text = "Chạy hàng này?"
+underline = true
+break = true
+
+[[end]]
+
+[[text]]
+[[text.rows]]
+line = true
+[[text.rows]]
+text = "Khối này nằm ngoài nhóm. Hàng line = true ở đầu tạo đường kẻ ngăn cách với phần phía trên."
+size = 12
+alpha = 0.85

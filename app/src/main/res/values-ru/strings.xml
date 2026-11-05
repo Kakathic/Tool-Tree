@@ -65,7 +65,7 @@
     <string name="select_all">Выбрать все</string>
     <string name="help_title">Инструкция</string>
     <string name="confirm_message">Текст уведомления</string>
-    <string name="confirm_title">Заголовок уведомления</string>
+    <string name="confirm_title">Напоминание</string>
     <string name="shell_executor">Исполнитель скриптов</string>
     <string name="btn_skip">Пропустить</string>
     <string name="btn_exit">Выход</string>

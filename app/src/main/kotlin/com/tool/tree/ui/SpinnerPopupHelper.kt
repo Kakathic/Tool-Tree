@@ -47,6 +47,8 @@ object SpinnerPopupHelper {
         val maxWidth = screenWidth.coerceAtLeast(minWidthPx)
 
         val unspecified = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        // Item inflated with parent == null has no LayoutParams -> TextView.onMeasure NPE
+        itemViews.forEach { ensureLayoutParams(it) }
         var maxItemWidth = 0
         for (itemView in itemViews) {
             val naturalWidth = measureNaturalWidth(itemView, unspecified)
@@ -93,6 +95,15 @@ object SpinnerPopupHelper {
         popup.horizontalOffset = offset
         if (applyVerticalOffset) {
             popup.verticalOffset = if (extraTopGapPx > 0) -extraTopGapPx else -anchor.height
+        }
+    }
+
+    private fun ensureLayoutParams(view: View) {
+        if (view.layoutParams == null) {
+            view.layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
         }
     }
 

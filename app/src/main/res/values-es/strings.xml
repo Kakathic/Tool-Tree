@@ -60,7 +60,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="select_all">Seleccionar todo</string>
     <string name="help_title">Instrucciones</string>
     <string name="confirm_message">Mensaje de aviso</string>
-    <string name="confirm_title">Título del aviso</string>
+    <string name="confirm_title">Aviso recordatorio</string>
     <string name="shell_executor">Ejecutor de scripts</string>
     <string name="btn_skip">Omitir</string>
     <string name="btn_exit">Salir</string>

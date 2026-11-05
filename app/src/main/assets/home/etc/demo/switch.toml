@@ -1,0 +1,73 @@
+[[group]]
+title = "Công tắc cơ bản"
+[[switch]]
+title = "Công tắc đơn giản"
+desc = "get đọc trạng thái, set nhận $state"
+get = "glog demo_switch_basic"
+set = 'slog demo_switch_basic "$state"'
+[[switch]]
+title = "Không có get"
+desc = "Luôn khởi đầu ở trạng thái tắt"
+set = 'echo "state = $state"'
+[[switch]]
+title = "Không có set"
+desc = "Đổi trạng thái không chạy script"
+get = "echo 1"
+
+[[group]]
+title = "Hiện kết quả"
+[[switch]]
+title = "Hiện log sau khi gạt"
+get = "glog demo_switch_log"
+set = '''
+slog demo_switch_log "$state"
+echo "Đã đặt trạng thái: $state"
+'''
+[[switch]]
+title = "auto-off"
+desc = "Tự đóng log khi chạy xong"
+auto-off = true
+get = "glog demo_switch_auto"
+set = '''
+slog demo_switch_auto "$state"
+echo "Sẽ tự đóng"
+'''
+[[switch]]
+title = "shell = bg-task"
+desc = "Chạy nền, không hộp thoại"
+shell = "bg-task"
+get = "glog demo_switch_bg"
+set = 'slog demo_switch_bg "$state"'
+
+[[group]]
+title = "Xác nhận và khoá"
+[[switch]]
+title = "confirm"
+desc = "Hỏi trước khi đổi"
+confirm = true
+get = "glog demo_switch_confirm"
+set = 'slog demo_switch_confirm "$state"'
+[[switch]]
+title = "lock"
+lock = "1|Công tắc đang bị khoá"
+get = "echo 1"
+[[switch]]
+title = "reload-page"
+desc = "Tải lại cả trang sau khi gạt"
+reload-page = true
+get = "glog demo_switch_reload"
+set = 'slog demo_switch_reload "$state"'
+
+[[group]]
+title = "rows dưới công tắc"
+[[switch]]
+title = "Công tắc có dòng phụ"
+get = "glog demo_switch_rows"
+set = 'slog demo_switch_rows "$state"'
+[[switch.rows]]
+text = "Dòng chú thích nằm dưới công tắc"
+italic = true
+size = 12
+[[switch.rows]]
+sh = "echo Trạng thái lưu: $(glog demo_switch_rows)"
+size = 12
