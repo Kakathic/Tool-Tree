@@ -38,7 +38,7 @@ class ListItemGroup(context: Context,
         if (view.getTag(R.id.kr_layout_ac) != null) return
         val content = view.findViewById<ViewGroup>(R.id.kr_layout_ac) ?: return
         val d = context.resources.displayMetrics.density
-        val cutTop = (7 * d).toInt()
+        val cutTop = (4 * d).toInt()
         val cutBottom = (4 * d).toInt()
         val startOld = (6 * d).toInt()
         val startNew = (2 * d).toInt()
