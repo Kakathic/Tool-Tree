@@ -1,6 +1,9 @@
 package com.omarea.krscript.ui
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.TimeInterpolator
+import android.animation.ValueAnimator
 import android.transition.ChangeBounds
 import android.transition.Fade
 import android.transition.TransitionManager
@@ -89,6 +92,7 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
     private var currentParamInfos: ArrayList<ActionParamInfo> = ArrayList()
     
     private val visibilityState = HashMap<String, Boolean>()
+    private val collapsingAnimators = HashMap<String, ValueAnimator>()
 
     fun renderList(actionParamInfos: ArrayList<ActionParamInfo>, config: NodeInfoBase, fileChooser: ParamsFileChooserRender.FileChooserInterface?) {
         val seenNames = HashSet<String>()
@@ -363,14 +367,45 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
             if (!changedThisPass) break
         }
 
+        // A row that is still collapsing but should be visible again: stop the collapse first
+        for ((name, animator) in ArrayList(collapsingAnimators.entries)) {
+            if (working[name] != false) animator.cancel()
+        }
+
+        // Rows that go visible -> hidden are collapsed by height (see collapseRow) instead of being
+        // removed in a ChangeBounds transition, which clips the rows below while they slide up
+        val hidingNames = HashSet<String>()
+        var showingAny = false
+        for (info in currentParamInfos) {
+            val name = info.name ?: continue
+            val shouldShow = working[name] ?: continue
+            val old = previousState[name] ?: continue
+            if (old == shouldShow) continue
+            if (shouldShow) {
+                showingAny = true
+            } else if (!info.dependReadonly && rowViews[name]?.visibility == View.VISIBLE) {
+                hidingNames.add(name)
+            }
+        }
+
         if (previousState.isNotEmpty()) {
-            TransitionManager.beginDelayedTransition(linearLayout, buildRowVisibilityTransition())
+            if (hidingNames.isEmpty() && collapsingAnimators.isEmpty()) {
+                TransitionManager.beginDelayedTransition(linearLayout, buildRowVisibilityTransition())
+            } else if (showingAny) {
+                TransitionManager.beginDelayedTransition(
+                    linearLayout,
+                    TransitionSet()
+                        .addTransition(Fade(Fade.IN))
+                        .setDuration(ROW_ANIM_DURATION_MS)
+                        .setInterpolator(standardMotionInterpolator())
+                )
+            }
         }
 
         for (info in currentParamInfos) {
             val name = info.name ?: continue
             val shouldShow = working[name] ?: continue
-            applyVisibility(name, shouldShow, previousState[name])
+            applyVisibility(name, shouldShow, previousState[name], hidingNames.contains(name))
         }
 
         applyDependSort()
@@ -606,7 +641,46 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
         }
     }
 
-    private fun applyVisibility(name: String, shouldShow: Boolean, oldState: Boolean?) {
+    private fun collapseRow(name: String, view: View) {
+        val startHeight = view.height
+        val lp = view.layoutParams as? ViewGroup.MarginLayoutParams
+        if (lp == null || startHeight <= 0 || !view.isAttachedToWindow) {
+            view.visibility = View.GONE
+            return
+        }
+
+        val origHeight = lp.height
+        val origTop = lp.topMargin
+        val origBottom = lp.bottomMargin
+        val origAlpha = view.alpha
+
+        val animator = ValueAnimator.ofFloat(1f, 0f)
+        animator.duration = ROW_ANIM_DURATION_MS
+        animator.interpolator = standardMotionInterpolator()
+        animator.addUpdateListener {
+            val f = it.animatedValue as Float
+            lp.height = (startHeight * f).toInt().coerceAtLeast(0)
+            lp.topMargin = (origTop * f).toInt()
+            lp.bottomMargin = (origBottom * f).toInt()
+            view.alpha = origAlpha * f
+            view.layoutParams = lp
+        }
+        animator.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                if (collapsingAnimators[name] === animation) collapsingAnimators.remove(name)
+                lp.height = origHeight
+                lp.topMargin = origTop
+                lp.bottomMargin = origBottom
+                view.alpha = origAlpha
+                view.visibility = View.GONE
+                view.layoutParams = lp
+            }
+        })
+        collapsingAnimators[name] = animator
+        animator.start()
+    }
+
+    private fun applyVisibility(name: String, shouldShow: Boolean, oldState: Boolean?, collapse: Boolean = false) {
         visibilityState[name] = shouldShow
 
         val view = rowViews[name]
@@ -618,7 +692,13 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
             view?.visibility = View.VISIBLE
             view?.let { setRowInteractive(it, effectiveEnabled, animate = !isInitial) }
         } else if (view != null) {
-            view.visibility = if (shouldShow) View.VISIBLE else View.GONE
+            if (collapse) {
+                collapseRow(name, view)
+            } else if (collapsingAnimators.containsKey(name) && !shouldShow) {
+                // already collapsing toward hidden, let it finish
+            } else {
+                view.visibility = if (shouldShow) View.VISIBLE else View.GONE
+            }
         }
 
         if (oldState != null && oldState != shouldShow) {
