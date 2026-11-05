@@ -24,9 +24,9 @@ class ListItemText(context: Context,
 
     init {
         if (compact) {
-            // Text nằm trực tiếp ngoài group: padding nhỏ (4dp ngang/trên, 8dp dưới), trong group giữ padding của layout
+            // Text nằm trực tiếp ngoài group: padding nhỏ (2dp ngang, 4dp trên, 8dp dưới), trong group giữ padding của layout
             val d = context.resources.displayMetrics.density
-            layout.findViewById<View?>(R.id.kr_text_content)?.setPadding((4 * d).toInt(), (4 * d).toInt(), (4 * d).toInt(), (8 * d).toInt())
+            layout.findViewById<View?>(R.id.kr_text_content)?.setPadding((2 * d).toInt(), (4 * d).toInt(), (2 * d).toInt(), (8 * d).toInt())
         }
         // Khối rows của text chỉ cách phần mô tả 4dp, thêm 8dp phía trên đường kẻ đầu khối để đường kẻ không dính sát chữ
         RowsRenderHelper.markCompactLeadingDivider(rowsView, 8)
