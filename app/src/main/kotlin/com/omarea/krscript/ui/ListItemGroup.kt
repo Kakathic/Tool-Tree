@@ -30,6 +30,30 @@ class ListItemGroup(context: Context,
         if (view.foreground != null) {
             view.foreground = ContextCompat.getDrawable(context, R.drawable.krscript_item_ripple_ac)
         }
+        applyRootCompactSpacing(view)
+    }
+
+    // Item nằm trực tiếp ngoài group không có thẻ nền nên khoảng đệm trên/dưới mặc định (thiết kế cho item trong thẻ)
+    // làm khoảng cách giữa 2 mục liền kề quá lớn. Thu gọn margin dọc của phần nội dung và bỏ chiều cao tối thiểu.
+    // Item trong group không bị ảnh hưởng. Muốn chỉnh độ thưa/chặt thì đổi 2 hằng số bên dưới.
+    private val rootTrimTopDp = 7
+    private val rootTrimBottomDp = 4
+
+    private fun applyRootCompactSpacing(view: View) {
+        if (view.getTag(R.id.kr_layout_ac) != null) return
+        val content = view.findViewById<ViewGroup?>(R.id.kr_layout_ac) ?: return
+        val density = context.resources.displayMetrics.density
+        val trimTop = (rootTrimTopDp * density).toInt()
+        val trimBottom = (rootTrimBottomDp * density).toInt()
+        for (i in 0 until content.childCount) {
+            val child = content.getChildAt(i)
+            val lp = child.layoutParams as? ViewGroup.MarginLayoutParams ?: continue
+            lp.topMargin = (lp.topMargin - trimTop).coerceAtLeast(0)
+            lp.bottomMargin = (lp.bottomMargin - trimBottom).coerceAtLeast(0)
+            child.layoutParams = lp
+        }
+        view.minimumHeight = 0
+        view.setTag(R.id.kr_layout_ac, true)
     }
 
     fun addPlaceholders(views: List<View>) {
