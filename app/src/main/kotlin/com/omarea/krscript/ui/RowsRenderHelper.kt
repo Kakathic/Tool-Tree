@@ -333,7 +333,7 @@ object RowsRenderHelper {
 
         val lineGroups = splitIntoLineGroups(rows)
 
-        for ((groupIndex, group) in lineGroups.withIndex()) {
+        for (group in lineGroups) {
             val firstRow = rows[group.first()]
 
             if (firstRow.line) {
@@ -349,9 +349,7 @@ object RowsRenderHelper {
                     dividerLine.setSpan(CompactDividerSpan(context, dpToPx(context, 6), dpToPx(context, 9)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
                 rowsView.append(dividerLine)
-                if (!(groupIndex == lineGroups.lastIndex && group.size == 1)) {
-                    rowsView.append("\n")
-                }
+                rowsView.append("\n")
             } else if (rowsView.length() > 0) {
                 rowsView.append("\n")
             }
