@@ -17,7 +17,7 @@ object AppUpdateChecker {
     const val APK_FILE_NAME = "Tool-Tree.apk"
     private const val TAG = "AppUpdateChecker"
     private const val CHANGELOG_CACHE = "changelog_cache.md"
-    private const val RESULT_TTL_MS = 5 * 60 * 1000L
+    private const val RESULT_TTL_MS = 3 * 60 * 1000L
 
     @Volatile private var lastResult: AppUpdateCheckResult? = null
     @Volatile private var lastResultTime = 0L

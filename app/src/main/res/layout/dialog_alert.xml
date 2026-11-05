@@ -17,12 +17,7 @@
 
         <TextView
             android:id="@+id/confirm_title"
-            style="@style/textTitle"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="16dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            style="@style/dialogTitle"
             android:text="@string/confirm_title" />
 
         <ScrollView
@@ -42,12 +37,8 @@
                 <TextView
                     android:id="@+id/confirm_message"
                     android:textIsSelectable="true"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:paddingTop="8dp"
                     android:paddingBottom="16dp"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    style="@style/dialogDesc"
                     android:text="@string/confirm_message" />
 
                 <FrameLayout
