@@ -205,6 +205,14 @@ home (){
   '
 }
 '''
+
+[[group]]
+[[page]]
+title = "@manage_addon_title"
+icon = "{ICON}/manage_addon.png"
+process = true
+config-sh = "exec $ETC/add-on.bash $UZZ"
+
 [[group]]
 [[editor]]
 id = "shella"
@@ -216,10 +224,3 @@ need-input = true
 placeholder = "#bash|sh|python"
 value = """# bash
 """
-
-[[group]]
-[[page]]
-title = "@manage_addon_title"
-icon = "{ICON}/manage_addon.png"
-process = true
-config-sh = "exec $ETC/add-on.bash $UZZ"
