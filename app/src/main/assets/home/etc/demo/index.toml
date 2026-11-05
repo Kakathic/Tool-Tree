@@ -4,6 +4,13 @@ load-key-sh = 'ETC="$ETC/demo" langpath'
 
 [[text]]
 [[text.rows]]
+sh = 'echo "${PAGE_CONFIG_FILE:-$ETC/demo/index.toml}"'
+monospace = true
+size = 11
+alpha = 0.7
+copy = true
+[[text.rows]]
+break = true
 text = "@idx_001"
 bold = true
 size = 15

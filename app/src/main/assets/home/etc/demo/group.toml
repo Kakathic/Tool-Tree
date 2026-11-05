@@ -4,6 +4,13 @@ load-key-sh = 'ETC="$ETC/demo" langpath'
 
 [[text]]
 [[text.rows]]
+sh = 'echo "${PAGE_CONFIG_FILE:-$ETC/demo/group.toml}"'
+monospace = true
+size = 11
+alpha = 0.7
+copy = true
+[[text.rows]]
+break = true
 text = "@grp_001"
 size = 12
 alpha = 0.85
