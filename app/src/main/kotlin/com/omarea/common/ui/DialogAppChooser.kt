@@ -19,6 +19,8 @@ class DialogAppChooser(
     private var callback: Callback? = null
 ) : DialogFullScreen(R.layout.dialog_app_chooser, darkMode) {
 
+    var fadeAnimation = false
+
     private var allowAllSelect = true
     private var excludeApps: Array<String> = arrayOf()
     private lateinit var adapter: AdapterAppChooser
@@ -27,6 +29,10 @@ class DialogAppChooser(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        if (fadeAnimation) {
+            dialog?.window?.setWindowAnimations(R.style.windowAnim2)
+        }
 
         loadingView = view.findViewById(R.id.loading)
         showLoading(true)

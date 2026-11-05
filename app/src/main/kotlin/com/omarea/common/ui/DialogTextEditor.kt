@@ -18,6 +18,8 @@ class DialogTextEditor(
         fun onConfirm(text: String)
     }
 
+    var fadeAnimation = false
+
     private var editText: EditText? = null
 
     private var editHint: CharSequence? = null
@@ -38,6 +40,10 @@ class DialogTextEditor(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        if (fadeAnimation) {
+            dialog?.window?.setWindowAnimations(R.style.windowAnim2)
+        }
 
         val titleView = view.findViewById<TextView>(R.id.dialog_title)
         if (!title.isNullOrEmpty()) {

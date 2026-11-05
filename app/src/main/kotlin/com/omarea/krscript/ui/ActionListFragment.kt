@@ -663,11 +663,17 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                     dialog?.dismiss()
                                     return@setOnClickListener
                                 }
-                                actionExecute(action, ParamsApplyScript.merge(script, actionParamInfos, render), onExit, paramsValue)
                                 val shellMode = resolveShellBy(action, paramsValue)
                                 val keepOpen = action.keepParamsDialog &&
                                     shellMode != RunnableNode.shellModeBgTask &&
                                     shellMode != RunnableNode.shellModeHidden
+                                actionExecute(
+                                    action,
+                                    ParamsApplyScript.merge(script, actionParamInfos, render),
+                                    onExit,
+                                    paramsValue,
+                                    fadeLog = keepOpen && isLongList
+                                )
                                 if (!keepOpen) dialog?.dismiss()
                             } catch (ex: Exception) {
                                 Toast.makeText(requireContext(), "" + ex.message, Toast.LENGTH_LONG).show()
@@ -730,7 +736,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
     }
 
     var hiddenTaskRunning = false
-    private fun actionExecute(nodeInfo: RunnableNode, script: String, onExit: Runnable, params: HashMap<String, String>?) {
+    private fun actionExecute(nodeInfo: RunnableNode, script: String, onExit: Runnable, params: HashMap<String, String>?, fadeLog: Boolean = false) {
         val context = requireContext()
         val onDismiss = Runnable { krScriptActionHandler?.onActionCompleted(nodeInfo) }
 
@@ -754,6 +760,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                 val darkMode = themeMode?.isDarkMode ?: false
                 val dialog = DialogLogFragment.create(nodeInfo, onExit, onDismiss, script, params, darkMode)
                 dialog.isCancelable = false
+                dialog.fadeAnimation = fadeLog
                 dialog.show(parentFragmentManager, "")
             }
         }

@@ -79,6 +79,7 @@ class DialogLogFragment : DialogFragment() {
     private lateinit var script: String
     private var params: HashMap<String, String>? = null
     private var themeResId: Int = 0
+    var fadeAnimation = false
     private var onDismissRunnable: Runnable? = null
     private var currentHandler: MyShellHandler? = null
 
@@ -106,6 +107,10 @@ class DialogLogFragment : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        if (fadeAnimation) {
+            dialog?.window?.setWindowAnimations(R.style.windowAnim2)
+        }
 
         dialog?.window?.let {
             com.omarea.common.ui.DialogHelper.applyEdgeToEdge(it, themeResId == R.style.kr_full_screen_dialog_dark, view)

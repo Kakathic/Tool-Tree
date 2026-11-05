@@ -87,6 +87,7 @@ class ParamsEditText(private var actionParamInfo: ActionParamInfo, private var c
                             }
                         }
                 ).apply {
+                    fadeAnimation = true
                     setInputType(dialogInputType)
                     setFilters(arrayOf(paramFilter))
                     setHint(editText.hint)

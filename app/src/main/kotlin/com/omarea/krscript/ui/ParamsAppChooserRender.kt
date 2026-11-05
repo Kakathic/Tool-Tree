@@ -73,7 +73,7 @@ class ParamsAppChooserRender(
             packages,
             actionParamInfo.multiple,
             this
-        )
+        ).apply { fadeAnimation = true }
     
         dialog.show(context.supportFragmentManager, "app-chooser")
         dialog.showLoading(true)
