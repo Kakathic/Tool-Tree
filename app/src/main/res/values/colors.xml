@@ -11,6 +11,9 @@
     <color name="logPanelBgLight">#66FFFFFF</color>
     <color name="logPanelBgDark">#66000000</color>
 
+    <color name="cardBgL">#1AAFAFAF</color>
+    <color name="cardBgD">#1A808080</color>
+
     <color name="colorBlurLight">#5AFFFFFF</color>
     <color name="colorBlurDark">#41000000</color>
     

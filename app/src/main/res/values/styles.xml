@@ -17,6 +17,7 @@
         <item name="android:actionBarTheme">@style/AppTheme.AppBarOverlay.Light</item>
         <item name="android:windowBackground">@color/window_bg_light</item>
         <item name="cardBg">@color/cardBgLight</item>
+        <item name="cardDialog">@color/cardBgL</item>
         <item name="logPanelBg">@color/logPanelBgLight</item>
         <item name="android:switchStyle">@style/SceneSwitch</item>
         <item name="android:seekBarStyle">@style/SceneSeekBar</item>
@@ -42,6 +43,7 @@
         <item name="android:windowAnimationStyle">@style/activityAnim</item>
         <item name="android:actionBarTheme">@style/AppTheme.AppBarOverlay</item>
         <item name="cardBg">@color/cardBgDark</item>
+        <item name="cardDialog">@color/cardBgD</item>
         <item name="logPanelBg">@color/logPanelBgDark</item>
         <item name="android:switchStyle">@style/SceneSwitch</item>
         <item name="android:seekBarStyle">@style/SceneSeekBar</item>
@@ -57,6 +59,7 @@
         <item name="android:colorForegroundInverse">@color/cardBgLightTransparent</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="cardBg">@color/cardBgLightTransparent</item>
+        <item name="cardDialog">@color/cardBgLightTransparent</item>
     </style>
 
     <style name="AppThemeWallpaper" parent="AppThemeDark">
@@ -65,6 +68,7 @@
         <item name="android:colorForegroundInverse">@color/cardBgDarkTransparent</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="cardBg">@color/cardBgDarkTransparent</item>
+        <item name="cardDialog">@color/cardBgDarkTransparent</item>
     </style>
 
     <style name="AppTheme.AppBarOverlay.Light" parent="ThemeOverlay.AppCompat.ActionBar">
