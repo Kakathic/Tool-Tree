@@ -31,7 +31,7 @@ class ListItemText(context: Context,
                 (RootItemSpacing.TEXT_END_DP * d).toInt(), (RootItemSpacing.TEXT_BOTTOM_DP * d).toInt())
         }
         // Khối rows của text chỉ cách phần mô tả 4dp, thêm 8dp phía trên đường kẻ đầu khối để đường kẻ không dính sát chữ
-        RowsRenderHelper.markCompactLeadingDivider(rowsView, 8)
+        // RowsRenderHelper.markCompactLeadingDivider(rowsView, 8)
         RowsRenderHelper.bind(context, rowsView, extraIconView, config.rows, config, rowsHtmlView, bgView)
     }
 }

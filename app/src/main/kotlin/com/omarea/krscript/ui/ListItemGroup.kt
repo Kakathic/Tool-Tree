@@ -23,9 +23,9 @@ object RootItemSpacing {
     const val ITEM_MIN_HEIGHT_DP = 0
 
     const val TEXT_TOP_DP = 8
-    const val TEXT_BOTTOM_DP = 2
-    const val TEXT_START_DP = ITEM_START_DP
-    const val TEXT_END_DP = ITEM_END_DP
+    const val TEXT_BOTTOM_DP = 6
+    const val TEXT_START_DP = 0
+    const val TEXT_END_DP = 0
 }
 
 class ListItemGroup(context: Context,
