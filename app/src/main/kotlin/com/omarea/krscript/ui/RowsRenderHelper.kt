@@ -1127,14 +1127,16 @@ object RowsRenderHelper {
     private class CompactDividerSpan(private val context: Context, private val topGapPx: Int, private val bottomGapPx: Int) : LeadingMarginSpan, LineHeightSpan {
         override fun getLeadingMargin(first: Boolean): Int = 0
 
+        private val strokeWidthPx: Float get() = BlurEngine.getStrokePaint(context).strokeWidth
+
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
-            // Phân bổ khoảng trống đúng hai phía của divider: topGapPx ở trên,
-            // bottomGapPx ở dưới. Trước đây cả hai giá trị đều bị cộng vào ascent,
-            // khiến vùng trống bị dồn lên phía trên baseline.
+            // Nét kẻ chiếm vùng baseline..baseline+strokeWidth nên cộng thêm độ dày nét vào
+            // phía dưới để khoảng trống nhìn thấy ở dưới đúng bằng bottomGapPx.
+            val stroke = Math.ceil(strokeWidthPx.toDouble()).toInt()
             fm.ascent = -topGapPx
             fm.top = -topGapPx
-            fm.descent = bottomGapPx
-            fm.bottom = bottomGapPx
+            fm.descent = bottomGapPx + stroke
+            fm.bottom = bottomGapPx + stroke
         }
 
         override fun drawLeadingMargin(canvas: Canvas, paint: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int, text: CharSequence?, start: Int, end: Int, first: Boolean, layout: Layout?) {
@@ -1157,6 +1159,8 @@ object RowsRenderHelper {
 
     private class TopExtraSpaceSpan(private val extraPx: Int) : LineHeightSpan {
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
+            val spanStart = (text as? Spanned)?.getSpanStart(this) ?: -1
+            if (spanStart >= 0 && !(spanStart >= start && spanStart < end)) return
             fm.ascent -= extraPx
             fm.top -= extraPx
         }
@@ -1164,6 +1168,8 @@ object RowsRenderHelper {
 
     private class BottomExtraSpaceSpan(private val extraPx: Int) : LineHeightSpan {
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
+            val spanEnd = (text as? Spanned)?.getSpanEnd(this) ?: -1
+            if (spanEnd >= 0 && !(spanEnd > start && spanEnd <= end)) return
             fm.descent += extraPx
             fm.bottom += extraPx
         }
