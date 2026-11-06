@@ -65,6 +65,8 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     companion object {
         private var pendingSpinIcon: android.graphics.drawable.Drawable? = null
         private var pendingSpinEnabled = false
+        private const val PARENT_REFRESH_WINDOW_MS = 3000L
+        @Volatile private var parentRefreshDeadline = 0L
         private const val CHECKBOX_REFRESH_DEBOUNCE_MS = 1000L
         private const val SKELETON_AFTER_DIALOG_MAX = 1
         private const val SKELETON_FIRST_FRAME_DELAY_MS = 48L
@@ -115,6 +117,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        parentRefreshDeadline = 0L
 
         if (!ScriptEnvironmen.isInited()) {
             val initIntent = Intent(this.applicationContext, SplashActivity::class.java).apply {
@@ -225,7 +228,10 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     private val actionShortClickHandler = object : KrScriptActionHandler {
         override fun onActionCompleted(runnableNode: RunnableNode) {
             when {
-                runnableNode.autoFinish -> finishAndRemoveTask()
+                runnableNode.autoFinish -> {
+                    markParentRefresh()
+                    finishAndRemoveTask()
+                }
                 runnableNode.reloadPage -> loadPageConfig(true)
                 runnableNode.autoKill -> killApp()
                 runnableNode.autoRestart -> restartApp()
@@ -518,7 +524,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         when (menuOption.type) {
             "refresh", "reload" -> triggerPageRecreate(menuOption.isFab && menuOption.fabSpin)
             "restart" -> restartApp()
-            "exit", "finish", "close" -> finish()
+            "exit", "finish", "close" -> finishAndRefreshParent()
             "killapp" -> killApp()
             "file", "folder" -> menuItemChooseFile(menuOption)
             "spinner" -> menuItemSpinner(menuOption, anchor)
@@ -542,6 +548,27 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         super.onResume()
         webViewLifecyclePaused = false
         applyWebViewFreezeState()
+        consumeParentRefreshRequest()
+    }
+
+    private fun markParentRefresh() {
+        parentRefreshDeadline = android.os.SystemClock.elapsedRealtime() + PARENT_REFRESH_WINDOW_MS
+    }
+
+    private fun finishAndRefreshParent() {
+        markParentRefresh()
+        finish()
+    }
+
+    private fun consumeParentRefreshRequest() {
+        val deadline = parentRefreshDeadline
+        if (deadline == 0L) return
+        parentRefreshDeadline = 0L
+        if (android.os.SystemClock.elapsedRealtime() > deadline) return
+        handler.post {
+            if (isFinishing || isDestroyed || !::binding.isInitialized) return@post
+            loadPageConfig(true)
+        }
     }
 
     private fun setupToolbarLiveBlur() {
@@ -774,7 +801,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                 val activityReplaced = menuOption.autoFinish || menuOption.reloadPage || menuOption.autoKill || menuOption.autoRestart
                 if (!activityReplaced) fabRunSpinStop(menuOption)
                 when {
-                    menuOption.autoFinish -> finish()
+                    menuOption.autoFinish -> finishAndRefreshParent()
                     menuOption.reloadPage -> triggerPageRecreate(menuOption.isFab && menuOption.fabSpin)
                     menuOption.autoKill -> killApp()
                     menuOption.autoRestart -> restartApp()
@@ -1120,7 +1147,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         val onDismiss = Runnable {
             val activityReplaced = menuOption.autoFinish || menuOption.reloadPage || menuOption.autoKill || menuOption.autoRestart
             when {
-                menuOption.autoFinish -> finish()
+                menuOption.autoFinish -> finishAndRefreshParent()
                 menuOption.reloadPage -> triggerPageRecreate(menuOption.isFab && menuOption.fabSpin)
                 menuOption.autoKill -> killApp()
                 menuOption.autoRestart -> restartApp()
