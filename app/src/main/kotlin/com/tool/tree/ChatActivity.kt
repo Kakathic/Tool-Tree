@@ -1327,7 +1327,14 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             val visible = visibleText(m.text)
             val renderMd = activity.node.markdown && !m.fromUser && !m.running
             val showDots = visible.isEmpty() && m.running
-            holder.dots.visibility = if (showDots) View.VISIBLE else View.GONE
+            holder.dots.visibility = if (m.running) View.VISIBLE else View.GONE
+            if (showDots) {
+                holder.dots.minimumHeight = holder.text.lineHeight + holder.text.paddingTop + holder.text.paddingBottom
+                holder.dots.setPadding(dp(holder.dots, 14f), 0, dp(holder.dots, 14f), 0)
+            } else {
+                holder.dots.minimumHeight = 0
+                holder.dots.setPadding(dp(holder.dots, 14f), 0, dp(holder.dots, 14f), dp(holder.dots, 8f))
+            }
             val blocks = if (renderMd) ChatMarkdown.splitBlocks(visible).takeIf { list -> list.any { it.isCode || it.isTable } } else null
             if (blocks != null) {
                 holder.text.visibility = View.GONE
