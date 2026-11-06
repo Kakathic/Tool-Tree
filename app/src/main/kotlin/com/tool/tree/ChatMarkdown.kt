@@ -31,10 +31,6 @@ import android.widget.Toast
 import com.omarea.krscript.ui.MarkdownCodeSpan
 import com.omarea.krscript.ui.MarkdownInlineCodeSpan
 import com.omarea.krscript.ui.MarkdownInlineHelper
-import io.noties.markwon.Markwon
-import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
-import io.noties.markwon.ext.tasklist.TaskListPlugin
-import io.noties.markwon.html.HtmlPlugin
 
 /**
  * Khối ```...``` bắt đầu ở đầu dòng được tách bằng [splitBlocks] thành khối code riêng (hiển thị thành khung có nút sao chép).
@@ -77,20 +73,16 @@ object ChatMarkdown {
     private val ORDERED = Regex("^(\\s*)(\\d{1,9})[.)]\\s+(.*)$")
     private val TASK = Regex("^\\[([ xX])\\]\\s+(.*)$")
     private val QUOTE = Regex("^\\s{0,3}>[> ]*(.*)$")
-    private val DEFINITION = Regex("^:\\s+(.*)$")
     private val TILDE_FENCE = Regex("(?m)^([ \\t]*)~~~(?=[^~]|$)")
     private val SETEXT_UNDER = Regex("^\\s{0,3}(=+|-+)\\s*$")
     private val NOT_SETEXT_TITLE = Regex("^\\s{0,3}(#|>|[-*+]\\s|\\d{1,9}[.)]\\s|\\||:\\s)")
     private val REF_DEF = Regex("^\\s{0,3}\\[([^\\]^][^\\]]*)]:\\s*<?((?:https?://|mailto:|www\\.|/|\\./|\\.\\./|#)[^\\s>]*)>?(?:\\s+(?:\"[^\"]*\"|'[^']*'|\\([^)]*\\)))?\\s*$")
-    private val FOOTNOTE_DEF = Regex("^\\s{0,3}\\[\\^([^\\]\\s]+)]:\\s*(.*)$")
     private val REF_FULL = Regex("\\[([^\\[\\]]+)]\\[([^\\[\\]]*)]")
     private val REF_SHORT = Regex("\\[([^\\[\\]^][^\\[\\]]*)](?![(\\[:])")
-    private val FOOTNOTE_REF = Regex("\\[\\^([^\\]\\s]+)]")
     private val SEP_CELL = Regex("^:?-+:?$")
     private val RULE = Regex("^\\s{0,3}([-*_])(?:[ \\t]*\\1){2,}[ \\t]*$")
-    private val INTRA_WORD_UNDERSCORE = Regex("(?<=[\\p{L}\\p{N}])_(?=[\\p{L}\\p{N}])")
     private val FENCE_INFO = Regex("^[A-Za-z0-9_+#.\\-]*[ \\t\\r]*$")
-    private const val INLINE_MARKERS = "*_`~[{\\<=^"
+    private const val INLINE_MARKERS = "*_`~[{<=^"
     private const val FENCE = "```"
 
     private const val SEG_NORMAL = 0
@@ -138,48 +130,26 @@ object ChatMarkdown {
     private fun applyReferences(s: String): String {
         if (!s.contains("]:")) return s
         val refs = HashMap<String, String>()
-        val notes = LinkedHashMap<String, String>()
         val body = ArrayList<String>()
         for (line in s.split('\n')) {
-            val t = line.trimEnd('\r')
-            val f = FOOTNOTE_DEF.matchEntire(t)
-            if (f != null) {
-                notes[f.groupValues[1]] = f.groupValues[2]
-                continue
-            }
-            val r = REF_DEF.matchEntire(t)
+            val r = REF_DEF.matchEntire(line.trimEnd('\r'))
             if (r != null) {
                 refs[r.groupValues[1].trim().lowercase()] = r.groupValues[2]
                 continue
             }
             body.add(line)
         }
-        if (refs.isEmpty() && notes.isEmpty()) return s
+        if (refs.isEmpty()) return s
         var text = body.joinToString("\n")
-        if (refs.isNotEmpty()) {
-            text = REF_FULL.replace(text) { m ->
-                val label = m.groupValues[1]
-                val id = m.groupValues[2].ifEmpty { label }.trim().lowercase()
-                val url = refs[id]
-                if (url != null) "[$label]($url)" else m.value
-            }
-            text = REF_SHORT.replace(text) { m ->
-                val url = refs[m.groupValues[1].trim().lowercase()]
-                if (url != null) "[${m.groupValues[1]}]($url)" else m.value
-            }
+        text = REF_FULL.replace(text) { m ->
+            val label = m.groupValues[1]
+            val id = m.groupValues[2].ifEmpty { label }.trim().lowercase()
+            val url = refs[id]
+            if (url != null) "[$label]($url)" else m.value
         }
-        if (notes.isNotEmpty()) {
-            val order = LinkedHashMap<String, Int>()
-            text = FOOTNOTE_REF.replace(text) { m ->
-                val id = m.groupValues[1]
-                if (notes.containsKey(id)) "^" + order.getOrPut(id) { order.size + 1 } + "^" else m.value
-            }
-            if (order.isNotEmpty()) {
-                val sb = StringBuilder(text.trimEnd('\n', '\r'))
-                sb.append("\n\n---")
-                for ((id, n) in order) sb.append("\n^").append(n).append("^ ").append(notes[id])
-                text = sb.toString()
-            }
+        text = REF_SHORT.replace(text) { m ->
+            val url = refs[m.groupValues[1].trim().lowercase()]
+            if (url != null) "[${m.groupValues[1]}]($url)" else m.value
         }
         return text
     }
@@ -188,8 +158,7 @@ object ChatMarkdown {
         if (source.isEmpty() || hasStyle(source)) return source
         val original = source.toString()
         if (original.contains(FENCE) || original.contains("~~~")) return source
-        var s = ChatMath.convertMath(original)
-        s = applyReferences(s)
+        var s = applyReferences(original)
         s = applySetext(s)
         return if (s == original) source else s
     }
@@ -320,11 +289,9 @@ object ChatMarkdown {
 
     fun renderInline(context: Context, text0: CharSequence): CharSequence {
         if (text0.isEmpty() || hasStyle(text0)) return text0
-        val text: CharSequence = ChatMath.convertMath(text0.toString())
-        val body = text.toString()
-        if (body.indexOfAny(INLINE_MARKERS.toCharArray()) < 0) return text
-        val safe = body.replace(INTRA_WORD_UNDERSCORE, "\\\\_")
-        val (plain, spans) = MarkdownInlineHelper.parse(safe)
+        val body = text0.toString()
+        if (body.indexOfAny(INLINE_MARKERS.toCharArray()) < 0) return text0
+        val (plain, spans) = MarkdownInlineHelper.parse(body)
         val out = SpannableStringBuilder(plain)
         applySpans(context, out, spans, 0)
         return out
@@ -426,110 +393,8 @@ object ChatMarkdown {
     }
 
 
-    // ---- Markwon (thư viện markdown CommonMark) ----
-    // Bật/tắt dùng Markwon cho văn bản thường; false = dùng lại bộ render tự viết bên dưới.
-    private const val USE_MARKWON = true
-
-    @Volatile
-    private var markwonInstance: Markwon? = null
-
-    private fun markwon(context: Context): Markwon {
-        markwonInstance?.let { return it }
-        synchronized(this) {
-            markwonInstance?.let { return it }
-            val app = context.applicationContext ?: context
-            val built = Markwon.builder(app)
-                .usePlugin(StrikethroughPlugin.create())
-                .usePlugin(TaskListPlugin.create(app))
-                .usePlugin(HtmlPlugin.create())
-                .build()
-            markwonInstance = built
-            return built
-        }
-    }
-
-    private val EXTRA_COLOR = Regex("\\{([^{}\\n]+)\\}\\((#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{8}|[A-Za-z]+)\\)")
-    private val EXTRA_HIGHLIGHT = Regex("==([^=\\n]+)==")
-    private val EXTRA_SUPER = Regex("\\^([^^\\s]+)\\^")
-    private val EXTRA_SUB = Regex("(?<!~)~([^~\\s]+)~(?!~)")
-    private val INLINE_CODE_RADIUS = Regex("`([^`\\n]+?)\\|\\d{1,3}`")
-    private val DEFINITION_LINE = Regex("(?m)^:[ \\t]+")
-    private val MARK_TAG = Regex("(?i)</?mark>")
-
-    // Văn bản có span sẵn (màu ANSI...) hoặc có rào ``` / ~~~ giữa dòng vẫn do bộ render cũ xử lý
-    private fun canUseMarkwon(source: CharSequence): Boolean {
-        if (!USE_MARKWON || hasStyle(source)) return false
-        val s = source.toString()
-        return !s.contains(FENCE) && !s.contains("~~~")
-    }
-
-    private fun renderMarkwon(context: Context, source: CharSequence): CharSequence {
-        var s = preprocess(source).toString()
-        s = INLINE_CODE_RADIUS.replace(s) { "`" + it.groupValues[1] + "`" }
-        s = MARK_TAG.replace(s, "==")
-        s = DEFINITION_LINE.replace(s, "&nbsp;&nbsp;&nbsp;&nbsp;")
-        val out = SpannableStringBuilder(markwon(context).toMarkdown(s))
-        applyExtras(out)
-        while (out.isNotEmpty() && out[out.length - 1] == '\n') out.delete(out.length - 1, out.length)
-        return out
-    }
-
-    private fun overlapsCode(out: Spanned, start: Int, end: Int): Boolean =
-        out.getSpans(start, end, Any::class.java).any { it.javaClass.simpleName.startsWith("Code") }
-
-    // Cú pháp mở rộng của Tool-Tree mà CommonMark không có: {chữ}(màu), ==nổi bật==, ^mũ^, ~chỉ số dưới~
-    private fun applyExtras(out: SpannableStringBuilder) {
-        wrapExtra(out, EXTRA_COLOR) { m, a, b ->
-            val color = try { Color.parseColor(m.groupValues[2]) } catch (e: IllegalArgumentException) { null }
-            if (color == null) false else {
-                out.setSpan(ForegroundColorSpan(color), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                true
-            }
-        }
-        wrapExtra(out, EXTRA_HIGHLIGHT) { _, a, b ->
-            out.setSpan(BackgroundColorSpan(0x66FFEB3B), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            true
-        }
-        wrapExtra(out, EXTRA_SUPER) { _, a, b ->
-            out.setSpan(SuperscriptSpan(), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            out.setSpan(RelativeSizeSpan(0.75f), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            true
-        }
-        wrapExtra(out, EXTRA_SUB) { _, a, b ->
-            out.setSpan(SubscriptSpan(), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            out.setSpan(RelativeSizeSpan(0.75f), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            true
-        }
-    }
-
-    private fun wrapExtra(
-        out: SpannableStringBuilder,
-        regex: Regex,
-        apply: (MatchResult, Int, Int) -> Boolean
-    ) {
-        val matches = regex.findAll(out.toString()).toList()
-        for (m in matches.asReversed()) {
-            val start = m.range.first
-            val end = m.range.last + 1
-            val inner = m.groups[1]?.range ?: continue
-            val innerStart = inner.first
-            val innerEnd = inner.last + 1
-            if (overlapsCode(out, start, end)) continue
-            if (!apply(m, innerStart, innerEnd)) continue
-            out.delete(innerEnd, end)
-            out.delete(start, innerStart)
-        }
-    }
-
     fun render(context: Context, source0: CharSequence): CharSequence {
         if (source0.isEmpty()) return source0
-        if (canUseMarkwon(source0)) {
-            try {
-                return renderMarkwon(context, source0)
-            } catch (e: Throwable) {
-                // Markwon lỗi: rơi về bộ render cũ bên dưới
-            }
-        }
         val source = preprocess(source0)
         val s = normalizeFences(source.toString())
         val out = SpannableStringBuilder()
@@ -671,13 +536,7 @@ object ChatMarkdown {
                             prefix = o.groupValues[1] + o.groupValues[2] + ". "
                             body = o.groupValues[3]
                         } else {
-                            val d = DEFINITION.matchEntire(str)
-                            if (d != null) {
-                                prefix = "    "
-                                body = d.groupValues[1]
-                            } else {
-                                block = false
-                            }
+                            block = false
                         }
                     }
                 }
@@ -691,8 +550,7 @@ object ChatMarkdown {
         if (body.indexOfAny(INLINE_MARKERS.toCharArray()) < 0) {
             out.append(body)
         } else {
-            val safe = body.replace(INTRA_WORD_UNDERSCORE, "\\\\_")
-            val (plain, spans) = MarkdownInlineHelper.parse(safe)
+            val (plain, spans) = MarkdownInlineHelper.parse(body)
             val offset = out.length
             out.append(plain)
             applySpans(context, out, spans, offset)
