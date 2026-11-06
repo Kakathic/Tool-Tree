@@ -54,7 +54,8 @@ class ScriptWatchService : Service() {
                 val info = task.taskInfo ?: return@any false
                 val base = info.baseIntent
                 val excluded = base != null && (base.flags and Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS) != 0
-                val sameAsRemoved = removed?.component != null && base?.component == removed.component
+                val removedComponent = removed?.component
+                val sameAsRemoved = removedComponent != null && base?.component == removedComponent
                 val empty = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && info.numActivities <= 0
                 !excluded && !sameAsRemoved && !empty
             }
