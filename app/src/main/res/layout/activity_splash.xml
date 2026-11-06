@@ -48,7 +48,9 @@
             android:text="@string/pop_before_start"
             android:textSize="14sp"
             android:gravity="center"
-            android:layout_marginTop="10dp"/>
+            android:layout_marginTop="10dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"/>
     </LinearLayout>
 
 </FrameLayout>
