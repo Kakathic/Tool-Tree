@@ -89,5 +89,5 @@ cd Up
 ls -1d *
 mkdir -p test
 find . -exec touch -d "2026-01-01 00:00:00" {} +
-zip -r UZE.zip *
+7z a -tzip -mx=9 -mmt=off -mtc=off -mta=off -y UZE.zip
 )
