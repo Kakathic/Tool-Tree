@@ -97,8 +97,8 @@ object RowsRenderHelper {
 
     private class BgState(val dyn: HashMap<Int, String>, val nodeDyn: String)
 
-    private const val DIVIDER_ABOVE_DP = 20
-    private const val DIVIDER_BELOW_DP = 10
+    private const val DIVIDER_ABOVE_DP = 0
+    private const val DIVIDER_BELOW_DP = 6
 
     private val leadingDividerTopGapDp = WeakHashMap<TextView, Int>()
 
