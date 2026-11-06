@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -61,13 +62,11 @@
             android:paddingEnd="12dp"
             android:paddingBottom="8dp">
 
-            <LinearLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/chat_input_box"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/chat_input_bg"
-                android:gravity="bottom"
-                android:orientation="horizontal">
+                android:background="@drawable/chat_input_bg">
 
                 <ImageButton
                     android:id="@+id/chat_options"
@@ -77,13 +76,14 @@
                     android:background="@drawable/chat_options_bg"
                     android:contentDescription="@null"
                     android:scaleType="center"
-                    android:visibility="gone" />
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
 
                 <EditText
                     android:id="@+id/chat_input"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:background="@null"
                     android:importantForAutofill="no"
                     android:inputType="textMultiLine|textCapSentences"
@@ -92,7 +92,11 @@
                     android:paddingTop="10dp"
                     android:paddingEnd="4dp"
                     android:paddingBottom="10dp"
-                    android:textSize="15sp" />
+                    android:textSize="15sp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/chat_send"
+                    app:layout_constraintStart_toEndOf="@id/chat_options"
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <ImageButton
                     android:id="@+id/chat_send"
@@ -101,8 +105,10 @@
                     android:layout_margin="4dp"
                     android:background="@drawable/chat_send_bg"
                     android:contentDescription="@null"
-                    android:scaleType="center" />
-            </LinearLayout>
+                    android:scaleType="center"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
         </com.tool.tree.ChatBottomBarLayout>
     </FrameLayout>
 

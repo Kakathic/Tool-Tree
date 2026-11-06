@@ -14,9 +14,11 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.Editable
 import android.text.Layout
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.TextWatcher
 import android.text.style.CharacterStyle
 import android.text.style.ForegroundColorSpan
 import android.util.TypedValue
@@ -33,6 +35,8 @@ import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.ImageButton
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import android.widget.LinearLayout
 import android.widget.ListPopupWindow
 import android.widget.ProgressBar
@@ -200,6 +204,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         sendButton.setOnClickListener { if (running) stopRunning() else send() }
         updateSendButton()
         setupOptionsButton()
+        setupInputExpand()
         setupDrawer()
         if (savedInstanceState == null) runGreeting()
 
@@ -517,6 +522,91 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         paramsNode.onParamsConfirmed = { values ->
             chatParams.clear()
             chatParams.putAll(values)
+        }
+    }
+
+    private var inputExpanded = false
+    private var inputSingleAvail = 0
+
+    /**
+     * Khi chữ cần từ 2 dòng trở lên: chuyển ô nhập thành dạng 2 hàng
+     * (chữ chiếm toàn bộ chiều rộng ở hàng trên, nút tuỳ chọn/gửi xuống hàng dưới)
+     * để không bị thừa khoảng trống hai bên. Khi chữ vừa 1 dòng lại thì trả về dạng 1 hàng.
+     */
+    private fun setupInputExpand() {
+        val box = findViewById<ConstraintLayout>(R.id.chat_input_box)
+        val density = resources.displayMetrics.density
+        val sendW = (44 * density).toInt()
+        val optionsW = (44 * density).toInt()
+        val optionsView = findViewById<View>(R.id.chat_options)
+        box.addOnLayoutChangeListener { _, left, _, right, _, _, _, _, _ ->
+            val opt = if (optionsView.visibility == View.VISIBLE) optionsW else 0
+            val avail = (right - left) - opt - sendW - inputSingleStartPad() - inputSingleEndPad()
+            if (avail != inputSingleAvail) {
+                inputSingleAvail = avail
+                updateInputLayoutMode()
+            }
+        }
+        inputView.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                updateInputLayoutMode()
+            }
+        })
+    }
+
+    private fun inputSingleStartPad() = (8 * resources.displayMetrics.density).toInt()
+    private fun inputSingleEndPad() = (4 * resources.displayMetrics.density).toInt()
+
+    private fun updateInputLayoutMode() {
+        if (!::inputView.isInitialized) return
+        val avail = inputSingleAvail
+        if (avail <= 0) return
+        val text = inputView.text?.toString().orEmpty()
+        val hasBreak = text.indexOf('\n') >= 0
+        val width = inputView.paint.measureText(text)
+        val margin = 8 * resources.displayMetrics.density
+        val wantExpanded = if (inputExpanded) {
+            hasBreak || width > avail - margin
+        } else {
+            hasBreak || width > avail
+        }
+        if (wantExpanded != inputExpanded) applyInputMode(wantExpanded)
+    }
+
+    private fun applyInputMode(expanded: Boolean) {
+        inputExpanded = expanded
+        val box = findViewById<ConstraintLayout>(R.id.chat_input_box)
+        val density = resources.displayMetrics.density
+        fun dp(v: Int) = (v * density).toInt()
+        val input = R.id.chat_input
+        val options = R.id.chat_options
+        val send = R.id.chat_send
+        val parent = ConstraintSet.PARENT_ID
+        ConstraintSet().apply {
+            clone(box)
+            if (expanded) {
+                connect(input, ConstraintSet.START, parent, ConstraintSet.START)
+                connect(input, ConstraintSet.END, parent, ConstraintSet.END)
+                connect(input, ConstraintSet.TOP, parent, ConstraintSet.TOP)
+                clear(input, ConstraintSet.BOTTOM)
+                connect(options, ConstraintSet.TOP, input, ConstraintSet.BOTTOM)
+                connect(send, ConstraintSet.TOP, input, ConstraintSet.BOTTOM)
+            } else {
+                connect(input, ConstraintSet.START, options, ConstraintSet.END)
+                connect(input, ConstraintSet.END, send, ConstraintSet.START)
+                connect(input, ConstraintSet.TOP, parent, ConstraintSet.TOP)
+                connect(input, ConstraintSet.BOTTOM, parent, ConstraintSet.BOTTOM)
+                clear(options, ConstraintSet.TOP)
+                clear(send, ConstraintSet.TOP)
+            }
+            applyTo(box)
+        }
+        if (expanded) {
+            inputView.setPaddingRelative(dp(16), dp(12), dp(16), dp(2))
+        } else {
+            inputView.setPaddingRelative(inputSingleStartPad(), dp(10), inputSingleEndPad(), dp(10))
         }
     }
 
