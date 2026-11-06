@@ -1,7 +1,6 @@
 package com.omarea.krscript.executor
 
 import android.content.Context
-import android.os.Build
 import com.tool.tree.ScriptWatchService
 import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
@@ -43,16 +42,20 @@ object ScriptRegistry {
         }.also { it.isDaemon = true }.start()
     }
 
-    private fun pidOf(p: Process): Int = try {
-        if (Build.VERSION.SDK_INT >= 26) {
-            p.pid().toInt()
-        } else {
+    private fun pidOf(p: Process): Int {
+        // Process.pid() chỉ có từ API 33 và không chắc resolve được lúc biên dịch -> gọi bằng reflection
+        try {
+            val m = Process::class.java.getMethod("pid")
+            return (m.invoke(p) as Number).toInt()
+        } catch (ignored: Throwable) {
+        }
+        return try {
             val f = p.javaClass.getDeclaredField("pid")
             f.isAccessible = true
             f.getInt(p)
+        } catch (ignored: Throwable) {
+            -1
         }
-    } catch (ignored: Throwable) {
-        -1
     }
 
     /** Dùng ngay trước khi tự kill tiến trình app: không bao giờ ném lỗi */
