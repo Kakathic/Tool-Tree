@@ -1124,20 +1124,22 @@ object RowsRenderHelper {
         }
     }
 
-    private class CompactDividerSpan(private val context: Context, private val topGapPx: Int, private val heightPx: Int) : LeadingMarginSpan, LineHeightSpan {
+    private class CompactDividerSpan(private val context: Context, private val topGapPx: Int, private val bottomGapPx: Int) : LeadingMarginSpan, LineHeightSpan {
         override fun getLeadingMargin(first: Boolean): Int = 0
 
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
-            val total = topGapPx + heightPx
-            fm.ascent = -total
-            fm.top = -total
-            fm.descent = 0
-            fm.bottom = 0
+            // Phân bổ khoảng trống đúng hai phía của divider: topGapPx ở trên,
+            // bottomGapPx ở dưới. Trước đây cả hai giá trị đều bị cộng vào ascent,
+            // khiến vùng trống bị dồn lên phía trên baseline.
+            fm.ascent = -topGapPx
+            fm.top = -topGapPx
+            fm.descent = bottomGapPx
+            fm.bottom = bottomGapPx
         }
 
         override fun drawLeadingMargin(canvas: Canvas, paint: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int, text: CharSequence?, start: Int, end: Int, first: Boolean, layout: Layout?) {
             val strokePaint = BlurEngine.getStrokePaint(context)
-            val y = top + topGapPx + strokePaint.strokeWidth.coerceAtLeast(1f)
+            val y = top + topGapPx + strokePaint.strokeWidth / 2f
             val right = (layout?.width ?: 0).toFloat()
             canvas.drawLine(0f, y, right, y, strokePaint)
         }

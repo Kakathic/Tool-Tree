@@ -94,7 +94,6 @@ Download() {
       echo '
       [[download.rows]]
       text = "'$description'"
-      margin-top = 2
       line = true
       '
     fi
