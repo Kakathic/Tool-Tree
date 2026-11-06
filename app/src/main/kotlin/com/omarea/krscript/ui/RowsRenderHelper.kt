@@ -97,16 +97,11 @@ object RowsRenderHelper {
 
     private class BgState(val dyn: HashMap<Int, String>, val nodeDyn: String)
 
-    private const val DIVIDER_ABOVE_DP = 6
-    private const val DIVIDER_BELOW_DP = 6
+    private const val DIVIDER_ABOVE_DP = 20
+    private const val DIVIDER_BELOW_DP = 40
 
     private val leadingDividerTopGapDp = WeakHashMap<TextView, Int>()
 
-    /**
-     * Đường kẻ ở đầu khối rows luôn được vẽ gọn (không chiếm cả một dòng chữ, tránh khoảng trống gấp đôi).
-     * [topGapDp] là khoảng đệm thêm phía trên đường kẻ, dùng khi khối rows nằm sát phần chữ phía trên
-     * (mặc định 0 vì các layout đã có sẵn khoảng cách).
-     */
     fun markCompactLeadingDivider(rowsView: TextView?, topGapDp: Int = 0) {
         if (rowsView != null) leadingDividerTopGapDp[rowsView] = topGapDp
     }
@@ -338,9 +333,6 @@ object RowsRenderHelper {
 
         for (group in lineGroups) {
             val firstRow = rows[group.first()]
-
-            // Row có line=true chỉ là đường kẻ: nếu không có nội dung hiển thị riêng thì không
-            // tính vào dòng chữ phía dưới, tránh tạo ô rỗng kèm dấu cách đẩy cả dòng sang phải 1 ô
             val contentRows = group.filter { idx -> !rows[idx].line || rows[idx].hasVisibleContent() }
 
             if (firstRow.line) {
@@ -348,16 +340,12 @@ object RowsRenderHelper {
                     rowsView.append("\n")
                 }
                 val dividerLine = SpannableString(" ")
-                // Row line=true không có nội dung riêng: margin-top / margin-bottom (dp) chỉnh khoảng cách trên / dưới đường kẻ,
-                // không đặt thì dùng mặc định
                 val ownSpacing = !firstRow.hasVisibleContent()
                 val defaultAbove = if (rowsView.length() == 0) (leadingDividerTopGapDp[rowsView] ?: 0) else DIVIDER_ABOVE_DP
                 val aboveDp = if (ownSpacing && firstRow.marginTopSet) firstRow.marginTop.coerceAtLeast(0) else defaultAbove
                 val belowDp = if (ownSpacing && firstRow.marginBottomSet) firstRow.marginBottom.coerceAtLeast(0) else DIVIDER_BELOW_DP
                 dividerLine.setSpan(CompactDividerSpan(context, dpToPx(context, aboveDp), dpToPx(context, belowDp)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 rowsView.append(dividerLine)
-                // Divider là row cuối (nhóm không còn nội dung) thì không nối "\n", nếu không
-                // TextView sẽ render thêm một dòng trống ngay dưới đường kẻ
                 if (contentRows.isNotEmpty()) {
                     rowsView.append("\n")
                 }
@@ -366,7 +354,6 @@ object RowsRenderHelper {
             }
 
             val groupTextStart = rowsView.length()
-
             val leftIdx = contentRows.filter { rows[it].align == Layout.Alignment.ALIGN_NORMAL }
             val centerIdx = contentRows.filter { rows[it].align == Layout.Alignment.ALIGN_CENTER }
             val rightIdx = contentRows.filter { rows[it].align == Layout.Alignment.ALIGN_OPPOSITE }
