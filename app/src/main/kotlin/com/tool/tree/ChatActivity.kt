@@ -582,13 +582,12 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     }
 
     private fun setupClearButton() {
-        val button = findViewById<ImageButton>(R.id.chat_clear)
-        button.setImageResource(R.drawable.ic_chat_clear)
+        val button = findViewById<TextView>(R.id.chat_clear)
+        button.text = getString(R.string.chat_clear_input)
         val tint = TypedValue()
         if (theme.resolveAttribute(android.R.attr.textColorSecondary, tint, true) && tint.resourceId != 0) {
-            button.imageTintList = ContextCompat.getColorStateList(this, tint.resourceId)
+            button.compoundDrawableTintList = ContextCompat.getColorStateList(this, tint.resourceId)
         }
-        button.contentDescription = getString(R.string.chat_clear_input)
         button.setOnClickListener { inputView.setText("") }
     }
 
