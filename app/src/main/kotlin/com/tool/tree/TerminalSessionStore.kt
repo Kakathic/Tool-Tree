@@ -158,12 +158,29 @@ object TerminalSessionStore {
         notifyChanged()
     }
 
-    fun killAll() {
+    /**
+     * [waitMs] > 0: chờ (tối đa) cho việc kill thật sự xong - dùng khi app/service sắp bị tắt,
+     * nếu không tiến trình có thể chết trước khi kịp dọn tiến trình con.
+     */
+    fun killAll(waitMs: Long = 0) {
+        val launchers = all().map { it.launcher }
         all().forEach { remove(it) }
+        val deadline = SystemClock.elapsedRealtime() + waitMs
+        launchers.forEach { it.awaitKill(deadline - SystemClock.elapsedRealtime()) }
+    }
+
+    /** Dùng ngay trước khi tự kill tiến trình app (crash, exit:[kill]/[restart]): không bao giờ ném lỗi */
+    fun killAllBeforeExit(waitMs: Long = 1500) {
+        try {
+            killAll(waitMs)
+        } catch (ignored: Throwable) {
+        }
     }
 
     private fun handleFinished(entry: Entry) {
         entry.finished = true
+        // Shell đã thoát: dọn tiến trình con còn chạy nền của phiên này
+        entry.launcher.reapOrphans()
         if (entry.ui == null) {
             // Phiên đang ẩn tự kết thúc: không ai đọc nữa nên bỏ luôn
             remove(entry)

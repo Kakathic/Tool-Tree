@@ -2,19 +2,28 @@ package com.tool.tree
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.Typeface
 import android.net.Uri
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextPaint
 import android.text.method.LinkMovementMethod
+import android.text.style.BackgroundColorSpan
 import android.text.style.CharacterStyle
 import android.text.style.ClickableSpan
+import android.text.Layout
 import android.text.style.ForegroundColorSpan
+import android.text.style.LeadingMarginSpan
+import android.text.style.LineBackgroundSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
+import android.text.style.SubscriptSpan
+import android.text.style.SuperscriptSpan
+import android.text.style.UnderlineSpan
 import android.text.style.URLSpan
 import android.view.View
 import android.widget.Toast
@@ -58,11 +67,16 @@ object ChatMarkdown {
         return if (found) out else source
     }
 
-    private val HEADING = Regex("^(#{1,3})\\s+(.*)$")
+    private val HEADING = Regex("^(#{1,6})\\s+(.*)$")
     private val BULLET = Regex("^(\\s*)[-*+]\\s+(.*)$")
+    private val ORDERED = Regex("^(\\s*)(\\d{1,9})[.)]\\s+(.*)$")
+    private val TASK = Regex("^\\[([ xX])\\]\\s+(.*)$")
+    private val QUOTE = Regex("^\\s{0,3}>[> ]*(.*)$")
+    private val SEP_CELL = Regex("^:?-+:?$")
+    private val RULE = Regex("^\\s{0,3}([-*_])(?:[ \\t]*\\1){2,}[ \\t]*$")
     private val INTRA_WORD_UNDERSCORE = Regex("(?<=[\\p{L}\\p{N}])_(?=[\\p{L}\\p{N}])")
     private val FENCE_INFO = Regex("^[A-Za-z0-9_+#.\\-]*[ \\t\\r]*$")
-    private const val INLINE_MARKERS = "*_`~[{\\"
+    private const val INLINE_MARKERS = "*_`~[{\\<=^"
     private const val FENCE = "```"
 
     private const val SEG_NORMAL = 0
@@ -71,7 +85,11 @@ object ChatMarkdown {
 
     private class Seg(val kind: Int, val start: Int, val end: Int, val block: Boolean = false, val info: String = "")
 
-    class Block(val isCode: Boolean, val text: CharSequence, val lang: String = "")
+    class Table(val header: List<CharSequence>, val rows: List<List<CharSequence>>, val aligns: IntArray)
+
+    class Block(val isCode: Boolean, val text: CharSequence, val lang: String = "", val table: Table? = null) {
+        val isTable: Boolean get() = table != null
+    }
 
     fun splitBlocks(source: CharSequence): List<Block> {
         val s = source.toString()
@@ -110,7 +128,142 @@ object ChatMarkdown {
         var b = to
         while (a < b && (source[a] == '\n' || source[a] == '\r')) a++
         while (b > a && (source[b - 1] == '\n' || source[b - 1] == '\r')) b--
-        if (b > a && source.subSequence(a, b).isNotBlank()) out.add(Block(false, source.subSequence(a, b)))
+        if (b <= a || !source.subSequence(a, b).isNotBlank()) return
+        if (source.indexOf('|', a) !in a until b) {
+            out.add(Block(false, source.subSequence(a, b)))
+            return
+        }
+
+        val s = source.toString()
+        val lines = ArrayList<IntArray>()
+        var p = a
+        while (true) {
+            val nl = s.indexOf('\n', p)
+            val e = if (nl < 0 || nl > b) b else nl
+            var le = e
+            if (le > p && s[le - 1] == '\r') le--
+            lines.add(intArrayOf(p, le))
+            if (e >= b) break
+            p = e + 1
+        }
+
+        var textFrom = a
+        var i = 0
+        while (i < lines.size) {
+            val head = if (i + 1 < lines.size && s.substring(lines[i][0], lines[i][1]).contains('|')) splitRow(source, lines[i][0], lines[i][1]) else null
+            val aligns = if (head != null) parseSeparator(s, lines[i + 1][0], lines[i + 1][1]) else null
+            if (head != null && aligns != null && aligns.size == head.size) {
+                if (lines[i][0] > textFrom) addTextBlock(out, source, textFrom, lines[i][0])
+                val rows = ArrayList<List<CharSequence>>()
+                var j = i + 2
+                while (j < lines.size) {
+                    val line = s.substring(lines[j][0], lines[j][1])
+                    if (line.isBlank() || !line.contains('|')) break
+                    val cells = splitRow(source, lines[j][0], lines[j][1])
+                    rows.add(List(head.size) { k -> cells.getOrElse(k) { "" } })
+                    j++
+                }
+                out.add(Block(false, source.subSequence(lines[i][0], lines[j - 1][1]), "", Table(head, rows, aligns)))
+                textFrom = lines[j - 1][1]
+                i = j
+            } else {
+                i++
+            }
+        }
+        if (textFrom < b) {
+            if (textFrom == a) out.add(Block(false, source.subSequence(a, b)))
+            else addTextBlock(out, source, textFrom, b)
+        }
+    }
+
+    private fun splitRow(source: CharSequence, from: Int, to: Int): List<CharSequence> {
+        var a = from
+        var b = to
+        while (a < b && source[a].isWhitespace()) a++
+        while (b > a && source[b - 1].isWhitespace()) b--
+        if (a < b && source[a] == '|') a++
+        if (b > a && source[b - 1] == '|' && (b - 2 < a || source[b - 2] != '\\')) b--
+        val cells = ArrayList<CharSequence>()
+        var cs = a
+        var k = a
+        while (k <= b) {
+            if (k == b || (source[k] == '|' && (k == a || source[k - 1] != '\\'))) {
+                var x = cs
+                var y = k
+                while (x < y && source[x].isWhitespace()) x++
+                while (y > x && source[y - 1].isWhitespace()) y--
+                val cell = source.subSequence(x, y)
+                cells.add(if (cell !is Spanned && cell.contains("\\|")) cell.toString().replace("\\|", "|") else cell)
+                cs = k + 1
+            }
+            k++
+        }
+        return cells
+    }
+
+    private fun parseSeparator(s: String, from: Int, to: Int): IntArray? {
+        val line = s.substring(from, to)
+        if (!line.contains('-')) return null
+        val cells = splitRow(line, 0, line.length)
+        if (cells.isEmpty()) return null
+        val aligns = IntArray(cells.size)
+        for ((idx, c) in cells.withIndex()) {
+            val t = c.toString()
+            if (!SEP_CELL.matches(t)) return null
+            aligns[idx] = if (t.startsWith(":") && t.endsWith(":")) 1 else if (t.endsWith(":")) 2 else 0
+        }
+        return aligns
+    }
+
+    fun renderInline(context: Context, text: CharSequence): CharSequence {
+        if (text.isEmpty() || hasStyle(text)) return text
+        val body = text.toString()
+        if (body.indexOfAny(INLINE_MARKERS.toCharArray()) < 0) return text
+        val safe = body.replace(INTRA_WORD_UNDERSCORE, "\\\\_")
+        val (plain, spans) = MarkdownInlineHelper.parse(safe)
+        val out = SpannableStringBuilder(plain)
+        applySpans(context, out, spans, 0)
+        return out
+    }
+
+    private class LineStyle {
+        var headingScale = 0f
+        var quote = false
+        var rule = false
+    }
+
+    private class QuoteBarSpan(private val color: Int, private val barPx: Int, private val gapPx: Int) : LeadingMarginSpan {
+        override fun getLeadingMargin(first: Boolean): Int = barPx + gapPx
+
+        override fun drawLeadingMargin(
+            c: Canvas, p: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int,
+            text: CharSequence, start: Int, end: Int, first: Boolean, layout: Layout?
+        ) {
+            val oldStyle = p.style
+            val oldColor = p.color
+            p.style = Paint.Style.FILL
+            p.color = color
+            val x2 = x + dir * barPx
+            c.drawRect(minOf(x, x2).toFloat(), top.toFloat(), maxOf(x, x2).toFloat(), bottom.toFloat(), p)
+            p.style = oldStyle
+            p.color = oldColor
+        }
+    }
+
+    private class RuleSpan(private val color: Int, private val widthPx: Float) : LineBackgroundSpan {
+        override fun drawBackground(
+            c: Canvas, p: Paint, left: Int, right: Int, top: Int, baseline: Int, bottom: Int,
+            text: CharSequence, start: Int, end: Int, lnum: Int
+        ) {
+            val oldColor = p.color
+            val oldWidth = p.strokeWidth
+            p.color = color
+            p.strokeWidth = widthPx
+            val y = (top + bottom) / 2f
+            c.drawLine(left.toFloat(), y, right.toFloat(), y, p)
+            p.color = oldColor
+            p.strokeWidth = oldWidth
+        }
     }
 
     private class Piece(val text: CharSequence, val code: Boolean, val lineStart: Boolean)
@@ -219,20 +372,28 @@ object ChatMarkdown {
 
     private fun renderPieces(context: Context, pieces: List<Piece>, out: SpannableStringBuilder) {
         val lineStart = out.length
-        var headingScale = 0f
+        val style = LineStyle()
         for (p in pieces) {
             if (p.code) {
                 val s = out.length
                 out.append(p.text)
                 if (out.length > s) out.setSpan(MarkdownCodeSpan(context), s, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             } else {
-                val scale = renderNormal(context, p, out)
-                if (scale != 0f) headingScale = scale
+                renderNormal(context, p, out, style)
             }
         }
-        if (headingScale != 0f && out.length > lineStart) {
-            out.setSpan(StyleSpan(Typeface.BOLD), lineStart, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            out.setSpan(RelativeSizeSpan(headingScale), lineStart, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        if (out.length > lineStart) {
+            val density = context.resources.displayMetrics.density
+            if (style.headingScale != 0f) {
+                out.setSpan(StyleSpan(Typeface.BOLD), lineStart, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                out.setSpan(RelativeSizeSpan(style.headingScale), lineStart, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            if (style.quote) {
+                out.setSpan(QuoteBarSpan(0xFF9E9E9E.toInt(), (3 * density).toInt().coerceAtLeast(2), (8 * density).toInt()), lineStart, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            if (style.rule) {
+                out.setSpan(RuleSpan(0x80808080.toInt(), (1 * density).coerceAtLeast(1f)), lineStart, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
         }
     }
 
@@ -241,26 +402,58 @@ object ChatMarkdown {
         return sp.getSpans(0, text.length, CharacterStyle::class.java).isNotEmpty()
     }
 
-    private fun renderNormal(context: Context, piece: Piece, out: SpannableStringBuilder): Float {
+    private fun bulletFor(indent: String): String {
+        var depth = 0
+        for (ch in indent) depth += if (ch == '\t') 4 else 1
+        return when {
+            depth < 2 -> "\u2022"
+            depth < 4 -> "\u25E6"
+            else -> "\u25AA"
+        }
+    }
+
+    private fun renderNormal(context: Context, piece: Piece, out: SpannableStringBuilder, style: LineStyle) {
         if (hasStyle(piece.text)) {
             out.append(piece.text)
-            return 0f
+            return
         }
         val str = piece.text.toString()
         var prefix = ""
         var body = str
-        var headingScale = 0f
 
         if (piece.lineStart) {
             val h = HEADING.matchEntire(str)
             if (h != null) {
                 body = h.groupValues[2]
-                headingScale = when (h.groupValues[1].length) { 1 -> 1.3f; 2 -> 1.15f; else -> 1.05f }
+                style.headingScale = when (h.groupValues[1].length) { 1 -> 1.3f; 2 -> 1.15f; 3 -> 1.05f; else -> 1f }
+            } else if (RULE.matches(str)) {
+                body = "\u00A0"
+                style.rule = true
             } else {
-                val b = BULLET.matchEntire(str)
-                if (b != null) {
-                    prefix = b.groupValues[1] + "• "
-                    body = b.groupValues[2]
+                val q = QUOTE.matchEntire(str)
+                if (q != null) {
+                    body = q.groupValues[1]
+                    style.quote = true
+                } else {
+                    val b = BULLET.matchEntire(str)
+                    if (b != null) {
+                        val indent = b.groupValues[1]
+                        val rest = b.groupValues[2]
+                        val t = TASK.matchEntire(rest)
+                        if (t != null) {
+                            prefix = indent + (if (t.groupValues[1] == " ") "\u2610 " else "\u2611 ")
+                            body = t.groupValues[2]
+                        } else {
+                            prefix = indent + bulletFor(indent) + " "
+                            body = rest
+                        }
+                    } else {
+                        val o = ORDERED.matchEntire(str)
+                        if (o != null) {
+                            prefix = o.groupValues[1] + o.groupValues[2] + ". "
+                            body = o.groupValues[3]
+                        }
+                    }
                 }
             }
         }
@@ -276,7 +469,6 @@ object ChatMarkdown {
             out.append(plain)
             applySpans(context, out, spans, offset)
         }
-        return headingScale
     }
 
     private fun applySpans(
@@ -296,6 +488,18 @@ object ChatMarkdown {
                     out.setSpan(StyleSpan(Typeface.ITALIC), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 MarkdownInlineHelper.MarkdownSpanType.STRIKETHROUGH ->
                     out.setSpan(StrikethroughSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                MarkdownInlineHelper.MarkdownSpanType.HIGHLIGHT ->
+                    out.setSpan(BackgroundColorSpan(0x66FFEB3B), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                MarkdownInlineHelper.MarkdownSpanType.UNDERLINE ->
+                    out.setSpan(UnderlineSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                MarkdownInlineHelper.MarkdownSpanType.SUPERSCRIPT -> {
+                    out.setSpan(SuperscriptSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    out.setSpan(RelativeSizeSpan(0.75f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                MarkdownInlineHelper.MarkdownSpanType.SUBSCRIPT -> {
+                    out.setSpan(SubscriptSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    out.setSpan(RelativeSizeSpan(0.75f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
                 MarkdownInlineHelper.MarkdownSpanType.CODE -> {
                     val radius = info.href.toFloatOrNull()
                     MarkdownInlineCodeSpan.apply(context, out, start, end, radius)

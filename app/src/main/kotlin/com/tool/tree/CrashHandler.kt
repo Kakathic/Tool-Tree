@@ -29,6 +29,8 @@ class CrashHandler(context: Context) : Thread.UncaughtExceptionHandler {
         }
 
         if (shownCrashUi) {
+            TerminalSessionStore.killAllBeforeExit()
+            com.omarea.krscript.executor.ScriptRegistry.killAllBeforeExit()
             android.os.Process.killProcess(android.os.Process.myPid())
             kotlin.system.exitProcess(10)
         } else {

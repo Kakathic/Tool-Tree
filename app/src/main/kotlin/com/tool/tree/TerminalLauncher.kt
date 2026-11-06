@@ -26,10 +26,39 @@ class TerminalLauncher private constructor(
     @Volatile
     private var killing = false
 
+    @Volatile
+    private var killThread: Thread? = null
+
     companion object {
         private const val ASSETS_FILE = "file:///android_asset/"
 
         private fun q(s: String): String = "'" + s.replace("'", "'\\''") + "'"
+
+        private val staleLock = Any()
+        private var staleReaped = false
+
+        /**
+         * Lần mở terminal đầu tiên của tiến trình app: dọn các tiến trình terminal mồ côi còn sót từ lần chạy trước
+         * (app bị kill đột ngột, crash...) - nhận biết qua biến TT_TERM_TAG. Chạy trước khi phiên mới được start.
+         */
+        private fun reapStaleProcesses(busybox: String) {
+            synchronized(staleLock) {
+                if (staleReaped) return
+                staleReaped = true
+                val b = q(busybox)
+                val script = "B=$b; ME=\$\$; sweep() { for d in /proc/[0-9]*; do pid=\${d#/proc/}; [ \"\$pid\" = \"\$ME\" ] && continue; " +
+                        "\$B grep -qa \"TT_TERM_TAG=term_\" \$d/environ 2>/dev/null && kill -\$SIG \$pid 2>/dev/null; done; }; " +
+                        "SIG=HUP; sweep; sleep 0.3; SIG=KILL; sweep"
+                try {
+                    val pb = if (ScriptEnvironmen.isRooted()) ProcessBuilder("su", "-c", script) else ProcessBuilder("sh", "-c", script)
+                    val proc = pb.redirectErrorStream(true).start()
+                    proc.outputStream.close()
+                    proc.inputStream.readBytes()
+                    proc.waitFor()
+                } catch (ignored: Exception) {
+                }
+            }
+        }
 
         fun prepare(context: Context, cwdArg: String, cmd: String, root: Int = 0, pagePath: String = "", closeOnExit: Boolean = false): TerminalLauncher {
             val spf = context.getSharedPreferences("kr-script-config", Context.MODE_PRIVATE)
@@ -45,6 +74,8 @@ class TerminalLauncher private constructor(
             if (!bash.exists() || !busybox.exists()) {
                 throw IllegalStateException("Missing ${bash.absolutePath} or ${busybox.absolutePath}")
             }
+
+            reapStaleProcesses(busybox.absolutePath)
 
             val tmp = File(home, "tmp").apply { mkdirs() }
             // Dọn file phiên cũ còn sót (tiến trình bị kill đột ngột)
@@ -62,6 +93,8 @@ class TerminalLauncher private constructor(
 
             val rc = StringBuilder().apply {
                 append("export HOME=").append(q(home.absolutePath)).append("\n")
+                // Đánh dấu phiên: mọi tiến trình con (kể cả nohup/setsid) thừa hưởng biến này để dọn sạch khi đóng
+                append("export TT_TERM_TAG=").append(q("term_$id")).append("\n")
                 append("umask 022\n")
                 append("export TERM=xterm-256color\n")
                 append("export COLORTERM=truecolor\n")
@@ -136,16 +169,53 @@ class TerminalLauncher private constructor(
     }
 
     override fun kill(process: Process) {
+        startKill()
+    }
+
+    /** Chờ luồng kill chạy xong (tối đa [timeoutMs]); dùng khi app sắp bị tắt để không bỏ sót tiến trình */
+    fun awaitKill(timeoutMs: Long) {
+        if (timeoutMs <= 0) return
+        try {
+            killThread?.join(timeoutMs)
+        } catch (ignored: InterruptedException) {
+        }
+    }
+
+    /**
+     * Phiên đã tự kết thúc (gõ exit...): dọn nốt các tiến trình con còn sót (nohup, job nền...)
+     * vì shell đã chết nên không còn ai quản lý chúng.
+     */
+    fun reapOrphans() {
+        startKill()
+    }
+
+    @Synchronized
+    private fun startKill() {
+        if (killing) return
         killing = true
-        val pidPath = q(pidFile.absolutePath)
-        Thread {
+        killThread = Thread {
+            sweepProcesses()
             try {
                 ScriptEnvironmen.executeResultRoot(appContext, "shell_progres='$tag' killtree", null)
             } catch (ignored: Exception) {
             }
-            runShell("kill -HUP \$(cat $pidPath) 2>/dev/null; sleep 0.2; kill -9 \$(cat $pidPath) 2>/dev/null")
             deleteFiles()
-        }.start()
+        }.also { it.start() }
+    }
+
+    /**
+     * Kill mọi tiến trình thuộc phiên: (1) mang biến TT_TERM_TAG của phiên (kể cả khi đã setsid/nohup/reparent về init),
+     * (2) cùng session với shell gốc. Gửi HUP trước, sau đó KILL cho cái còn lại.
+     */
+    private fun sweepProcesses() {
+        val b = q(busybox)
+        val script = "T=${q(tag)}; B=$b; P=\$(cat ${q(pidFile.absolutePath)} 2>/dev/null); ME=\$\$; " +
+                "sweep() { for d in /proc/[0-9]*; do pid=\${d#/proc/}; [ \"\$pid\" = \"\$ME\" ] && continue; hit=0; " +
+                "if \$B grep -qa \"TT_TERM_TAG=\$T\" \$d/environ 2>/dev/null; then hit=1; " +
+                "elif [ -n \"\$P\" ]; then read -r l < \$d/stat 2>/dev/null; set -- \${l##*) }; [ \"\$4\" = \"\$P\" ] && hit=1; fi; " +
+                "[ \$hit = 1 ] && kill -\$SIG \$pid 2>/dev/null; done; }; " +
+                "SIG=HUP; sweep; sleep 0.3; SIG=KILL; sweep"
+        runShell(script)
     }
 
     private fun runShell(script: String) {

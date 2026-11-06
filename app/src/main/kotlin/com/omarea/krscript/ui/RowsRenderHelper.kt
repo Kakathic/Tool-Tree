@@ -1303,6 +1303,18 @@ object RowsRenderHelper {
                     spannableString.setSpan(StyleSpan(Typeface.ITALIC), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 MarkdownInlineHelper.MarkdownSpanType.STRIKETHROUGH ->
                     spannableString.setSpan(StrikethroughSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                MarkdownInlineHelper.MarkdownSpanType.HIGHLIGHT ->
+                    spannableString.setSpan(BackgroundColorSpan(0x66FFEB3B), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                MarkdownInlineHelper.MarkdownSpanType.UNDERLINE ->
+                    spannableString.setSpan(UnderlineSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                MarkdownInlineHelper.MarkdownSpanType.SUPERSCRIPT -> {
+                    spannableString.setSpan(SuperscriptSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    spannableString.setSpan(RelativeSizeSpan(0.75f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                MarkdownInlineHelper.MarkdownSpanType.SUBSCRIPT -> {
+                    spannableString.setSpan(SubscriptSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    spannableString.setSpan(RelativeSizeSpan(0.75f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
                 MarkdownInlineHelper.MarkdownSpanType.CODE -> {
                     val customRadius = info.href.toFloatOrNull()
                     MarkdownInlineCodeSpan.apply(context, spannableString, start, end, customRadius)

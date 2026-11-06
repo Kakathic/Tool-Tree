@@ -30,11 +30,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ListPopupWindow
 import android.widget.ProgressBar
+import android.widget.TableLayout
+import android.widget.TableRow
 import android.widget.TextView
 import android.widget.Toast
 import java.util.concurrent.ExecutorService
@@ -1020,13 +1023,95 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             return card
         }
 
+        private fun dividerDrawable(color: Int, sizePx: Int) = GradientDrawable().apply {
+            setColor(color)
+            setSize(sizePx, sizePx)
+        }
+
+        private fun buildTableBlock(container: LinearLayout, holder: VH, table: ChatMarkdown.Table, raw: CharSequence): View {
+            val ctx = container.context
+            val density = ctx.resources.displayMetrics.density
+            val line = (1 * density).toInt().coerceAtLeast(1)
+            val lineColor = 0x55808080
+            val textColor = holder.text.currentTextColor
+            val cols = table.header.size
+            val colMax = (holder.text.maxWidth * 0.7f).toInt()
+
+            val card = FrameLayout(ctx)
+            card.background = GradientDrawable().apply {
+                cornerRadius = 10 * density
+                setColor(0x14808080)
+                setStroke(line, lineColor)
+            }
+            card.clipToOutline = true
+
+            val tl = TableLayout(ctx)
+            tl.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
+            tl.dividerDrawable = dividerDrawable(lineColor, line)
+
+            fun addRow(cells: List<CharSequence>, header: Boolean) {
+                val tr = TableRow(ctx)
+                tr.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
+                tr.dividerDrawable = dividerDrawable(lineColor, line)
+                if (header) tr.setBackgroundColor(0x22808080)
+                for (c in 0 until cols) {
+                    val tv = ChatTextView(ctx)
+                    tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                    tv.setTextColor(textColor)
+                    tv.setPadding(dp(tv, 10f), dp(tv, 6f), dp(tv, if (header && c == cols - 1) 38f else 10f), dp(tv, 6f))
+                    tv.maxWidth = colMax
+                    tv.gravity = when (table.aligns.getOrElse(c) { 0 }) { 1 -> Gravity.CENTER_HORIZONTAL; 2 -> Gravity.END; else -> Gravity.START }
+                    if (header) tv.setTypeface(tv.typeface, Typeface.BOLD)
+                    tv.setTextIsSelectable(true)
+                    tv.movementMethod = ChatMarkdown.SelectableLinkMovement
+                    tv.setLinkTextColor(activity.accentColor())
+                    tv.text = ChatMarkdown.linkify(ChatMarkdown.renderInline(ctx, cells.getOrElse(c) { "" }))
+                    tr.addView(tv, TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                }
+                tl.addView(tr, TableLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            }
+            addRow(table.header, true)
+            table.rows.forEach { addRow(it, false) }
+
+            val scroll = HorizontalScrollView(ctx)
+            scroll.isHorizontalScrollBarEnabled = false
+            scroll.overScrollMode = View.OVER_SCROLL_NEVER
+            scroll.addView(tl, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            card.addView(scroll, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+            val icon = ImageView(ctx)
+            icon.setImageResource(R.drawable.ic_chat_copy)
+            icon.imageTintList = ColorStateList.valueOf((textColor and 0x00FFFFFF) or (0xB3 shl 24))
+            icon.setPadding(dp(icon, 7f), dp(icon, 7f), dp(icon, 7f), dp(icon, 7f))
+            icon.contentDescription = ctx.getString(R.string.btn_copy_output)
+            val ripple = TypedValue()
+            if (ctx.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, ripple, true) && ripple.resourceId != 0) {
+                icon.background = ContextCompat.getDrawable(ctx, ripple.resourceId)
+            }
+            val plain = raw.toString()
+            icon.setOnClickListener { onCopy(plain) }
+            card.addView(icon, FrameLayout.LayoutParams(dp(icon, 34f), dp(icon, 34f), Gravity.TOP or Gravity.END).apply {
+                topMargin = dp(icon, 1f)
+                marginEnd = dp(icon, 2f)
+            })
+            return card
+        }
+
         private fun bindBlocks(holder: VH, blocks: List<ChatMarkdown.Block>) {
             val container = holder.blocks
             container.removeAllViews()
             blocks.forEachIndexed { index, block ->
                 val first = index == 0
                 val last = index == blocks.lastIndex
-                if (block.isCode) {
+                if (block.isTable) {
+                    val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        marginStart = dp(container, 10f)
+                        marginEnd = dp(container, 10f)
+                        topMargin = dp(container, if (first) 10f else 3f)
+                        bottomMargin = dp(container, if (last) 10f else 3f)
+                    }
+                    container.addView(buildTableBlock(container, holder, block.table!!, block.text), params)
+                } else if (block.isCode) {
                     val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         marginStart = dp(container, 10f)
                         marginEnd = dp(container, 10f)
@@ -1121,7 +1206,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             val renderMd = activity.node.markdown && !m.fromUser && !m.running
             val showDots = visible.isEmpty() && m.running
             holder.dots.visibility = if (showDots) View.VISIBLE else View.GONE
-            val blocks = if (renderMd) ChatMarkdown.splitBlocks(visible).takeIf { list -> list.any { it.isCode } } else null
+            val blocks = if (renderMd) ChatMarkdown.splitBlocks(visible).takeIf { list -> list.any { it.isCode || it.isTable } } else null
             if (blocks != null) {
                 holder.text.visibility = View.GONE
                 holder.blocks.visibility = View.VISIBLE

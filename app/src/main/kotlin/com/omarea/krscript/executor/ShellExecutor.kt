@@ -71,6 +71,7 @@ class ShellExecutor {
                         }
                     }
                 } else null
+            ScriptRegistry.register(context, sessionTag, process)
             SimpleShellWatcher().setHandler(context, process, shellHandlerBase, onExit)
 
             val outputStream = process.outputStream

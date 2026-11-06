@@ -1397,12 +1397,19 @@ html-url = "https://example.com"
 <table class="tbl cols-2">
 <tr><th>Syntax</th><th>Result</th></tr>
 <tr><td><code>**text**</code> / <code>__text__</code></td><td>Bold</td></tr>
-<tr><td><code>*text*</code> / <code>_text_</code></td><td>Italic</td></tr>
+<tr><td><code>***text***</code> / <code>___text___</code></td><td>Bold + italic</td></tr>
+<tr><td><code>*text*</code> / <code>_text_</code></td><td>Italic. A single <code>*</code>/<code>_</code> must hug the text (no space right after the opening mark or right before the closing one), so <code>2 * 3 * 4</code> stays literal; an underscore inside a word (<code>my_var_name</code>) is never italic</td></tr>
 <tr><td><code>~~text~~</code></td><td>Strikethrough</td></tr>
 <tr><td><code>{text}(color)</code></td><td>Custom text color - <code>color</code> is a color name (e.g. <code>red</code>) or hex (<code>#RRGGBB</code>/<code>#AARRGGBB</code>)</td></tr>
-<tr><td><code>[text](url)</code></td><td>Clickable link, opens <code>url</code></td></tr>
+<tr><td><code>[text](url)</code></td><td>Clickable link, opens <code>url</code>. An optional title is ignored: <code>[text](url "title")</code> opens <code>url</code>. Balanced parentheses inside <code>url</code> are allowed</td></tr>
+<tr><td><code>&lt;https://...&gt;</code> / <code>&lt;name@mail.com&gt;</code></td><td>Clickable link whose label is the address itself (an email opens as <code>mailto:</code>)</td></tr>
+<tr><td><code>![alt](url)</code></td><td>Images are not drawn; shown as a clickable link labelled with a picture mark and <code>alt</code></td></tr>
+<tr><td><code>==text==</code></td><td>Highlighted (yellow background). The marks must hug the text, so <code>a == b == c</code> stays literal</td></tr>
+<tr><td><code>^text^</code> / <code>~text~</code></td><td>Superscript / subscript. No spaces allowed inside, e.g. <code>x^2^</code>, <code>H~2~O</code></td></tr>
+<tr><td><code>&lt;u&gt;</code> <code>&lt;mark&gt;</code> <code>&lt;sup&gt;</code> <code>&lt;sub&gt;</code> <code>&lt;b&gt;</code> <code>&lt;i&gt;</code> <code>&lt;s&gt;</code> (with the matching closing tag) and <code>&lt;br&gt;</code></td><td>Underline, highlight, superscript, subscript, bold, italic, strikethrough and a line break. Other HTML tags are left as plain text</td></tr>
 <tr><td><code>`text`</code></td><td>Rounded background box around <code>text</code> (like an inline "code" chip). The content is parsed recursively, so it can nest the other marks above - e.g. <code>`{text}(red)`</code> = box + red text, <code>`[text](url)`</code> = box + clickable link</td></tr>
 <tr><td><code>`text|R`</code></td><td>Same rounded box, with <code>R</code> (a plain number, dp) overriding the box's corner radius for this span only. No <code>|R</code> suffix = default radius. Also works combined with nesting, e.g. <code>`{text}(red)|16`</code></td></tr>
+<tr><td><code>``text``</code></td><td>Literal rounded box (like <code>```text```</code>) whose content may contain a single backtick, e.g. <code>``a`b``</code> shows <code>a`b</code>. One space just inside each side is trimmed</td></tr>
 <tr><td><code>```text```</code></td><td>Same rounded box as <code>`text`</code>, but the content is shown <strong>literally</strong> - Markdown marks inside are NOT interpreted (use this to display raw symbols, e.g. <code>```**not bold**```</code> shows the asterisks as-is). Also accepts the <code>|R</code> corner-radius suffix</td></tr>
 </table>
 </div>
@@ -1612,7 +1619,7 @@ keep-screen-on = true
 <tr><td class="field-name">greeting-sh</td><td>welcome-sh</td><td class="field-type">Shell</td><td>-</td><td><span class="badge shell">shell</span> Script run once when the chat page opens (not when switching to another conversation). Its output streams into the first (greeting) bubble with the same ANSI / markdown rendering as replies. <code>$MSG</code> is empty; <code>$CHAT_ID</code> and the saved <code>[[chat.params]]</code> values are exported. Takes priority over <code>greeting</code>; if it prints nothing, <code>greeting</code> is used instead (no bubble when both are empty). The bubble is not stored; its last output is reused as the greeting of other conversations opened in the same visit. While it runs the Send button shows Stop and sending is blocked until it ends</td></tr>
 <tr><td class="field-name">placeholder</td><td>hint</td><td class="field-type">String</td><td>-</td><td>Hint of the input box</td></tr>
 <tr><td class="field-name">max-lines</td><td>-</td><td class="field-type">Int</td><td>6</td><td>The input box grows with the text up to this many lines</td></tr>
-<tr><td class="field-name">markdown</td><td>md</td><td class="field-type">Bool</td><td>false</td><td>Render the reply bubbles as Markdown (same inline syntax as §11.4: bold, italic, strikethrough, inline code, links, colors). Lines starting with <code>```</code> become separate code blocks with a copy button. User bubbles and a reply that is still running are shown as plain text</td></tr>
+<tr><td class="field-name">markdown</td><td>md</td><td class="field-type">Bool</td><td>false</td><td>Render the reply bubbles as Markdown (same inline syntax as §11.4: bold, italic, strikethrough, inline code, links, colors). Lines starting with <code>```</code> become separate code blocks with a copy button. Line-level syntax (chat only, at the start of a line): headings <code># </code> to <code>###### </code>, bullets <code>- </code>/<code>* </code>/<code>+ </code> (nested levels use <code>&#8226; &#9702; &#9642;</code>), numbered lists <code>1. </code>, task lists <code>- [ ] </code>/<code>- [x] </code>, quotes <code>&gt; </code>, and horizontal rules <code>---</code>/<code>***</code>/<code>___</code>. Tables (<code>| a | b |</code> header, a <code>|---|:---:|---:|</code> separator row for left/center/right alignment, then body rows) are drawn as a horizontally scrollable grid with a copy button (copies the Markdown source) and inline Markdown inside cells; escape a literal pipe as <code>\|</code>. Tables are not supported in <code>[[text.rows]]</code>. User bubbles and a reply that is still running are shown as plain text</td></tr>
 <tr><td class="field-name">params-title</td><td>-</td><td class="field-type">String</td><td>Settings</td><td>Title of the dialog opened by the options button on the left of the input box (needs <code>[[chat.params]]</code>)</td></tr>
 <tr><td class="field-name">params-icon</td><td>-</td><td class="field-type">Path</td><td>default icon</td><td>Icon of that options button</td></tr>
 <tr><td class="field-name">params-script</td><td>apply</td><td class="field-type">Shell</td><td>-</td><td>Optional. Empty: pressing Confirm only saves the values. Set: it also runs once in the log dialog with the values as env</td></tr>
@@ -2210,9 +2217,9 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
-<li>2026-11-04 - <code>[[text.rows]]</code>: new <code>autolink</code> (alias <code>auto-link</code>, default <code>true</code>) - bare <code>http(s)://</code> / <code>www.</code> links in row text become clickable; set <code>autolink = false</code> to disable.</li>
-<li>2026-11-04 - <code>[[chat]]</code>: new <code>params-shell</code> (<code>default</code> / <code>hidden</code> / <code>bg-task</code>) - run <code>params-script</code> silently or in the background instead of the log dialog.</li>
-<li>2026-11-04 - <code>[[chat]]</code>: a running script is no longer stopped when leaving the page; reopening the chat reattaches to the running output.</li>
+<li>2026-11-06 - <code>markdown = true</code>: added <code>&lt;url&gt;</code> autolinks, <code>![alt](url)</code> (as link), <code>==highlight==</code>, <code>^sup^</code>, <code>~sub~</code> and the HTML tags <code>&lt;u&gt; &lt;mark&gt; &lt;sup&gt; &lt;sub&gt; &lt;br&gt;</code> (see section 11.4).</li>
+<li>2026-11-06 - <code>[[chat]]</code> with <code>markdown = true</code>: Markdown tables are rendered as a scrollable grid with a copy button (see section 14.1).</li>
+<li>2026-11-06 - <code>markdown = true</code>: added <code>***bold italic***</code>, <code>``literal`code``</code> and link titles; single <code>*</code>/<code>_</code> no longer italicize across spaces or inside words. In <code>[[chat]]</code> replies: headings up to level 6, numbered/task lists, quotes and horizontal rules (see sections 11.4 and 14.1).</li>
 </ul>
 </section>
 </main>

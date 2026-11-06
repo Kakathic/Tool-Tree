@@ -204,6 +204,8 @@ abstract class ShellHandlerBase(
                 } catch (ignored: Exception) {
                 }
             }
+            com.tool.tree.TerminalSessionStore.killAllBeforeExit()
+            com.omarea.krscript.executor.ScriptRegistry.killAllBeforeExit()
             android.os.Process.killProcess(android.os.Process.myPid())
             System.exit(0)
         }

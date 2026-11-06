@@ -23,6 +23,8 @@ class TerminalService : Service(), TerminalSessionStore.Listener {
         const val ACTION_SET_WAKELOCK = "com.tool.tree.TERMINAL_SET_WAKELOCK"
         private const val EXTRA_WAKELOCK = "wakelock"
         private const val WAKE_LOCK_TAG = "com.tool.tree:terminal"
+        // Thời gian tối đa chờ dọn tiến trình khi thoát (main thread, giữ dưới ngưỡng ANR)
+        private const val KILL_WAIT_MS = 3000L
 
         fun ensureStarted(context: Context) {
             ContextCompat.startForegroundService(context, Intent(context, TerminalService::class.java))
@@ -57,7 +59,7 @@ class TerminalService : Service(), TerminalSessionStore.Listener {
         // Phải gọi startForeground ngay sau startForegroundService
         startForeground(NOTIFICATION_ID, buildNotification())
         if (intent?.action == ACTION_EXIT_ALL) {
-            TerminalSessionStore.killAll()
+            TerminalSessionStore.killAll(KILL_WAIT_MS)
             releaseWakeLock()
             stopForeground(true)
             stopSelf()
@@ -70,7 +72,8 @@ class TerminalService : Service(), TerminalSessionStore.Listener {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        TerminalSessionStore.killAll()
+        TerminalSessionStore.killAll(KILL_WAIT_MS)
+        com.omarea.krscript.executor.ScriptRegistry.killAll(KILL_WAIT_MS)
         releaseWakeLock()
         stopForeground(true)
         stopSelf()
@@ -78,6 +81,8 @@ class TerminalService : Service(), TerminalSessionStore.Listener {
     }
 
     override fun onDestroy() {
+        // Service bị huỷ mà còn phiên (hệ thống dừng service): dọn luôn, tránh tiến trình mồ côi
+        TerminalSessionStore.killAll(KILL_WAIT_MS)
         releaseWakeLock()
         TerminalSessionStore.removeListener(this)
         super.onDestroy()
