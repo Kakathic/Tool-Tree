@@ -238,6 +238,7 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="chat_default_title">Csevegés</string>
     <string name="chat_input_hint">Írjon üzenetet…</string>
     <string name="chat_copied">Másolva</string>
+    <string name="chat_clear_input">Szöveg törlése</string>
     <string name="chat_script_empty">Ehhez a csevegéshez nincs szkript beállítva</string>
     <string name="chat_cleared_stop">A futó szkript leállítása, majd törlés</string>
     <string name="chat_params_title">Beállítások</string>

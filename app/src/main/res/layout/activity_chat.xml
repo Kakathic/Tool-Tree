@@ -80,6 +80,18 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent" />
 
+                <ImageButton
+                    android:id="@+id/chat_clear"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="4dp"
+                    android:background="@drawable/chat_options_bg"
+                    android:contentDescription="@null"
+                    android:scaleType="center"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toEndOf="@id/chat_options" />
+
                 <EditText
                     android:id="@+id/chat_input"
                     android:layout_width="0dp"

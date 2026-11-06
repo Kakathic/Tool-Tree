@@ -238,6 +238,7 @@
     <string name="chat_default_title">Чат</string>
     <string name="chat_input_hint">Введите сообщение…</string>
     <string name="chat_copied">Скопировано</string>
+    <string name="chat_clear_input">Очистить текст</string>
     <string name="chat_script_empty">Для этого чата не настроен скрипт</string>
     <string name="chat_cleared_stop">Остановка работающего скрипта, затем очистка</string>
     <string name="chat_params_title">Настройки</string>

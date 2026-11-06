@@ -243,6 +243,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="chat_default_title">Chat</string>
     <string name="chat_input_hint">Escribe un mensaje…</string>
     <string name="chat_copied">Copiado</string>
+    <string name="chat_clear_input">Borrar texto</string>
     <string name="chat_script_empty">Este chat no tiene un script configurado</string>
     <string name="chat_cleared_stop">Deteniendo el script en ejecución y luego borrando</string>
     <string name="chat_params_title">Ajustes</string>

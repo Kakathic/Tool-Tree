@@ -238,6 +238,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="chat_default_title">Obrolan</string>
     <string name="chat_input_hint">Ketik pesan…</string>
     <string name="chat_copied">Disalin</string>
+    <string name="chat_clear_input">Hapus teks</string>
     <string name="chat_script_empty">Obrolan ini belum memiliki skrip yang dikonfigurasi</string>
     <string name="chat_cleared_stop">Menghentikan skrip yang berjalan, lalu menghapus</string>
     <string name="chat_params_title">Pengaturan</string>

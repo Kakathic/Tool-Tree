@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
@@ -90,7 +89,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private val UNSUPPORTED_TYPES = setOf("file", "folder", "spinner", "checkbox", "refresh", "reload", "restart", "killapp")
 
         private const val SWIPE_HORIZONTAL_RATIO = 2f
-        private const val OPEN_SESSIONS_SWIPE_DP = 64
         private const val CLOSE_SESSIONS_SWIPE_DP = 48
 
         private val ioExecutor: ExecutorService = Executors.newSingleThreadExecutor()
@@ -204,6 +202,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         sendButton.setOnClickListener { if (running) stopRunning() else send() }
         updateSendButton()
         setupOptionsButton()
+        setupClearButton()
         setupInputExpand()
         setupDrawer()
         if (savedInstanceState == null) runGreeting()
@@ -280,9 +279,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             canStart = { !drawer.isDrawerVisible(GravityCompat.END) },
             allowLeftPull = false,
             canDrag = { ev -> canSwipeNow(ev) },
-            horizontalRatio = SWIPE_HORIZONTAL_RATIO,
-            onLeftSwipe = { toggleDrawer() },
-            leftSwipeDistancePx = OPEN_SESSIONS_SWIPE_DP * resources.displayMetrics.density
+            horizontalRatio = SWIPE_HORIZONTAL_RATIO
         )
     }
 
@@ -471,20 +468,17 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             onDelete = { info -> confirmDelete(info) },
             onNew = { startNewSession() }
         )
+        // Không cho vuốt từ mép phải để mở ngăn kéo; chỉ mở bằng nút. Khi đã mở thì vẫn vuốt để đóng được.
+        drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END)
         drawer.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
-            override fun onDrawerStateChanged(newState: Int) {
-                if (newState == DrawerLayout.STATE_DRAGGING && !drawer.isDrawerOpen(GravityCompat.END)) prepareSessionList()
+            override fun onDrawerOpened(drawerView: View) {
+                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.END)
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END)
             }
         })
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val density = resources.displayMetrics.density
-            drawer.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
-                val height = minOf(v.height, (200 * density).toInt())
-                val top = (v.height - height) / 2
-                v.setSystemGestureExclusionRects(listOf(Rect(v.width - (24 * density).toInt(), top, v.width, top + height)))
-            }
-        }
     }
 
     private fun refreshSessionList() {
@@ -581,8 +575,29 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 updateInputLayoutMode()
+                inputView.post { updateClearButton() }
             }
         })
+        inputView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateClearButton() }
+    }
+
+    private fun setupClearButton() {
+        val button = findViewById<ImageButton>(R.id.chat_clear)
+        button.setImageResource(R.drawable.ic_chat_clear)
+        val tint = TypedValue()
+        if (theme.resolveAttribute(android.R.attr.textColorSecondary, tint, true) && tint.resourceId != 0) {
+            button.imageTintList = ContextCompat.getColorStateList(this, tint.resourceId)
+        }
+        button.contentDescription = getString(R.string.chat_clear_input)
+        button.setOnClickListener { inputView.setText("") }
+    }
+
+    /** Nút xóa chỉ hiện khi ô nhập đang ở dạng mở rộng và có từ 2 dòng trở lên. */
+    private fun updateClearButton() {
+        if (!::inputView.isInitialized) return
+        val button = findViewById<View>(R.id.chat_clear) ?: return
+        val wanted = if (inputExpanded && inputView.lineCount >= 2) View.VISIBLE else View.GONE
+        if (button.visibility != wanted) button.visibility = wanted
     }
 
     private fun inputSingleStartPad() = (8 * resources.displayMetrics.density).toInt()
@@ -612,6 +627,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         val input = R.id.chat_input
         val options = R.id.chat_options
         val send = R.id.chat_send
+        val clearBtn = R.id.chat_clear
         val parent = ConstraintSet.PARENT_ID
         ConstraintSet().apply {
             clone(box)
@@ -622,6 +638,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 clear(input, ConstraintSet.BOTTOM)
                 connect(options, ConstraintSet.TOP, input, ConstraintSet.BOTTOM)
                 connect(send, ConstraintSet.TOP, input, ConstraintSet.BOTTOM)
+                connect(clearBtn, ConstraintSet.TOP, input, ConstraintSet.BOTTOM)
             } else {
                 connect(input, ConstraintSet.START, options, ConstraintSet.END)
                 connect(input, ConstraintSet.END, send, ConstraintSet.START)
@@ -629,6 +646,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 connect(input, ConstraintSet.BOTTOM, parent, ConstraintSet.BOTTOM)
                 clear(options, ConstraintSet.TOP)
                 clear(send, ConstraintSet.TOP)
+                clear(clearBtn, ConstraintSet.TOP)
             }
             applyTo(box)
         }
@@ -1089,6 +1107,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private val onCopy: (CharSequence) -> Unit
     ) : RecyclerView.Adapter<ChatAdapter.VH>() {
         private var items = ArrayList<ChatMessage>()
+        private val TICK_MS = 100L
         private val ticker = Handler(Looper.getMainLooper())
         private var tickerOn = false
         private val tick = object : Runnable {
@@ -1099,14 +1118,14 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                     val pos = h.bindingAdapterPosition
                     if (pos in items.indices && items[pos].running) bindTitle(h, items[pos])
                 }
-                if (items.any { it.running }) ticker.postDelayed(this, 1000) else tickerOn = false
+                if (items.any { it.running }) ticker.postDelayed(this, TICK_MS) else tickerOn = false
             }
         }
 
         private fun startTicker() {
             if (tickerOn) return
             tickerOn = true
-            ticker.postDelayed(tick, 1000)
+            ticker.postDelayed(tick, TICK_MS)
         }
 
         override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
@@ -1120,8 +1139,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             return when {
                 total >= 3600 -> "${total / 3600}h " + ((total % 3600) / 60).toString().padStart(2, '0') + "m"
                 total >= 60 -> "${total / 60}m " + (total % 60).toString().padStart(2, '0') + "s"
-                finalValue && ms < 10000 -> "$total.${(ms / 100) % 10}s"
-                else -> "${total}s"
+                else -> "$total.${(ms / 100) % 10}s"
             }
         }
 
