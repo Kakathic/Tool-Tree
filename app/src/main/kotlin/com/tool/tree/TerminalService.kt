@@ -73,7 +73,6 @@ class TerminalService : Service(), TerminalSessionStore.Listener {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         TerminalSessionStore.killAll(KILL_WAIT_MS)
-        com.omarea.krscript.executor.ScriptRegistry.killAll(KILL_WAIT_MS)
         releaseWakeLock()
         stopForeground(true)
         stopSelf()

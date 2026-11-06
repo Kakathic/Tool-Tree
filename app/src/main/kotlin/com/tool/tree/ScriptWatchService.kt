@@ -1,8 +1,10 @@
 package com.tool.tree
 
+import android.app.ActivityManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.IBinder
 import com.omarea.krscript.executor.ScriptRegistry
 
@@ -36,9 +38,29 @@ class ScriptWatchService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        ScriptRegistry.killAll(KILL_WAIT_MS)
-        stopSelf()
+        // App có nhiều task (Terminal singleTask, trang mở bằng NEW_TASK...): chỉ kill khi đã hết task giao diện,
+        // tránh kill script khi người dùng chỉ vuốt bỏ một task phụ trong lúc task chính vẫn đang dùng
+        if (!hasOtherUiTask(rootIntent)) {
+            ScriptRegistry.killAll(KILL_WAIT_MS)
+            stopSelf()
+        }
         super.onTaskRemoved(rootIntent)
+    }
+
+    private fun hasOtherUiTask(removed: Intent?): Boolean {
+        return try {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            am.appTasks.any { task ->
+                val info = task.taskInfo ?: return@any false
+                val base = info.baseIntent
+                val excluded = base != null && (base.flags and Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS) != 0
+                val sameAsRemoved = removed?.component != null && base?.component == removed.component
+                val empty = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && info.numActivities <= 0
+                !excluded && !sameAsRemoved && !empty
+            }
+        } catch (ignored: Throwable) {
+            false
+        }
     }
 
     override fun onDestroy() {

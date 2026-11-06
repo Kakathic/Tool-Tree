@@ -1,6 +1,7 @@
 package com.omarea.krscript.executor
 
 import android.content.Context
+import android.os.Build
 import com.tool.tree.ScriptWatchService
 import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
@@ -9,7 +10,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Theo dõi các script (action/switch/picker/download/chat/bg-task...) đang chạy qua [ShellExecutor]
  * để kill chúng khi thoát app (vuốt khỏi recents, crash, exit:[kill]/[restart]).
  *
- * Chỉ kill script còn đang chạy (shell gốc và mọi tiến trình con của nó). Daemon đã tách ra
+ * Chỉ kill script còn đang chạy (executor gốc và mọi tiến trình con của nó). Daemon đã tách ra
  * (nohup/setsid, đã mồ côi về init) được giữ nguyên.
  */
 object ScriptRegistry {
@@ -42,20 +43,16 @@ object ScriptRegistry {
         }.also { it.isDaemon = true }.start()
     }
 
-    private fun pidOf(p: Process): Int {
-        // Process.pid() chỉ có từ API 33 và không chắc resolve được lúc biên dịch -> gọi bằng reflection
-        try {
-            val m = Process::class.java.getMethod("pid")
-            return (m.invoke(p) as Number).toInt()
-        } catch (ignored: Throwable) {
-        }
-        return try {
+    private fun pidOf(p: Process): Int = try {
+        if (Build.VERSION.SDK_INT >= 26) {
+            p.pid().toInt()
+        } else {
             val f = p.javaClass.getDeclaredField("pid")
             f.isAccessible = true
             f.getInt(p)
-        } catch (ignored: Throwable) {
-            -1
         }
+    } catch (ignored: Throwable) {
+        -1
     }
 
     /** Dùng ngay trước khi tự kill tiến trình app: không bao giờ ném lỗi */
@@ -103,40 +100,44 @@ object ScriptRegistry {
     }
 
     /**
-     * Shell gốc của mỗi lần chạy = tiến trình mang shell_progres=<tag> mà cha không mang tag đó và cha không phải init;
-     * kill nó cùng mọi hậu duệ (theo ppid). Tiến trình mang tag có cha là init (daemon đã tách) không bị đụng tới.
+     * Mỗi lần chạy có một tiến trình executor (cha trực tiếp của các lệnh) mà argv chứa đúng tag, ví dụ
+     * "executor.sh <file> pio_123". Gốc kill = executor đó + tiến trình Java đã tạo (su/sh, phải là con trực tiếp của app,
+     * chống trùng pid). Kill gốc cùng mọi hậu duệ theo ppid, theo thứ tự cha trước con (shell chết trước nên không kịp chạy lệnh kế tiếp). Daemon đã mồ côi (cha là init) không phải hậu duệ nên được giữ.
+     * Chỉ khớp argv đúng bằng tag nên không dính tiến trình dọn dẹp (tag nằm lẫn trong chuỗi script dài).
      * § được đổi thành $ để khỏi phải escape trong Kotlin.
      */
     private fun buildScript(busybox: String, tags: String, pids: String): String {
         fun q(s: String) = "'" + s.replace("'", "'\\''") + "'"
-        return ("B=${q(busybox)}; TAGS=${q(tags)}; JP=${q(pids)}; ME=§§; all=\"\"\n" +
-                "for d in /proc/[0-9]*; do\n" +
-                "  pid=§{d#/proc/}; [ \"§pid\" = \"§ME\" ] && continue\n" +
-                "  read -r l < §d/stat 2>/dev/null || continue\n" +
-                "  set -- §{l##*) }\n" +
-                "  eval \"pp_§pid=§2\"\n" +
-                "  all=\"§all §pid\"\n" +
-                "  §B grep -qaE \"shell_progres=(§TAGS)\" §d/environ 2>/dev/null && eval \"t_§pid=1\"\n" +
-                "done\n" +
-                "kl=\" \"\n" +
-                "for pid in §all; do\n" +
-                "  eval \"pt=\\§t_§pid; pa=\\§pp_§pid\"\n" +
-                "  [ -n \"§pt\" ] || continue\n" +
-                "  eval \"ptp=\\§t_§pa\"\n" +
-                "  if [ -z \"§ptp\" ] && [ \"§pa\" != 1 ] && [ \"§pa\" != 0 ]; then kl=\"§kl§pid \"; fi\n" +
-                "done\n" +
-                "for p in §JP; do case \"§all\" in *\" §p\"*) kl=\"§kl§p \";; esac; done\n" +
-                "ch=1\n" +
-                "while [ §ch = 1 ]; do\n" +
-                "  ch=0\n" +
-                "  for pid in §all; do\n" +
+        return ("B=${q(busybox)}; TAGS=${q(tags)}; JP=${q(pids)}; APP=${android.os.Process.myPid()}; ME=§§; kl=\" \"\n" +
+                "scan() {\n" +
+                "  all=\"\"; es=\" \"\n" +
+                "  for d in /proc/[0-9]*; do\n" +
+                "    pid=§{d#/proc/}; [ \"§pid\" = \"§ME\" ] && continue\n" +
+                "    read -r l < §d/stat 2>/dev/null || continue\n" +
+                "    set -- §{l##*) }\n" +
+                "    eval \"pp_§pid=§2\"\n" +
+                "    all=\"§all §pid\"\n" +
                 "    case \"§kl\" in *\" §pid \"*) continue;; esac\n" +
-                "    eval \"pa=\\§pp_§pid\"\n" +
-                "    case \"§kl\" in *\" §pa \"*) kl=\"§kl§pid \"; ch=1;; esac\n" +
+                "    if §B grep -qa \"pio_\" §d/cmdline 2>/dev/null; then\n" +
+                "      §B tr '\\0' '\\n' < §d/cmdline 2>/dev/null | §B grep -qxE \"(§TAGS)\" && es=\"§es§pid \"\n" +
+                "    fi\n" +
                 "  done\n" +
-                "done\n" +
-                "for p in §kl; do kill -HUP §p 2>/dev/null; done\n" +
-                "sleep 0.3\n" +
+                "}\n" +
+                "grow() {\n" +
+                "  ch=1\n" +
+                "  while [ §ch = 1 ]; do\n" +
+                "    ch=0\n" +
+                "    for pid in §all; do\n" +
+                "      case \"§kl\" in *\" §pid \"*) continue;; esac\n" +
+                "      eval \"pa=\\§pp_§pid\"\n" +
+                "      case \"§kl\" in *\" §pa \"*) kl=\"§kl§pid \"; ch=1;; esac\n" +
+                "    done\n" +
+                "  done\n" +
+                "}\n" +
+                "scan\n" +
+                "for p in §JP; do eval \"pa=\\§pp_§p\"; [ \"§pa\" = \"§APP\" ] && kl=\"§kl§p \"; done\n" +
+                "kl=\"§kl§{es# }\"\n" +
+                "grow\n" +
                 "for p in §kl; do kill -9 §p 2>/dev/null; done\n").replace('§', '$')
     }
 }
