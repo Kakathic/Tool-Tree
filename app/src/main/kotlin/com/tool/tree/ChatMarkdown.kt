@@ -10,6 +10,7 @@ import android.net.Uri
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextPaint
+import android.util.TypedValue
 import android.text.method.LinkMovementMethod
 import android.text.style.BackgroundColorSpan
 import android.text.style.CharacterStyle
@@ -72,6 +73,15 @@ object ChatMarkdown {
     private val ORDERED = Regex("^(\\s*)(\\d{1,9})[.)]\\s+(.*)$")
     private val TASK = Regex("^\\[([ xX])\\]\\s+(.*)$")
     private val QUOTE = Regex("^\\s{0,3}>[> ]*(.*)$")
+    private val DEFINITION = Regex("^:\\s+(.*)$")
+    private val TILDE_FENCE = Regex("(?m)^([ \\t]*)~~~(?=[^~]|$)")
+    private val SETEXT_UNDER = Regex("^\\s{0,3}(=+|-+)\\s*$")
+    private val NOT_SETEXT_TITLE = Regex("^\\s{0,3}(#|>|[-*+]\\s|\\d{1,9}[.)]\\s|\\||:\\s)")
+    private val REF_DEF = Regex("^\\s{0,3}\\[([^\\]^][^\\]]*)]:\\s*<?((?:https?://|mailto:|www\\.|/|\\./|\\.\\./|#)[^\\s>]*)>?(?:\\s+(?:\"[^\"]*\"|'[^']*'|\\([^)]*\\)))?\\s*$")
+    private val FOOTNOTE_DEF = Regex("^\\s{0,3}\\[\\^([^\\]\\s]+)]:\\s*(.*)$")
+    private val REF_FULL = Regex("\\[([^\\[\\]]+)]\\[([^\\[\\]]*)]")
+    private val REF_SHORT = Regex("\\[([^\\[\\]^][^\\[\\]]*)](?![(\\[:])")
+    private val FOOTNOTE_REF = Regex("\\[\\^([^\\]\\s]+)]")
     private val SEP_CELL = Regex("^:?-+:?$")
     private val RULE = Regex("^\\s{0,3}([-*_])(?:[ \\t]*\\1){2,}[ \\t]*$")
     private val INTRA_WORD_UNDERSCORE = Regex("(?<=[\\p{L}\\p{N}])_(?=[\\p{L}\\p{N}])")
@@ -91,8 +101,97 @@ object ChatMarkdown {
         val isTable: Boolean get() = table != null
     }
 
+    private fun normalizeFences(s: String): String {
+        if (!s.contains("~~~") || s.contains(FENCE)) return s
+        return TILDE_FENCE.replace(s) { it.groupValues[1] + FENCE }
+    }
+
+    private fun applySetext(s: String): String {
+        val lines = s.split('\n')
+        if (lines.size < 2) return s
+        val res = ArrayList<String>(lines.size)
+        var changed = false
+        var i = 0
+        while (i < lines.size) {
+            val line = lines[i]
+            val next = lines.getOrNull(i + 1)
+            val prevBlank = i == 0 || lines[i - 1].isBlank()
+            if (next != null && prevBlank && line.isNotBlank() && !NOT_SETEXT_TITLE.containsMatchIn(line) && !RULE.matches(line.trimEnd('\r'))) {
+                val m = SETEXT_UNDER.matchEntire(next.trimEnd('\r'))
+                if (m != null && m.groupValues[1].length >= 3) {
+                    res.add((if (m.groupValues[1][0] == '=') "# " else "## ") + line)
+                    changed = true
+                    i += 2
+                    continue
+                }
+            }
+            res.add(line)
+            i++
+        }
+        return if (changed) res.joinToString("\n") else s
+    }
+
+    private fun applyReferences(s: String): String {
+        if (!s.contains("]:")) return s
+        val refs = HashMap<String, String>()
+        val notes = LinkedHashMap<String, String>()
+        val body = ArrayList<String>()
+        for (line in s.split('\n')) {
+            val t = line.trimEnd('\r')
+            val f = FOOTNOTE_DEF.matchEntire(t)
+            if (f != null) {
+                notes[f.groupValues[1]] = f.groupValues[2]
+                continue
+            }
+            val r = REF_DEF.matchEntire(t)
+            if (r != null) {
+                refs[r.groupValues[1].trim().lowercase()] = r.groupValues[2]
+                continue
+            }
+            body.add(line)
+        }
+        if (refs.isEmpty() && notes.isEmpty()) return s
+        var text = body.joinToString("\n")
+        if (refs.isNotEmpty()) {
+            text = REF_FULL.replace(text) { m ->
+                val label = m.groupValues[1]
+                val id = m.groupValues[2].ifEmpty { label }.trim().lowercase()
+                val url = refs[id]
+                if (url != null) "[$label]($url)" else m.value
+            }
+            text = REF_SHORT.replace(text) { m ->
+                val url = refs[m.groupValues[1].trim().lowercase()]
+                if (url != null) "[${m.groupValues[1]}]($url)" else m.value
+            }
+        }
+        if (notes.isNotEmpty()) {
+            val order = LinkedHashMap<String, Int>()
+            text = FOOTNOTE_REF.replace(text) { m ->
+                val id = m.groupValues[1]
+                if (notes.containsKey(id)) "^" + order.getOrPut(id) { order.size + 1 } + "^" else m.value
+            }
+            if (order.isNotEmpty()) {
+                val sb = StringBuilder(text.trimEnd('\n', '\r'))
+                sb.append("\n\n---")
+                for ((id, n) in order) sb.append("\n^").append(n).append("^ ").append(notes[id])
+                text = sb.toString()
+            }
+        }
+        return text
+    }
+
+    fun preprocess(source: CharSequence): CharSequence {
+        if (source.isEmpty() || hasStyle(source)) return source
+        val original = source.toString()
+        if (original.contains(FENCE) || original.contains("~~~")) return source
+        var s = ChatMath.convertMath(original)
+        s = applyReferences(s)
+        s = applySetext(s)
+        return if (s == original) source else s
+    }
+
     fun splitBlocks(source: CharSequence): List<Block> {
-        val s = source.toString()
+        val s = normalizeFences(source.toString())
         val out = ArrayList<Block>()
         if (!s.contains(FENCE)) {
             addTextBlock(out, source, 0, s.length)
@@ -215,8 +314,9 @@ object ChatMarkdown {
         return aligns
     }
 
-    fun renderInline(context: Context, text: CharSequence): CharSequence {
-        if (text.isEmpty() || hasStyle(text)) return text
+    fun renderInline(context: Context, text0: CharSequence): CharSequence {
+        if (text0.isEmpty() || hasStyle(text0)) return text0
+        val text: CharSequence = ChatMath.convertMath(text0.toString())
         val body = text.toString()
         if (body.indexOfAny(INLINE_MARKERS.toCharArray()) < 0) return text
         val safe = body.replace(INTRA_WORD_UNDERSCORE, "\\\\_")
@@ -230,6 +330,7 @@ object ChatMarkdown {
         var headingScale = 0f
         var quote = false
         var rule = false
+        var listPrefix = ""
     }
 
     private class QuoteBarSpan(private val color: Int, private val barPx: Int, private val gapPx: Int) : LeadingMarginSpan {
@@ -320,21 +421,23 @@ object ChatMarkdown {
         return segs
     }
 
-    fun render(context: Context, source: CharSequence): CharSequence {
-        if (source.isEmpty()) return source
-        val s = source.toString()
+    fun render(context: Context, source0: CharSequence): CharSequence {
+        if (source0.isEmpty()) return source0
+        val source = preprocess(source0)
+        val s = normalizeFences(source.toString())
         val out = SpannableStringBuilder()
         val pieces = ArrayList<Piece>()
         var hasMark = false
         var lineFirst = true
         var wrote = false
+        var lastQuote = false
 
         fun flush(codeLineBreak: Boolean) {
             val visible = pieces.any { if (it.code) it.text.isNotEmpty() else it.text.isNotBlank() }
             if (!(hasMark && !visible && !codeLineBreak)) {
                 if (wrote) out.append('\n')
                 wrote = true
-                renderPieces(context, pieces, out)
+                lastQuote = renderPieces(context, pieces, out, lastQuote)
             }
             pieces.clear()
             hasMark = false
@@ -370,7 +473,7 @@ object ChatMarkdown {
         return out
     }
 
-    private fun renderPieces(context: Context, pieces: List<Piece>, out: SpannableStringBuilder) {
+    private fun renderPieces(context: Context, pieces: List<Piece>, out: SpannableStringBuilder, afterQuote: Boolean): Boolean {
         val lineStart = out.length
         val style = LineStyle()
         for (p in pieces) {
@@ -379,7 +482,7 @@ object ChatMarkdown {
                 out.append(p.text)
                 if (out.length > s) out.setSpan(MarkdownCodeSpan(context), s, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             } else {
-                renderNormal(context, p, out, style)
+                renderNormal(context, p, out, style, afterQuote)
             }
         }
         if (out.length > lineStart) {
@@ -394,7 +497,14 @@ object ChatMarkdown {
             if (style.rule) {
                 out.setSpan(RuleSpan(0x80808080.toInt(), (1 * density).coerceAtLeast(1f)), lineStart, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
+            if (style.listPrefix.isNotEmpty()) {
+                val paint = TextPaint()
+                paint.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 15f, context.resources.displayMetrics)
+                val hang = paint.measureText(style.listPrefix).toInt()
+                out.setSpan(LeadingMarginSpan.Standard(0, hang), lineStart, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
         }
+        return style.quote
     }
 
     private fun hasStyle(text: CharSequence): Boolean {
@@ -412,7 +522,7 @@ object ChatMarkdown {
         }
     }
 
-    private fun renderNormal(context: Context, piece: Piece, out: SpannableStringBuilder, style: LineStyle) {
+    private fun renderNormal(context: Context, piece: Piece, out: SpannableStringBuilder, style: LineStyle, afterQuote: Boolean) {
         if (hasStyle(piece.text)) {
             out.append(piece.text)
             return
@@ -420,6 +530,7 @@ object ChatMarkdown {
         val str = piece.text.toString()
         var prefix = ""
         var body = str
+        var block = true
 
         if (piece.lineStart) {
             val h = HEADING.matchEntire(str)
@@ -452,10 +563,20 @@ object ChatMarkdown {
                         if (o != null) {
                             prefix = o.groupValues[1] + o.groupValues[2] + ". "
                             body = o.groupValues[3]
+                        } else {
+                            val d = DEFINITION.matchEntire(str)
+                            if (d != null) {
+                                prefix = "    "
+                                body = d.groupValues[1]
+                            } else {
+                                block = false
+                            }
                         }
                     }
                 }
             }
+            if (!block && afterQuote && str.isNotBlank()) style.quote = true
+            if (prefix.isNotBlank() && !style.quote) style.listPrefix = prefix
         }
 
         out.append(prefix)

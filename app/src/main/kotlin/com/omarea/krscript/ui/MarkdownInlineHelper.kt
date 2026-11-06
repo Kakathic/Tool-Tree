@@ -11,7 +11,7 @@ object MarkdownInlineHelper {
         val href: String = ""
     )
 
-    private const val ESCAPABLE = "\\`*_{}[]()#+-.!~<=^"
+    private const val ESCAPABLE = "\\`*_{}[]()#+-.!~<=^$"
 
     private val LINK_TITLE = Regex("^(\\S+)\\s+(?:\"[^\"]*\"|'[^']*')$")
 

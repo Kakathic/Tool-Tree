@@ -32,7 +32,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.ImageButton
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -286,8 +285,32 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         )
     }
 
+    private var hScrollUnderFinger: ChatHScrollView? = null
+    private var swipeDownRawX = 0f
+
+    private fun findChatHScroll(view: View, x: Int, y: Int): ChatHScrollView? {
+        if (view.visibility != View.VISIBLE) return null
+        val loc = IntArray(2)
+        view.getLocationOnScreen(loc)
+        if (x < loc[0] || x >= loc[0] + view.width || y < loc[1] || y >= loc[1] + view.height) return null
+        if (view is ChatHScrollView) return view
+        if (view is ViewGroup) {
+            for (i in view.childCount - 1 downTo 0) {
+                val found = findChatHScroll(view.getChildAt(i), x, y)
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
     private fun canSwipeNow(ev: MotionEvent): Boolean {
         if (ev.eventTime - ev.downTime >= ViewConfiguration.getLongPressTimeout()) return false
+        val scroller = hScrollUnderFinger
+        if (scroller != null) {
+            val dx = ev.rawX - swipeDownRawX
+            if (dx > 0 && scroller.canScrollHorizontally(-1)) return false
+            if (dx < 0 && scroller.canScrollHorizontally(1)) return false
+        }
         val focused = currentFocus as? TextView
         return focused == null || !focused.hasSelection()
     }
@@ -324,6 +347,10 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
+            swipeDownRawX = ev.rawX
+            hScrollUnderFinger = findChatHScroll(window.decorView, ev.rawX.toInt(), ev.rawY.toInt())
+        }
         if (handleCloseSessionsSwipe(ev)) return true
         if (::swipeBackHelper.isInitialized && swipeBackHelper.dispatchTouchEvent(ev)) return true
         return super.dispatchTouchEvent(ev)
@@ -1084,7 +1111,6 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             tv.setTextColor(textColor)
             tv.setPadding(dp(tv, 10f), dp(tv, 8f), dp(tv, 38f), dp(tv, 8f))
-            tv.maxWidth = holder.text.maxWidth - dp(tv, 20f)
             if (Build.VERSION.SDK_INT >= 23) tv.hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
             tv.setTextIsSelectable(true)
             val colored = SpannableStringBuilder(code)
@@ -1093,7 +1119,12 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 SyntaxHighlighterFactory.highlightSpannable(lang, colored)
             }
             tv.text = colored
-            card.addView(tv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            val codeScroll = ChatHScrollView(ctx)
+            codeScroll.maxWidthPx = holder.text.maxWidth - dp(card, 20f)
+            codeScroll.isHorizontalScrollBarEnabled = false
+            codeScroll.overScrollMode = View.OVER_SCROLL_NEVER
+            codeScroll.addView(tv, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            card.addView(codeScroll, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
             val icon = ImageView(ctx)
             icon.setImageResource(R.drawable.ic_chat_copy)
@@ -1163,7 +1194,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             addRow(table.header, true)
             table.rows.forEach { addRow(it, false) }
 
-            val scroll = HorizontalScrollView(ctx)
+            val scroll = ChatHScrollView(ctx)
+            scroll.maxWidthPx = holder.text.maxWidth - dp(card, 20f)
             scroll.isHorizontalScrollBarEnabled = false
             scroll.overScrollMode = View.OVER_SCROLL_NEVER
             scroll.addView(tl, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
