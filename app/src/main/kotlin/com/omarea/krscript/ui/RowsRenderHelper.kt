@@ -98,11 +98,11 @@ object RowsRenderHelper {
     private class BgState(val dyn: HashMap<Int, String>, val nodeDyn: String)
 
     private const val DIVIDER_ABOVE_DP = 20
-    private const val DIVIDER_BELOW_DP = 40
+    private const val DIVIDER_BELOW_DP = 10
 
     private val leadingDividerTopGapDp = WeakHashMap<TextView, Int>()
 
-    fun markCompactLeadingDivider(rowsView: TextView?, topGapDp: Int = 0) {
+    fun markCompactLeadingDivider(rowsView: TextView?, topGapDp: Int = DIVIDER_ABOVE_DP) {
         if (rowsView != null) leadingDividerTopGapDp[rowsView] = topGapDp
     }
 
@@ -341,7 +341,7 @@ object RowsRenderHelper {
                 }
                 val dividerLine = SpannableString(" ")
                 val ownSpacing = !firstRow.hasVisibleContent()
-                val defaultAbove = if (rowsView.length() == 0) (leadingDividerTopGapDp[rowsView] ?: 0) else DIVIDER_ABOVE_DP
+                val defaultAbove = if (rowsView.length() == 0) (leadingDividerTopGapDp[rowsView] ?: DIVIDER_ABOVE_DP) else DIVIDER_ABOVE_DP
                 val aboveDp = if (ownSpacing && firstRow.marginTopSet) firstRow.marginTop.coerceAtLeast(0) else defaultAbove
                 val belowDp = if (ownSpacing && firstRow.marginBottomSet) firstRow.marginBottom.coerceAtLeast(0) else DIVIDER_BELOW_DP
                 dividerLine.setSpan(CompactDividerSpan(context, dpToPx(context, aboveDp), dpToPx(context, belowDp)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -1139,7 +1139,7 @@ object RowsRenderHelper {
 
         override fun drawLeadingMargin(canvas: Canvas, paint: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int, text: CharSequence?, start: Int, end: Int, first: Boolean, layout: Layout?) {
             val strokePaint = BlurEngine.getStrokePaint(context)
-            val y = top + topGapPx + strokePaint.strokeWidth / 2f
+            val y = baseline + strokePaint.strokeWidth / 2f
             val right = (layout?.width ?: 0).toFloat()
             canvas.drawLine(0f, y, right, y, strokePaint)
         }
