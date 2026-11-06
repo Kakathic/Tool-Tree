@@ -31,6 +31,10 @@ import android.widget.Toast
 import com.omarea.krscript.ui.MarkdownCodeSpan
 import com.omarea.krscript.ui.MarkdownInlineCodeSpan
 import com.omarea.krscript.ui.MarkdownInlineHelper
+import io.noties.markwon.Markwon
+import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
+import io.noties.markwon.ext.tasklist.TaskListPlugin
+import io.noties.markwon.html.HtmlPlugin
 
 /**
  * Khối ```...``` bắt đầu ở đầu dòng được tách bằng [splitBlocks] thành khối code riêng (hiển thị thành khung có nút sao chép).
@@ -421,8 +425,111 @@ object ChatMarkdown {
         return segs
     }
 
+
+    // ---- Markwon (thư viện markdown CommonMark) ----
+    // Bật/tắt dùng Markwon cho văn bản thường; false = dùng lại bộ render tự viết bên dưới.
+    private const val USE_MARKWON = true
+
+    @Volatile
+    private var markwonInstance: Markwon? = null
+
+    private fun markwon(context: Context): Markwon {
+        markwonInstance?.let { return it }
+        synchronized(this) {
+            markwonInstance?.let { return it }
+            val app = context.applicationContext ?: context
+            val built = Markwon.builder(app)
+                .usePlugin(StrikethroughPlugin.create())
+                .usePlugin(TaskListPlugin.create(app))
+                .usePlugin(HtmlPlugin.create())
+                .build()
+            markwonInstance = built
+            return built
+        }
+    }
+
+    private val EXTRA_COLOR = Regex("\\{([^{}\\n]+)\\}\\((#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{8}|[A-Za-z]+)\\)")
+    private val EXTRA_HIGHLIGHT = Regex("==([^=\\n]+)==")
+    private val EXTRA_SUPER = Regex("\\^([^^\\s]+)\\^")
+    private val EXTRA_SUB = Regex("(?<!~)~([^~\\s]+)~(?!~)")
+    private val INLINE_CODE_RADIUS = Regex("`([^`\\n]+?)\\|\\d{1,3}`")
+    private val DEFINITION_LINE = Regex("(?m)^:[ \\t]+")
+    private val MARK_TAG = Regex("(?i)</?mark>")
+
+    // Văn bản có span sẵn (màu ANSI...) hoặc có rào ``` / ~~~ giữa dòng vẫn do bộ render cũ xử lý
+    private fun canUseMarkwon(source: CharSequence): Boolean {
+        if (!USE_MARKWON || hasStyle(source)) return false
+        val s = source.toString()
+        return !s.contains(FENCE) && !s.contains("~~~")
+    }
+
+    private fun renderMarkwon(context: Context, source: CharSequence): CharSequence {
+        var s = preprocess(source).toString()
+        s = INLINE_CODE_RADIUS.replace(s) { "`" + it.groupValues[1] + "`" }
+        s = MARK_TAG.replace(s, "==")
+        s = DEFINITION_LINE.replace(s, "&nbsp;&nbsp;&nbsp;&nbsp;")
+        val out = SpannableStringBuilder(markwon(context).toMarkdown(s))
+        applyExtras(out)
+        while (out.isNotEmpty() && out[out.length - 1] == '\n') out.delete(out.length - 1, out.length)
+        return out
+    }
+
+    private fun overlapsCode(out: Spanned, start: Int, end: Int): Boolean =
+        out.getSpans(start, end, Any::class.java).any { it.javaClass.simpleName.startsWith("Code") }
+
+    // Cú pháp mở rộng của Tool-Tree mà CommonMark không có: {chữ}(màu), ==nổi bật==, ^mũ^, ~chỉ số dưới~
+    private fun applyExtras(out: SpannableStringBuilder) {
+        wrapExtra(out, EXTRA_COLOR) { m, a, b ->
+            val color = try { Color.parseColor(m.groupValues[2]) } catch (e: IllegalArgumentException) { null }
+            if (color == null) false else {
+                out.setSpan(ForegroundColorSpan(color), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                true
+            }
+        }
+        wrapExtra(out, EXTRA_HIGHLIGHT) { _, a, b ->
+            out.setSpan(BackgroundColorSpan(0x66FFEB3B), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            true
+        }
+        wrapExtra(out, EXTRA_SUPER) { _, a, b ->
+            out.setSpan(SuperscriptSpan(), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            out.setSpan(RelativeSizeSpan(0.75f), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            true
+        }
+        wrapExtra(out, EXTRA_SUB) { _, a, b ->
+            out.setSpan(SubscriptSpan(), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            out.setSpan(RelativeSizeSpan(0.75f), a, b, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            true
+        }
+    }
+
+    private fun wrapExtra(
+        out: SpannableStringBuilder,
+        regex: Regex,
+        apply: (MatchResult, Int, Int) -> Boolean
+    ) {
+        val matches = regex.findAll(out.toString()).toList()
+        for (m in matches.asReversed()) {
+            val start = m.range.first
+            val end = m.range.last + 1
+            val inner = m.groups[1]?.range ?: continue
+            val innerStart = inner.first
+            val innerEnd = inner.last + 1
+            if (overlapsCode(out, start, end)) continue
+            if (!apply(m, innerStart, innerEnd)) continue
+            out.delete(innerEnd, end)
+            out.delete(start, innerStart)
+        }
+    }
+
     fun render(context: Context, source0: CharSequence): CharSequence {
         if (source0.isEmpty()) return source0
+        if (canUseMarkwon(source0)) {
+            try {
+                return renderMarkwon(context, source0)
+            } catch (e: Throwable) {
+                // Markwon lỗi: rơi về bộ render cũ bên dưới
+            }
+        }
         val source = preprocess(source0)
         val s = normalizeFences(source.toString())
         val out = SpannableStringBuilder()
