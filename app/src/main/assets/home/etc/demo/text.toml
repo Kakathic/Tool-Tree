@@ -3,7 +3,6 @@
 load-key-sh = 'ETC="$ETC/demo" langpath'
 
 [[text]]
-title = "@path_toml"
 [[text.rows]]
 sh = 'echo "${PAGE_CONFIG_FILE:-$ETC/demo/text.toml}"'
 monospace = true
@@ -16,7 +15,6 @@ line = true
 [[group]]
 title = "@txt_001"
 [[text]]
-title = "@txt_002"
 [[text.rows]]
 text = "@txt_003"
 bold = true
@@ -151,15 +149,6 @@ break = true
 [[text.rows]]
 photo = "{ICON}/info.png"
 break = true
-
-[[group]]
-title = "@txt_035"
-[[text]]
-title = "@txt_036"
-desc = "@txt_037"
-summary = "@txt_038"
-[[text.rows]]
-text = "@txt_039"
 
 [[group]]
 title = "@txt_040"

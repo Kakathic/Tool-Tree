@@ -725,31 +725,33 @@ class PageConfigReader {
         }
     }
 
-    private fun mainNodeToml(nodeInfoBase: NodeInfoBase, table: TomlTable): NodeInfoBase? {
+    private fun mainNodeToml(nodeInfoBase: NodeInfoBase, table: TomlTable, readTexts: Boolean = true): NodeInfoBase? {
         tomlGet(table, *TomlKeys.SUPPORT)?.let {
             if (!resolveBoolOrShell(it, "support", "visible")) return null
         }
         tomlGet(table, *TomlKeys.KEY)?.let { nodeInfoBase.key = it.trim() }
-        tomlGet(table, *TomlKeys.TITLE_SH)?.let {
-            nodeInfoBase.titleSh = it
-            registerDynamicString(nodeInfoBase, "title", it)
-        }
-        if (nodeInfoBase.title.isEmpty()) {
-            tomlGet(table, "title")?.let { nodeInfoBase.title = StringResRef.resolve(context, it) }
-        }
-        tomlGet(table, *TomlKeys.DESC_SH)?.let {
-            nodeInfoBase.descSh = it
-            registerDynamicString(nodeInfoBase, "desc", it)
-        }
-        if (nodeInfoBase.desc.isEmpty()) {
-            tomlGet(table, "desc")?.let { nodeInfoBase.desc = StringResRef.resolve(context, it) }
-        }
-        tomlGet(table, "summary-sh")?.let {
-            nodeInfoBase.summarySh = it
-            registerDynamicString(nodeInfoBase, "summary", it)
-        }
-        if (nodeInfoBase.summary.isEmpty()) {
-            tomlGet(table, "summary")?.let { nodeInfoBase.summary = StringResRef.resolve(context, it) }
+        if (readTexts) {
+            tomlGet(table, *TomlKeys.TITLE_SH)?.let {
+                nodeInfoBase.titleSh = it
+                registerDynamicString(nodeInfoBase, "title", it)
+            }
+            if (nodeInfoBase.title.isEmpty()) {
+                tomlGet(table, "title")?.let { nodeInfoBase.title = StringResRef.resolve(context, it) }
+            }
+            tomlGet(table, *TomlKeys.DESC_SH)?.let {
+                nodeInfoBase.descSh = it
+                registerDynamicString(nodeInfoBase, "desc", it)
+            }
+            if (nodeInfoBase.desc.isEmpty()) {
+                tomlGet(table, "desc")?.let { nodeInfoBase.desc = StringResRef.resolve(context, it) }
+            }
+            tomlGet(table, "summary-sh")?.let {
+                nodeInfoBase.summarySh = it
+                registerDynamicString(nodeInfoBase, "summary", it)
+            }
+            if (nodeInfoBase.summary.isEmpty()) {
+                tomlGet(table, "summary")?.let { nodeInfoBase.summary = StringResRef.resolve(context, it) }
+            }
         }
         tomlGet(table, *TomlKeys.LOAD_AFTER)?.let { nodeInfoBase.loadAfter = tomlTruthy(it) }
         return nodeInfoBase
@@ -1246,7 +1248,7 @@ class PageConfigReader {
     }
 
     private fun textNodeToml(table: TomlTable): TextNode? {
-        val text = mainNodeToml(TextNode(pageConfigAbsPath), table) as TextNode? ?: return null
+        val text = mainNodeToml(TextNode(pageConfigAbsPath), table, readTexts = false) as TextNode? ?: return null
         tomlGet(table, *TomlKeys.BG_IMAGE)?.let { text.bgImage = it.trim() }
         tomlGet(table, *TomlKeys.BG_IMAGE_SH)?.let { text.bgImageSh = it.trim() }
         tomlGet(table, *TomlKeys.BG_SCALE)?.let { text.bgScale = it.trim().lowercase(getDefault()) }

@@ -670,7 +670,7 @@ script = "..."</code></pre>
 </section>
 <section id="shared-fields">
 <h2>3. Shared fields (NodeInfoBase + ClickableNode + RunnableNode)</h2>
-<p>These are the shared fields used by most visible page nodes through <code>NodeInfoBase</code>, with additional fields inherited by clickable and runnable nodes. Some page-level containers such as <code>[[group]]</code>, <code>[[menu]]</code>, <code>[[fab]]</code>, and the invisible <code>[[resource]]</code> node are parsed by specialized code and do not accept every shared field listed below.</p>
+<p>These are the shared fields used by most visible page nodes through <code>NodeInfoBase</code>, with additional fields inherited by clickable and runnable nodes. Some page-level containers such as <code>[[group]]</code>, <code>[[menu]]</code>, <code>[[fab]]</code>, and the invisible <code>[[resource]]</code> node are parsed by specialized code and do not accept every shared field listed below. <code>[[text]]</code> reads only <code>key</code>, <code>support</code> and <code>load-after</code> from this table - its <code>title</code>, <code>desc</code> and <code>summary</code> (and <code>-sh</code> forms) are not supported.</p>
 <h3>3.1. NodeInfoBase (shared by normal page nodes)</h3>
 <div class="tbl-container">
 <table class="tbl cols-5">
@@ -1188,7 +1188,7 @@ option-sh = "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequenc
 <tr><td class="field-name">bg-image</td><td>bg-photo</td><td class="field-type">String</td><td>Background image path of the whole text block (same loader as action <code>bg</code>: <code>{HOME}</code>/<code>{ICON}</code>, relative paths). Can also be set on any <code>[[text.rows]]</code> row; the last non-empty one wins</td></tr>
 <tr><td class="field-name">bg-image-sh</td><td>bg-photo-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that prints the background image path (batched with the rows scripts; overrides <code>bg-image</code>)</td></tr>
 <tr><td class="field-name">bg-scale</td><td>-</td><td class="field-type">String</td><td><code>fit</code> (default, like action: image drives the height, <code>fitCenter</code>) | <code>crop</code> (fills the block, <code>centerCrop</code>, does not change the height) | <code>stretch</code> (fills the block, <code>fitXY</code>)</td></tr>
-<tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ NodeInfoBase fields (title, title-sh, desc, desc-sh, summary, support...)</td></tr>
+<tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ NodeInfoBase fields <code>key</code>, <code>support</code>, <code>load-after</code>. <code>[[text]]</code> has no <code>title</code> / <code>desc</code> / <code>summary</code> (nor their <code>-sh</code> forms): they are ignored - put the content in <code>[[text.rows]]</code></td></tr>
 </table>
 </div>
 <h3>10.2. Demo</h3>
@@ -1205,8 +1205,6 @@ option-sh = "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequenc
 </div>
 </div></div>
 <pre><code>[[text]]
-title = "Notice"
-
 [[text.rows]]
 text = "CAUTION"
 bold = true
@@ -1337,8 +1335,6 @@ text = "Temp: 41 C"
 </div>
 </div></div>
 <pre><code>[[text]]
-title = "Device info"
-
 [[text.rows]]
 text = "Device info"
 bold = true
@@ -1466,8 +1462,6 @@ reset = 0
 <h3>11.7. Inline progress bar (<code>progress</code>) and flash highlight (<code>flash</code>)</h3>
 <p>A row can embed a small horizontal progress bar <strong>inline, right after its text/icon</strong> - useful for battery/thermal/storage gauges without leaving the text flow. The bar is driven either statically or by a script:</p>
 <pre><code>[[text]]
-title = "Storage"
-
 [[text.rows]]
 sh = "df -h /data | tail -1 | awk '{print $5}'"
 text = "/data usage"
@@ -2133,8 +2127,6 @@ echo "am:[broadcast -a com.example.MY_ACTION --es status ok --ei code 200]"
 <p>A representative TOML configuration showcasing groups, actions, parameters, switches, and rich text rows:</p>
 <pre><code># Top-level item (declared before the first [[group]]) - shown without a group header
 [[text]]
-title = "NOTICE"
-
 [[text.rows]]
 text = "Every entry below belongs to the nearest [[group]] above it"
 italic = true
@@ -2216,9 +2208,9 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
+<li>2026-11-06 - <code>[[text]]</code>: removed <code>title</code>, <code>desc</code>, <code>summary</code> and <code>title-sh</code>, <code>desc-sh</code>, <code>summary-sh</code> (ignored now, the block shows only its rows; see section 10.1).</li>
 <li>2026-11-06 - <code>markdown = true</code> (rows and chat): removed backslash escapes and HTML tags (<code>&lt;u&gt; &lt;mark&gt; &lt;sup&gt; &lt;sub&gt; &lt;b&gt; &lt;i&gt; &lt;s&gt; &lt;br&gt;</code>); <code>[[chat]]</code>: removed the Markwon library, footnotes, definition lines and math-to-Unicode, and the <code>`text|R`</code> radius works again in chat (see sections 11.4 and 14.1).</li>
 <li>2026-11-06 - <code>[[chat]]</code> with <code>markdown = true</code>: ordinary text is now rendered by the Markwon library (CommonMark); <code>`text|R`</code> radius is ignored in chat and bullet glyphs follow the library (see section 14.1).</li>
-<li>2026-11-06 - <code>[[chat]]</code> with <code>markdown = true</code>: added <code>~~~</code> fences, Setext headings, lazy quote lines, hanging indent for lists, definition lines, reference links, footnotes and math-to-Unicode (see section 14.1).</li>
 </ul>
 </section>
 </main>
