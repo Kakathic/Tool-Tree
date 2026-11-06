@@ -650,7 +650,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             applyTo(box)
         }
         if (expanded) {
-            inputView.setPaddingRelative(dp(16), dp(12), dp(16), dp(2))
+            inputView.setPaddingRelative(dp(16), dp(12), dp(16), dp(8))
         } else {
             inputView.setPaddingRelative(inputSingleStartPad(), dp(10), inputSingleEndPad(), dp(10))
         }

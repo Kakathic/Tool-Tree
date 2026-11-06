@@ -34,32 +34,6 @@ class TerminalLauncher private constructor(
 
         private fun q(s: String): String = "'" + s.replace("'", "'\\''") + "'"
 
-        private val staleLock = Any()
-        private var staleReaped = false
-
-        /**
-         * Lần mở terminal đầu tiên của tiến trình app: dọn các tiến trình terminal mồ côi còn sót từ lần chạy trước
-         * (app bị kill đột ngột, crash...) - nhận biết qua biến TT_TERM_TAG. Chạy trước khi phiên mới được start.
-         */
-        private fun reapStaleProcesses(busybox: String) {
-            synchronized(staleLock) {
-                if (staleReaped) return
-                staleReaped = true
-                val b = q(busybox)
-                val script = "B=$b; ME=\$\$; sweep() { for d in /proc/[0-9]*; do pid=\${d#/proc/}; [ \"\$pid\" = \"\$ME\" ] && continue; " +
-                        "\$B grep -qa \"TT_TERM_TAG=term_\" \$d/environ 2>/dev/null && kill -\$SIG \$pid 2>/dev/null; done; }; " +
-                        "SIG=HUP; sweep; sleep 0.3; SIG=KILL; sweep"
-                try {
-                    val pb = if (ScriptEnvironmen.isRooted()) ProcessBuilder("su", "-c", script) else ProcessBuilder("sh", "-c", script)
-                    val proc = pb.redirectErrorStream(true).start()
-                    proc.outputStream.close()
-                    proc.inputStream.readBytes()
-                    proc.waitFor()
-                } catch (ignored: Exception) {
-                }
-            }
-        }
-
         fun prepare(context: Context, cwdArg: String, cmd: String, root: Int = 0, pagePath: String = "", closeOnExit: Boolean = false): TerminalLauncher {
             val spf = context.getSharedPreferences("kr-script-config", Context.MODE_PRIVATE)
             val executor = spf.getString("executor", "root/executor.sh") ?: "root/executor.sh"
@@ -74,8 +48,6 @@ class TerminalLauncher private constructor(
             if (!bash.exists() || !busybox.exists()) {
                 throw IllegalStateException("Missing ${bash.absolutePath} or ${busybox.absolutePath}")
             }
-
-            reapStaleProcesses(busybox.absolutePath)
 
             val tmp = File(home, "tmp").apply { mkdirs() }
             // Dọn file phiên cũ còn sót (tiến trình bị kill đột ngột)
