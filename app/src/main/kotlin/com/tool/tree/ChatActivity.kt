@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.text.Editable
 import android.text.Layout
 import android.text.SpannableStringBuilder
@@ -98,7 +99,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private fun persistTo(store: ChatSessionStore, target: ChatSession) {
             val snapshot = target.messages
                 .filter { !it.transient && (it.fromUser || it.text.isNotEmpty()) }
-                .map { ChatSessionStore.Stored(it.fromUser, it.text.toString(), ChatSpanCodec.encode(it.text)) }
+                .map { ChatSessionStore.Stored(it.fromUser, it.text.toString(), ChatSpanCodec.encode(it.text), it.durationMs) }
             try {
                 ioExecutor.execute { store.save(target.id, snapshot) }
             } catch (_: Exception) {
@@ -432,6 +433,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             s.messages.add(
                 ChatMessage(m.fromUser, m.text).apply {
                     ChatSpanCodec.apply(text, m.spans)
+                    durationMs = m.durationMs
                     title = (if (m.fromUser) node.userTitle else node.chatTitle).ifEmpty { null }
                 }
             )
@@ -708,6 +710,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         onDone: (() -> Unit)? = null
     ) {
         running = true
+        reply.startMs = SystemClock.elapsedRealtime()
+        reply.durationMs = -1L
         updateSendButton()
         AnsiColorParser.reset()
         val run = ActiveRun(pageKey(), owner, reply, store)
@@ -722,6 +726,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             {
                 if (activeRuns[run.pageKey] === run) activeRuns.remove(run.pageKey)
                 reply.running = false
+                reply.durationMs = if (reply.startMs > 0) SystemClock.elapsedRealtime() - reply.startMs else -1L
                 run.onDone?.invoke()
                 val ui = run.onFinished
                 if (ui != null) ui() else persistTo(run.store, run.session)
@@ -946,6 +951,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         var running = false
         var progressCur = 0
         var progressTotal = 0
+        var startMs = 0L
+        var durationMs = -1L
     }
 
     private class ChatShellHandler(
@@ -1082,6 +1089,58 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private val onCopy: (CharSequence) -> Unit
     ) : RecyclerView.Adapter<ChatAdapter.VH>() {
         private var items = ArrayList<ChatMessage>()
+        private val ticker = Handler(Looper.getMainLooper())
+        private var tickerOn = false
+        private val tick = object : Runnable {
+            override fun run() {
+                val rv = activity.listView
+                for (i in 0 until rv.childCount) {
+                    val h = rv.getChildViewHolder(rv.getChildAt(i)) as? VH ?: continue
+                    val pos = h.bindingAdapterPosition
+                    if (pos in items.indices && items[pos].running) bindTitle(h, items[pos])
+                }
+                if (items.any { it.running }) ticker.postDelayed(this, 1000) else tickerOn = false
+            }
+        }
+
+        private fun startTicker() {
+            if (tickerOn) return
+            tickerOn = true
+            ticker.postDelayed(tick, 1000)
+        }
+
+        override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+            ticker.removeCallbacks(tick)
+            tickerOn = false
+            super.onDetachedFromRecyclerView(recyclerView)
+        }
+
+        private fun formatElapsed(ms: Long, finalValue: Boolean): String {
+            val total = ms / 1000
+            return when {
+                total >= 3600 -> "${total / 3600}h " + ((total % 3600) / 60).toString().padStart(2, '0') + "m"
+                total >= 60 -> "${total / 60}m " + (total % 60).toString().padStart(2, '0') + "s"
+                finalValue && ms < 10000 -> "$total.${(ms / 100) % 10}s"
+                else -> "${total}s"
+            }
+        }
+
+        private fun bindTitle(holder: VH, m: ChatMessage) {
+            val base = m.title?.toString()
+            val time = when {
+                m.fromUser || m.transient -> null
+                m.running && m.startMs > 0 -> formatElapsed(SystemClock.elapsedRealtime() - m.startMs, false)
+                !m.running && m.durationMs >= 0 -> formatElapsed(m.durationMs, true)
+                else -> null
+            }
+            val label = when {
+                time == null -> base
+                base.isNullOrEmpty() -> time
+                else -> "$base \u2022 $time"
+            }
+            holder.title.visibility = if (label != null) View.VISIBLE else View.GONE
+            holder.title.text = label
+        }
 
         @android.annotation.SuppressLint("NotifyDataSetChanged")
         fun bind(list: ArrayList<ChatMessage>) {
@@ -1339,9 +1398,8 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val m = items[position]
-            val label = m.title
-            holder.title.visibility = if (label != null) View.VISIBLE else View.GONE
-            holder.title.text = label
+            bindTitle(holder, m)
+            if (m.running) startTicker()
             val visible = visibleText(m.text)
             val renderMd = activity.node.markdown && !m.fromUser && !m.running
             val showDots = visible.isEmpty() && m.running
