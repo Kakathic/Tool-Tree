@@ -956,6 +956,7 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
         private val onFinished: () -> Unit,
         private val quietEmpty: Boolean = false
     ) : SilentShellOutputHandler(context) {
+        private val eraseAtStart = Regex("^\u001B\\[([0-2]?)K")
         private var lineStart = 0
         private var pendingOverwrite = false
         private var prevEndedWithCr = false
@@ -988,6 +989,10 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
             finished = true
             message.progressTotal = 0
             val buf = message.text
+            if (pendingOverwrite && lineStart in 0..buf.length) {
+                buf.delete(lineStart, buf.length)
+                pendingOverwrite = false
+            }
             while (buf.isNotEmpty() && buf.last() == '\n') buf.delete(buf.length - 1, buf.length)
             if (quietEmpty && buf.isEmpty()) {
                 // greeting-sh: no output -> no bubble
@@ -1008,7 +1013,20 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
 
         private fun dispatch(msg: Any?, forcedColor: Int?) {
             if (msg == null || finished) return
-            val raw = msg.toString()
+            var raw = msg.toString()
+            val erase = eraseAtStart.find(raw)
+            if (erase != null) {
+                val buf = message.text
+                if ((pendingOverwrite || erase.groupValues[1] == "2") && lineStart in 0..buf.length) {
+                    buf.delete(lineStart, buf.length)
+                    pendingOverwrite = false
+                }
+                raw = raw.substring(erase.range.last + 1)
+                if (raw.isEmpty()) {
+                    onChanged()
+                    return
+                }
+            }
             var parsed: CharSequence = ChatAnsi.stripDefaultColor(AnsiColorParser.parse(raw))
             if (forcedColor != null && !raw.contains("\u001B[")) {
                 parsed = SpannableStringBuilder(parsed).apply {
