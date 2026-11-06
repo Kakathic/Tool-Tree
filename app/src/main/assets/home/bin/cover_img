@@ -220,7 +220,7 @@ case "$CONVER" in
 esac
 
 if [[ "$file_img" != "$INPUT" && -f "$file_img" ]]; then
-  rm -f "$file_img"
+[[ "$dang_type" != "sparse" ]] && rm -f "$file_img"
 fi
 
 finalize_exit
