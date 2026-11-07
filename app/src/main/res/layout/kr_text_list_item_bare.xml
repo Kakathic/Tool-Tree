@@ -20,9 +20,9 @@
     android:gravity="center_vertical"
     android:orientation="vertical"
     android:paddingLeft="16dp"
-    android:paddingTop="6dp"
+    android:paddingTop="8dp"
     android:paddingRight="16dp"
-    android:paddingBottom="10dp">
+    android:paddingBottom="0dp">
 
     <TextView
         android:id="@id/kr_rows"
