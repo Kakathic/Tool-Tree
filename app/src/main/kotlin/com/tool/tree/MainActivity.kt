@@ -67,6 +67,7 @@ class MainActivity : AppCompatActivity() {
     
     private var pendingUpdateInfo: AppUpdateInfo? = null
     private var deferredUpdateInfo: AppUpdateInfo? = null
+    private var deferredStartOnUpdate = false
     private var aboutPending = false
 
     companion object {
@@ -150,22 +151,25 @@ class MainActivity : AppCompatActivity() {
         invalidateOptionsMenu()
 
         if (updateInfo != null && !AppUpdateConfig(this).isDismissed(updateInfo.sha256)) {
-            showAboutDialog(updateInfo)
+            showAboutDialog(updateInfo, startOnUpdate = true)
         }
     }
 
-    private fun showAboutDialog(info: AppUpdateInfo?) {
+    private fun showAboutDialog(info: AppUpdateInfo?, startOnUpdate: Boolean = false) {
         if (aboutPending) return
         aboutPending = true
         BlurEngine.runWhenBlurReady {
             aboutPending = false
             if (isFinishing || isDestroyed) return@runWhenBlurReady
             if (supportFragmentManager.isStateSaved) {
-                if (info != null) deferredUpdateInfo = info
+                if (info != null) {
+                    deferredUpdateInfo = info
+                    deferredStartOnUpdate = startOnUpdate
+                }
                 return@runWhenBlurReady
             }
             if (supportFragmentManager.findFragmentByTag("app_update") != null) return@runWhenBlurReady
-            DialogAboutUpdate(ThemeModeState.isDarkMode(), info) { result -> onUpdateResult(result) }
+            DialogAboutUpdate(ThemeModeState.isDarkMode(), info, startOnUpdate) { result -> onUpdateResult(result) }
                 .show(supportFragmentManager, "app_update")
         }
     }
@@ -198,7 +202,9 @@ class MainActivity : AppCompatActivity() {
         }
         val info = deferredUpdateInfo ?: return
         deferredUpdateInfo = null
-        showAboutDialog(info)
+        val direct = deferredStartOnUpdate
+        deferredStartOnUpdate = false
+        showAboutDialog(info, direct)
     }
 
     private fun setAppTitleWithVersion(versionName: String) {

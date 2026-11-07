@@ -31,6 +31,7 @@ import java.io.File
 class DialogAboutUpdate(
     private val darkMode: Boolean = false,
     private val knownInfo: AppUpdateInfo? = null,
+    startOnUpdate: Boolean = false,
     private val onResult: (AppUpdateCheckResult) -> Unit = {}
 ) : DialogFullScreen(R.layout.dialog_about, darkMode) {
 
@@ -54,6 +55,9 @@ class DialogAboutUpdate(
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    // Mở thẳng màn Cập nhật (tự hiện lúc khởi động): chạm ngoài / vuốt = đóng hẳn, không lùi về Giới thiệu
+    private val openedDirectly = startOnUpdate && knownInfo != null
 
     // About panel
     private lateinit var aboutPanel: View
@@ -103,9 +107,15 @@ class DialogAboutUpdate(
 
     // Trong màn Cập nhật: Back quay về Giới thiệu (đang tải thì bỏ qua)
     private fun handleBack(): Boolean {
-        if (!inUpdate) return false
+        if (!inUpdate || openedDirectly) return false
         if (activeDownload == null) showPanel(false)
         return true
+    }
+
+    // Chạm ra ngoài hộp thoại
+    private fun onOutsideTap() {
+        if (activeDownload != null) return
+        if (inUpdate && !openedDirectly) showPanel(false) else closeView()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -117,12 +127,7 @@ class DialogAboutUpdate(
         aboutPanel = view.findViewById(R.id.about_panel)
         updatePanel = view.findViewById(R.id.update_panel)
 
-        view.findViewById<View>(R.id.about_back).setOnClickListener {
-            if (activeDownload == null) closeView()
-        }
-        view.findViewById<View>(R.id.update_back).setOnClickListener {
-            if (activeDownload == null) showPanel(false)
-        }
+        view.findViewById<View>(R.id.dialog_root).setOnClickListener { onOutsideTap() }
 
         view.findViewById<View>(R.id.about_version_row).setOnClickListener { openLink(activity, GITHUB_URL) }
         view.findViewById<View>(R.id.about_donate).setOnClickListener { openLink(activity, DONATE_URL) }
@@ -132,6 +137,13 @@ class DialogAboutUpdate(
 
         bindSettings(view, activity)
         bindUpdate(view, activity)
+        setupCardSize(view)
+        if (openedDirectly) {
+            inUpdate = true
+            aboutPanel.visibility = View.GONE
+            updatePanel.visibility = View.VISIBLE
+            refreshSwipe()
+        }
         viewReady = true
     }
 
@@ -179,8 +191,25 @@ class DialogAboutUpdate(
         refreshSwipe()
     }
 
+    // Vuốt để đóng: tắt khi đang tải, và ở màn Cập nhật mở từ Giới thiệu (vuốt sẽ đóng cả dialog)
     private fun refreshSwipe() {
-        setSwipeBackRuntimeEnabled(!inUpdate && activeDownload == null)
+        setSwipeBackRuntimeEnabled(activeDownload == null && (!inUpdate || openedDirectly))
+    }
+
+    // Dialog căn giữa; 2 màn có cùng chiều cao = chiều cao màn Giới thiệu (tối đa 82% màn hình)
+    private fun setupCardSize(view: View) {
+        val dm = resources.displayMetrics
+        val cardWidth = minOf(dm.widthPixels - (48 * dm.density).toInt(), (400 * dm.density).toInt())
+        val card = view.findViewById<View>(R.id.dialog_card)
+        card.layoutParams = card.layoutParams.apply { width = cardWidth }
+
+        aboutPanel.measure(
+            View.MeasureSpec.makeMeasureSpec(cardWidth, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val height = minOf(aboutPanel.measuredHeight, (dm.heightPixels * 0.82f).toInt())
+        aboutPanel.layoutParams = aboutPanel.layoutParams.apply { this.height = height }
+        updatePanel.layoutParams = updatePanel.layoutParams.apply { this.height = height }
     }
 
     private fun openUpdatePanel(activity: Activity) {
