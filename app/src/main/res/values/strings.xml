@@ -266,4 +266,11 @@ If you agree, press the confirm button to continue."</string>
     <string name="chat_params_title">Settings</string>
     <string name="chat_sessions_title">Chat sessions</string>
     <string name="chat_delete_session_confirm">Delete this session?</string>
+    <string name="kr_favorite_add_title">Add to</string>
+    <string formatted="false" name="kr_favorite_add_desc">Where do you want to add “%s”?</string>
+    <string name="kr_favorite_to_drawer">Menu</string>
+    <string name="kr_favorite_to_home">Home screen</string>
+    <string name="kr_favorite_added">Added to the menu favorites</string>
+    <string name="kr_favorite_exists">Already in the menu favorites</string>
+    <string formatted="false" name="kr_favorite_remove_desc">Remove “%s” from favorites?</string>
 </resources>

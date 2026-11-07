@@ -252,4 +252,11 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="chat_params_title">Cài đặt</string>
     <string name="chat_sessions_title">Phiên chat</string>
     <string name="chat_delete_session_confirm">Xoá phiên này?</string>
+    <string name="kr_favorite_add_title">Thêm vào</string>
+    <string formatted="false" name="kr_favorite_add_desc">Bạn muốn thêm “%s” vào đâu?</string>
+    <string name="kr_favorite_to_drawer">Mục lục</string>
+    <string name="kr_favorite_to_home">Màn hình chính</string>
+    <string name="kr_favorite_added">Đã thêm vào Yêu thích của mục lục</string>
+    <string name="kr_favorite_exists">Đã có trong Yêu thích của mục lục</string>
+    <string formatted="false" name="kr_favorite_remove_desc">Xoá “%s” khỏi Yêu thích?</string>
 </resources>
