@@ -10,7 +10,7 @@ class ListItemChat(context: Context, config: ChatNode, card: Boolean = false) : 
     private val widgetView = layout.findViewById<ImageView?>(R.id.kr_widget)
 
     init {
-        widgetView?.visibility = View.VISIBLE
+        widgetView?.visibility = if (card) View.GONE else View.VISIBLE
         widgetView?.setImageDrawable(context.getDrawable(R.drawable.icon_chat))
         WidgetTintHelper.applyTint(context, widgetView, iconDrawable)
     }

@@ -20,7 +20,7 @@ class ListItemAction(context: Context, private val config: ActionNode, card: Boo
     }
 
     init {
-        widgetView?.visibility = View.VISIBLE
+        widgetView?.visibility = if (card) View.GONE else View.VISIBLE
         if (config.params != null && config.params!!.isNotEmpty()) {
             widgetView?.setImageDrawable(context.getDrawable(R.drawable.kr_list))
         } else {

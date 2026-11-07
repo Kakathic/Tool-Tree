@@ -6,7 +6,7 @@
     android:clickable="true"
     android:focusable="true"
     android:foreground="?android:attr/selectableItemBackground"
-    android:minHeight="72dp">
+    android:minHeight="56dp">
 
     <com.omarea.krscript.ui.TextBgImageView
         android:id="@+id/kr_extra_bg"
@@ -36,27 +36,33 @@
         android:paddingEnd="12dp"
         android:paddingBottom="12dp">
 
+        <ImageView
+            android:id="@id/kr_icon"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginBottom="8dp"
+            android:padding="0dp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <ImageView
-                android:id="@id/kr_icon"
-                android:layout_width="35dp"
-                android:layout_height="35dp"
-                android:padding="0dp" />
-
-            <View
+            <TextView
+                android:id="@id/kr_title"
+                style="@style/textTitle"
                 android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="2" />
 
             <ImageView
                 android:id="@id/kr_widget"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="6dp"
                 android:padding="5dp"
                 app:tint="?android:attr/colorAccent" />
 
@@ -64,11 +70,11 @@
                 android:id="@id/kr_switch"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
                 android:clickable="false"
                 android:elevation="5dp"
                 android:enabled="false"
                 android:focusable="false"
-                android:padding="5dp"
                 android:switchTextAppearance="@null"
                 android:textOff=""
                 android:textOn=""
@@ -78,17 +84,11 @@
 
             <com.omarea.krscript.ui.DownloadProgressRing
                 android:id="@+id/kr_download_ring"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="6dp"
                 android:visibility="gone" />
         </LinearLayout>
-
-        <TextView
-            android:id="@id/kr_title"
-            style="@style/textTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" />
 
         <TextView
             android:id="@id/kr_desc"

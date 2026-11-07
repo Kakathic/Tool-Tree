@@ -18,7 +18,7 @@ class ListItemPage(context: Context, private val config: PageNode, card: Boolean
     }
 
     init {
-        widgetView?.visibility = View.VISIBLE
+        widgetView?.visibility = if (card) View.GONE else View.VISIBLE
         widgetView?.setImageDrawable(context.getDrawable(R.drawable.kr_arrow))
         WidgetTintHelper.applyTint(context, widgetView, iconDrawable)
 
