@@ -124,6 +124,8 @@ class ListItemGroup(context: Context,
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         val density = context.resources.displayMetrics.density
         val gap = if (cardMode) (CARD_GAP_DP * density).toInt() else 0
+        val cellCount = children.count { (it is ListItemClickable && it.card) || (it is ListItemGroup && it.isCell) }
+        val cols = if (columnWidthDp > 0) columns.coerceAtMost(cellCount.coerceAtLeast(1)) else columns
         content.removeAllViews()
         val rows = ArrayList<LinearLayout>()
         var row: LinearLayout? = null
@@ -132,7 +134,7 @@ class ListItemGroup(context: Context,
             (view.parent as? ViewGroup)?.removeView(view)
             if ((child is ListItemClickable && child.card) || (child is ListItemGroup && child.isCell)) {
                 var current = row
-                if (current == null || current.childCount >= columns) {
+                if (current == null || current.childCount >= cols) {
                     current = LinearLayout(context)
                     current.orientation = LinearLayout.HORIZONTAL
                     if (gridLines) {
@@ -159,7 +161,7 @@ class ListItemGroup(context: Context,
             }
         }
         for (r in rows) {
-            while (r.childCount < columns) {
+            while (r.childCount < cols) {
                 r.addView(View(context), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
                     marginStart = gap
                 })
