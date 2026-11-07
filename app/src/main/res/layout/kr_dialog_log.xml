@@ -79,6 +79,18 @@
                 android:scaleType="centerInside"
                 android:src="@drawable/kr_hide" />
 
+            <ImageButton
+                android:id="@+id/btn_copy"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="2dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/btn_copy_output"
+                android:padding="6dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/kr_log_copy"
+                android:visibility="gone" />
+
         </LinearLayout>
 
     </LinearLayout>

@@ -191,7 +191,8 @@ class DialogLogFragment : DialogFragment() {
                             transition
                         )
                         b.btnHide.visibility = View.GONE
-                        b.btnDivider.visibility = View.GONE
+                        b.btnDivider.visibility = View.VISIBLE
+                        b.btnCopy.visibility = View.VISIBLE
                         b.btnCancel.visibility = View.GONE
                         b.btnExit.visibility = View.VISIBLE
                         b.actionProgress.visibility = View.GONE
@@ -213,7 +214,8 @@ class DialogLogFragment : DialogFragment() {
 
         if (handler.isFinished) {
             binding.btnHide.visibility = View.GONE
-            binding.btnDivider.visibility = View.GONE
+            binding.btnDivider.visibility = View.VISIBLE
+            binding.btnCopy.visibility = View.VISIBLE
             binding.btnCancel.visibility = View.GONE
             binding.btnExit.visibility = View.VISIBLE
             binding.actionProgress.visibility = View.GONE
@@ -275,7 +277,8 @@ class DialogLogFragment : DialogFragment() {
                             transition
                         )
                         b.btnHide.visibility = View.GONE
-                        b.btnDivider.visibility = View.GONE
+                        b.btnDivider.visibility = View.VISIBLE
+                        b.btnCopy.visibility = View.VISIBLE
                         b.btnCancel.visibility = View.GONE
                         b.btnExit.visibility = View.VISIBLE
                         b.actionProgress.visibility = View.GONE
@@ -356,6 +359,10 @@ class DialogLogFragment : DialogFragment() {
             shareLogAsFile()
         }
 
+        binding.btnCopy.setOnClickListener {
+            copyLogToClipboard()
+        }
+
         if (nodeInterruptable) {
             binding.btnHide.visibility = View.VISIBLE
             binding.btnDivider.visibility = View.VISIBLE
@@ -386,6 +393,21 @@ class DialogLogFragment : DialogFragment() {
         } else {
             Toast.makeText(requireContext(), getString(R.string.input_send_fail), Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun copyLogToClipboard() {
+        val act = activity ?: return
+        val text = currentHandler?.getLogText(excludeFinishLine = true)
+            ?: binding.shellOutput.text.toString()
+        if (text.isBlank()) {
+            Toast.makeText(act, getString(R.string.kr_task_notify_copy_empty), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val copied = runCatching {
+            val clipboard = act.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("text", text))
+        }.isSuccess
+        Toast.makeText(act, if (copied) R.string.copy_success else R.string.copy_fail, Toast.LENGTH_SHORT).show()
     }
 
     private fun shareLogAsFile() {
