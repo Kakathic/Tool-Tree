@@ -1194,15 +1194,21 @@ object RowsRenderHelper {
         }
     }
 
+    // margin-top chỉ áp cho dòng đầu của hàng (hàng chữ nhiều dòng không bị nở khoảng trống ở mọi dòng)
     private class TopExtraSpaceSpan(private val extraPx: Int) : LineHeightSpan {
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
+            val spanStart = (text as? Spanned)?.getSpanStart(this) ?: -1
+            if (spanStart >= 0 && start > spanStart) return
             fm.ascent -= extraPx
             fm.top -= extraPx
         }
     }
 
+    // margin-bottom chỉ áp cho dòng cuối của hàng
     private class BottomExtraSpaceSpan(private val extraPx: Int) : LineHeightSpan {
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
+            val spanEnd = (text as? Spanned)?.getSpanEnd(this) ?: -1
+            if (spanEnd >= 0 && end < spanEnd) return
             fm.descent += extraPx
             fm.bottom += extraPx
         }

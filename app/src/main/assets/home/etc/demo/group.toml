@@ -58,24 +58,10 @@ title = "@grp_017"
 [[action]]
 title = "@grp_018"
 script = 'echo ok'
-
 [[end]]
 
 [[text]]
 [[text.rows]]
-text = "@grp_019"
-size = 12
-alpha = 0.85
-
-[[text]]
-[[text.rows]]
-text = "@grp_019"
-size = 12
-alpha = 0.85
-
-[[text]]
-[[text.rows]]
-line = true
 text = "@grp_019"
 size = 12
 alpha = 0.85
