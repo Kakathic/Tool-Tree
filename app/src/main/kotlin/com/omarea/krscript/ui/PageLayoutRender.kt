@@ -119,7 +119,7 @@ class PageLayoutRender(private val mContext: Context,
     private fun renderNode(parent: ListItemGroup, it: NodeInfoBase, atIndex: Int = -1, replacePlaceholder: Boolean = false) {
         try {
             if (parent === rootGroup && it !is GroupNode && it !is TextNode) return
-            val card = parent.columns > 1
+            val card = parent.gridMode
             var uiRender: ListItemView? = null
             if (it is PageNode) {
                 uiRender = createPageItem(it, card)

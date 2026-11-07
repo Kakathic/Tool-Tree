@@ -24,9 +24,35 @@ class ListItemGroup(context: Context,
                 config) {
     protected var children = ArrayList<ListItemView>()
 
-    val columns: Int = if (isRootGroup) 1 else config.columns.coerceIn(1, 4)
+    private val columnWidthDp: Int = config.columnWidthDp
+    private val minColumns: Int = config.minColumns.coerceIn(1, 6)
+    private val maxColumns: Int = config.maxColumns.coerceIn(minColumns, 6)
 
-    private val isGrid: Boolean get() = columns > 1
+    val gridMode: Boolean = !isRootGroup && (config.columns > 1 || columnWidthDp > 0)
+
+    var columns: Int = if (isRootGroup) 1 else if (columnWidthDp > 0) {
+        val metrics = context.resources.displayMetrics
+        calcColumns(metrics.widthPixels - (32 * metrics.density).toInt())
+    } else {
+        config.columns.coerceIn(1, 6)
+    }
+        private set
+
+    private val isGrid: Boolean get() = gridMode
+
+    private fun calcColumns(widthPx: Int): Int {
+        val cellPx = columnWidthDp * context.resources.displayMetrics.density
+        if (cellPx <= 0f || widthPx <= 0) return minColumns
+        return (widthPx / cellPx).toInt().coerceIn(minColumns, maxColumns)
+    }
+
+    private fun updateColumnsByWidth(widthPx: Int) {
+        if (widthPx <= 0) return
+        val next = calcColumns(widthPx)
+        if (next == columns) return
+        columns = next
+        layout.findViewById<ViewGroup>(android.R.id.content).post { relayoutGrid() }
+    }
 
     private var gridLines = false
 
@@ -234,5 +260,11 @@ class ListItemGroup(context: Context,
 
     init {
         title = config.title
+        if (gridMode && columnWidthDp > 0) {
+            layout.findViewById<ViewGroup>(android.R.id.content)
+                .addOnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ ->
+                    if (right - left != oldRight - oldLeft) updateColumnsByWidth(right - left)
+                }
+        }
     }
 }

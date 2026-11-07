@@ -210,6 +210,15 @@ a:hover{text-decoration:underline;}
 .d-item .d-summary{font-size:12px;color:var(--fg-soft);margin-top:1px;}
 .d-item .d-trail{font-size:13px;color:var(--fg-muted);flex-shrink:0;}
 .d-item .d-trail .d-chevron{font-size:14px;opacity:.6;}
+.d-grid{display:grid;grid-template-columns:repeat(2,1fr);padding-bottom:4px;}
+.d-cell{padding:10px 8px 12px;border-bottom:1px solid var(--border);}
+.d-cell:nth-child(odd){border-right:1px solid var(--border);}
+.d-cell:nth-last-child(-n+2){border-bottom:none;}
+.d-cell .d-cell-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.d-cell .d-icon{width:30px;height:30px;background:var(--accent-soft);color:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.d-cell .d-cell-widget{font-size:14px;color:var(--accent);opacity:.8;}
+.d-cell .d-title2{font-size:14px;font-weight:500;color:var(--fg);}
+.d-cell .d-desc{font-size:12px;color:var(--fg-muted);margin-top:1px;}
 .d-switch{width:38px;height:22px;background:var(--green);border-radius:11px;position:relative;flex-shrink:0;transition:background .15s;}
 .d-switch.off{background:var(--fg-muted);}
 .d-switch::after{content:'';position:absolute;top:2px;left:18px;width:18px;height:18px;background:#fff;border-radius:50%;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
@@ -754,7 +763,11 @@ script = "..."</code></pre>
 <tr><td class="field-name">title-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that produces title</td></tr>
 <tr><td class="field-name">key</td><td>index, id</td><td class="field-type">String</td><td>auto</td><td>Unique ID</td></tr>
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>true</td><td>Hide/show the group - a hidden group ALSO hides all of its children (every entry until the next <code>[[group]]</code> is skipped, their shells are not run). Accepts shell too!</td></tr>
-<tr><td class="field-name">line</td><td>divider, separator</td><td class="field-type">Bool</td><td>false</td><td>Draws a thin divider line between the entries of the group. Only shown between visible entries, so it appears from 2 visible entries up</td></tr>
+<tr><td class="field-name">line</td><td>divider, separator</td><td class="field-type">Bool</td><td>false</td><td>Draws a thin divider line between the entries of the group. Only shown between visible entries, so it appears from 2 visible entries up. In a grid group (see <a href="#group-grid">4.4</a>) it separates the rows and the cells</td></tr>
+<tr><td class="field-name">columns</td><td>cols, grid</td><td class="field-type">Int</td><td>1</td><td>Number of columns, 1-6. Above 1 the entries of the group are laid out as a grid of cards (section <a href="#group-grid">4.4</a>)</td></tr>
+<tr><td class="field-name">column-width</td><td>col-width</td><td class="field-type">Int (dp)</td><td>0</td><td>Automatic column count: group width &divide; <code>column-width</code>, clamped to <code>min-columns</code>..<code>max-columns</code>, recalculated when the screen rotates, folds or is resized. Takes priority over <code>columns</code></td></tr>
+<tr><td class="field-name">min-columns</td><td>min-cols</td><td class="field-type">Int</td><td>1</td><td>Lower limit of the automatic column count (1-6)</td></tr>
+<tr><td class="field-name">max-columns</td><td>max-cols</td><td class="field-type">Int</td><td>6</td><td>Upper limit of the automatic column count (1-6)</td></tr>
 </table>
 </div>
 <h3>4.2. Demo</h3>
@@ -795,6 +808,42 @@ script = "sync; echo 3 &gt; /proc/sys/vm/drop_caches"
 <h3>4.3. Grouping rules (no nesting)</h3>
 <p>Since dot-notation was removed, groups can no longer be nested inside each other. Every <code>[[group]]</code> is a top-level sibling: declaring a new <code>[[group]]</code> closes the previous one, and all following entries belong to the new group. Entries declared before the first <code>[[group]]</code> (or after an <code>[[end]]</code>) are not part of any group, and <strong>only <code>[[text]]</code> is displayed there</strong>: it is drawn edge to edge, without a card. Every other node type declared outside a group is not displayed. To <strong>stop wrapping</strong> without opening another group, put an empty <code>[[end]]</code> line: everything after it is outside any group again until the next <code>[[group]]</code>. <code>[[end]]</code> is optional and only needed for this; a following <code>[[group]]</code> already closes the previous group by itself. It also clears the hidden state of a group with <code>support = false</code>.</p>
 <div class="callout warn">Groups also don't support inline <code>resource-file</code>/<code>resource-dir</code> fields (see <a href="#resource">section 16</a>) and have no <code>desc</code>/<code>summary</code> - a group is just a title + its children.</div>
+<h3 id="group-grid">4.4. Grid layout (columns)</h3>
+<p>With <code>columns</code> above 1, or with <code>column-width</code>, the clickable entries of the group (<code>[[action]]</code>, <code>[[page]]</code>, <code>[[switch]]</code>, <code>[[picker]]</code>, <code>[[download]]</code>, <code>[[editor]]</code>, <code>[[terminal]]</code>, <code>[[chat]]</code>) become <strong>cards</strong> placed side by side. Each card shows the icon on the left and the widget (arrow, switch, download ring...) on the right of its top line, then the title, <code>desc</code> and <code>summary</code> below. A group without these fields keeps the normal one-entry-per-line layout.</p>
+<div class="demo-block"><div class="demo-label">Demo (Android UI)</div><div class="demo-frame">
+<div class="d-toolbar"><span class="d-back">&lt;</span><span class="d-title">Tools</span></div>
+<div class="d-body">
+<div class="d-group">
+<div class="d-group-title">Tools</div>
+<div class="d-grid">
+<div class="d-cell"><div class="d-cell-top"><div class="d-icon">⚡</div><span class="d-cell-widget">›</span></div><div class="d-title2">CPU</div><div class="d-desc">Performance</div></div>
+<div class="d-cell"><div class="d-cell-top"><div class="d-icon">🗑</div><span class="d-cell-widget">›</span></div><div class="d-title2">Cache</div><div class="d-desc">Clear cache</div></div>
+<div class="d-cell"><div class="d-cell-top"><div class="d-icon">🔋</div><span class="d-cell-widget">›</span></div><div class="d-title2">Battery</div><div class="d-desc">Saver mode</div></div>
+<div class="d-cell"><div class="d-cell-top"><div class="d-icon">📶</div><span class="d-cell-widget">›</span></div><div class="d-title2">Network</div><div class="d-desc">DNS</div></div>
+</div>
+</div>
+</div>
+</div></div>
+<pre><code># Fixed: 2 columns
+[[group]]
+title = "Tools"
+columns = 2
+line = true
+
+[[action]]
+title = "CPU"
+desc = "Performance"
+icon = "cpu.png"
+script = "echo performance &gt; /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+
+# Automatic: cells at least 160dp wide, 2 to 4 columns
+[[group]]
+title = "Auto"
+column-width = 160
+min-columns = 2
+max-columns = 4
+</code></pre>
+<div class="callout tip">Rules: entries that are not cards (<code>[[text]]</code>) take a full row of their own. The last row is padded with empty cells, so every card keeps the same width. Cards in one row have the same height. <code>rows</code>, <code>photo</code> and <code>bg</code> of an entry are drawn inside its card. <code>columns</code> is capped at 6; when <code>column-width</code> is set it wins over <code>columns</code>, and a narrow screen may give 1 column (still drawn as cards).</div>
 </section>
 <section id="page">
 <h2>5. [[page]] - Sub-page</h2>
@@ -2209,9 +2258,9 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
+<li>2026-11-07 - <code>[[group]]</code>: new <code>columns</code> (grid of cards) and <code>column-width</code> / <code>min-columns</code> / <code>max-columns</code> (automatic column count by screen width, section 4.4).</li>
 <li>2026-11-07 - Items without <code>key</code> now get an automatic id <code>auto:&lt;title&gt;</code> used by long-press favorites (see <code>key</code> in section 3.1).</li>
 <li>2026-11-07 - <code>[[page]]</code>: new <code>open</code> = id of an item in the target page; the item is run automatically after the page opens (section 5.1).</li>
-<li>2026-11-07 - Removed <code>allow-shortcut</code>/<code>shortcut</code>. Long-pressing any item that has a <code>key</code>/<code>id</code> now opens a dialog with two checkboxes (add to the menu favorites / add a home-screen shortcut); items without a key show "not supported". The shortcut badge on items is gone.</li>
 </ul>
 </section>
 </main>
