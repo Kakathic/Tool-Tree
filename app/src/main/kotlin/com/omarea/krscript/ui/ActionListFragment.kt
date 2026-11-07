@@ -31,6 +31,7 @@ import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.executor.ShellCancelTag
 import com.omarea.krscript.model.*
 import com.omarea.krscript.shortcut.ActionShortcutManager
+import com.omarea.krscript.shortcut.DrawerFavorites
 import com.tool.tree.ThemeModeState
 import kotlinx.coroutines.*
 
@@ -298,11 +299,40 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
             krScriptActionHandler?.addToFavorites(clickableNode, object : KrScriptActionHandler.AddToFavoritesHandler {
                 override fun onAddToFavorites(clickableNode: ClickableNode, intent: Intent?) {
                     if (intent != null) {
-                        DialogHelper.confirm(activity!!, getString(R.string.kr_shortcut_create), String.format(getString(R.string.kr_shortcut_create_desc), clickableNode.title), {
-                            val result = ActionShortcutManager(context!!).addShortcut(intent, IconPathAnalysis().loadLogo(context!!, clickableNode), clickableNode)
-                            if (!result) Toast.makeText(context, R.string.kr_shortcut_create_fail, Toast.LENGTH_SHORT).show()
-                            else Toast.makeText(context, getString(R.string.kr_shortcut_create_success), Toast.LENGTH_SHORT).show()
-                        })
+                        val act = activity!!
+                        val density = act.resources.displayMetrics.density
+                        val checkDrawer = android.widget.CheckBox(act).apply {
+                            text = getString(R.string.kr_favorite_to_drawer)
+                            isChecked = true
+                        }
+                        val checkHome = android.widget.CheckBox(act).apply {
+                            text = getString(R.string.kr_favorite_to_home)
+                        }
+                        val options = android.widget.LinearLayout(act).apply {
+                            orientation = android.widget.LinearLayout.VERTICAL
+                            setPadding((8 * density).toInt(), 0, (8 * density).toInt(), 0)
+                            addView(checkDrawer)
+                            addView(checkHome)
+                        }
+                        DialogHelper.confirm(
+                            act,
+                            getString(R.string.kr_favorite_add_title),
+                            String.format(getString(R.string.kr_favorite_add_desc), clickableNode.title),
+                            options,
+                            Runnable {
+                                val ctx = context ?: return@Runnable
+                                if (checkDrawer.isChecked) {
+                                    val added = DrawerFavorites(ctx).addFromIntent(intent, clickableNode)
+                                    Toast.makeText(ctx, if (added) R.string.kr_favorite_added else R.string.kr_favorite_exists, Toast.LENGTH_SHORT).show()
+                                }
+                                if (checkHome.isChecked) {
+                                    val result = ActionShortcutManager(ctx).addShortcut(intent, IconPathAnalysis().loadLogo(ctx, clickableNode), clickableNode)
+                                    if (!result) Toast.makeText(ctx, R.string.kr_shortcut_create_fail, Toast.LENGTH_SHORT).show()
+                                    else Toast.makeText(ctx, getString(R.string.kr_shortcut_create_success), Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            null
+                        )
                     }
                 }
             })

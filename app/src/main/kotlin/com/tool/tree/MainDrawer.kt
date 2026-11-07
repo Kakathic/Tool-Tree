@@ -8,17 +8,21 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.omarea.krscript.config.IconPathAnalysis
+import com.omarea.krscript.model.ClickableNode
 import com.omarea.krscript.model.GroupNode
 import com.omarea.krscript.model.NodeInfoBase
 import com.omarea.krscript.model.PageNode
+import com.omarea.krscript.shortcut.DrawerFavorites
 
-// Mục lục bên trái: chỉ vẽ [[group]] (tiêu đề nhóm) và [[page]] (mục bấm được)
+// Mục lục bên trái: nhóm Yêu thích (JSON) ở đầu, tiếp theo là [[group]] + [[page]] từ drawer.toml
 class MainDrawer(
     private val list: LinearLayout,
-    private val onPageClick: (PageNode) -> Unit
+    private val onPageClick: (PageNode) -> Unit,
+    private val onFavoriteLongClick: (DrawerFavorites.Entry) -> Unit
 ) {
     private val context get() = list.context
     private val iconLoader = IconPathAnalysis()
+    private var tomlNodes: List<NodeInfoBase>? = null
 
     private fun dp(value: Int): Int = (value * list.resources.displayMetrics.density).toInt()
 
@@ -29,11 +33,25 @@ class MainDrawer(
     }
 
     fun refresh(nodes: List<NodeInfoBase>?) {
+        tomlNodes = nodes
+        render()
+    }
+
+    // Vẽ lại toàn bộ; Yêu thích đọc lại từ file mỗi lần nên luôn mới
+    fun render() {
         list.removeAllViews()
-        nodes ?: return
         val primary = themeColor(android.R.attr.textColorPrimary, Color.WHITE)
         val secondary = themeColor(android.R.attr.textColorSecondary, Color.GRAY)
-        for (node in nodes) {
+
+        val favorites = DrawerFavorites(context).list()
+        if (favorites.isNotEmpty()) {
+            addHeader(context.getString(R.string.tab_favorites), secondary)
+            for (entry in favorites) {
+                addRow(entry.title, entry.toIconNode(), primary, { onPageClick(entry.toPage()) }, { onFavoriteLongClick(entry) })
+            }
+        }
+
+        for (node in tomlNodes.orEmpty()) {
             when (node) {
                 is GroupNode -> {
                     var headerAdded = false
@@ -43,10 +61,10 @@ class MainDrawer(
                             headerAdded = true
                             addHeader(node.title, secondary)
                         }
-                        addRow(child, primary)
+                        addRow(child.title, child, primary, { onPageClick(child) }, null)
                     }
                 }
-                is PageNode -> addRow(node, primary)
+                is PageNode -> addRow(node.title, node, primary, { onPageClick(node) }, null)
                 else -> {}
             }
         }
@@ -62,7 +80,7 @@ class MainDrawer(
         })
     }
 
-    private fun addRow(page: PageNode, textColor: Int) {
+    private fun addRow(title: String, iconNode: ClickableNode, textColor: Int, onClick: () -> Unit, onLongClick: (() -> Unit)?) {
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -71,9 +89,12 @@ class MainDrawer(
             if (context.theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)) {
                 setBackgroundResource(tv.resourceId)
             }
-            setOnClickListener { onPageClick(page) }
+            setOnClickListener { onClick() }
+            if (onLongClick != null) {
+                setOnLongClickListener { onLongClick(); true }
+            }
         }
-        val icon = iconLoader.loadIcon(context, page)
+        val icon = iconLoader.loadIcon(context, iconNode)
         if (icon != null) {
             row.addView(ImageView(context).apply {
                 setImageDrawable(icon)
@@ -82,7 +103,7 @@ class MainDrawer(
             })
         }
         row.addView(TextView(context).apply {
-            text = page.title
+            text = title
             textSize = 15f
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END

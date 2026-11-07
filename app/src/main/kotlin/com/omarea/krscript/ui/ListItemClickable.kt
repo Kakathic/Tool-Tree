@@ -24,11 +24,9 @@ open class ListItemClickable(
     
     protected var iconDrawable: Drawable? = null
 
-    private val allowShortcutConfig = this.key.isNotEmpty() && config.shortcut
-
     private val analyzer = IconPathAnalysis()
 
-    protected open fun allowLongClick(): Boolean = allowShortcutConfig
+    protected open fun allowLongClick(): Boolean = true
 
     fun setOnClickListener(onClickListener: OnClickListener): ListItemClickable {
         this.mOnClickListener = onClickListener
@@ -103,8 +101,6 @@ open class ListItemClickable(
                 false
             }
         }
-
-        shortcutIconView?.visibility = if (allowShortcutConfig) View.VISIBLE else View.GONE
 
         applyIconPhotoBg()
     }

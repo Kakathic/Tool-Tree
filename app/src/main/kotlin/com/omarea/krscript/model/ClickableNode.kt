@@ -22,7 +22,6 @@ open class ClickableNode(currentPageConfigPath: String) : NodeInfoBase(currentPa
     var bgSh: String = ""
     var bgScale: String = ""
 
-    var shortcut: Boolean = false
 
     var locked: Boolean = false
     var lockMessage: String = ""

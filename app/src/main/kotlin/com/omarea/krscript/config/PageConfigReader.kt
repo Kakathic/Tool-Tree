@@ -792,7 +792,6 @@ class PageConfigReader {
                 registerDynamicString(this, "bg", bgSh)
             }
             tomlGet(table, *TomlKeys.BG_SCALE)?.let { bgScale = it.trim().lowercase(getDefault()) }
-            tomlGet(table, "shortcut")?.let { shortcut = tomlTruthy(it, "shortcut") }
         }
     }
 
