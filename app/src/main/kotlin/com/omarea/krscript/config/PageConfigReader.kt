@@ -875,10 +875,19 @@ class PageConfigReader {
         }
         tomlGet(table, *TomlKeys.SUPPORT)?.let { group.supported = resolveBoolOrShell(it, "support", "visible") }
         tomlGet(table, *TomlKeys.LINE)?.let { group.line = tomlTruthy(it, "line", "divider", "separator") }
-        tomlGet(table, *TomlKeys.COLUMNS)?.let { group.columns = parseIntOr(it, 1).coerceIn(1, 6) }
+        var autoColumns = false
+        tomlGet(table, *TomlKeys.COLUMNS)?.let { raw ->
+            val v = raw.trim().lowercase(getDefault())
+            if (v == "true" || v == "auto") {
+                autoColumns = true
+            } else {
+                group.columns = if (v == "false") 1 else parseIntOr(raw, 1).coerceIn(1, 6)
+            }
+        }
         tomlGet(table, *TomlKeys.COLUMN_WIDTH)?.let { group.columnWidthDp = parseIntOr(it, 0).coerceAtLeast(0) }
         tomlGet(table, *TomlKeys.MIN_COLUMNS)?.let { group.minColumns = parseIntOr(it, 1).coerceIn(1, 6) }
         tomlGet(table, *TomlKeys.MAX_COLUMNS)?.let { group.maxColumns = parseIntOr(it, 6).coerceIn(1, 6) }
+        if (autoColumns && group.columnWidthDp <= 0) group.columnWidthDp = 160
         return group
     }
 

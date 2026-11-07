@@ -764,10 +764,10 @@ script = "..."</code></pre>
 <tr><td class="field-name">key</td><td>index, id</td><td class="field-type">String</td><td>auto</td><td>Unique ID</td></tr>
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>true</td><td>Hide/show the group - a hidden group ALSO hides all of its children (every entry until the next <code>[[group]]</code> is skipped, their shells are not run). Accepts shell too!</td></tr>
 <tr><td class="field-name">line</td><td>divider, separator</td><td class="field-type">Bool</td><td>false</td><td>Draws a thin divider line between the entries of the group. Only shown between visible entries, so it appears from 2 visible entries up. In a grid group (see <a href="#group-grid">4.4</a>) it separates the rows and the cells</td></tr>
-<tr><td class="field-name">columns</td><td>cols, grid</td><td class="field-type">Int</td><td>1</td><td>Number of columns, 1-6. Above 1 the entries of the group are laid out as a grid of cards (section <a href="#group-grid">4.4</a>)</td></tr>
-<tr><td class="field-name">column-width</td><td>col-width</td><td class="field-type">Int (dp)</td><td>0</td><td>Automatic column count: group width &divide; <code>column-width</code>, clamped to <code>min-columns</code>..<code>max-columns</code>, recalculated when the screen rotates, folds or is resized. Takes priority over <code>columns</code></td></tr>
-<tr><td class="field-name">min-columns</td><td>min-cols</td><td class="field-type">Int</td><td>1</td><td>Lower limit of the automatic column count (1-6)</td></tr>
-<tr><td class="field-name">max-columns</td><td>max-cols</td><td class="field-type">Int</td><td>6</td><td>Upper limit of the automatic column count (1-6)</td></tr>
+<tr><td class="field-name">columns</td><td>cols, grid</td><td class="field-type">Int|Bool</td><td>1</td><td>Number of columns, 1-6. Above 1 the entries of the group are laid out as a grid of cards (section <a href="#group-grid">4.4</a>). <code>columns = true</code> (or <code>"auto"</code>) turns the grid on with an automatic column count, using <code>column-width = 160</code> unless you set another; <code>false</code> = 1</td></tr>
+<tr><td class="field-name">column-width</td><td>col-width</td><td class="field-type">Int (dp)</td><td>0 (160 when <code>columns = true</code>)</td><td>Automatic column count: group width &divide; <code>column-width</code>, clamped to <code>min-columns</code>..<code>max-columns</code>, recalculated when the screen rotates, folds or is resized. Takes priority over a numeric <code>columns</code></td></tr>
+<tr><td class="field-name">min-columns</td><td>min-cols</td><td class="field-type">Int</td><td>1</td><td>Minimum <strong>number of columns</strong> in automatic mode (1-6), even when the screen is narrow</td></tr>
+<tr><td class="field-name">max-columns</td><td>max-cols</td><td class="field-type">Int</td><td>6</td><td>Maximum <strong>number of columns</strong> in automatic mode (1-6), even when the screen is wide</td></tr>
 </table>
 </div>
 <h3>4.2. Demo</h3>
@@ -836,13 +836,20 @@ desc = "Performance"
 icon = "cpu.png"
 script = "echo performance &gt; /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
 
-# Automatic: cells at least 160dp wide, 2 to 4 columns
+# Automatic, shortest form: columns = true (cells at least 160dp wide)
 [[group]]
 title = "Auto"
+columns = true
+
+# Automatic, tuned: 2 to 4 columns
+[[group]]
+title = "Auto tuned"
+columns = true
 column-width = 160
 min-columns = 2
 max-columns = 4
 </code></pre>
+<div class="callout tip"><strong>Choosing <code>column-width</code>:</strong> a 1080 px wide screen is about 360-410 dp wide (density 2.6-3.0), so the group is about 330-380 dp wide. <code>160</code> gives <strong>2 columns</strong> in portrait and 4-5 in landscape (capped by <code>max-columns</code>); <code>120</code> would give 3 columns in portrait but the cards get tight for titles. A card needs about 110 dp for its icon, widget and padding. Recommended: <code>columns = true</code>, <code>min-columns = 2</code>, <code>max-columns = 4</code>.</div>
 <div class="callout tip">Rules: entries that are not cards (<code>[[text]]</code>) take a full row of their own. The last row is padded with empty cells, so every card keeps the same width. Cards in one row have the same height. <code>rows</code>, <code>photo</code> and <code>bg</code> of an entry are drawn inside its card. <code>columns</code> is capped at 6; when <code>column-width</code> is set it wins over <code>columns</code>, and a narrow screen may give 1 column (still drawn as cards).</div>
 </section>
 <section id="page">
@@ -2258,7 +2265,7 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
-<li>2026-11-07 - <code>[[group]]</code>: new <code>columns</code> (grid of cards) and <code>column-width</code> / <code>min-columns</code> / <code>max-columns</code> (automatic column count by screen width, section 4.4).</li>
+<li>2026-11-07 - <code>[[group]]</code>: new <code>columns</code> (number, or <code>true</code> for automatic grid of cards) and <code>column-width</code> / <code>min-columns</code> / <code>max-columns</code> (automatic column count by screen width, section 4.4).</li>
 <li>2026-11-07 - Items without <code>key</code> now get an automatic id <code>auto:&lt;title&gt;</code> used by long-press favorites (see <code>key</code> in section 3.1).</li>
 <li>2026-11-07 - <code>[[page]]</code>: new <code>open</code> = id of an item in the target page; the item is run automatically after the page opens (section 5.1).</li>
 </ul>
