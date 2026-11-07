@@ -48,6 +48,10 @@ class ListItemGroup(context: Context,
 
     private val isGrid: Boolean get() = gridMode
 
+    companion object {
+        private const val CARD_GAP_DP = 16
+    }
+
     private fun calcColumns(widthPx: Int): Int {
         val cellPx = columnWidthDp * context.resources.displayMetrics.density
         if (cellPx <= 0f || widthPx <= 0) return minColumns
@@ -119,7 +123,7 @@ class ListItemGroup(context: Context,
     private fun relayoutGrid() {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         val density = context.resources.displayMetrics.density
-        val gap = if (cardMode) (4 * density).toInt() else 0
+        val gap = if (cardMode) (CARD_GAP_DP * density).toInt() else 0
         content.removeAllViews()
         val rows = ArrayList<LinearLayout>()
         var row: LinearLayout? = null
@@ -137,22 +141,27 @@ class ListItemGroup(context: Context,
                         current.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
                     }
                     content.addView(current, LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        if (content.childCount > 0) topMargin = gap
+                    })
                     rows.add(current)
                     row = current
                 }
                 current.addView(view, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
-                    setMargins(gap, gap, gap, gap)
+                    if (current.childCount > 0) marginStart = gap
                 })
             } else {
                 row = null
-                content.addView(view)
+                content.addView(view, LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    if (content.childCount > 0) topMargin = gap
+                })
             }
         }
         for (r in rows) {
             while (r.childCount < columns) {
                 r.addView(View(context), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
-                    setMargins(gap, gap, gap, gap)
+                    marginStart = gap
                 })
             }
         }
