@@ -214,9 +214,8 @@ a:hover{text-decoration:underline;}
 .d-cell{padding:10px 8px 12px;border-bottom:1px solid var(--border);}
 .d-cell:nth-child(odd){border-right:1px solid var(--border);}
 .d-cell:nth-last-child(-n+2){border-bottom:none;}
-.d-cell .d-cell-top{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
-.d-cell .d-title-row{display:flex;align-items:center;justify-content:space-between;}
-.d-cell .d-cell-box{width:30px;height:30px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;}
+.d-cell .d-title-row{display:flex;align-items:center;gap:8px;}
+.d-cell .d-title-row .d-title2{flex:1;min-width:0;}
 .d-cell .d-icon{width:30px;height:30px;background:var(--accent-soft);color:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;}
 .d-cell .d-cell-widget{font-size:14px;color:var(--accent);opacity:.8;}
 .d-cell .d-title2{font-size:14px;font-weight:500;color:var(--fg);}
@@ -811,17 +810,17 @@ script = "sync; echo 3 &gt; /proc/sys/vm/drop_caches"
 <p>Since dot-notation was removed, groups can no longer be nested inside each other. Every <code>[[group]]</code> is a top-level sibling: declaring a new <code>[[group]]</code> closes the previous one, and all following entries belong to the new group. Entries declared before the first <code>[[group]]</code> (or after an <code>[[end]]</code>) are not part of any group, and <strong>only <code>[[text]]</code> is displayed there</strong>: it is drawn edge to edge, without a card. Every other node type declared outside a group is not displayed. To <strong>stop wrapping</strong> without opening another group, put an empty <code>[[end]]</code> line: everything after it is outside any group again until the next <code>[[group]]</code>. <code>[[end]]</code> is optional and only needed for this; a following <code>[[group]]</code> already closes the previous group by itself. It also clears the hidden state of a group with <code>support = false</code>.</p>
 <div class="callout warn">Groups also don't support inline <code>resource-file</code>/<code>resource-dir</code> fields (see <a href="#resource">section 16</a>) and have no <code>desc</code>/<code>summary</code> - a group is just a title + its children.</div>
 <h3 id="group-grid">4.4. Grid layout (columns)</h3>
-<p>With <code>columns</code> above 1, or with <code>column-width</code>, the clickable entries of the group (<code>[[action]]</code>, <code>[[page]]</code>, <code>[[switch]]</code>, <code>[[picker]]</code>, <code>[[download]]</code>, <code>[[editor]]</code>, <code>[[terminal]]</code>, <code>[[chat]]</code>) become <strong>cards</strong> placed side by side. Each card shows the icon on top (only when the entry has one), then the title line, then <code>desc</code>/<code>summary</code>. The widget (arrow, run button, switch, download icon / progress ring) is small and sits at the <strong>end of the title line</strong>. An entry <strong>without an icon</strong> shows its widget in a small rounded frame at the top-left instead, in the place the icon would take. A group without these fields keeps the normal one-entry-per-line layout.</p>
+<p>With <code>columns</code> above 1, or with <code>column-width</code>, the clickable entries of the group (<code>[[action]]</code>, <code>[[page]]</code>, <code>[[switch]]</code>, <code>[[picker]]</code>, <code>[[download]]</code>, <code>[[editor]]</code>, <code>[[terminal]]</code>, <code>[[chat]]</code>) become <strong>cards</strong> placed side by side. Each card is one line with the icon (only when the entry has one), the title (at most 2 lines) and a small widget at the end (arrow, run button, switch, download icon / progress ring); <code>desc</code> and <code>summary</code> are below. An entry without an icon simply starts with its title. A group without these fields keeps the normal one-entry-per-line layout.</p>
 <div class="demo-block"><div class="demo-label">Demo (Android UI)</div><div class="demo-frame">
 <div class="d-toolbar"><span class="d-back">&lt;</span><span class="d-title">Tools</span></div>
 <div class="d-body">
 <div class="d-group">
 <div class="d-group-title">Tools</div>
 <div class="d-grid">
-<div class="d-cell"><div class="d-cell-top"><div class="d-icon">⚡</div></div><div class="d-title-row"><div class="d-title2">CPU</div><span class="d-cell-widget">›</span></div><div class="d-desc">Performance</div></div>
-<div class="d-cell"><div class="d-cell-top"><div class="d-icon">🗑</div></div><div class="d-title-row"><div class="d-title2">Cache</div><span class="d-cell-widget">›</span></div><div class="d-desc">Clear cache</div></div>
-<div class="d-cell"><div class="d-cell-top"><div class="d-icon">🔋</div></div><div class="d-title-row"><div class="d-title2">Battery</div><span class="d-cell-widget">›</span></div><div class="d-desc">Saver mode</div></div>
-<div class="d-cell"><div class="d-cell-top"><div class="d-cell-box">›</div></div><div class="d-title-row"><div class="d-title2">Network</div></div><div class="d-desc">DNS</div></div>
+<div class="d-cell"><div class="d-title-row"><div class="d-icon">⚡</div><div class="d-title2">CPU</div><span class="d-cell-widget">›</span></div><div class="d-desc">Performance</div></div>
+<div class="d-cell"><div class="d-title-row"><div class="d-icon">🗑</div><div class="d-title2">Cache</div><span class="d-cell-widget">›</span></div><div class="d-desc">Clear cache</div></div>
+<div class="d-cell"><div class="d-title-row"><div class="d-icon">🔋</div><div class="d-title2">Battery</div><span class="d-cell-widget">›</span></div><div class="d-desc">Saver mode</div></div>
+<div class="d-cell"><div class="d-title-row"><div class="d-title2">Network</div><span class="d-cell-widget">›</span></div><div class="d-desc">DNS</div></div>
 </div>
 </div>
 </div>
