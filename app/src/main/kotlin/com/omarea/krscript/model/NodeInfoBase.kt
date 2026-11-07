@@ -31,4 +31,7 @@ open class NodeInfoBase(val currentPageConfigPath: String) : Serializable {
 
     // true khi node đứng ngay sau [[end]] ở ngoài group: bắt đầu một khối (thẻ ngầm) mới
     var newBlock: Boolean = false
+
+    // true khi newBlock chỉ vì mục mở đầu khối (load-after) chưa hiện; mục đó hiện thì cờ này được gỡ
+    var breakByDeferred: Boolean = false
 }

@@ -616,6 +616,7 @@ class PageConfigReader {
         var currentGroup: GroupNode? = null
         var groupHidden = false
         var pendingEndBreak = false
+        var carryBreak = false
 
         fun closeCurrentGroup(doneNow: Int) {
             currentGroup?.let { onNodeReady?.invoke(it, doneNow, total) }
@@ -628,12 +629,14 @@ class PageConfigReader {
                 currentGroup = null
                 groupHidden = false
                 pendingEndBreak = true
+                carryBreak = false
                 onNodeReady?.invoke(null, done, total)
                 continue
             }
             if (entry.type == "group") {
                 closeCurrentGroup(done)
                 pendingEndBreak = false
+                carryBreak = false
                 val group = groupNodeToml(entry.table)
                 done++
                 if (group.supported) {
@@ -656,7 +659,10 @@ class PageConfigReader {
             if (isLoadAfter(entry.table)) {
                 val targetList = currentGroup?.children ?: result
                 val breakHere = currentGroup == null && pendingEndBreak
-                if (breakHere) pendingEndBreak = false
+                if (breakHere) {
+                    pendingEndBreak = false
+                    carryBreak = true
+                }
                 deferredEntries.add(DeferredEntry(entry.type, entry.table, currentGroup, targetList.size, breakHere))
                 onNodeReady?.invoke(null, done, total)
                 continue
@@ -669,7 +675,12 @@ class PageConfigReader {
                 if (node != null && pendingEndBreak) {
                     node.newBlock = true
                     pendingEndBreak = false
+                } else if (node != null && carryBreak) {
+                    // mục mở đầu khối là load-after chưa hiện: mục này tạm làm đầu khối
+                    node.newBlock = true
+                    node.breakByDeferred = true
                 }
+                if (node != null) carryBreak = false
                 node?.let { result.add(it) }
                 onNodeReady?.invoke(node, done, total)
             }

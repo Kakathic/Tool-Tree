@@ -140,11 +140,19 @@ class PageLayoutRender(private val mContext: Context,
             looseGroupOf[node] = card
             return
         }
+        val next = insertNext
+        val carriedCard = if (node.newBlock && next != null && next.breakByDeferred) looseGroupOf[next] else null
         val prevCard = if (node.newBlock) null else insertPrev?.let { looseGroupOf[it] }
-        val nextCard = if (insertNext?.newBlock == true) null else insertNext?.let { looseGroupOf[it] }
+        val nextCard = if (next?.newBlock == true) null else next?.let { looseGroupOf[it] }
         val card: ListItemGroup
         val pos: Int
-        if (prevCard != null) {
+        if (carriedCard != null) {
+            // mục mở đầu khối (load-after) hiện ra: nó vào đầu thẻ của mục đang tạm làm đầu khối
+            card = carriedCard
+            pos = 0
+            next!!.newBlock = false
+            next.breakByDeferred = false
+        } else if (prevCard != null) {
             card = prevCard
             pos = (insertPrev?.let { looseMembers[card]?.indexOf(it) } ?: -1) + 1
         } else if (nextCard != null) {
