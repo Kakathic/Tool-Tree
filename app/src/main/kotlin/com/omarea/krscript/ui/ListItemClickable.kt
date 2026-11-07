@@ -24,7 +24,7 @@ open class ListItemClickable(
     
     protected var iconDrawable: Drawable? = null
 
-    private val allowShortcutConfig = this.key.isNotEmpty() && config.allowShortcut != false
+    private val allowShortcutConfig = this.key.isNotEmpty() && config.shortcut
 
     private val analyzer = IconPathAnalysis()
 

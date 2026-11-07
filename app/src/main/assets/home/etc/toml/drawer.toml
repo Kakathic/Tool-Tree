@@ -1,0 +1,20 @@
+[[toml]]
+load-key-sh = "langpath"
+
+[[group]]
+[[page]]
+title = "@setting_text"
+icon = "{ICON}/settings.png"
+config = "{HOME}/etc/toml/settings.toml"
+support = "glog Toff"
+
+[[page]]
+title = "@tools_text"
+icon = "{ICON}/tool_apk.png"
+config = "{HOME}/etc/toml/troot.toml"
+
+# open = "<id>": mở trang rồi tự chạy mục có id đó trong trang (bỏ open = chỉ mở trang)
+# [[page]]
+# title = "API key"
+# config = "{HOME}/etc/toml/feature.toml"
+# open = "gemini_api"

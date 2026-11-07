@@ -14,6 +14,7 @@ echo '
   title = "'$pin_text_add'"
   get = "[ -f '$1'/pin ] && echo 1"
   type = "checkbox"
+  auto-finish = true
   silent = true
   script = """
   if [ -f "'$1'/pin" ]; then
@@ -39,7 +40,7 @@ if [ "$google_text" ] || [ "$transai" == "true" ]; then
   fi
   echo '
   [[menu.items]]
-  title = "AI Translation"
+  title = "AI Trans"
   get = "glog transai_text_'$id'"
   reload = true
   silent = true

@@ -3,6 +3,7 @@ package com.omarea.krscript.model
 class PageNode(currentConfigXml: String) : ClickableNode(currentConfigXml) {
     var pageConfigPath: String = ""
     var pageConfigSh: String = ""
+    var openItemId: String = ""
     var onlineHtmlPage: String = ""
     var link: String = ""
     var activity: String = ""

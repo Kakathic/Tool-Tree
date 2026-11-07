@@ -792,10 +792,7 @@ class PageConfigReader {
                 registerDynamicString(this, "bg", bgSh)
             }
             tomlGet(table, *TomlKeys.BG_SCALE)?.let { bgScale = it.trim().lowercase(getDefault()) }
-            tomlGet(table, "allow-shortcut")?.let { allowShortcut = tomlTruthy(it, "allow", "allow-shortcut") }
-            if (key.isNotEmpty() && key.startsWith("@") && allowShortcut == null) {
-                allowShortcut = false
-            }
+            tomlGet(table, "shortcut")?.let { shortcut = tomlTruthy(it, "shortcut") }
         }
     }
 
@@ -868,6 +865,7 @@ class PageConfigReader {
     private fun pageNodeToml(table: TomlTable): PageNode? {
         val page = clickableNodeToml(PageNode(pageConfigAbsPath), table) as PageNode? ?: return null
         tomlGet(table, "config")?.let { page.pageConfigPath = it }
+        tomlGet(table, "open")?.let { page.openItemId = it.trim() }
         tomlGet(table, "html")?.let { page.onlineHtmlPage = it }
         tomlGet(table, "before-load", "before-read")?.let { page.beforeRead = it }
         tomlGet(table, "after-load", "after-read")?.let { page.afterRead = it }

@@ -100,8 +100,8 @@ desc = "@pg_031"
 min-sdk = 99
 config = "{HOME}/etc/demo/switch.toml"
 [[page]]
-title = "key + allow-shortcut"
+title = "key + shortcut"
 desc = "@pg_032"
 key = "demo_page_shortcut"
-allow-shortcut = true
+shortcut = true
 config = "{HOME}/etc/demo/switch.toml"

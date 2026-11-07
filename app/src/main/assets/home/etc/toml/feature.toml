@@ -58,7 +58,6 @@ items = [ "512", "1024", "2048", "3072", "4096", "5120", "6144", "7168", "8192" 
 [[group]]
 [[action]]
 id = "gemini_api"
-allow-shortcut = false
 title = "@api_key_text"
 icon = "{ICON}/apikey.png"
 script = '''

@@ -20,7 +20,12 @@ import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
+import android.view.Choreographer
 import androidx.activity.addCallback
+import androidx.core.view.GravityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import android.widget.ListPopupWindow
 import androidx.appcompat.widget.Toolbar
@@ -32,6 +37,9 @@ import com.omarea.common.ui.BlurEngine
 import com.omarea.common.ui.DialogHelper
 import com.omarea.krscript.config.PageConfigReader
 import com.omarea.krscript.config.PageConfigSh
+import com.omarea.krscript.TryOpenActivity
+import com.omarea.krscript.WebLauncher
+import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.model.*
 import com.omarea.krscript.ui.ActionListFragment
 import com.omarea.krscript.ui.DialogLogFragment
@@ -70,6 +78,7 @@ class MainActivity : AppCompatActivity() {
     private val ACTION_FILE_PATH_CHOOSER = 65400
     private val ACTION_FILE_PATH_CHOOSER_INNER = 65300
     private lateinit var adapter: MainPagerAdapter
+    private lateinit var mainDrawer: MainDrawer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,9 +97,15 @@ class MainActivity : AppCompatActivity() {
 
         initAdapter()
         loadTabs()
+        setupDrawer(versionName)
+        loadDrawer()
 
         onBackPressedDispatcher.addCallback(this) {
-            finish()
+            if (binding.mainDrawer.isDrawerOpen(GravityCompat.START)) {
+                binding.mainDrawer.closeDrawer(GravityCompat.START)
+            } else {
+                finish()
+            }
         }
 
         handleResumeNotificationIntent(intent)
@@ -199,6 +214,115 @@ class MainActivity : AppCompatActivity() {
         title = spannable
     }
 
+    private fun setupDrawer(versionName: String) {
+        val drawer = binding.mainDrawer
+        val panel = binding.mainDrawerPanel
+        binding.mainDrawerTitle.text = "${getString(R.string.app_name)} $versionName"
+        mainDrawer = MainDrawer(binding.mainDrawerList) { page -> onDrawerPageClick(page) }
+
+        drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START)
+        drawer.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
+            override fun onDrawerOpened(drawerView: View) {
+                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.START)
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START)
+            }
+        })
+
+        ViewCompat.setOnApplyWindowInsetsListener(panel) { v, insets ->
+            val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(0, sys.top, 0, sys.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(panel)
+
+        toolbar.post {
+            for (i in 0 until toolbar.childCount) {
+                val child = toolbar.getChildAt(i)
+                if (child is TextView) child.setOnClickListener { openDrawer() }
+            }
+        }
+        binding.viewPager.onOverscrollStart = { openDrawer() }
+    }
+
+    private fun openDrawer() {
+        if (binding.mainDrawerList.childCount == 0) return
+        binding.mainDrawer.openDrawer(GravityCompat.START)
+    }
+
+    private fun loadDrawer() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val items = getItems(krScriptConfig.getDrawerConfig())
+            withContext(Dispatchers.Main) {
+                if (isFinishing || isDestroyed || !::mainDrawer.isInitialized) return@withContext
+                mainDrawer.refresh(items)
+            }
+        }
+    }
+
+    private fun onDrawerPageClick(page: PageNode) {
+        binding.mainDrawer.closeDrawer(GravityCompat.START, false)
+        // Chờ 2 frame để ảnh chụp xem trước (swipe-back) không còn thấy ngăn kéo
+        Choreographer.getInstance().postFrameCallback {
+            Choreographer.getInstance().postFrameCallback {
+                if (isFinishing || isDestroyed) return@postFrameCallback
+                runIfUnlocked(page) {
+                    when {
+                        page.link.isNotEmpty() -> try {
+                            WebLauncher.open(this, page.link)
+                        } catch (ex: Exception) {
+                            Toast.makeText(this, getString(R.string.kr_slice_activity_fail), Toast.LENGTH_SHORT).show()
+                        }
+                        page.activity.isNotEmpty() -> TryOpenActivity(this, page.activity).tryOpen()
+                        else -> OpenPageHelper(this).openPage(page)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun runIfUnlocked(node: ClickableNode, onUnlocked: () -> Unit) {
+        val sdk = Build.VERSION.SDK_INT
+        val sdkMessage = getString(R.string.kr_sdk_message).format(node.minSdkVersion, node.maxSdkVersion)
+        when {
+            node.targetSdkVersion > 0 && sdk != node.targetSdkVersion -> {
+                DialogHelper.helpInfo(this, getString(R.string.kr_sdk_discrepancy), getString(R.string.kr_sdk_discrepancy_message).format(node.targetSdkVersion))
+                return
+            }
+            sdk > node.maxSdkVersion -> {
+                DialogHelper.helpInfo(this, getString(R.string.kr_sdk_overtop), sdkMessage)
+                return
+            }
+            sdk < node.minSdkVersion -> {
+                DialogHelper.helpInfo(this, getString(R.string.kr_sdk_too_low), sdkMessage)
+                return
+            }
+        }
+
+        if (node.lockShell.isEmpty()) {
+            if (node.locked) {
+                Toast.makeText(this, node.lockMessage.ifEmpty { getString(R.string.kr_lock_message) }, Toast.LENGTH_SHORT).show()
+            } else {
+                onUnlocked()
+            }
+            return
+        }
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val message = ScriptEnvironmen.executeResultRoot(this@MainActivity, node.lockShell, node)
+            withContext(Dispatchers.Main) {
+                if (isFinishing || isDestroyed) return@withContext
+                if (message == "unlock" || message == "unlocked" || message == "false" || message == "0") {
+                    onUnlocked()
+                } else {
+                    Toast.makeText(this@MainActivity, message.ifEmpty { getString(R.string.kr_lock_message) }, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     private fun initAdapter() {
         if (!::adapter.isInitialized) {
             adapter = MainPagerAdapter(this)
@@ -266,6 +390,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun reloadTabs() {
+        loadDrawer()
         lifecycleScope.launch(Dispatchers.IO) {
             val favorites = getItems(krScriptConfig.getFavoriteConfig())
             val pages = getItems(krScriptConfig.getPageListConfig())

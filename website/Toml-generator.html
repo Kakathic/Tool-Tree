@@ -1256,7 +1256,7 @@ const A_BG         = { key:'advBg',        label:'bg', type:'text', ph:'{ICON}/b
 const A_MINSDK     = { key:'advMinSdk',    label:'min-sdk', type:'text', ph:'26', hint:'Minimum Android SDK.' };
 const A_MAXSDK     = { key:'advMaxSdk',    label:'max-sdk', type:'text', ph:'34', hint:'Maximum Android SDK.' };
 const A_TARGETSDK  = { key:'advTargetSdk', label:'target-sdk', type:'text', ph:'35', hint:'Target Android SDK.' };
-const A_SHORTCUT   = { key:'advShortcut',  label:'allow-shortcut', type:'select', options:['auto','true','false'], hint:'Desktop shortcut.' };
+const A_SHORTCUT   = { key:'advShortcut',  label:'shortcut', type:'select', options:['false','true'], hint:'Desktop shortcut.' };
 const A_SHELLMODE  = { key:'advShellMode', label:'shell', type:'select', options:['default','bg-task','hidden'], hint:'Mode; ignored with bg-task.' };
 const A_SHELLBY    = { key:'advShellBy', label:'shell-by', type:'text', ph:'key1|key2', hint:'[[action]] only. Param names to test, separated by |. A single entry is shared by every rule.' };
 const A_SHELLVALUE = { key:'advShellValue', label:'shell-value', type:'text', ph:'2,3|4', hint:'Expected value per rule, separated by |. Several accepted values in one rule: separate with a comma (2,3). Spaces inside a value are fine; | and , are not.' };
@@ -1420,7 +1420,7 @@ function gating(f) {
     + intLine('min-sdk', f.advMinSdk)
     + intLine('max-sdk', f.advMaxSdk)
     + intLine('target-sdk', f.advTargetSdk)
-    + (f.advShortcut && f.advShortcut !== 'auto' ? `\nallow-shortcut = ${f.advShortcut}` : '');
+    + (f.advShortcut === 'true' ? `\nshortcut = true` : '');
 }
 function advPage(f) {
   let s = advSh0(f,'advBeforeLoad','before-load') + advSh0(f,'advAfterLoad','after-load')
@@ -1818,7 +1818,7 @@ const TYPES = {
       { key:'loadText', label:'load-text (inline keys)', type:'textarea', default:'', ph:'Key="test"\nKey2="test2"', hint:'Top-level inline key text, one name = "value" per line (single-quoted or unquoted values also work). Emitted as a triple-quoted block. Processed after load-key, so it adds missing keys and overrides same-name ones. Blank → omitted.' },
       { key:'loadTextSh', label:'load-text-sh (script)', type:'text', default:'', ph:'cat lang/extra.bash', hint:'Script whose output is key text (name = "value" lines; single-quoted or unquoted values also work), e.g. cat file or echo "PTSH=$PTSH". Same rules as load-text. Blank → omitted.' },
       { key:'title', label:'title', type:'text', default:'CPU', sh:true, hint:'Display title. -sh = title-sh shell form.' },
-      { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Unique ID. Required for desktop shortcuts. @ prefix disables them.' },
+      { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Unique ID. Required for desktop shortcuts (also set shortcut = true).' },
       { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide group/children · other = shell → 1. -sh = shell form.' },
       { key:'child1', label:'first child title (preview only)', type:'text', default:'Optimize CPU' },
       { key:'child2', label:'second child title (preview only)', type:'text', default:'Governor' },
@@ -1956,7 +1956,7 @@ const TYPES = {
       { key:'title', label:'title', type:'text', default:'Set CPU governor', sh:true, hint:'-sh: title-sh — the value becomes echo "…" auto.' },
       { key:'desc', label:'desc', type:'text', default:'Choose a governor before applying', sh:true, hint:'-sh: desc-sh — the value becomes echo "…" auto.' },
       { key:'icon', label:'icon', type:'text', default:'🔥', sh:true, hint:'File path required — e.g. {ICON}/action.png ({HOME} ok); emoji is preview-only. The real app loads the icon from a PATH. -sh: icon-sh.' },
-      { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Required for desktop shortcuts; starting with "@" disables them.' },
+      { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Required for desktop shortcuts (also set shortcut = true).' },
       { key:'script', label:'script', type:'textarea', default:'sleep $delay_sec; echo $governor > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor', hint:'Receives every action.params name as an env var ($delay_sec, $governor …) and $state where applicable. Multi-line scripts are escaped as \\n. Left empty → omitted.' },
       { key:'paramList', label:'action.params', type:'paramlist',
         default:[
@@ -2351,7 +2351,7 @@ const DOCS = {
 </table></div>
 <div class="doc-note warn"><b>Scope:</b> menu/FAB items are toolbar/popup entries, not normal page-list nodes. The generator therefore does not expose normal-node display fields such as <code>desc</code>/<code>summary</code>, or normal-node SDK/shortcut/lock fields. Navigation types (<code>link</code>, <code>activity</code>, <code>html</code>, <code>config</code>) open their target directly and do not use runnable fields.</div>`,
     notes: [
-      ['warn','<code>load-after</code>, <code>min-sdk</code>, <code>max-sdk</code> and <code>allow-shortcut</code> are <b>not read on a group</b> — put them on the child nodes instead.'],
+      ['warn','<code>load-after</code>, <code>min-sdk</code>, <code>max-sdk</code> and <code>shortcut</code> are <b>not read on a group</b> — put them on the child nodes instead.'],
       ['danger','<b>Dot-notation removed:</b> nested entries like <code>[[group.action]]</code> are <b>silently ignored</b> — the parser only reads node tables at the top level of the document.'],
       ['warn','Groups have no <code>desc</code>/<code>summary</code> and cannot inline <code>resource-file</code>/<code>resource-dir</code> — the generator emits a separate <code>[[resource]]</code> node instead.'],
       ['tip','Groups cannot be nested: declaring a new <code>[[group]]</code> closes the previous one. To stop wrapping without a new group, add an empty <code>[[end]]</code> line — the nodes after it render on the page without a group wrapper (optional; not needed before another <code>[[group]]</code>). Reserved name: <code>[[toml]]</code> is a parser marker (inline TOML from <code>config-sh</code>), not a node — it is skipped harmlessly. To wrap a single node in a group, use the <b>wrap in [[group]]</b> checkbox at the top of its Fields panel.'],
@@ -2803,7 +2803,7 @@ const TOPICS = [
 <tr><td>title / title-sh</td><td>-</td><td>String</td><td>Title; -sh variant produces it dynamically and overrides</td></tr>
 <tr><td>desc / desc-sh</td><td>-</td><td>String</td><td>Description line; dynamic variant overrides</td></tr>
 <tr><td>summary / summary-sh</td><td>-</td><td>String</td><td>Extra small grey text; dynamic variant overrides</td></tr>
-<tr><td>key</td><td>index, id</td><td>String</td><td>Unique ID — required for desktop shortcuts; a key starting with <code>@</code> disables shortcuts</td></tr>
+<tr><td>key</td><td>index, id</td><td>String</td><td>Unique ID — required for desktop shortcuts (together with <code>shortcut = true</code>)</td></tr>
 <tr><td>support</td><td>visible</td><td>Bool|Shell</td><td>Show/hide; accepts true/1, false/0, or a shell returning "1" (runs during parse); a shell string makes it dynamic (there is no <code>support-sh</code> key)</td></tr>
 <tr><td>load-after</td><td>-</td><td>Bool</td><td>Build &amp; insert this entry (at its original position) AFTER the page shows — for expensive shells</td></tr>
 </table></div>
@@ -2820,7 +2820,7 @@ const TOPICS = [
 <tr><td>bg / bg-sh</td><td>String</td><td>Background image for the item/dialog</td></tr>
 <tr><td>lock / lock-sh</td><td>String</td><td><code>"1|message"</code> / <code>"1"</code> / a shell returning "1" (resolveBoolOrShell)</td></tr>
 <tr><td>min-sdk / max-sdk / target-sdk</td><td>Int</td><td>Android SDK gating (max-sdk default 100)</td></tr>
-<tr><td>allow-shortcut</td><td>Bool?</td><td>Shortcut creation; forced false when key starts with <code>@</code></td></tr>
+<tr><td>shortcut</td><td>Bool</td><td>Shortcut creation; default false, needs a non-empty key</td></tr>
 </table></div>
 <h4>RunnableNode — action, switch, picker, download</h4>
 <div class="doc-tbl-wrap"><table class="doc-tbl">
@@ -3024,7 +3024,7 @@ lock = "{LOT}|Requires root access"</pre>`
 <li>depend-* is directional — put it on the AFFECTED param; <code>depend-value</code> accepts comma-separated "any of" values; hide and dim are mutually exclusive.</li>
 <li><code>icon</code>/<code>photo</code>/<code>bg</code> must be file PATHS — use <code>{ICON}/x.png</code> or <code>{HOME}/…</code>, never emoji or resource IDs.</li>
 <li>Leave a field blank and it is omitted from the generated TOML — no empty keys like <code>script = ""</code> (param <code>name</code> is the exception: it always emits, auto-derived when blank).</li>
-<li>Desktop shortcuts need an explicit <code>key</code>; a key starting with <code>@</code> disables them.</li>
+<li>Desktop shortcuts need an explicit <code>key</code> and <code>shortcut = true</code>.</li>
 <li>Never name a load-key <code>string</code>/<code>color</code>/<code>android</code> — they shadow resource references.</li>
 <li>Use <code>@name</code> (not <code>$name</code>) for load-key tokens so they never collide with shell variables.</li>
 <li><code>lock</code> is one input: <code>"1|message"</code> / <code>"1"</code> / a shell string; the message accepts <code>@string/…</code>, <code>@key</code> and <code>{ROT}</code>/<code>{LOT}</code> — e.g. <code>lock = "{LOT}|Requires root"</code>.</li>

@@ -38,6 +38,9 @@ class OpenPageHelper(private val activity: Activity) {
         intent.apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             putExtra("page", pageNode)
+            if (pageNode.openItemId.isNotEmpty() && component?.className == ActionPage::class.java.name) {
+                putExtra("autoRunItemId", pageNode.openItemId)
+            }
             SwipeBackPreviewCache.capture(activity) {
                 activity.startActivity(this)
             }

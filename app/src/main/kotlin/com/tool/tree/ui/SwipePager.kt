@@ -34,6 +34,7 @@ class SwipePager @JvmOverloads constructor(
 
         private const val MAX_OVERSCROLL_RATIO = 0.40f
         private const val MIN_OVERSCROLL_RESISTANCE = 0.15f
+        private const val OVERSCROLL_OPEN_RATIO = 0.15f
     }
 
     interface PageTransformer {
@@ -46,6 +47,9 @@ class SwipePager @JvmOverloads constructor(
 
     var currentItem: Int = 0
         private set
+
+    // Gọi khi người dùng kéo trang đầu sang phải quá ngưỡng rồi thả tay
+    var onOverscrollStart: (() -> Unit)? = null
 
     private val scroller = OverScroller(context, DecelerateInterpolator(1.4f))
     private var velocityTracker: VelocityTracker? = null
@@ -286,8 +290,11 @@ class SwipePager @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (isDragging) {
+                    val openStart = ev.actionMasked == MotionEvent.ACTION_UP &&
+                        scrollX < -(width * OVERSCROLL_OPEN_RATIO).toInt()
                     velocityTracker?.computeCurrentVelocity(1000, maxFlingVelocity.toFloat())
                     settle(velocityTracker?.xVelocity ?: 0f)
+                    if (openStart) onOverscrollStart?.invoke()
                 } else if (interruptedAnimation) {
                     settle(0f)
                 }
