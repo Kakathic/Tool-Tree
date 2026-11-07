@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [[text]] nằm ngoài [[group]]. Khung gốc không còn lề 2 bên nên mặc định sát mép màn hình.
+     Chỉnh 4 hướng ở kr_text_content bên dưới: paddingLeft / paddingTop / paddingRight / paddingBottom. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <com.omarea.krscript.ui.TextBgImageView
+        android:id="@+id/kr_extra_bg"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+
+<LinearLayout
+    android:id="@+id/kr_text_content"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="vertical"
+    android:paddingLeft="0dp"
+    android:paddingTop="6dp"
+    android:paddingRight="0dp"
+    android:paddingBottom="10dp">
+
+    <TextView
+        android:id="@id/kr_rows"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        style="@style/textSmall"
+        android:visibility="gone"
+        android:breakStrategy="simple" />
+
+    <FrameLayout
+        android:id="@+id/kr_rows_html"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/kr_extra_icon_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
+        android:layout_marginTop="4dp"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+</LinearLayout>
+
+</FrameLayout>

@@ -68,11 +68,6 @@ alpha = 0.85
 [[text.rows]]
 line = true
 
-[[action]]
-title = "@grp_020"
-desc = "@grp_021"
-script = 'echo "@grp_022"'
-
 [[text]]
 [[text.rows]]
 line = true

@@ -434,7 +434,7 @@ class PageConfigReader {
     val menuIcon: ClickableNode? get() = collectedMenuIcon
     val fabIcon: ClickableNode? get() = collectedFabIcon
 
-    private class DeferredEntry(val type: String, val table: TomlTable, val group: GroupNode?, val insertIndex: Int, val newBlock: Boolean = false)
+    private class DeferredEntry(val type: String, val table: TomlTable, val group: GroupNode?, val insertIndex: Int)
     private val deferredEntries = ArrayList<DeferredEntry>()
 
     val hasDeferredEntries: Boolean get() = deferredEntries.isNotEmpty()
@@ -615,8 +615,6 @@ class PageConfigReader {
         val result = ArrayList<NodeInfoBase>()
         var currentGroup: GroupNode? = null
         var groupHidden = false
-        var pendingEndBreak = false
-        var carryBreak = false
 
         fun closeCurrentGroup(doneNow: Int) {
             currentGroup?.let { onNodeReady?.invoke(it, doneNow, total) }
@@ -628,15 +626,11 @@ class PageConfigReader {
                 done++
                 currentGroup = null
                 groupHidden = false
-                pendingEndBreak = true
-                carryBreak = false
                 onNodeReady?.invoke(null, done, total)
                 continue
             }
             if (entry.type == "group") {
                 closeCurrentGroup(done)
-                pendingEndBreak = false
-                carryBreak = false
                 val group = groupNodeToml(entry.table)
                 done++
                 if (group.supported) {
@@ -658,12 +652,7 @@ class PageConfigReader {
             }
             if (isLoadAfter(entry.table)) {
                 val targetList = currentGroup?.children ?: result
-                val breakHere = currentGroup == null && pendingEndBreak
-                if (breakHere) {
-                    pendingEndBreak = false
-                    carryBreak = true
-                }
-                deferredEntries.add(DeferredEntry(entry.type, entry.table, currentGroup, targetList.size, breakHere))
+                deferredEntries.add(DeferredEntry(entry.type, entry.table, currentGroup, targetList.size))
                 onNodeReady?.invoke(null, done, total)
                 continue
             }
@@ -672,15 +661,6 @@ class PageConfigReader {
                 node?.let { currentGroup!!.children.add(it) }
                 onNodeReady?.invoke(null, done, total)
             } else {
-                if (node != null && pendingEndBreak) {
-                    node.newBlock = true
-                    pendingEndBreak = false
-                } else if (node != null && carryBreak) {
-                    // mục mở đầu khối là load-after chưa hiện: mục này tạm làm đầu khối
-                    node.newBlock = true
-                    node.breakByDeferred = true
-                }
-                if (node != null) carryBreak = false
                 node?.let { result.add(it) }
                 onNodeReady?.invoke(node, done, total)
             }
@@ -694,7 +674,6 @@ class PageConfigReader {
         val insertedCountPerContainer = HashMap<GroupNode?, Int>()
         for (entry in deferredEntries) {
             val node = tomlBuildNode(entry.type, entry.table) ?: continue
-            if (entry.newBlock) node.newBlock = true
             val extra = insertedCountPerContainer[entry.group] ?: 0
             val finalIndex = entry.insertIndex + extra
             insertedCountPerContainer[entry.group] = extra + 1
@@ -882,6 +861,7 @@ class PageConfigReader {
             tomlGet(table, "title")?.let { group.title = StringResRef.resolve(context, it) }
         }
         tomlGet(table, *TomlKeys.SUPPORT)?.let { group.supported = resolveBoolOrShell(it, "support", "visible") }
+        tomlGet(table, *TomlKeys.LINE)?.let { group.line = tomlTruthy(it, "line", "divider", "separator") }
         return group
     }
 

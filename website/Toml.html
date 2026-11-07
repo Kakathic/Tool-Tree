@@ -754,6 +754,7 @@ script = "..."</code></pre>
 <tr><td class="field-name">title-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that produces title</td></tr>
 <tr><td class="field-name">key</td><td>index, id</td><td class="field-type">String</td><td>auto</td><td>Unique ID</td></tr>
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>true</td><td>Hide/show the group - a hidden group ALSO hides all of its children (every entry until the next <code>[[group]]</code> is skipped, their shells are not run). Accepts shell too!</td></tr>
+<tr><td class="field-name">line</td><td>divider, separator</td><td class="field-type">Bool</td><td>false</td><td>Draws a thin divider line between the entries of the group. Only shown between visible entries, so it appears from 2 visible entries up</td></tr>
 </table>
 </div>
 <h3>4.2. Demo</h3>
@@ -792,7 +793,7 @@ title = "Clear cache"
 script = "sync; echo 3 &gt; /proc/sys/vm/drop_caches"
 </code></pre>
 <h3>4.3. Grouping rules (no nesting)</h3>
-<p>Since dot-notation was removed, groups can no longer be nested inside each other. Every <code>[[group]]</code> is a top-level sibling: declaring a new <code>[[group]]</code> closes the previous one, and all following entries belong to the new group. Entries declared before the first <code>[[group]]</code> are not part of any group: they are wrapped automatically in a card without a title, and consecutive entries share one card even without <code>[[end]]</code>. The only visual difference from a real group is a thin divider line between the entries of that automatic card (shown from 2 visible entries up). To <strong>stop wrapping</strong> without opening another group, put an empty <code>[[end]]</code> line: everything after it is outside any group again and is wrapped in the same automatic way until the next <code>[[group]]</code>. Because <code>[[end]]</code> also starts a new automatic card, use it to split such entries into separate cards. <code>[[end]]</code> is optional and only needed for this; a following <code>[[group]]</code> already closes the previous group by itself. It also clears the hidden state of a group with <code>support = false</code>.</p>
+<p>Since dot-notation was removed, groups can no longer be nested inside each other. Every <code>[[group]]</code> is a top-level sibling: declaring a new <code>[[group]]</code> closes the previous one, and all following entries belong to the new group. Entries declared before the first <code>[[group]]</code> (or after an <code>[[end]]</code>) are not part of any group, and <strong>only <code>[[text]]</code> is displayed there</strong>: it is drawn edge to edge, without a card. Every other node type declared outside a group is not displayed. To <strong>stop wrapping</strong> without opening another group, put an empty <code>[[end]]</code> line: everything after it is outside any group again until the next <code>[[group]]</code>. <code>[[end]]</code> is optional and only needed for this; a following <code>[[group]]</code> already closes the previous group by itself. It also clears the hidden state of a group with <code>support = false</code>.</p>
 <div class="callout warn">Groups also don't support inline <code>resource-file</code>/<code>resource-dir</code> fields (see <a href="#resource">section 16</a>) and have no <code>desc</code>/<code>summary</code> - a group is just a title + its children.</div>
 </section>
 <section id="page">
@@ -1188,7 +1189,7 @@ option-sh = "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequenc
 <tr><td class="field-name">bg-image</td><td>bg-photo</td><td class="field-type">String</td><td>Background image path of the whole text block (same loader as action <code>bg</code>: <code>{HOME}</code>/<code>{ICON}</code>, relative paths). Can also be set on any <code>[[text.rows]]</code> row; the last non-empty one wins</td></tr>
 <tr><td class="field-name">bg-image-sh</td><td>bg-photo-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that prints the background image path (batched with the rows scripts; overrides <code>bg-image</code>)</td></tr>
 <tr><td class="field-name">bg-scale</td><td>-</td><td class="field-type">String</td><td><code>fit</code> (default, like action: image drives the height, <code>fitCenter</code>) | <code>crop</code> (fills the block, <code>centerCrop</code>, does not change the height) | <code>stretch</code> (fills the block, <code>fitXY</code>)</td></tr>
-<tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ NodeInfoBase fields <code>key</code>, <code>support</code>, <code>load-after</code>. <code>[[text]]</code> has no <code>title</code> / <code>desc</code> / <code>summary</code> (nor their <code>-sh</code> forms): they are ignored - put the content in <code>[[text.rows]]</code></td></tr>
+<tr><td colspan="4" style="background:var(--bg-soft);font-style:italic;">+ NodeInfoBase fields <code>key</code>, <code>support</code>, <code>load-after</code>. <code>[[text]]</code> has no <code>title</code> / <code>desc</code> / <code>summary</code> (nor their <code>-sh</code> forms): they are ignored - put the content in <code>[[text.rows]]</code>. Outside any <code>[[group]]</code>, <code>[[text]]</code> is shown edge to edge (no card)</td></tr>
 </table>
 </div>
 <h3>10.2. Demo</h3>
@@ -2125,7 +2126,7 @@ echo "am:[broadcast -a com.example.MY_ACTION --es status ok --ei code 200]"
 <section id="example">
 <h2>25. Full example</h2>
 <p>A representative TOML configuration showcasing groups, actions, parameters, switches, and rich text rows:</p>
-<pre><code># Top-level item (declared before the first [[group]]) - shown without a group header
+<pre><code># Top-level item (declared before the first [[group]]) - only [[text]] is shown outside a group, edge to edge
 [[text]]
 [[text.rows]]
 text = "Every entry below belongs to the nearest [[group]] above it"
@@ -2208,7 +2209,7 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
-<li>2026-11-07 - Entries outside any <code>[[group]]</code> (before the first group or after <code>[[end]]</code>) are now wrapped automatically in a title-less card, with thin dividers between the entries (from 2 visible entries up). <code>[[end]]</code> also splits these automatic cards (see section 4).</li>
+<li>2026-11-07 - <code>[[group]]</code>: new <code>line</code> (alias <code>divider</code>, <code>separator</code>) draws dividers between its entries. Outside any group (before the first group or after <code>[[end]]</code>) only <code>[[text]]</code> is displayed, edge to edge; other node types are not displayed (see section 4.3).</li>
 <li>2026-11-06 - <code>[[text]]</code>: removed <code>title</code>, <code>desc</code>, <code>summary</code> and <code>title-sh</code>, <code>desc-sh</code>, <code>summary-sh</code> (ignored now, the block shows only its rows; see section 10.1).</li>
 <li>2026-11-06 - <code>markdown = true</code> (rows and chat): removed backslash escapes and HTML tags (<code>&lt;u&gt; &lt;mark&gt; &lt;sup&gt; &lt;sub&gt; &lt;b&gt; &lt;i&gt; &lt;s&gt; &lt;br&gt;</code>); <code>[[chat]]</code>: removed the Markwon library, footnotes, definition lines and math-to-Unicode, and the <code>`text|R`</code> radius works again in chat (see sections 11.4 and 14.1).</li>
 </ul>

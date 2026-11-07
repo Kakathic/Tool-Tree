@@ -110,66 +110,6 @@ class PageLayoutRender(private val mContext: Context,
     private val groupInsertIndexMap = HashMap<GroupNode, Int>()
     private val attachedGroups = HashSet<GroupNode>()
 
-    // Các mục nằm ngoài [[group]] được gom vào "thẻ ngầm" (giống group nhưng không có tiêu đề)
-    private val looseGroupOf = HashMap<NodeInfoBase, ListItemGroup>()
-    private val looseMembers = HashMap<ListItemGroup, ArrayList<NodeInfoBase>>()
-    private var currentLoose: ListItemGroup? = null
-    private var insertPrev: NodeInfoBase? = null
-    private var insertNext: NodeInfoBase? = null
-
-    private fun newLooseGroup(): ListItemGroup {
-        val node = GroupNode("")
-        node.key = "__loose_" + node.index
-        val card = ListItemGroup(mContext, false, node)
-        card.enableDividers()
-        looseMembers[card] = ArrayList()
-        return card
-    }
-
-    private fun addLoose(view: ListItemView, node: NodeInfoBase, atIndex: Int, replacePlaceholder: Boolean) {
-        if (atIndex < 0) {
-            if (node.newBlock) currentLoose = null
-            var card = currentLoose
-            if (card == null) {
-                card = newLooseGroup()
-                if (replacePlaceholder) rootGroup.addViewBeforePlaceholder(card) else rootGroup.addView(card)
-                currentLoose = card
-            }
-            card.addView(view)
-            looseMembers[card]?.add(node)
-            looseGroupOf[node] = card
-            return
-        }
-        val next = insertNext
-        val carriedCard = if (node.newBlock && next != null && next.breakByDeferred) looseGroupOf[next] else null
-        val prevCard = if (node.newBlock) null else insertPrev?.let { looseGroupOf[it] }
-        val nextCard = if (next?.newBlock == true) null else next?.let { looseGroupOf[it] }
-        val card: ListItemGroup
-        val pos: Int
-        if (carriedCard != null) {
-            // mục mở đầu khối (load-after) hiện ra: nó vào đầu thẻ của mục đang tạm làm đầu khối
-            card = carriedCard
-            pos = 0
-            next!!.newBlock = false
-            next.breakByDeferred = false
-        } else if (prevCard != null) {
-            card = prevCard
-            pos = (insertPrev?.let { looseMembers[card]?.indexOf(it) } ?: -1) + 1
-        } else if (nextCard != null) {
-            card = nextCard
-            pos = (insertNext?.let { looseMembers[card]?.indexOf(it) } ?: 0).coerceAtLeast(0)
-        } else {
-            card = newLooseGroup()
-            rootGroup.addView(card, atIndex)
-            pos = 0
-        }
-        val members = looseMembers[card]
-        val at = pos.coerceIn(0, members?.size ?: 0)
-        members?.add(at, node)
-        card.addView(view, at)
-        looseGroupOf[node] = card
-    }
-
     private fun mapConfigList(parent: ListItemGroup, actionInfos: ArrayList<NodeInfoBase>) {
         for (index in 0 until actionInfos.size) {
             renderNode(parent, actionInfos[index])
@@ -178,6 +118,8 @@ class PageLayoutRender(private val mContext: Context,
 
     private fun renderNode(parent: ListItemGroup, it: NodeInfoBase, atIndex: Int = -1, replacePlaceholder: Boolean = false) {
         try {
+            // Mục ngoài [[group]]: chỉ [[text]] được hiển thị, các loại khác bị bỏ qua
+            if (parent === rootGroup && it !is GroupNode && it !is TextNode) return
             var uiRender: ListItemView? = null
             if (it is PageNode) {
                 uiRender = createPageItem(it)
@@ -190,7 +132,7 @@ class PageLayoutRender(private val mContext: Context,
             } else if (it is DownloadNode) {
                 uiRender = createDownloadItem(it)
             } else if (it is TextNode) {
-                uiRender = createTextItem(it)
+                uiRender = createTextItem(it, parent === rootGroup)
             } else if (it is EditorNode) {
                 uiRender = createEditorItem(it)
             } else if (it is TerminalNode) {
@@ -202,7 +144,6 @@ class PageLayoutRender(private val mContext: Context,
                 groupViewMap[it] = subGroup
                 groupParentMap[it] = parent
                 if (it.children.isNotEmpty()) {
-                    if (parent === rootGroup) currentLoose = null
                     if (replacePlaceholder) parent.addViewBeforePlaceholder(subGroup) else parent.addView(subGroup)
                     attachedGroups.add(it)
                     mapConfigList(subGroup, it.children)
@@ -216,9 +157,7 @@ class PageLayoutRender(private val mContext: Context,
                     uiRender.setOnClickListener(this.onItemClickListener)
                     uiRender.setOnLongClickListener(this.onItemLongClickListener)
                 }
-                if (parent === rootGroup && it !is GroupNode) {
-                    addLoose(uiRender, it, atIndex, replacePlaceholder)
-                } else if (atIndex >= 0) {
+                if (atIndex >= 0) {
                     parent.addView(uiRender, atIndex)
                 } else if (replacePlaceholder) {
                     parent.addViewBeforePlaceholder(uiRender)
@@ -269,16 +208,10 @@ class PageLayoutRender(private val mContext: Context,
 
     private fun realRootViewIndex(modelIndex: Int): Int {
         var realIndex = 0
-        val counted = HashSet<ListItemGroup>()
         for (i in 0 until modelIndex) {
             val existing = itemConfigList[i]
-            if (existing is GroupNode) {
-                if (!attachedGroups.contains(existing)) continue
-                realIndex++
-            } else {
-                val card = looseGroupOf[existing] ?: continue
-                if (counted.add(card)) realIndex++
-            }
+            if (existing is GroupNode && !attachedGroups.contains(existing)) continue
+            realIndex++
         }
         return realIndex
     }
@@ -287,15 +220,8 @@ class PageLayoutRender(private val mContext: Context,
         if (group == null) {
             val at = index.coerceIn(0, itemConfigList.size)
             val realAt = realRootViewIndex(at)
-            insertPrev = if (at > 0) itemConfigList[at - 1] else null
-            insertNext = if (at < itemConfigList.size) itemConfigList[at] else null
             itemConfigList.add(at, node)
-            try {
-                renderNode(rootGroup, node, realAt)
-            } finally {
-                insertPrev = null
-                insertNext = null
-            }
+            renderNode(rootGroup, node, realAt)
             return
         }
         val subGroup = groupViewMap[group] ?: return
@@ -310,8 +236,8 @@ class PageLayoutRender(private val mContext: Context,
         renderNode(subGroup, node, at)
     }
 
-    private fun createTextItem(node: TextNode): ListItemView {
-        return ListItemText(mContext, node)
+    private fun createTextItem(node: TextNode, bare: Boolean = false): ListItemView {
+        return ListItemText(mContext, node, bare)
     }
 
     private fun createListItem(node: PickerNode): ListItemView {
@@ -347,7 +273,9 @@ class PageLayoutRender(private val mContext: Context,
     }
 
     private fun createItemGroup(node: GroupNode): ListItemGroup {
-        return ListItemGroup(mContext, false, node)
+        val group = ListItemGroup(mContext, false, node)
+        if (node.line) group.enableDividers()
+        return group
     }
 
     init {

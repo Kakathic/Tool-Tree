@@ -7,8 +7,13 @@ import android.widget.TextView
 import com.tool.tree.R
 import com.omarea.krscript.model.TextNode
 
+// bare = true: [[text]] nằm ngoài [[group]], dùng layout kr_text_list_item_bare (sát lề, chỉnh 4 hướng)
 class ListItemText(context: Context,
-                   private val config: TextNode) : ListItemView(context, R.layout.kr_text_list_item, config) {
+                   private val config: TextNode,
+                   bare: Boolean = false) : ListItemView(
+        context,
+        if (bare) R.layout.kr_text_list_item_bare else R.layout.kr_text_list_item,
+        config) {
 
     private val rowsView = layout.findViewById<TextView?>(R.id.kr_rows)
     protected var extraIconView = layout.findViewById<ImageView?>(R.id.kr_extra_icon_text)
