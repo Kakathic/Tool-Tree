@@ -1312,8 +1312,8 @@ text = "Temp: 41 C"
 <tr><td class="field-name">monospace</td><td>mono, code</td><td class="field-type">Bool</td><td>false</td><td>Monospace font (for code/log)</td></tr>
 <tr><td class="field-name">letter-spacing</td><td>letterspacing, spacing</td><td class="field-type">Float</td><td>0</td><td>Letter spacing (em units)</td></tr>
 <tr><td class="field-name">line-height</td><td>lineheight, row-height</td><td class="field-type">Float</td><td>0</td><td>Line height multiplier (1.5 = +50%)</td></tr>
-<tr><td class="field-name">margin-top</td><td>spacing-top, top-margin</td><td class="field-type">Int</td><td>0</td><td>Extra space above the row (dp). Applied once, to the first line only - a multi-line row is not expanded on every line</td></tr>
-<tr><td class="field-name">margin-bottom</td><td>spacing-bottom, bottom-margin</td><td class="field-type">Int</td><td>0</td><td>Extra space below the row (dp). Applied once, to the last line only - a multi-line row is not expanded on every line</td></tr>
+<tr><td class="field-name">margin-top</td><td>spacing-top, top-margin</td><td class="field-type">Int</td><td>0</td><td>Extra space above the row (dp). Drawn as one blank gap line directly above the row, so a multi-line row is never split by it</td></tr>
+<tr><td class="field-name">margin-bottom</td><td>spacing-bottom, bottom-margin</td><td class="field-type">Int</td><td>0</td><td>Extra space below the row (dp). Applied once, to the last line of the row only - a multi-line row is not expanded on every line</td></tr>
 <tr><td class="field-name">alpha</td><td>opacity</td><td class="field-type">Float</td><td>-1</td><td>Opacity 0.0-1.0 or 0-255</td></tr>
 <tr><td class="field-name">foreground</td><td>color</td><td class="field-type">String</td><td>-1</td><td>Text color (e.g. <code>#FF0000</code>)</td></tr>
 <tr><td class="field-name">bg-color</td><td>bg, background, bgcolor (legacy)</td><td class="field-type">String</td><td>-1</td><td>Background color of the row. For an image use <code>bg-image</code> (on a node <code>bg</code> was always the image, hence the new explicit name)</td></tr>
@@ -2266,7 +2266,7 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
-<li>2026-11-07 - <code>margin-top</code> / <code>margin-bottom</code> on text rows now apply once per row (first / last line) instead of on every line of a multi-line row.</li>
+<li>2026-11-07 - <code>margin-top</code> / <code>margin-bottom</code> on text rows now apply once per row: <code>margin-top</code> as a single gap above the row, <code>margin-bottom</code> on the last line, instead of on every line of a multi-line row.</li>
 <li>2026-11-07 - <code>[[group]]</code>: new <code>columns</code> (number, or <code>true</code> for automatic grid of cards) and <code>column-width</code> / <code>min-columns</code> / <code>max-columns</code> (automatic column count by screen width, section 4.4).</li>
 <li>2026-11-07 - Items without <code>key</code> now get an automatic id <code>auto:&lt;title&gt;</code> used by long-press favorites (see <code>key</code> in section 3.1).</li>
 </ul>

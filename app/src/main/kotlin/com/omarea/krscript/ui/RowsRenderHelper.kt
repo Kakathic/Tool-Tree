@@ -370,6 +370,14 @@ object RowsRenderHelper {
                 rowsView.append("\n")
             }
 
+            // margin-top: dòng đệm riêng phía trên nhóm (chỉ khi row đầu nhóm là row có nội dung và ghi margin-top > 0)
+            if (firstRow.marginTop > 0 && contentRows.isNotEmpty() && contentRows.first() == group.first()) {
+                val spaceLine = SpannableString(" ")
+                spaceLine.setSpan(SpaceLineSpan(rowsView, dpToPx(context, firstRow.marginTop)), 0, spaceLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                rowsView.append(spaceLine)
+                rowsView.append("\n")
+            }
+
             val groupTextStart = rowsView.length()
 
             val leftIdx = contentRows.filter { rows[it].align == Layout.Alignment.ALIGN_NORMAL }
@@ -609,7 +617,6 @@ object RowsRenderHelper {
         val oldText = editable.subSequence(start, end).toString()
         // Gỡ hẳn các span chiều cao của row cũ trước khi thay, tránh span cũ còn sót làm dòng cao dần sau mỗi lần làm mới
         editable.getSpans(start, end, RefreshCountdownSpan::class.java).forEach { editable.removeSpan(it) }
-        editable.getSpans(start, end, TopExtraSpaceSpan::class.java).forEach { editable.removeSpan(it) }
         editable.getSpans(start, end, BottomExtraSpaceSpan::class.java).forEach { editable.removeSpan(it) }
         editable.replace(start, end, rendered.spannable)
         rowsView.visibility = if (editable.isEmpty()) View.GONE else View.VISIBLE
@@ -954,9 +961,6 @@ object RowsRenderHelper {
             spannableString.setSpan(LineHeightMultiplierSpan(row.lineHeight), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
-        if (row.marginTop > 0) {
-            spannableString.setSpan(TopExtraSpaceSpan(dpToPx(context, row.marginTop)), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
         if (row.marginBottom > 0) {
             spannableString.setSpan(BottomExtraSpaceSpan(dpToPx(context, row.marginBottom)), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
@@ -1194,13 +1198,19 @@ object RowsRenderHelper {
         }
     }
 
-    // margin-top chỉ áp cho dòng đầu của hàng (hàng chữ nhiều dòng không bị nở khoảng trống ở mọi dòng)
-    private class TopExtraSpaceSpan(private val extraPx: Int) : LineHeightSpan {
+    /**
+     * margin-top của hàng: một dòng đệm riêng đặt phía trên hàng, cao đúng [heightPx] (đã bù lineSpacing của TextView).
+     * Không cộng vào chiều cao dòng chữ nên hàng nhiều dòng không bao giờ bị tách khoảng trống ở giữa.
+     */
+    private class SpaceLineSpan(private val rowsView: TextView, private val heightPx: Int) : LineHeightSpan {
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
-            val spanStart = (text as? Spanned)?.getSpanStart(this) ?: -1
-            if (spanStart >= 0 && start > spanStart) return
-            fm.ascent -= extraPx
-            fm.top -= extraPx
+            val mult = rowsView.lineSpacingMultiplier.takeIf { it > 0f } ?: 1f
+            val add = rowsView.lineSpacingExtra
+            val raw = Math.round((heightPx - add) / mult).coerceAtLeast(1)
+            fm.ascent = -raw
+            fm.top = -raw
+            fm.descent = 0
+            fm.bottom = 0
         }
     }
 
