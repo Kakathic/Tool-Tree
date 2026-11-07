@@ -40,6 +40,7 @@ import com.omarea.krscript.config.PageConfigSh
 import com.omarea.krscript.TryOpenActivity
 import com.omarea.krscript.WebLauncher
 import com.omarea.krscript.executor.ScriptEnvironmen
+import com.omarea.krscript.shortcut.DrawerFavorites
 import com.omarea.krscript.model.*
 import com.omarea.krscript.ui.ActionListFragment
 import com.omarea.krscript.ui.DialogLogFragment
@@ -218,7 +219,16 @@ class MainActivity : AppCompatActivity() {
         val drawer = binding.mainDrawer
         val panel = binding.mainDrawerPanel
         binding.mainDrawerTitle.text = "${getString(R.string.app_name)} $versionName"
-        mainDrawer = MainDrawer(binding.mainDrawerList) { page -> onDrawerPageClick(page) }
+        mainDrawer = MainDrawer(
+            binding.mainDrawerList,
+            { page -> onDrawerPageClick(page) },
+            { entry ->
+                DialogHelper.confirm(this, entry.title, getString(R.string.kr_favorite_remove_desc).format(entry.title), Runnable {
+                    DrawerFavorites(this).remove(entry.id)
+                    mainDrawer.render()
+                })
+            }
+        )
 
         drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START)
         drawer.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
@@ -248,6 +258,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openDrawer() {
+        mainDrawer.render()
         if (binding.mainDrawerList.childCount == 0) return
         binding.mainDrawer.openDrawer(GravityCompat.START)
     }
@@ -550,7 +561,7 @@ class MainActivity : AppCompatActivity() {
                     component = ComponentName(applicationContext, ActionPage::class.java)
                     addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or Intent.FLAG_ACTIVITY_NO_HISTORY)
                     putExtra("page", page)
-                    if (clickableNode is RunnableNode || clickableNode is TerminalNode || clickableNode is EditorNode) putExtra("autoRunItemId", clickableNode.key)
+                    if (clickableNode is RunnableNode || clickableNode is TerminalNode || clickableNode is EditorNode) putExtra("autoRunItemId", clickableNode.effectiveKey)
                 }
                 addToFavoritesHandler.onAddToFavorites(clickableNode, intent)
             }

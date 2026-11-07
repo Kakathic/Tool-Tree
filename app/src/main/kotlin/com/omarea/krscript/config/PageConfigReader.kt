@@ -219,6 +219,7 @@ class PageConfigReader {
             if (text.isNotEmpty()) parseKeyLines(text, keyMap, lenient = true)
         }
         if (keyMap.isEmpty()) return merged
+        keyMap.forEach { (name, value) -> keyReverse.putIfAbsent(value, name) }
 
         val keyRefRegex = Regex("@(" + keyMap.keys.joinToString("|") { Regex.escape(it) } + ")\\b")
         return keyRefRegex.replace(merged) { m ->
@@ -230,6 +231,20 @@ class PageConfigReader {
                 ?.replace("\t", "\\t")
                 ?: m.value
         }
+    }
+
+    // Giá trị đã dịch -> tên key ngôn ngữ, để id tự sinh không đổi theo ngôn ngữ
+    private val keyReverse = HashMap<String, String>()
+    private val usedAutoKeys = HashMap<String, Int>()
+
+    private fun assignAutoKey(node: NodeInfoBase, table: TomlTable) {
+        if (node.key.isNotEmpty() || node.titleSh.isNotEmpty()) return
+        val raw = tomlGet(table, "title")?.trim().orEmpty()
+        if (raw.isEmpty()) return
+        val base = "auto:" + (keyReverse[raw]?.let { "@$it" } ?: raw)
+        val seen = usedAutoKeys[base] ?: 0
+        usedAutoKeys[base] = seen + 1
+        node.autoKey = if (seen == 0) base else "$base#${seen + 1}"
     }
 
     private val pendingSwitchStates = ArrayList<Pair<SwitchNode, String>>()
@@ -560,6 +575,7 @@ class PageConfigReader {
 
     private fun readConfigToml(rawText: String, onNodeReady: ((NodeInfoBase?, Int, Int) -> Unit)? = null): ArrayList<NodeInfoBase>? {
         return try {
+            usedAutoKeys.clear()
             val result = Toml.parse(rawText)
             if (result.hasErrors()) {
                 val message = result.errors().joinToString("\n") { it.toString() }
@@ -738,6 +754,7 @@ class PageConfigReader {
             if (nodeInfoBase.title.isEmpty()) {
                 tomlGet(table, "title")?.let { nodeInfoBase.title = StringResRef.resolve(context, it) }
             }
+            assignAutoKey(nodeInfoBase, table)
             tomlGet(table, *TomlKeys.DESC_SH)?.let {
                 nodeInfoBase.descSh = it
                 registerDynamicString(nodeInfoBase, "desc", it)

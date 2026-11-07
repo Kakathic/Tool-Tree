@@ -293,7 +293,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
     }
 
     override fun onItemLongClick(clickableNode: ClickableNode) {
-        if (clickableNode.key.isEmpty()) {
+        if (clickableNode.effectiveKey.isEmpty()) {
             DialogHelper.alert(this.requireActivity(), getString(R.string.kr_shortcut_create_fail), getString(R.string.kr_ushortcut_nsupported))
         } else {
             krScriptActionHandler?.addToFavorites(clickableNode, object : KrScriptActionHandler.AddToFavoritesHandler {

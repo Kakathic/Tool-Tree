@@ -23,6 +23,9 @@ open class ListItemView(val context: Context,
             return config.key
         }
 
+    val autoKey: String
+        get() = config.autoKey
+
     var title: String
         get() {
             return titleView?.text.toString()

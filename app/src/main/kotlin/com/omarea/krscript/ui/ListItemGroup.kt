@@ -117,7 +117,7 @@ class ListItemGroup(context: Context,
 
     fun triggerActionByKey(key: String): Boolean {
         for (child in this.children) {
-            if (child is ListItemClickable && child.key.equals(key)) {
+            if (child is ListItemClickable && (child.key == key || (child.key.isEmpty() && child.autoKey == key))) {
                 child.triggerAction()
                 return true
             } else if (child is ListItemGroup && child.triggerActionByKey(key)) {

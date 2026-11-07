@@ -243,7 +243,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             val intent = Intent(applicationContext, ActionPage::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or Intent.FLAG_ACTIVITY_NO_HISTORY)
                 putExtra("page", page)
-                if (clickableNode is RunnableNode || clickableNode is TerminalNode || clickableNode is EditorNode) putExtra("autoRunItemId", clickableNode.key)
+                if (clickableNode is RunnableNode || clickableNode is TerminalNode || clickableNode is EditorNode) putExtra("autoRunItemId", clickableNode.effectiveKey)
             }
             addToFavoritesHandler.onAddToFavorites(clickableNode, intent)
         }

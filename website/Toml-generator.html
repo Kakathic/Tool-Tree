@@ -1816,7 +1816,7 @@ const TYPES = {
       { key:'loadText', label:'load-text (inline keys)', type:'textarea', default:'', ph:'Key="test"\nKey2="test2"', hint:'Top-level inline key text, one name = "value" per line (single-quoted or unquoted values also work). Emitted as a triple-quoted block. Processed after load-key, so it adds missing keys and overrides same-name ones. Blank → omitted.' },
       { key:'loadTextSh', label:'load-text-sh (script)', type:'text', default:'', ph:'cat lang/extra.bash', hint:'Script whose output is key text (name = "value" lines; single-quoted or unquoted values also work), e.g. cat file or echo "PTSH=$PTSH". Same rules as load-text. Blank → omitted.' },
       { key:'title', label:'title', type:'text', default:'CPU', sh:true, hint:'Display title. -sh = title-sh shell form.' },
-      { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Unique ID. Required to add the item to the menu favorites / home screen (long-press).' },
+      { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Unique ID. Used by long-press favorites / home screen. Blank = auto:<title> (less stable if the title changes).' },
       { key:'support', label:'support', type:'text', default:'true', sh:true, shellOnly:true, hint:'true = show · false = hide group/children · other = shell → 1. -sh = shell form.' },
       { key:'child1', label:'first child title (preview only)', type:'text', default:'Optimize CPU' },
       { key:'child2', label:'second child title (preview only)', type:'text', default:'Governor' },
@@ -1954,7 +1954,7 @@ const TYPES = {
       { key:'title', label:'title', type:'text', default:'Set CPU governor', sh:true, hint:'-sh: title-sh — the value becomes echo "…" auto.' },
       { key:'desc', label:'desc', type:'text', default:'Choose a governor before applying', sh:true, hint:'-sh: desc-sh — the value becomes echo "…" auto.' },
       { key:'icon', label:'icon', type:'text', default:'🔥', sh:true, hint:'File path required — e.g. {ICON}/action.png ({HOME} ok); emoji is preview-only. The real app loads the icon from a PATH. -sh: icon-sh.' },
-      { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Required to add the item to the menu favorites / home screen (long-press).' },
+      { key:'nodeKey', label:'key (id, optional)', type:'text', default:'', hint:'Used by long-press favorites / home screen. Blank = auto:<title> (less stable if the title changes).' },
       { key:'script', label:'script', type:'textarea', default:'sleep $delay_sec; echo $governor > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor', hint:'Receives every action.params name as an env var ($delay_sec, $governor …) and $state where applicable. Multi-line scripts are escaped as \\n. Left empty → omitted.' },
       { key:'paramList', label:'action.params', type:'paramlist',
         default:[
@@ -2801,7 +2801,7 @@ const TOPICS = [
 <tr><td>title / title-sh</td><td>-</td><td>String</td><td>Title; -sh variant produces it dynamically and overrides</td></tr>
 <tr><td>desc / desc-sh</td><td>-</td><td>String</td><td>Description line; dynamic variant overrides</td></tr>
 <tr><td>summary / summary-sh</td><td>-</td><td>String</td><td>Extra small grey text; dynamic variant overrides</td></tr>
-<tr><td>key</td><td>index, id</td><td>String</td><td>Unique ID — required to add the item to the menu favorites / home screen</td></tr>
+<tr><td>key</td><td>index, id</td><td>String</td><td>Unique ID — used by menu favorites / home screen; blank = auto:&lt;title&gt;</td></tr>
 <tr><td>support</td><td>visible</td><td>Bool|Shell</td><td>Show/hide; accepts true/1, false/0, or a shell returning "1" (runs during parse); a shell string makes it dynamic (there is no <code>support-sh</code> key)</td></tr>
 <tr><td>load-after</td><td>-</td><td>Bool</td><td>Build &amp; insert this entry (at its original position) AFTER the page shows — for expensive shells</td></tr>
 </table></div>
@@ -3021,7 +3021,7 @@ lock = "{LOT}|Requires root access"</pre>`
 <li>depend-* is directional — put it on the AFFECTED param; <code>depend-value</code> accepts comma-separated "any of" values; hide and dim are mutually exclusive.</li>
 <li><code>icon</code>/<code>photo</code>/<code>bg</code> must be file PATHS — use <code>{ICON}/x.png</code> or <code>{HOME}/…</code>, never emoji or resource IDs.</li>
 <li>Leave a field blank and it is omitted from the generated TOML — no empty keys like <code>script = ""</code> (param <code>name</code> is the exception: it always emits, auto-derived when blank).</li>
-<li>Adding an item to the menu favorites / home screen needs an explicit <code>key</code>.</li>
+<li>Adding an item to the menu favorites / home screen works best with an explicit <code>key</code>; without one an <code>auto:&lt;title&gt;</code> id is used.</li>
 <li>Never name a load-key <code>string</code>/<code>color</code>/<code>android</code> — they shadow resource references.</li>
 <li>Use <code>@name</code> (not <code>$name</code>) for load-key tokens so they never collide with shell variables.</li>
 <li><code>lock</code> is one input: <code>"1|message"</code> / <code>"1"</code> / a shell string; the message accepts <code>@string/…</code>, <code>@key</code> and <code>{ROT}</code>/<code>{LOT}</code> — e.g. <code>lock = "{LOT}|Requires root"</code>.</li>
