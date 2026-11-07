@@ -478,14 +478,14 @@ class DialogAboutUpdate(
         return parts[0].padStart(2, '0') + "/" + parts[1].padStart(2, '0') + "/" + parts[2]
     }
 
-    private fun showChangelog(text: String?) {
-        if (text.isNullOrBlank() || !::updateTimeline.isInitialized) return
-        val entries = parseChangelog(text)
+    private fun showChangelog(changelog: String?) {
+        if (changelog.isNullOrBlank() || !::updateTimeline.isInitialized) return
+        val entries = parseChangelog(changelog)
         updateTimeline.removeAllViews()
         if (entries.isEmpty()) {
             updateTimeline.visibility = View.GONE
             updateLog.visibility = View.VISIBLE
-            updateLog.text = HtmlCompat.fromHtml(AppUpdateInstaller.markdownToHtml(text), HtmlCompat.FROM_HTML_MODE_LEGACY)
+            updateLog.text = HtmlCompat.fromHtml(AppUpdateInstaller.markdownToHtml(changelog), HtmlCompat.FROM_HTML_MODE_LEGACY)
             return
         }
         updateLog.visibility = View.GONE
