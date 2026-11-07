@@ -244,4 +244,12 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="chat_params_title">Beállítások</string>
     <string name="chat_sessions_title">Csevegési munkamenetek</string>
     <string name="chat_delete_session_confirm">Törli ezt a munkamenetet?</string>
+    <string name="about_check">Ellenőrzés</string>
+    <string name="about_theme_system">Rendszer</string>
+    <string name="about_theme_dark">Sötét</string>
+    <string name="about_theme_light">Világos</string>
+    <string name="about_wallpaper_none">Nincs háttérkép</string>
+    <string name="about_changelog">Változásnapló</string>
+    <string name="about_badge_latest">Legújabb</string>
+    <string name="about_download">Letöltés</string>
 </resources>

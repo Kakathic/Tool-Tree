@@ -12,18 +12,18 @@ elif [ "$menu_id" == "v3" ]; then
 echo "am:[start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.tool.tree]"
 fi
 """
-  [[menu.items]]
-  key = "v1"
-  title = "@permis_text_1"
-  silent = true
-  [[menu.items]]
-  key = "v2"
-  title = "@permis_text_4"
-  silent = true
-  [[menu.items]]
-  key = "v3"
-  title = "@setting_text_5"
-  silent = true
+[[menu.items]]
+key = "v1"
+title = "@permis_text_1"
+silent = true
+[[menu.items]]
+key = "v2"
+title = "@permis_text_4"
+silent = true
+[[menu.items]]
+key = "v3"
+title = "@setting_text_5"
+silent = true
 
 [[group]]
 [[text]]
@@ -33,28 +33,34 @@ html-height = 100
 
 [[group]]
 columns = true
+card = true
 
 [[page]]
 title = "@update_text_5"
 icon = "{ICON}/website.png"
 link = "https://Kakathic.github.io/Tool-Tree"
+cell = "a"
 
 [[page]]
 title = "Telegram"
 icon = "{ICON}/telegram.png"
 link = "https://t.me/tooltree"
+cell = "b"
 
 [[group]]
 columns = true
+card = true
 
 [[download]]
 title = "@download_text stable"
 icon = "{ICON}/update.png"
 url-sh = "linkgit https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest Tool-Tree"
 script = "openfile $state"
+cell = "a"
 
 [[download]]
 title = "@download_text beta"
 icon = "{ICON}/update2.png"
 url = "https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-beta.apk"
 script = "openfile $state"
+cell = "b"

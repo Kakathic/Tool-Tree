@@ -259,4 +259,12 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="kr_favorite_added">Đã thêm vào Yêu thích của mục lục</string>
     <string name="kr_favorite_exists">Đã có trong Yêu thích của mục lục</string>
     <string formatted="false" name="kr_favorite_remove_desc">Xoá “%s” khỏi Yêu thích?</string>
+    <string name="about_check">Kiểm tra</string>
+    <string name="about_theme_system">Hệ thống</string>
+    <string name="about_theme_dark">Tối</string>
+    <string name="about_theme_light">Sáng</string>
+    <string name="about_wallpaper_none">Không dùng hình nền</string>
+    <string name="about_changelog">Lịch sử thay đổi</string>
+    <string name="about_badge_latest">Mới nhất</string>
+    <string name="about_download">Tải về</string>
 </resources>

@@ -273,4 +273,12 @@ If you agree, press the confirm button to continue."</string>
     <string name="kr_favorite_added">Added to the menu favorites</string>
     <string name="kr_favorite_exists">Already in the menu favorites</string>
     <string formatted="false" name="kr_favorite_remove_desc">Remove “%s” from favorites?</string>
+    <string name="about_check">Check</string>
+    <string name="about_theme_system">System</string>
+    <string name="about_theme_dark">Dark</string>
+    <string name="about_theme_light">Light</string>
+    <string name="about_wallpaper_none">No wallpaper</string>
+    <string name="about_changelog">Changelog</string>
+    <string name="about_badge_latest">Latest</string>
+    <string name="about_download">Download</string>
 </resources>

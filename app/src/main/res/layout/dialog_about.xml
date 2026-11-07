@@ -1,339 +1,252 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:clickable="true"
     android:focusable="true"
     android:paddingStart="16dp"
-    android:paddingEnd="16dp"
     android:paddingTop="8dp"
+    android:paddingEnd="16dp"
     android:paddingBottom="12dp">
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:minHeight="48dp"
-        android:orientation="horizontal">
-        <ImageButton
-            android:id="@+id/about_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="-8dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/about_back"
-            android:src="@drawable/ic_arrow_back" />
+        android:id="@+id/about_panel"
+        android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
         <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_weight="1"
-            android:gravity="center_vertical"
-            android:text="@string/about_title"
-            style="@style/aboutHeaderText" />
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <TextView
-                android:id="@+id/about_version"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:alpha="0.7"
-                android:text="@string/engine_version_name"
-                android:textSize="12sp" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="3dp"
-                android:layout_marginEnd="3dp"
-                android:alpha="0.7"
-                android:text="•"
-                android:textSize="12sp" />
-            <TextView
-                android:id="@+id/about_status"
-                style="@style/aboutHeaderText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/author_name" />
-        </LinearLayout>
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:layout_marginBottom="12dp"
+            android:minHeight="40dp" android:gravity="center_vertical" android:paddingStart="4dp"
+            android:text="@string/about_title" android:textColor="?android:attr/textColorPrimary"
+            android:textSize="24sp" android:textStyle="bold" />
+        <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+            android:overScrollMode="never" android:requiresFadingEdge="vertical" android:scrollbars="none">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+            <LinearLayout android:id="@+id/about_card_info"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="0dp" android:background="@drawable/about_card_bg"
+                android:clipToOutline="true" android:orientation="vertical">
+                <LinearLayout
+                    android:id="@+id/about_version_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="54dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" android:clickable="true" android:focusable="true" android:foreground="?android:attr/selectableItemBackground">
+                    <TextView 
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="@string/appliction_name" android:textStyle="bold"
+                        android:textColor="?android:attr/textColorPrimary" android:textSize="15sp" />
+                    <TextView
+                        android:id="@+id/about_version" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                         android:alpha="0.8" android:textColor="?android:attr/textColorSecondary" android:textSize="14sp" />
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorPirm" android:id="@+id/about_div1" />
+                <LinearLayout
+                    android:id="@+id/about_update_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="54dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" android:clickable="true" android:focusable="true" android:foreground="?android:attr/selectableItemBackground">
+                    <TextView 
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="@string/about_latest_version"
+                        android:textColor="?android:attr/textColorPrimary" android:textSize="15sp" />
+                    <View android:id="@+id/about_update_dot" android:layout_width="8dp" android:layout_height="8dp" android:layout_marginEnd="8dp" android:background="@drawable/about_dot_red" android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/about_update_text" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/about_check" android:alpha="0.7" android:textColor="?android:attr/textColorSecondary" android:textSize="14sp" />
+<ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="2dp" android:alpha="0.5" android:src="@drawable/kr_arrow" android:tint="?android:attr/textColorPrimary" android:importantForAccessibility="no" />
+                </LinearLayout>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/theme_card"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:background="@drawable/about_card_bg"
+                android:clipToOutline="true" android:orientation="vertical">
+                <LinearLayout
+                    android:id="@+id/theme_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="54dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp">
+                    <TextView 
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="@string/theme_text"
+                        android:textColor="?android:attr/textColorPrimary" android:textSize="15sp" />
+                    <LinearLayout android:id="@+id/theme_segment" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:background="@drawable/about_seg_bg" android:orientation="horizontal" android:padding="3dp">
+                        <TextView android:id="@+id/theme_seg_0" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:clickable="true" android:focusable="true" android:gravity="center"
+                            android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingTop="7dp" android:paddingBottom="7dp"
+                            android:text="@string/about_theme_system" android:textColor="?android:attr/textColorSecondary" android:textSize="13sp" />
+                        <TextView android:id="@+id/theme_seg_1" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:clickable="true" android:focusable="true" android:gravity="center"
+                            android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingTop="7dp" android:paddingBottom="7dp"
+                            android:text="@string/about_theme_dark" android:textColor="?android:attr/textColorSecondary" android:textSize="13sp" />
+                        <TextView android:id="@+id/theme_seg_2" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:clickable="true" android:focusable="true" android:gravity="center"
+                            android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingTop="7dp" android:paddingBottom="7dp"
+                            android:text="@string/about_theme_light" android:textColor="?android:attr/textColorSecondary" android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorPirm" android:id="@+id/about_div2" />
+                <LinearLayout
+                    android:id="@+id/blur_disable_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="54dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" android:clickable="true" android:focusable="true" android:foreground="?android:attr/selectableItemBackground">
+                    <TextView android:id="@+id/blur_disable_label"
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="@string/theme_disable_blur"
+                        android:textColor="?android:attr/textColorPrimary" android:textSize="15sp" />
+                    <Switch android:id="@+id/blur_disable_check" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:clickable="false" android:focusable="false" android:textOff="" android:textOn=""
+                        android:switchTextAppearance="@null" android:track="@drawable/kr_switch_track" android:thumb="@drawable/kr_switch_thumb" />
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorPirm" android:id="@+id/about_div3" />
+                <LinearLayout
+                    android:id="@+id/direct_bg_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="54dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" android:clickable="true" android:focusable="true" android:foreground="?android:attr/selectableItemBackground">
+                    <TextView android:id="@+id/direct_bg_label"
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="@string/theme_direct_bg"
+                        android:textColor="?android:attr/textColorPrimary" android:textSize="15sp" />
+                    <Switch android:id="@+id/direct_bg_check" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:clickable="false" android:focusable="false" android:textOff="" android:textOn=""
+                        android:switchTextAppearance="@null" android:track="@drawable/kr_switch_track" android:thumb="@drawable/kr_switch_thumb" />
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorPirm" android:id="@+id/about_div4" />
+                <LinearLayout
+                    android:id="@+id/wallpaper_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="54dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" android:clickable="true" android:focusable="true" android:foreground="?android:attr/selectableItemBackground">
+                    <TextView 
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="@string/about_wallpaper"
+                        android:textColor="?android:attr/textColorPrimary" android:textSize="15sp" />
+                    <TextView
+                        android:id="@+id/wallpaper_path" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                         android:alpha="0.7" android:textColor="?android:attr/textColorSecondary" android:textSize="14sp" android:layout_marginEnd="4dp" android:ellipsize="end" android:singleLine="true" android:maxWidth="150dp" />
+<ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="2dp" android:alpha="0.5" android:src="@drawable/kr_arrow" android:tint="?android:attr/textColorPrimary" android:importantForAccessibility="no" />
+                </LinearLayout>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/link_card"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:background="@drawable/about_card_bg"
+                android:clipToOutline="true" android:orientation="vertical">
+                <LinearLayout
+                    android:id="@+id/about_donate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="54dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" android:clickable="true" android:focusable="true" android:foreground="?android:attr/selectableItemBackground">
+                    <TextView 
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="@string/about_donate"
+                        android:textColor="?android:attr/textColorPrimary" android:textSize="15sp" />
+<ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="2dp" android:alpha="0.5" android:src="@drawable/kr_arrow" android:tint="?android:attr/textColorPrimary" android:importantForAccessibility="no" />
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorPirm" android:id="@+id/about_div5" />
+                <LinearLayout
+                    android:id="@+id/about_telegram"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="54dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" android:clickable="true" android:focusable="true" android:foreground="?android:attr/selectableItemBackground">
+                    <TextView 
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="@string/about_telegram"
+                        android:textColor="?android:attr/textColorPrimary" android:textSize="15sp" />
+<ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="2dp" android:alpha="0.5" android:src="@drawable/kr_arrow" android:tint="?android:attr/textColorPrimary" android:importantForAccessibility="no" />
+                </LinearLayout>
+            </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+        <TextView android:id="@+id/about_back" android:layout_width="match_parent" android:layout_height="52dp"
+            android:layout_marginTop="12dp" android:background="@drawable/about_btn_gradient" android:clickable="true"
+            android:focusable="true" android:gravity="center" android:text="@string/about_back" android:textColor="#FFFFFF" android:textSize="16sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
-
-            <!-- Khung thông tin: mô tả (căn giữa), tên app, tác giả -->
+        android:id="@+id/update_panel"
+        android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+        android:visibility="gone">
+        <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+            android:layout_marginTop="16dp" android:overScrollMode="never" android:requiresFadingEdge="vertical" android:scrollbars="none">
             <LinearLayout
-                android:id="@+id/info_card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/krscript_item_ripple_kon"
-                android:clipToOutline="true"
-                android:orientation="vertical"
-                android:padding="16dp">
-                <TextView
-                    android:id="@+id/about_desc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:text="@string/appliction_desc"
-                    android:textAlignment="center"
-                    android:textColor="@color/colorAccent"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/appliction_nameText"
-                    android:layout_width="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:alpha="0.8"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:text="@string/appliction_name"
-                    android:textAlignment="center"
-                    android:textColor="@drawable/text_color_selector"
-                    android:textSize="40sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/appliction_authorText"
-                    android:layout_width="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:alpha="0.7"
-                    android:text="@string/appliction_author"
-                    android:textAlignment="center"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textStyle="bold" />
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="4dp"
-                    android:orientation="horizontal">
-                    <TextView
-                        android:id="@+id/about_donate"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:paddingStart="12dp"
-                        android:paddingTop="8dp"
-                        android:paddingEnd="12dp"
-                        android:paddingBottom="6dp"
-                        android:text="@string/about_donate"
-                        android:textColor="@color/about_link_selector"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:id="@+id/about_telegram"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="32dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:paddingStart="12dp"
-                        android:paddingTop="8dp"
-                        android:paddingEnd="12dp"
-                        android:paddingBottom="6dp"
-                        android:text="@string/about_telegram"
-                        android:textColor="@color/about_link_selector"
-                        android:textStyle="bold" />
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:background="@drawable/about_card_bg" android:orientation="vertical" android:padding="20dp">
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:orientation="horizontal" android:gravity="center_vertical">
+                        <TextView android:id="@+id/update_title" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/update_text" android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="24sp" android:textStyle="bold" />
+                        <TextView android:id="@+id/update_version" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp" android:textColor="@color/colorAccent"
+                            android:textSize="24sp" android:textStyle="bold" android:visibility="gone" />
+                    </LinearLayout>
+                    <com.omarea.krscript.ui.DownloadProgressRing
+                        android:id="@+id/update_ring" android:layout_width="26dp" android:layout_height="26dp"
+                        android:layout_marginStart="8dp" android:visibility="gone" />
+                    <TextView android:id="@+id/update_action" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp" android:background="@drawable/about_btn_small_gradient"
+                        android:clickable="true" android:focusable="true" android:gravity="center"
+                        android:minWidth="88dp" android:paddingStart="18dp" android:paddingTop="11dp"
+                        android:paddingEnd="18dp" android:paddingBottom="11dp" android:textColor="#FFFFFF"
+                        android:textSize="15sp" android:textStyle="bold" android:visibility="gone" />
                 </LinearLayout>
-            </LinearLayout>
 
-            <!-- Khung bọc: Chủ đề + các tùy chọn ẩn -->
-            <LinearLayout
-                android:id="@+id/theme_card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/krscript_item_ripple_kon"
-                android:clipToOutline="true"
-                android:orientation="vertical"
-                android:paddingStart="16dp"
-                android:paddingTop="4dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="4dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="44dp"
-                android:orientation="horizontal">
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:alpha="0.7"
-                    android:text="@string/theme_text"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/theme_selector"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="-4dp"
-                    android:background="@null"
-                    android:clickable="true"
-                    android:drawablePadding="6dp"
-                    android:drawableEnd="@drawable/abc_spinner_mtrl_am_alpha"
-                    android:ellipsize="end"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:singleLine="true"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                <TextView android:id="@+id/update_meta" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:alpha="0.7" android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="14sp" />
 
-            <LinearLayout
-                android:id="@+id/wallpaper_row"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="44dp"
-                android:orientation="horizontal">
-                <TextView
-                    android:id="@+id/wallpaper_path"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:alpha="0.7"
-                    android:ellipsize="end"
-                    android:singleLine="true"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/wallpaper_choose"
-                    android:layout_width="wrap_content"
-                    android:layout_height="44dp"
-                    android:background="@null"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="0dp"
-                    android:text="@string/about_import_image"
-                    android:textColor="@color/colorAccent"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/wallpaper_remove"
-                    android:layout_width="wrap_content"
-                    android:layout_height="44dp"
-                    android:background="@null"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="0dp"
-                    android:text="@string/about_remove"
-                    android:textColor="@color/colorAccent"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp" android:alpha="0.8" android:letterSpacing="0.08"
+                    android:text="@string/about_changelog" android:textAllCaps="true"
+                    android:textColor="?android:attr/textColorSecondary" android:textSize="13sp" android:textStyle="bold" />
 
-            <LinearLayout
-                android:id="@+id/blur_disable_row"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="44dp"
-                android:orientation="horizontal">
-                <TextView
-                    android:id="@+id/blur_disable_label"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:alpha="0.7"
-                    android:text="@string/theme_disable_blur"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-                <CheckBox
-                    android:id="@+id/blur_disable_check"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@null"
-                    android:layout_marginEnd="-6dp"
-                    android:minWidth="0dp"
-                    android:minHeight="0dp"
-                    android:paddingStart="0dp"
-                    android:paddingEnd="0dp" />
-            </LinearLayout>
+                <LinearLayout android:id="@+id/update_timeline" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp" android:orientation="vertical" />
 
-            <LinearLayout
-                android:id="@+id/direct_bg_row"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:minHeight="44dp"
-                android:orientation="horizontal">
-                <TextView
-                    android:id="@+id/direct_bg_label"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:alpha="0.7"
-                    android:text="@string/theme_direct_bg"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-                <CheckBox
-                    android:id="@+id/direct_bg_check"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@null"
-                    android:layout_marginEnd="-6dp"
-                    android:minWidth="0dp"
-                    android:minHeight="0dp"
-                    android:paddingStart="0dp"
-                    android:paddingEnd="0dp" />
+                <TextView android:id="@+id/update_log" style="@style/textSmall" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:textIsSelectable="true" android:visibility="gone" />
             </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/update_card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/krscript_item_ripple_kon"
-                android:clipToOutline="true"
-                android:orientation="vertical"
-                android:visibility="gone">
-                <include
-                    android:id="@+id/update_item"
-                    layout="@layout/kr_download_list_item"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-            <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_marginTop="12dp"
-                android:layout_weight="1"
-                android:minHeight="96dp"
-                android:overScrollMode="never"
-                android:requiresFadingEdge="vertical">
-                <TextView
-                    android:id="@+id/update_log"
-                    style="@style/textSmall"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textIsSelectable="true" />
-            </ScrollView>
-        </LinearLayout>
+        </ScrollView>
+        <TextView android:id="@+id/update_back" android:layout_width="match_parent" android:layout_height="52dp"
+            android:layout_marginTop="12dp" android:background="@drawable/about_btn_gradient" android:clickable="true"
+            android:focusable="true" android:gravity="center" android:text="@string/about_back" android:textColor="#FFFFFF" android:textSize="16sp"
+            android:textStyle="bold" />
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>

@@ -244,4 +244,12 @@
     <string name="chat_params_title">Настройки</string>
     <string name="chat_sessions_title">Сеансы чата</string>
     <string name="chat_delete_session_confirm">Удалить этот сеанс?</string>
+    <string name="about_check">Проверить</string>
+    <string name="about_theme_system">Система</string>
+    <string name="about_theme_dark">Тёмная</string>
+    <string name="about_theme_light">Светлая</string>
+    <string name="about_wallpaper_none">Без обоев</string>
+    <string name="about_changelog">История изменений</string>
+    <string name="about_badge_latest">Новейшая</string>
+    <string name="about_download">Скачать</string>
 </resources>

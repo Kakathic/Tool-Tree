@@ -4,21 +4,19 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
-import android.graphics.Paint
+import android.content.res.ColorStateList
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
-import android.os.SystemClock
 import android.os.Looper
-import android.text.SpannableStringBuilder
+import android.os.SystemClock
 import android.text.method.LinkMovementMethod
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
-import android.widget.CheckBox
-import android.widget.ImageView
+import android.widget.CompoundButton
 import android.widget.ListPopupWindow
 import android.widget.TextView
 import android.widget.Toast
@@ -31,19 +29,24 @@ import com.tool.tree.ui.SpinnerPopupHelper
 import java.io.File
 
 class DialogAboutUpdate(
-    darkMode: Boolean = false,
+    private val darkMode: Boolean = false,
     private val knownInfo: AppUpdateInfo? = null,
     private val onResult: (AppUpdateCheckResult) -> Unit = {}
 ) : DialogFullScreen(R.layout.dialog_about, darkMode) {
 
     private enum class UpdateMode { CHECK, UPDATE, INSTALL }
 
+    private class ChangelogEntry(val version: String, val date: String, val items: List<String>)
+
     private companion object {
         const val REQUEST_WALLPAPER = 4101
-        const val ABOUT_DESC_RESTORE_DELAY_MS = 5000L
         const val CHECKING_MIN_VISIBLE_MS = 800L
-        const val ABOUT_DESC_FADE_OUT_MS = 150L
-        const val ABOUT_DESC_FADE_IN_MS = 200L
+        const val PANEL_IN_MS = 220L
+        const val PANEL_OUT_MS = 160L
+        const val GITHUB_URL = "https://github.com/Kakathic/Tool-Tree"
+        const val DONATE_URL = "https://Kakathic.github.io/Tool-Tree/website/Information.html"
+        const val TELEGRAM_URL = "https://t.me/tool_tree"
+        val VERSION_HEADER = Regex("""^\*\*\s*Version:?\s*([^\s(*]+)\s*(?:\(([^)]*)\))?\s*\*\*\s*$""", RegexOption.IGNORE_CASE)
     }
 
     init {
@@ -51,31 +54,35 @@ class DialogAboutUpdate(
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val logBuilder = SpannableStringBuilder()
 
-    private lateinit var aboutDesc: TextView
-    private lateinit var logText: TextView
-    private lateinit var updateCard: View
-    private lateinit var updateItem: View
-    private lateinit var itemIcon: ImageView
-    private lateinit var itemTitle: TextView
-    private lateinit var itemDesc: TextView
-    private lateinit var itemWidget: ImageView
-    private lateinit var itemRing: DownloadProgressRing
+    // About panel
+    private lateinit var aboutPanel: View
+    private lateinit var updateDot: View
+    private lateinit var updateRowText: TextView
     private lateinit var wallpaperRow: View
     private lateinit var wallpaperPath: TextView
-    private lateinit var wallpaperChoose: TextView
-    private lateinit var wallpaperRemove: TextView
     private lateinit var blurRow: View
-    private lateinit var blurLabel: TextView
-    private lateinit var blurCheck: CheckBox
+    private lateinit var blurCheck: CompoundButton
     private lateinit var directRow: View
-    private lateinit var directLabel: TextView
-    private lateinit var directCheck: CheckBox
+    private lateinit var directCheck: CompoundButton
+    private lateinit var themeSegments: List<TextView>
+    private var textPrimary: ColorStateList? = null
+    private var textSecondary: ColorStateList? = null
+
+    // Update panel
+    private lateinit var updatePanel: View
+    private lateinit var updateTitle: TextView
+    private lateinit var updateVersion: TextView
+    private lateinit var updateRing: DownloadProgressRing
+    private lateinit var updateAction: TextView
+    private lateinit var updateMeta: TextView
+    private lateinit var updateTimeline: ViewGroup
+    private lateinit var updateLog: TextView
     private lateinit var destFile: File
     private lateinit var appContext: android.content.Context
 
     private var viewReady = false
+    private var inUpdate = false
     private var checking = false
     private var mode = UpdateMode.CHECK
     private var loadedInfo: AppUpdateInfo? = knownInfo
@@ -84,9 +91,21 @@ class DialogAboutUpdate(
     private var closingForRecreate = false
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialog = super.onCreateDialog(savedInstanceState)
+        val themeRes = if (darkMode) R.style.dialog_full_screen_dark else R.style.dialog_full_screen_light
+        val dialog = object : Dialog(requireActivity(), themeRes) {
+            override fun onBackPressed() {
+                if (!handleBack()) super.onBackPressed()
+            }
+        }
         dialog.window?.setWindowAnimations(R.style.windowAnim2)
         return dialog
+    }
+
+    // Trong màn Cập nhật: Back quay về Giới thiệu (đang tải thì bỏ qua)
+    private fun handleBack(): Boolean {
+        if (!inUpdate) return false
+        if (activeDownload == null) showPanel(false)
+        return true
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -95,64 +114,30 @@ class DialogAboutUpdate(
         appContext = activity.applicationContext
         destFile = File(activity.cacheDir, AppUpdateChecker.APK_FILE_NAME)
 
+        aboutPanel = view.findViewById(R.id.about_panel)
+        updatePanel = view.findViewById(R.id.update_panel)
+
         view.findViewById<View>(R.id.about_back).setOnClickListener {
             if (activeDownload == null) closeView()
         }
+        view.findViewById<View>(R.id.update_back).setOnClickListener {
+            if (activeDownload == null) showPanel(false)
+        }
 
-        val donateText = view.findViewById<TextView>(R.id.about_donate)
-        val telegramText = view.findViewById<TextView>(R.id.about_telegram)
-        donateText.paintFlags = donateText.paintFlags or Paint.UNDERLINE_TEXT_FLAG
-        telegramText.paintFlags = telegramText.paintFlags or Paint.UNDERLINE_TEXT_FLAG
-        donateText.setOnClickListener {
-            openLink(activity, "https://Kakathic.github.io/Tool-Tree/website/Information.html")
-        }
-        telegramText.setOnClickListener {
-            openLink(activity, "https://t.me/tool_tree")
-        }
-        view.findViewById<TextView>(R.id.appliction_nameText).setOnClickListener {
-            openLink(activity, "https://github.com/Kakathic/Tool-Tree")
-        }
+        view.findViewById<View>(R.id.about_version_row).setOnClickListener { openLink(activity, GITHUB_URL) }
+        view.findViewById<View>(R.id.about_donate).setOnClickListener { openLink(activity, DONATE_URL) }
+        view.findViewById<View>(R.id.about_telegram).setOnClickListener { openLink(activity, TELEGRAM_URL) }
+        val versionName = runCatching { activity.packageManager.getPackageInfo(activity.packageName, 0).versionName }.getOrNull()
+        view.findViewById<TextView>(R.id.about_version).text = versionName ?: ""
 
         bindSettings(view, activity)
         bindUpdate(view, activity)
         viewReady = true
     }
 
-    private val restoreAboutDescRunnable = Runnable { restoreAboutDesc() }
-
-    private fun restoreAboutDesc() {
-        mainHandler.removeCallbacks(restoreAboutDescRunnable)
-        if (!viewReady || !::aboutDesc.isInitialized) return
-        setAboutDescAnimated(R.string.appliction_desc)
-    }
-
-    private fun setAboutDescAnimated(resId: Int) {
-        val target = getString(resId)
-        aboutDesc.animate().cancel()
-        if (aboutDesc.text.toString() == target) {
-            aboutDesc.alpha = 1f
-            return
-        }
-        aboutDesc.animate()
-            .alpha(0f)
-            .setDuration(ABOUT_DESC_FADE_OUT_MS)
-            .withEndAction {
-                aboutDesc.text = target
-                aboutDesc.animate().alpha(1f).setDuration(ABOUT_DESC_FADE_IN_MS).start()
-            }
-            .start()
-    }
-
-    private fun showAboutDescTemp(resId: Int, restoreAfterMs: Long = 0L) {
-        mainHandler.removeCallbacks(restoreAboutDescRunnable)
-        if (!::aboutDesc.isInitialized) return
-        setAboutDescAnimated(resId)
-        if (restoreAfterMs > 0L) mainHandler.postDelayed(restoreAboutDescRunnable, restoreAfterMs)
-    }
-
     override fun onDestroyView() {
-        mainHandler.removeCallbacks(restoreAboutDescRunnable)
-        if (::aboutDesc.isInitialized) aboutDesc.animate().cancel()
+        if (::aboutPanel.isInitialized) aboutPanel.animate().cancel()
+        if (::updatePanel.isInitialized) updatePanel.animate().cancel()
         viewReady = false
         super.onDestroyView()
     }
@@ -171,28 +156,69 @@ class DialogAboutUpdate(
         }
     }
 
-    @Suppress("DEPRECATION")
+    // ---------------------------------------------------------------- panels
+
+    private fun showPanel(update: Boolean) {
+        if (inUpdate == update) return
+        inUpdate = update
+        val from = if (update) aboutPanel else updatePanel
+        val to = if (update) updatePanel else aboutPanel
+        val dx = resources.displayMetrics.density * 32f * (if (update) 1f else -1f)
+
+        from.animate().cancel()
+        to.animate().cancel()
+        to.alpha = 0f
+        to.translationX = dx
+        to.visibility = View.VISIBLE
+        to.animate().alpha(1f).translationX(0f).setDuration(PANEL_IN_MS).start()
+        from.animate().alpha(0f).translationX(-dx).setDuration(PANEL_OUT_MS).withEndAction {
+            from.alpha = 1f
+            from.translationX = 0f
+            if (from !== (if (inUpdate) updatePanel else aboutPanel)) from.visibility = View.GONE
+        }.start()
+        refreshSwipe()
+    }
+
+    private fun refreshSwipe() {
+        setSwipeBackRuntimeEnabled(!inUpdate && activeDownload == null)
+    }
+
+    private fun openUpdatePanel(activity: Activity) {
+        showPanel(true)
+        val info = loadedInfo
+        when {
+            checking -> renderCheckingUi(activity)
+            activeDownload != null -> {}
+            info != null -> showAvailable(info, activity)
+            else -> startCheck(activity, silent = false)
+        }
+    }
+
+    // ---------------------------------------------------------------- about: theme
+
     private fun bindSettings(view: View, activity: Activity) {
         val themeConfig = ThemeConfig(activity.applicationContext)
 
+        view.context.obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary, android.R.attr.textColorSecondary)).let {
+            textPrimary = it.getColorStateList(0)
+            textSecondary = it.getColorStateList(1)
+            it.recycle()
+        }
+
         blurRow = view.findViewById(R.id.blur_disable_row)
-        blurLabel = view.findViewById(R.id.blur_disable_label)
         blurCheck = view.findViewById(R.id.blur_disable_check)
         directRow = view.findViewById(R.id.direct_bg_row)
-        directLabel = view.findViewById(R.id.direct_bg_label)
         directCheck = view.findViewById(R.id.direct_bg_check)
         wallpaperRow = view.findViewById(R.id.wallpaper_row)
         wallpaperPath = view.findViewById(R.id.wallpaper_path)
-        wallpaperChoose = view.findViewById(R.id.wallpaper_choose)
-        wallpaperRemove = view.findViewById(R.id.wallpaper_remove)
+        themeSegments = listOf(R.id.theme_seg_0, R.id.theme_seg_1, R.id.theme_seg_2).map { view.findViewById<TextView>(it) }
 
         blurCheck.isChecked = ThemeModeState.isBlurDisabled(activity)
         directCheck.isChecked = ThemeModeState.isDirectBgEnabled(activity)
-        refreshWallpaperRow(activity)
-        updateOptionStates(themeConfig.getThemeMode())
+        refreshThemeUi(activity, themeConfig)
 
-        blurRow.setOnClickListener { if (blurCheck.isEnabled) blurCheck.toggle() }
-        directRow.setOnClickListener { if (directCheck.isEnabled) directCheck.toggle() }
+        blurRow.setOnClickListener { blurCheck.toggle() }
+        directRow.setOnClickListener { directCheck.toggle() }
         blurCheck.setOnCheckedChangeListener { _, checked ->
             ThemeModeState.setBlurDisabled(activity, checked)
             applyThemeChange(activity)
@@ -202,22 +228,104 @@ class DialogAboutUpdate(
             applyThemeChange(activity)
         }
 
-        wallpaperChoose.setOnClickListener {
-            if (!wallpaperChoose.isEnabled) return@setOnClickListener
-            startActivityForResult(
-                Intent(activity, ActivityFileSelector::class.java).apply {
-                    putExtra("mode", ActivityFileSelector.MODE_FILE)
-                    putExtra("extension", "jpg,jpeg,png,webp")
-                },
-                REQUEST_WALLPAPER
-            )
+        themeSegments.forEachIndexed { index, seg ->
+            seg.setOnClickListener { setThemeBase(activity, themeConfig, index) }
         }
-        wallpaperRemove.setOnClickListener {
-            if (!wallpaperRemove.isEnabled) return@setOnClickListener
-            ThemeModeState.clearCustomWallpaper(activity)
-            applyThemeChange(activity)
+        wallpaperRow.setOnClickListener { showWallpaperMenu(activity, themeConfig) }
+    }
+
+    // Chế độ 0..2 = hệ thống/tối/sáng, 3..5 = cùng bộ đó nhưng dùng hình nền
+    private fun setThemeBase(activity: Activity, themeConfig: ThemeConfig, base: Int) {
+        val current = themeConfig.getThemeMode()
+        val newMode = base + if (current >= 3) 3 else 0
+        if (newMode == current) return
+        themeConfig.setThemeMode(newMode)
+        applyThemeChange(activity)
+    }
+
+    private fun refreshThemeUi(activity: Activity, themeConfig: ThemeConfig) {
+        val mode = themeConfig.getThemeMode()
+        val base = mode % 3
+        val wallpaper = mode >= 3
+        themeSegments.forEachIndexed { index, seg ->
+            val selected = index == base
+            seg.background = if (selected) ContextCompat.getDrawable(activity, R.drawable.about_seg_selected) else null
+            seg.setTextColor(if (selected) textPrimary else textSecondary)
+            seg.setTypeface(null, if (selected) Typeface.BOLD else Typeface.NORMAL)
         }
-        bindThemeSelector(view, activity, themeConfig)
+        val visibility = if (wallpaper) View.VISIBLE else View.GONE
+        blurRow.visibility = visibility
+        directRow.visibility = visibility
+        view?.findViewById<View>(R.id.about_div3)?.visibility = visibility
+        view?.findViewById<View>(R.id.about_div4)?.visibility = visibility
+        val hasCustom = ThemeModeState.getCustomWallpaperPath(activity) != null
+        wallpaperPath.setText(
+            when {
+                !wallpaper -> R.string.about_wallpaper_none
+                hasCustom -> R.string.about_wallpaper_custom
+                else -> R.string.about_wallpaper_hint
+            }
+        )
+    }
+
+    private fun showWallpaperMenu(activity: Activity, themeConfig: ThemeConfig) {
+        val mode = themeConfig.getThemeMode()
+        val base = mode % 3
+        val wallpaper = mode >= 3
+        val hasCustom = ThemeModeState.getCustomWallpaperPath(activity) != null
+
+        val names = ArrayList<String>()
+        val actions = ArrayList<() -> Unit>()
+        if (wallpaper) {
+            names.add(getString(R.string.about_wallpaper_none))
+            actions.add {
+                themeConfig.setThemeMode(base)
+                applyThemeChange(activity)
+            }
+        }
+        if (!wallpaper || hasCustom) {
+            names.add(getString(R.string.about_wallpaper_hint))
+            actions.add {
+                ThemeModeState.clearCustomWallpaper(activity)
+                themeConfig.setThemeMode(base + 3)
+                applyThemeChange(activity)
+            }
+        }
+        names.add(getString(R.string.about_import_image))
+        actions.add { pickWallpaper(activity) }
+
+        val popup = ListPopupWindow(activity)
+        popup.anchorView = wallpaperRow
+        popup.setAdapter(ArrayAdapter(activity, R.layout.kr_spinner_dropdown, names))
+        val background = ContextCompat.getDrawable(activity, R.drawable.kr_spinner_popup_bg)
+        popup.setBackgroundDrawable(background)
+        popup.setOnItemClickListener { _, _, position, _ ->
+            popup.dismiss()
+            actions[position]()
+        }
+        val inflater = LayoutInflater.from(activity)
+        val itemViews = names.map { name ->
+            inflater.inflate(R.layout.kr_spinner_dropdown, wallpaperRow.parent as? ViewGroup, false).apply {
+                findViewById<TextView>(R.id.text).text = name
+            }
+        }
+        val minWidthPx = (resources.displayMetrics.density * 220).toInt()
+        SpinnerPopupHelper.applyWidthAndPosition(
+            popup, wallpaperRow, itemViews, background, minWidthPx, alignRight = true
+        )
+        popup.show()
+        SpinnerPopupHelper.applyRoundedClip(popup, resources.getDimension(R.dimen.kr_spinner_popup_radius))
+    }
+
+    @Suppress("DEPRECATION")
+    private fun pickWallpaper(activity: Activity) {
+        startActivityForResult(
+            Intent(activity, ActivityFileSelector::class.java).apply {
+                putExtra("mode", ActivityFileSelector.MODE_FILE)
+                putExtra("extension", "jpg,jpeg,png,webp")
+            },
+            REQUEST_WALLPAPER
+        )
     }
 
     private fun applyThemeChange(activity: Activity) {
@@ -226,56 +334,6 @@ class DialogAboutUpdate(
         closingForRecreate = true
         runCatching { dismissNow() }
         activity.recreate()
-    }
-
-    private fun refreshWallpaperRow(activity: Activity) {
-        val hasCustom = ThemeModeState.getCustomWallpaperPath(activity) != null
-        wallpaperPath.setText(if (hasCustom) R.string.about_wallpaper_custom else R.string.about_wallpaper_hint)
-        wallpaperRemove.visibility = if (hasCustom) View.VISIBLE else View.GONE
-    }
-
-    private fun updateOptionStates(themeLevel: Int) {
-        val visibility = if (themeLevel >= 3) View.VISIBLE else View.GONE
-        wallpaperRow.visibility = visibility
-        blurRow.visibility = visibility
-        directRow.visibility = visibility
-    }
-
-    private fun bindThemeSelector(view: View, activity: Activity, themeConfig: ThemeConfig) {
-        val themeSelector = view.findViewById<TextView>(R.id.theme_selector)
-        val themeNames = listOf(
-            getString(R.string.theme_system_default), getString(R.string.theme_dark),
-            getString(R.string.theme_light), getString(R.string.theme_wallpaper_system),
-            getString(R.string.theme_wallpaper_dark), getString(R.string.theme_wallpaper_light)
-        )
-
-        themeSelector.text = themeNames[themeConfig.getThemeMode().coerceIn(0, themeNames.size - 1)]
-        themeSelector.setOnClickListener {
-            val popup = ListPopupWindow(activity)
-            popup.anchorView = themeSelector
-            popup.setAdapter(ArrayAdapter(activity, R.layout.kr_spinner_dropdown, themeNames))
-            val background = ContextCompat.getDrawable(activity, R.drawable.kr_spinner_popup_bg)
-            popup.setBackgroundDrawable(background)
-            popup.setOnItemClickListener { _, _, position, _ ->
-                themeConfig.setThemeMode(position)
-                themeSelector.text = themeNames[position]
-                updateOptionStates(position)
-                popup.dismiss()
-                applyThemeChange(activity)
-            }
-            val inflater = LayoutInflater.from(activity)
-            val itemViews = themeNames.map { name ->
-                inflater.inflate(R.layout.kr_spinner_dropdown, themeSelector.parent as? ViewGroup, false).apply {
-                    findViewById<TextView>(R.id.text).text = name
-                }
-            }
-            val minWidthPx = (resources.displayMetrics.density * 220).toInt()
-            SpinnerPopupHelper.applyWidthAndPosition(
-                popup, themeSelector, itemViews, background, minWidthPx, alignRight = true
-            )
-            popup.show()
-            SpinnerPopupHelper.applyRoundedClip(popup, resources.getDimension(R.dimen.kr_spinner_popup_radius))
-        }
     }
 
     @Suppress("DEPRECATION")
@@ -290,119 +348,212 @@ class DialogAboutUpdate(
         val activity = activity ?: return
         if (path.isBlank()) return
         if (ThemeModeState.setCustomWallpaper(activity, path)) {
+            val themeConfig = ThemeConfig(activity.applicationContext)
+            val current = themeConfig.getThemeMode()
+            if (current < 3) themeConfig.setThemeMode(current + 3)
             applyThemeChange(activity)
         } else {
             Toast.makeText(activity, R.string.about_wallpaper_invalid, Toast.LENGTH_SHORT).show()
         }
     }
 
+    // ---------------------------------------------------------------- update
+
     private fun bindUpdate(view: View, activity: Activity) {
-        aboutDesc = view.findViewById(R.id.about_desc)
-        updateCard = view.findViewById(R.id.update_card)
-        updateItem = view.findViewById(R.id.update_item)
-        itemIcon = view.findViewById(R.id.kr_icon)
-        itemTitle = view.findViewById(R.id.kr_title)
-        itemDesc = view.findViewById(R.id.kr_desc)
-        itemWidget = view.findViewById(R.id.kr_widget)
-        itemRing = view.findViewById(R.id.kr_download_ring)
-        logText = view.findViewById(R.id.update_log)
+        updateDot = view.findViewById(R.id.about_update_dot)
+        updateRowText = view.findViewById(R.id.about_update_text)
+        updateTitle = view.findViewById(R.id.update_title)
+        updateVersion = view.findViewById(R.id.update_version)
+        updateRing = view.findViewById(R.id.update_ring)
+        updateAction = view.findViewById(R.id.update_action)
+        updateMeta = view.findViewById(R.id.update_meta)
+        updateTimeline = view.findViewById(R.id.update_timeline)
+        updateLog = view.findViewById(R.id.update_log)
 
-        runCatching { itemIcon.setImageDrawable(activity.packageManager.getApplicationIcon(activity.applicationInfo)) }
-        itemIcon.imageTintList = null
-        itemTitle.setText(R.string.update_text)
-        itemDesc.visibility = View.VISIBLE
+        updateLog.movementMethod = LinkMovementMethod.getInstance()
 
-        logText.setTextIsSelectable(true)
-        logText.movementMethod = LinkMovementMethod.getInstance()
-        logText.setOnClickListener { }
+        view.findViewById<View>(R.id.about_update_row).setOnClickListener { openUpdatePanel(activity) }
 
-        updateItem.setOnClickListener {
+        updateAction.setOnClickListener {
             if (activeDownload != null) {
                 cancelDownload(activity)
                 return@setOnClickListener
             }
             if (checking) return@setOnClickListener
             when (mode) {
-                UpdateMode.CHECK -> startCheck(activity)
+                UpdateMode.CHECK -> startCheck(activity, silent = false)
                 UpdateMode.UPDATE -> startDownload(activity)
                 UpdateMode.INSTALL -> openApk(activity, destFile)
             }
         }
 
         showChangelog(AppUpdateChecker.cachedChangelog(activity))
+        updateMeta.text = ""
 
         val info = knownInfo
-        if (info != null) showAvailable(info, activity) else startCheck(activity)
+        if (info != null) {
+            showAvailable(info, activity)
+        } else {
+            startCheck(activity, silent = true)
+        }
+        refreshUpdateRow()
+    }
+
+    private fun refreshUpdateRow() {
+        if (!::updateDot.isInitialized) return
+        val available = loadedInfo != null
+        updateDot.visibility = if (available) View.VISIBLE else View.GONE
+        updateRowText.setText(if (available) R.string.update_text else R.string.about_check)
     }
 
     private fun setMode(newMode: UpdateMode) {
         mode = newMode
-        itemWidget.setImageResource(
-            when (newMode) {
-                UpdateMode.CHECK -> R.drawable.ic_update
-                UpdateMode.UPDATE -> R.drawable.kr_download
-                UpdateMode.INSTALL -> R.drawable.download_done
-            }
-        )
+        renderAction()
     }
 
-    private fun setUpdateVisible(visible: Boolean) {
-        val v = if (visible) View.VISIBLE else View.GONE
-        updateCard.visibility = v
+    private fun renderAction() {
+        when {
+            activeDownload != null -> {
+                updateAction.setText(R.string.btn_cancel)
+                updateAction.visibility = View.VISIBLE
+            }
+            checking -> updateAction.visibility = View.GONE
+            else -> {
+                updateAction.setText(
+                    when (mode) {
+                        UpdateMode.CHECK -> R.string.about_update_recheck
+                        UpdateMode.UPDATE -> R.string.about_download
+                        UpdateMode.INSTALL -> R.string.app_update_btn_install
+                    }
+                )
+                updateAction.visibility = View.VISIBLE
+            }
+        }
     }
 
     private fun setBusy(busy: Boolean) {
-        itemRing.visibility = if (busy) View.VISIBLE else View.GONE
-        itemWidget.visibility = if (busy) View.GONE else View.VISIBLE
-        if (busy) itemRing.setIndeterminate(true)
+        updateRing.visibility = if (busy) View.VISIBLE else View.GONE
+        if (busy) updateRing.setIndeterminate(true)
+        renderAction()
     }
 
-    private fun resetLog() {
-        logBuilder.clear()
-        logText.text = ""
+    private fun setVersionLabel(version: String?) {
+        if (version.isNullOrBlank()) {
+            updateVersion.visibility = View.GONE
+        } else {
+            updateVersion.text = version
+            updateVersion.visibility = View.VISIBLE
+        }
     }
 
-    private fun appendLog(line: CharSequence) {
-        if (logBuilder.isNotEmpty()) logBuilder.append('\n')
-        logBuilder.append(line)
-        logText.text = logBuilder
+    // ---- changelog (Version.md -> timeline)
+
+    private fun parseChangelog(text: String): List<ChangelogEntry> {
+        val result = ArrayList<ChangelogEntry>()
+        var version: String? = null
+        var date = ""
+        var items = ArrayList<String>()
+        fun flush() {
+            version?.let { result.add(ChangelogEntry(it, date, items)) }
+        }
+        for (raw in text.lines()) {
+            val line = raw.trim()
+            val header = VERSION_HEADER.find(line)
+            if (header != null) {
+                flush()
+                version = header.groupValues[1]
+                date = normalizeDate(header.groupValues[2])
+                items = ArrayList()
+            } else if (version != null && (line.startsWith("+ ") || line.startsWith("- "))) {
+                items.add(line.substring(2).trim())
+            }
+        }
+        flush()
+        return result
+    }
+
+    private fun normalizeDate(raw: String): String {
+        val parts = raw.trim().split('-', '/', '.')
+        if (parts.size != 3 || parts.any { it.isEmpty() || !it.all(Char::isDigit) }) return raw.trim()
+        return parts[0].padStart(2, '0') + "/" + parts[1].padStart(2, '0') + "/" + parts[2]
     }
 
     private fun showChangelog(text: String?) {
-        if (text.isNullOrBlank()) return
-        resetLog()
-        appendLog(HtmlCompat.fromHtml(AppUpdateInstaller.markdownToHtml(text), HtmlCompat.FROM_HTML_MODE_LEGACY))
+        if (text.isNullOrBlank() || !::updateTimeline.isInitialized) return
+        val entries = parseChangelog(text)
+        updateTimeline.removeAllViews()
+        if (entries.isEmpty()) {
+            updateTimeline.visibility = View.GONE
+            updateLog.visibility = View.VISIBLE
+            updateLog.text = HtmlCompat.fromHtml(AppUpdateInstaller.markdownToHtml(text), HtmlCompat.FROM_HTML_MODE_LEGACY)
+            return
+        }
+        updateLog.visibility = View.GONE
+        updateTimeline.visibility = View.VISIBLE
+        val inflater = LayoutInflater.from(updateTimeline.context)
+        entries.forEachIndexed { index, entry ->
+            val row = inflater.inflate(R.layout.item_about_changelog, updateTimeline, false)
+            val latest = index == 0
+            row.findViewById<TextView>(R.id.cl_version).text = entry.version
+            row.findViewById<TextView>(R.id.cl_date).apply {
+                text = entry.date
+                visibility = if (entry.date.isEmpty()) View.GONE else View.VISIBLE
+            }
+            row.findViewById<View>(R.id.cl_badge).visibility = if (latest) View.VISIBLE else View.GONE
+            row.findViewById<View>(R.id.cl_dot).setBackgroundResource(
+                if (latest) R.drawable.about_dot_latest else R.drawable.about_dot_old
+            )
+            row.findViewById<View>(R.id.cl_line).visibility = if (index == entries.lastIndex) View.GONE else View.VISIBLE
+            row.findViewById<TextView>(R.id.cl_items).apply {
+                val html = AppUpdateInstaller.markdownToHtml(entry.items.joinToString("\n"))
+                text = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_LEGACY).trimEnd()
+                movementMethod = LinkMovementMethod.getInstance()
+                alpha = if (latest) 0.95f else 0.6f
+            }
+            updateTimeline.addView(row)
+        }
+        // Số phiên bản mới nhất trên tiêu đề (chỉ khi có bản cập nhật)
+        if (loadedInfo != null) setVersionLabel(entries.first().version)
     }
+
+    private fun shortSha(sha: String): String =
+        if (sha.length > 8) sha.take(4) + "…" + sha.takeLast(3) else sha
 
     private fun showDownloadProgress(downloaded: Long, total: Long, startTime: Long) {
         val elapsed = (SystemClock.elapsedRealtime() - startTime).coerceAtLeast(1L)
-        itemDesc.text = ListItemDownload.formatProgress(downloaded, total, downloaded * 1000.0 / elapsed)
+        updateMeta.text = ListItemDownload.formatProgress(downloaded, total, downloaded * 1000.0 / elapsed)
         if (total > 0) {
-            itemRing.setIndeterminate(false)
-            itemRing.setProgress(downloaded * 100f / total)
+            updateRing.setIndeterminate(false)
+            updateRing.setProgress(downloaded * 100f / total)
         } else {
-            itemRing.setIndeterminate(true)
+            updateRing.setIndeterminate(true)
         }
     }
 
     private fun showAvailable(info: AppUpdateInfo, activity: Activity) {
         loadedInfo = info
         destFile = File(activity.cacheDir, info.apkFileName)
-        setUpdateVisible(true)
-        val size = if (info.apkSize > 0) " (" + AppUpdateInstaller.formatFileSize(info.apkSize) + ")" else ""
-        itemDesc.text = activity.getString(R.string.app_update_desc) + size
+        updateMeta.text = buildString {
+            if (info.apkSize > 0) append(AppUpdateInstaller.formatFileSize(info.apkSize)).append("  ·  ")
+            append("SHA-256 ").append(shortSha(info.sha256))
+        }
         showChangelog(info.changelogText)
+        if (info.changelogText.isNullOrBlank()) setVersionLabel(null)
         setMode(if (destFile.exists() && destFile.length() > 0) UpdateMode.INSTALL else UpdateMode.UPDATE)
         setBusy(false)
+        refreshUpdateRow()
     }
 
-    private fun startCheck(activity: Activity) {
+    private fun renderCheckingUi(activity: Activity) {
+        setVersionLabel(null)
+        updateMeta.text = activity.getString(R.string.app_update_checking)
+        setBusy(true)
+    }
+
+    private fun startCheck(activity: Activity, silent: Boolean) {
         if (checking) return
         checking = true
-        setUpdateVisible(false)
-        setBusy(true)
-        itemDesc.text = activity.getString(R.string.app_update_checking)
-        showAboutDescTemp(R.string.app_update_checking)
+        if (!silent) renderCheckingUi(activity)
         val checkStart = SystemClock.elapsedRealtime()
 
         Thread {
@@ -411,7 +562,8 @@ class DialogAboutUpdate(
             } catch (_: Exception) {
                 AppUpdateCheckResult.Failed
             }
-            val remaining = (CHECKING_MIN_VISIBLE_MS - (SystemClock.elapsedRealtime() - checkStart)).coerceAtLeast(0L)
+            val remaining = if (silent) 0L
+            else (CHECKING_MIN_VISIBLE_MS - (SystemClock.elapsedRealtime() - checkStart)).coerceAtLeast(0L)
             mainHandler.postDelayed({
                 checking = false
                 onResult(result)
@@ -422,39 +574,37 @@ class DialogAboutUpdate(
     }
 
     private fun applyResult(activity: Activity, result: AppUpdateCheckResult) {
+        if (activeDownload != null) return
         when (result) {
-            is AppUpdateCheckResult.Available -> {
-                restoreAboutDesc()
-                showAvailable(result.info, activity)
-            }
+            is AppUpdateCheckResult.Available -> showAvailable(result.info, activity)
             is AppUpdateCheckResult.UpToDate -> {
-                showAboutDescTemp(R.string.app_update_latest, ABOUT_DESC_RESTORE_DELAY_MS)
                 loadedInfo = null
-                setUpdateVisible(false)
+                setVersionLabel(null)
+                updateMeta.text = activity.getString(R.string.app_update_latest)
                 showChangelog(result.changelogText)
                 setMode(UpdateMode.CHECK)
                 setBusy(false)
             }
             is AppUpdateCheckResult.Failed -> {
-                restoreAboutDesc()
-                setUpdateVisible(false)
+                setVersionLabel(null)
+                updateMeta.text = if (inUpdate) activity.getString(R.string.app_update_check_fail) else ""
                 showChangelog(AppUpdateChecker.cachedChangelog(activity))
                 setMode(UpdateMode.CHECK)
                 setBusy(false)
             }
         }
+        refreshUpdateRow()
     }
 
     private fun startDownload(activity: Activity) {
         val info = loadedInfo ?: return
         isCancelable = false
-        setSwipeBackRuntimeEnabled(false)
-
-        setBusy(true)
-        itemDesc.text = activity.getString(R.string.about_update_downloading)
 
         val state = AppUpdateInstaller.DownloadState()
         activeDownload = state
+        refreshSwipe()
+        setBusy(true)
+        updateMeta.text = activity.getString(R.string.about_update_downloading)
         val startTime = SystemClock.elapsedRealtime()
 
         Thread {
@@ -479,10 +629,10 @@ class DialogAboutUpdate(
                     destFile.delete()
                     if (isAdded && viewReady) {
                         isCancelable = true
-                        setSwipeBackRuntimeEnabled(true)
-                        setBusy(false)
+                        refreshSwipe()
                         setMode(UpdateMode.UPDATE)
-                        itemDesc.text = activity.getString(R.string.app_update_download_fail) + ": " + error
+                        setBusy(false)
+                        updateMeta.text = activity.getString(R.string.app_update_download_fail) + ": " + error
                     }
                     Toast.makeText(
                         activity,
@@ -499,16 +649,16 @@ class DialogAboutUpdate(
     private fun cancelDownload(activity: Activity) {
         val state = activeDownload ?: return
         isCancelable = true
-        setSwipeBackRuntimeEnabled(true)
         activeDownload = null
+        refreshSwipe()
         state.cancelled = true
         try {
             state.connection?.disconnect()
         } catch (_: Exception) {
         }
-        setBusy(false)
         setMode(UpdateMode.UPDATE)
-        itemDesc.text = activity.getString(R.string.app_update_download_cancelled)
+        setBusy(false)
+        updateMeta.text = activity.getString(R.string.app_update_download_cancelled)
     }
 
     private fun openApk(activity: Activity, file: File) {
@@ -520,8 +670,10 @@ class DialogAboutUpdate(
                     if (isAdded) runCatching { dismissAllowingStateLoss() }
                     AppUpdateInstaller.openApkViaSystemInstaller(activity, file)
                 } else if (viewReady) {
-                    setBusy(false)
+                    isCancelable = true
+                    refreshSwipe()
                     setMode(UpdateMode.INSTALL)
+                    setBusy(false)
                 }
             }
         }.apply { isDaemon = true }.start()
