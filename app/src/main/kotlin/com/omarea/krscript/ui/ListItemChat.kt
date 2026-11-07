@@ -6,7 +6,7 @@ import android.widget.ImageView
 import com.omarea.krscript.model.ChatNode
 import com.tool.tree.R
 
-class ListItemChat(context: Context, config: ChatNode) : ListItemClickable(context, R.layout.kr_action_list_item, config) {
+class ListItemChat(context: Context, config: ChatNode, card: Boolean = false) : ListItemClickable(context, if (card) R.layout.kr_action_card_item else R.layout.kr_action_list_item, config, card) {
     private val widgetView = layout.findViewById<ImageView?>(R.id.kr_widget)
 
     init {

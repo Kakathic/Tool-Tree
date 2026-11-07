@@ -8,7 +8,7 @@ import android.widget.TextView
 import com.tool.tree.R
 import com.omarea.krscript.model.ActionNode
 
-class ListItemAction(context: Context, private val config: ActionNode) : ListItemClickable(context, R.layout.kr_action_list_item, config) {
+class ListItemAction(context: Context, private val config: ActionNode, card: Boolean = false) : ListItemClickable(context, if (card) R.layout.kr_action_card_item else R.layout.kr_action_list_item, config, card) {
     private val widgetView = layout.findViewById<ImageView?>(R.id.kr_widget)
     private val rowsView = layout.findViewById<TextView?>(R.id.kr_rows)
     private val rowsPhotoView = layout.findViewById<ImageView?>(R.id.kr_rows_photo)

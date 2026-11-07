@@ -12,7 +12,8 @@ import com.omarea.krscript.model.ClickableNode
 open class ListItemClickable(
     context: Context,
     layoutId: Int,
-    private val config: ClickableNode
+    private val config: ClickableNode,
+    val card: Boolean = false
 ) : ListItemView(context, layoutId, config) {
 
     protected var mOnClickListener: OnClickListener? = null

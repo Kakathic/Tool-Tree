@@ -118,27 +118,27 @@ class PageLayoutRender(private val mContext: Context,
 
     private fun renderNode(parent: ListItemGroup, it: NodeInfoBase, atIndex: Int = -1, replacePlaceholder: Boolean = false) {
         try {
-            // Mục ngoài [[group]]: chỉ [[text]] được hiển thị, các loại khác bị bỏ qua
             if (parent === rootGroup && it !is GroupNode && it !is TextNode) return
+            val card = parent.columns > 1
             var uiRender: ListItemView? = null
             if (it is PageNode) {
-                uiRender = createPageItem(it)
+                uiRender = createPageItem(it, card)
             } else if (it is SwitchNode) {
-                uiRender = createSwitchItem(it)
+                uiRender = createSwitchItem(it, card)
             } else if (it is ActionNode) {
-                uiRender = createActionItem(it)
+                uiRender = createActionItem(it, card)
             } else if (it is PickerNode) {
-                uiRender = createListItem(it)
+                uiRender = createListItem(it, card)
             } else if (it is DownloadNode) {
-                uiRender = createDownloadItem(it)
+                uiRender = createDownloadItem(it, card)
             } else if (it is TextNode) {
                 uiRender = createTextItem(it, parent === rootGroup)
             } else if (it is EditorNode) {
-                uiRender = createEditorItem(it)
+                uiRender = createEditorItem(it, card)
             } else if (it is TerminalNode) {
-                uiRender = ListItemTerminal(mContext, it)
+                uiRender = ListItemTerminal(mContext, it, card)
             } else if (it is ChatNode) {
-                uiRender = ListItemChat(mContext, it)
+                uiRender = ListItemChat(mContext, it, card)
             } else if (it is GroupNode) {
                 val subGroup = createItemGroup(it)
                 groupViewMap[it] = subGroup
@@ -240,28 +240,28 @@ class PageLayoutRender(private val mContext: Context,
         return ListItemText(mContext, node, bare)
     }
 
-    private fun createListItem(node: PickerNode): ListItemView {
-        return ListItemPicker(mContext, node)
+    private fun createListItem(node: PickerNode, card: Boolean): ListItemView {
+        return ListItemPicker(mContext, node, card)
     }
 
-    private fun createPageItem(node: PageNode): ListItemView {
-        return ListItemPage(mContext, node)
+    private fun createPageItem(node: PageNode, card: Boolean): ListItemView {
+        return ListItemPage(mContext, node, card)
     }
 
-    private fun createSwitchItem(node: SwitchNode): ListItemView {
-        return ListItemSwitch(mContext, node)
+    private fun createSwitchItem(node: SwitchNode, card: Boolean): ListItemView {
+        return ListItemSwitch(mContext, node, card)
     }
 
-    private fun createActionItem(node: ActionNode): ListItemView {
-        return ListItemAction(mContext, node)
+    private fun createActionItem(node: ActionNode, card: Boolean): ListItemView {
+        return ListItemAction(mContext, node, card)
     }
 
-    private fun createEditorItem(node: EditorNode): ListItemView {
-        return ListItemEditor(mContext, node)
+    private fun createEditorItem(node: EditorNode, card: Boolean): ListItemView {
+        return ListItemEditor(mContext, node, card)
     }
 
-    private fun createDownloadItem(node: DownloadNode): ListItemView {
-        val view = ListItemDownload(mContext, node)
+    private fun createDownloadItem(node: DownloadNode, card: Boolean): ListItemView {
+        val view = ListItemDownload(mContext, node, card)
         DownloadTaskHelper.findSessionForNode(node)?.let { session ->
             if (node.url.isBlank() && session.url.isNotBlank()) {
                 node.url = session.url

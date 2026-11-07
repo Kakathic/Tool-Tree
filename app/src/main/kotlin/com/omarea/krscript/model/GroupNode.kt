@@ -2,7 +2,8 @@ package com.omarea.krscript.model
 
 class GroupNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPath){
     var supported: Boolean = true
-    // line = true: vẽ dải ngăn cách giữa các mục trong group (chỉ từ 2 mục hiển thị trở lên)
     var line: Boolean = false
+    // columns > 1: các mục bấm được trong group xếp thành lưới ô dạng thẻ (1..4 cột)
+    var columns: Int = 1
     val children: ArrayList<NodeInfoBase> = ArrayList()
 }

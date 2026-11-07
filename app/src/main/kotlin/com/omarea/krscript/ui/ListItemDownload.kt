@@ -7,8 +7,8 @@ import android.widget.TextView
 import com.tool.tree.R
 import com.omarea.krscript.model.DownloadNode
 
-class ListItemDownload(context: Context, private val config: DownloadNode) :
-    ListItemClickable(context, R.layout.kr_download_list_item, config) {
+class ListItemDownload(context: Context, private val config: DownloadNode, card: Boolean = false) :
+    ListItemClickable(context, if (card) R.layout.kr_action_card_item else R.layout.kr_download_list_item, config, card) {
 
     private val widgetView = layout.findViewById<ImageView?>(R.id.kr_widget)
     private val ringView = layout.findViewById<DownloadProgressRing?>(R.id.kr_download_ring)

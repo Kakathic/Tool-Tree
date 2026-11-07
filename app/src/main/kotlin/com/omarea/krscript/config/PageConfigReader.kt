@@ -875,6 +875,7 @@ class PageConfigReader {
         }
         tomlGet(table, *TomlKeys.SUPPORT)?.let { group.supported = resolveBoolOrShell(it, "support", "visible") }
         tomlGet(table, *TomlKeys.LINE)?.let { group.line = tomlTruthy(it, "line", "divider", "separator") }
+        tomlGet(table, *TomlKeys.COLUMNS)?.let { group.columns = parseIntOr(it, 1).coerceIn(1, 4) }
         return group
     }
 

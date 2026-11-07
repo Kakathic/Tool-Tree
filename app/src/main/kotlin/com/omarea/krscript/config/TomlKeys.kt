@@ -35,6 +35,7 @@ object TomlKeys {
     val BG_COLOR = arrayOf("bg-color", "bg", "background", "bgcolor")
     val PROGRESS_TRACK_COLOR = arrayOf("progress-track-color", "progress-bg")
     val LINE = arrayOf("line", "divider", "separator")
+    val COLUMNS = arrayOf("columns", "cols", "grid")
     val CONFIRM_TEXT = arrayOf("confirm-text", "confirm-message")
     val LINK = arrayOf("link", "href")
     val INTENT = arrayOf("activity", "a", "intent")

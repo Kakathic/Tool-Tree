@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground"
+    android:minHeight="72dp">
+
+    <com.omarea.krscript.ui.TextBgImageView
+        android:id="@+id/kr_extra_bg"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@id/kr_shortcut_icon"
+        android:layout_width="10dp"
+        android:layout_height="10dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginTop="6dp"
+        android:src="@drawable/kr_shortcut_icon"
+        android:visibility="gone"
+        app:tint="@color/kr_shortcut_color" />
+
+    <LinearLayout
+        android:id="@+id/kr_layout_ac"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@id/kr_icon"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
+                android:padding="0dp" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <ImageView
+                android:id="@id/kr_widget"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:padding="5dp"
+                app:tint="?android:attr/colorAccent" />
+
+            <Switch
+                android:id="@id/kr_switch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clickable="false"
+                android:elevation="5dp"
+                android:enabled="false"
+                android:focusable="false"
+                android:padding="5dp"
+                android:switchTextAppearance="@null"
+                android:textOff=""
+                android:textOn=""
+                android:thumb="@drawable/kr_switch_thumb"
+                android:track="@drawable/kr_switch_track"
+                android:visibility="gone" />
+
+            <com.omarea.krscript.ui.DownloadProgressRing
+                android:id="@+id/kr_download_ring"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@id/kr_title"
+            style="@style/textTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@id/kr_desc"
+            style="@style/textSmall"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@id/kr_summary"
+            style="@style/textSmall"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="?android:attr/colorAccent"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/kr_rows"
+        style="@style/textSmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/kr_layout_ac"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="0dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="10dp"
+        android:visibility="gone" />
+
+    <FrameLayout
+        android:id="@+id/kr_rows_html"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/kr_rows"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="10dp"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/kr_rows_photo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/kr_rows_html"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="10dp"
+        android:adjustViewBounds="true"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/kr_extra_icon"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/kr_rows_photo"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="12dp"
+        android:adjustViewBounds="true"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+
+</RelativeLayout>
