@@ -29,6 +29,7 @@ script = 'echo "@grp_007"'
 
 [[group]]
 title = "@grp_008"
+line = true
 [[switch]]
 title = "@grp_009"
 get = "glog demo_group_switch"
@@ -65,12 +66,19 @@ script = 'echo ok'
 text = "@grp_019"
 size = 12
 alpha = 0.85
+
+[[text]]
 [[text.rows]]
-line = true
+text = "@grp_019"
+size = 12
+alpha = 0.85
 
 [[text]]
 [[text.rows]]
 line = true
+text = "@grp_019"
+size = 12
+alpha = 0.85
 
 [[group]]
 title = "@grp_023"

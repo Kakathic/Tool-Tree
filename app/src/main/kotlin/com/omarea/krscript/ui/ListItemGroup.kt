@@ -42,7 +42,7 @@ class ListItemGroup(context: Context,
         val content = layout.findViewById<ViewGroup>(android.R.id.content) as? LinearLayout ?: return
         val density = context.resources.displayMetrics.density
         content.dividerDrawable = StrokeDividerDrawable(context)
-        content.dividerPadding = (12 * density).toInt()
+        content.dividerPadding = (16 * density).toInt()
         content.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
     }
 

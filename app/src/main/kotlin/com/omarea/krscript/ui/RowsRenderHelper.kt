@@ -97,12 +97,13 @@ object RowsRenderHelper {
 
     private class BgState(val dyn: HashMap<Int, String>, val nodeDyn: String)
 
-    private const val DIVIDER_ABOVE_DP = 2
-    private const val DIVIDER_BELOW_DP = 6
-
     private val leadingDividerTopGapDp = WeakHashMap<TextView, Int>()
 
-    fun markCompactLeadingDivider(rowsView: TextView?, topGapDp: Int = DIVIDER_ABOVE_DP) {
+    /**
+     * Đường kẻ ở đầu khối rows. [topGapDp] là khoảng đệm phía trên đường kẻ khi nó đứng đầu khối
+     * và row không ghi margin-top (mặc định 0 vì các layout đã có sẵn khoảng cách).
+     */
+    fun markCompactLeadingDivider(rowsView: TextView?, topGapDp: Int = 0) {
         if (rowsView != null) leadingDividerTopGapDp[rowsView] = topGapDp
     }
 
@@ -333,6 +334,9 @@ object RowsRenderHelper {
 
         for (group in lineGroups) {
             val firstRow = rows[group.first()]
+
+            // Row có line=true chỉ là đường kẻ: nếu không có nội dung hiển thị riêng thì không
+            // tính vào dòng chữ phía dưới, tránh tạo ô rỗng kèm dấu cách đẩy cả dòng sang phải 1 ô
             val contentRows = group.filter { idx -> !rows[idx].line || rows[idx].hasVisibleContent() }
 
             if (firstRow.line) {
@@ -340,12 +344,25 @@ object RowsRenderHelper {
                     rowsView.append("\n")
                 }
                 val dividerLine = SpannableString(" ")
+                // Đường kẻ không tự chiếm chiều cao: chiều cao dòng = margin-top + margin-bottom (dp).
+                // margin-top: khoảng từ đáy dòng phía trên tới đường kẻ; margin-bottom: khoảng từ đường kẻ tới đỉnh dòng phía dưới.
+                // Mặc định 0 / 0, cho phép giá trị âm để kéo đường kẻ sát chữ hơn khoảng đệm tự nhiên của dòng chữ.
+                // Row line=true có nội dung riêng thì margin áp cho nội dung, không áp cho đường kẻ.
+                val leading = rowsView.length() == 0
                 val ownSpacing = !firstRow.hasVisibleContent()
-                val defaultAbove = if (rowsView.length() == 0) (leadingDividerTopGapDp[rowsView] ?: DIVIDER_ABOVE_DP) else DIVIDER_ABOVE_DP
-                val aboveDp = if (ownSpacing && firstRow.marginTopSet) firstRow.marginTop.coerceAtLeast(0) else defaultAbove
-                val belowDp = if (ownSpacing && firstRow.marginBottomSet) firstRow.marginBottom.coerceAtLeast(0) else DIVIDER_BELOW_DP
-                dividerLine.setSpan(CompactDividerSpan(context, dpToPx(context, aboveDp), dpToPx(context, belowDp)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                var aboveDp = if (leading) (leadingDividerTopGapDp[rowsView] ?: 0) else 0
+                var belowDp = 0
+                if (ownSpacing && firstRow.marginTopSet) aboveDp = firstRow.marginTop
+                if (ownSpacing && firstRow.marginBottomSet) belowDp = firstRow.marginBottom
+                if (leading) {
+                    // Đứng đầu khối thì không có dòng phía trên để kéo lên, không nhận giá trị âm
+                    aboveDp = aboveDp.coerceAtLeast(0)
+                    belowDp = belowDp.coerceAtLeast(0)
+                }
+                dividerLine.setSpan(DividerLineSpan(context, rowsView, dpToPx(context, aboveDp), dpToPx(context, belowDp)), 0, dividerLine.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 rowsView.append(dividerLine)
+                // Divider là row cuối (nhóm không còn nội dung) thì không nối "\n", nếu không
+                // TextView sẽ render thêm một dòng trống ngay dưới đường kẻ
                 if (contentRows.isNotEmpty()) {
                     rowsView.append("\n")
                 }
@@ -354,6 +371,7 @@ object RowsRenderHelper {
             }
 
             val groupTextStart = rowsView.length()
+
             val leftIdx = contentRows.filter { rows[it].align == Layout.Alignment.ALIGN_NORMAL }
             val centerIdx = contentRows.filter { rows[it].align == Layout.Alignment.ALIGN_CENTER }
             val rightIdx = contentRows.filter { rows[it].align == Layout.Alignment.ALIGN_OPPOSITE }
@@ -1124,24 +1142,38 @@ object RowsRenderHelper {
         }
     }
 
-    private class CompactDividerSpan(private val context: Context, private val topGapPx: Int, private val bottomGapPx: Int) : LeadingMarginSpan, LineHeightSpan {
+    /**
+     * Đường kẻ chỉ gồm nét vẽ, không có chiều cao riêng. Chiều cao dòng = abovePx + belowPx (có thể <= 0),
+     * nét kẻ nằm cách đỉnh dòng đúng abovePx. Tính bù lineSpacing của TextView để khoảng cách ra đúng số đã ghi.
+     */
+    private class DividerLineSpan(
+        private val context: Context,
+        private val rowsView: TextView,
+        private val abovePx: Int,
+        private val belowPx: Int
+    ) : LeadingMarginSpan, LineHeightSpan {
         override fun getLeadingMargin(first: Boolean): Int = 0
 
-        private val strokeWidthPx: Float get() = BlurEngine.getStrokePaint(context).strokeWidth
-
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
-            // Nét kẻ chiếm vùng baseline..baseline+strokeWidth nên cộng thêm độ dày nét vào
-            // phía dưới để khoảng trống nhìn thấy ở dưới đúng bằng bottomGapPx.
-            val stroke = Math.ceil(strokeWidthPx.toDouble()).toInt()
-            fm.ascent = -topGapPx
-            fm.top = -topGapPx
-            fm.descent = bottomGapPx + stroke
-            fm.bottom = bottomGapPx + stroke
+            val mult = rowsView.lineSpacingMultiplier.takeIf { it > 0f } ?: 1f
+            val add = rowsView.lineSpacingExtra
+            val raw = Math.round((abovePx + belowPx - add) / mult)
+            if (raw >= 0) {
+                fm.ascent = -raw
+                fm.top = -raw
+                fm.descent = 0
+                fm.bottom = 0
+            } else {
+                fm.ascent = 0
+                fm.top = 0
+                fm.descent = raw
+                fm.bottom = raw
+            }
         }
 
         override fun drawLeadingMargin(canvas: Canvas, paint: Paint, x: Int, dir: Int, top: Int, baseline: Int, bottom: Int, text: CharSequence?, start: Int, end: Int, first: Boolean, layout: Layout?) {
             val strokePaint = BlurEngine.getStrokePaint(context)
-            val y = baseline + strokePaint.strokeWidth / 2f
+            val y = (top + abovePx).toFloat()
             val right = (layout?.width ?: 0).toFloat()
             canvas.drawLine(0f, y, right, y, strokePaint)
         }
@@ -1159,8 +1191,6 @@ object RowsRenderHelper {
 
     private class TopExtraSpaceSpan(private val extraPx: Int) : LineHeightSpan {
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
-            val spanStart = (text as? Spanned)?.getSpanStart(this) ?: -1
-            if (spanStart >= 0 && !(spanStart >= start && spanStart < end)) return
             fm.ascent -= extraPx
             fm.top -= extraPx
         }
@@ -1168,8 +1198,6 @@ object RowsRenderHelper {
 
     private class BottomExtraSpaceSpan(private val extraPx: Int) : LineHeightSpan {
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
-            val spanEnd = (text as? Spanned)?.getSpanEnd(this) ?: -1
-            if (spanEnd >= 0 && !(spanEnd > start && spanEnd <= end)) return
             fm.descent += extraPx
             fm.bottom += extraPx
         }
