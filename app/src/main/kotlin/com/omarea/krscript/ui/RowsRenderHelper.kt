@@ -1152,12 +1152,17 @@ object RowsRenderHelper {
         private val abovePx: Int,
         private val belowPx: Int
     ) : LeadingMarginSpan, LineHeightSpan {
+        private val MIN_DIVIDER_HEIGHT_PX = 1
+
         override fun getLeadingMargin(first: Boolean): Int = 0
 
         override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt) {
             val mult = rowsView.lineSpacingMultiplier.takeIf { it > 0f } ?: 1f
             val add = rowsView.lineSpacingExtra
-            val raw = Math.round((abovePx + belowPx - add) / mult)
+            // Dòng kẻ cao đúng 0px dễ bị Android bỏ qua khi reflow/vẽ lại (mất đường kẻ sau khi load xong),
+            // nên tổng chiều cao bằng 0 thì nâng lên tối thiểu 1px. Tổng âm (margin âm) giữ nguyên.
+            val target = if (abovePx + belowPx == 0) MIN_DIVIDER_HEIGHT_PX else abovePx + belowPx
+            val raw = Math.round((target - add) / mult)
             if (raw >= 0) {
                 fm.ascent = -raw
                 fm.top = -raw
