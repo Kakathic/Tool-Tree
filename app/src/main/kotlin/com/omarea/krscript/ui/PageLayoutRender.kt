@@ -110,6 +110,58 @@ class PageLayoutRender(private val mContext: Context,
     private val groupInsertIndexMap = HashMap<GroupNode, Int>()
     private val attachedGroups = HashSet<GroupNode>()
 
+    // Các mục nằm ngoài [[group]] được gom vào "thẻ ngầm" (giống group nhưng không có tiêu đề)
+    private val looseGroupOf = HashMap<NodeInfoBase, ListItemGroup>()
+    private val looseMembers = HashMap<ListItemGroup, ArrayList<NodeInfoBase>>()
+    private var currentLoose: ListItemGroup? = null
+    private var insertPrev: NodeInfoBase? = null
+    private var insertNext: NodeInfoBase? = null
+
+    private fun newLooseGroup(): ListItemGroup {
+        val node = GroupNode("")
+        node.key = "__loose_" + node.index
+        val card = ListItemGroup(mContext, false, node)
+        card.enableDividers()
+        looseMembers[card] = ArrayList()
+        return card
+    }
+
+    private fun addLoose(view: ListItemView, node: NodeInfoBase, atIndex: Int, replacePlaceholder: Boolean) {
+        if (atIndex < 0) {
+            if (node.newBlock) currentLoose = null
+            var card = currentLoose
+            if (card == null) {
+                card = newLooseGroup()
+                if (replacePlaceholder) rootGroup.addViewBeforePlaceholder(card) else rootGroup.addView(card)
+                currentLoose = card
+            }
+            card.addView(view)
+            looseMembers[card]?.add(node)
+            looseGroupOf[node] = card
+            return
+        }
+        val prevCard = if (node.newBlock) null else insertPrev?.let { looseGroupOf[it] }
+        val nextCard = if (insertNext?.newBlock == true) null else insertNext?.let { looseGroupOf[it] }
+        val card: ListItemGroup
+        val pos: Int
+        if (prevCard != null) {
+            card = prevCard
+            pos = (insertPrev?.let { looseMembers[card]?.indexOf(it) } ?: -1) + 1
+        } else if (nextCard != null) {
+            card = nextCard
+            pos = (insertNext?.let { looseMembers[card]?.indexOf(it) } ?: 0).coerceAtLeast(0)
+        } else {
+            card = newLooseGroup()
+            rootGroup.addView(card, atIndex)
+            pos = 0
+        }
+        val members = looseMembers[card]
+        val at = pos.coerceIn(0, members?.size ?: 0)
+        members?.add(at, node)
+        card.addView(view, at)
+        looseGroupOf[node] = card
+    }
+
     private fun mapConfigList(parent: ListItemGroup, actionInfos: ArrayList<NodeInfoBase>) {
         for (index in 0 until actionInfos.size) {
             renderNode(parent, actionInfos[index])
@@ -142,6 +194,7 @@ class PageLayoutRender(private val mContext: Context,
                 groupViewMap[it] = subGroup
                 groupParentMap[it] = parent
                 if (it.children.isNotEmpty()) {
+                    if (parent === rootGroup) currentLoose = null
                     if (replacePlaceholder) parent.addViewBeforePlaceholder(subGroup) else parent.addView(subGroup)
                     attachedGroups.add(it)
                     mapConfigList(subGroup, it.children)
@@ -155,7 +208,9 @@ class PageLayoutRender(private val mContext: Context,
                     uiRender.setOnClickListener(this.onItemClickListener)
                     uiRender.setOnLongClickListener(this.onItemLongClickListener)
                 }
-                if (atIndex >= 0) {
+                if (parent === rootGroup && it !is GroupNode) {
+                    addLoose(uiRender, it, atIndex, replacePlaceholder)
+                } else if (atIndex >= 0) {
                     parent.addView(uiRender, atIndex)
                 } else if (replacePlaceholder) {
                     parent.addViewBeforePlaceholder(uiRender)
@@ -206,10 +261,16 @@ class PageLayoutRender(private val mContext: Context,
 
     private fun realRootViewIndex(modelIndex: Int): Int {
         var realIndex = 0
+        val counted = HashSet<ListItemGroup>()
         for (i in 0 until modelIndex) {
             val existing = itemConfigList[i]
-            if (existing is GroupNode && !attachedGroups.contains(existing)) continue
-            realIndex++
+            if (existing is GroupNode) {
+                if (!attachedGroups.contains(existing)) continue
+                realIndex++
+            } else {
+                val card = looseGroupOf[existing] ?: continue
+                if (counted.add(card)) realIndex++
+            }
         }
         return realIndex
     }
@@ -218,8 +279,15 @@ class PageLayoutRender(private val mContext: Context,
         if (group == null) {
             val at = index.coerceIn(0, itemConfigList.size)
             val realAt = realRootViewIndex(at)
+            insertPrev = if (at > 0) itemConfigList[at - 1] else null
+            insertNext = if (at < itemConfigList.size) itemConfigList[at] else null
             itemConfigList.add(at, node)
-            renderNode(rootGroup, node, realAt)
+            try {
+                renderNode(rootGroup, node, realAt)
+            } finally {
+                insertPrev = null
+                insertNext = null
+            }
             return
         }
         val subGroup = groupViewMap[group] ?: return

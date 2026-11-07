@@ -4,7 +4,13 @@ import android.animation.Animator
 import android.animation.LayoutTransition
 import android.content.Context
 import android.view.View
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import com.omarea.common.ui.BlurEngine
 import androidx.core.content.ContextCompat
 import com.tool.tree.R
 import com.omarea.krscript.model.GroupNode
@@ -28,6 +34,31 @@ class ListItemGroup(context: Context,
         if (view.foreground != null) {
             view.foreground = ContextCompat.getDrawable(context, R.drawable.krscript_item_ripple_ac)
         }
+    }
+
+    // Dải ngăn cách giữa các mục (chỉ dùng cho thẻ ngầm của mục ngoài group).
+    // LinearLayout chỉ vẽ dải ở giữa các view đang hiển thị, nên từ 2 mục trở lên mới có.
+    fun enableDividers() {
+        val content = layout.findViewById<ViewGroup>(android.R.id.content) as? LinearLayout ?: return
+        val density = context.resources.displayMetrics.density
+        content.dividerDrawable = StrokeDividerDrawable(context)
+        content.dividerPadding = (12 * density).toInt()
+        content.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
+    }
+
+    private class StrokeDividerDrawable(private val context: Context) : Drawable() {
+        override fun getIntrinsicHeight(): Int = 3
+
+        override fun draw(canvas: Canvas) {
+            val paint = BlurEngine.getStrokePaint(context)
+            val y = bounds.exactCenterY()
+            canvas.drawLine(bounds.left.toFloat(), y, bounds.right.toFloat(), y, paint)
+        }
+
+        override fun setAlpha(alpha: Int) {}
+        override fun setColorFilter(colorFilter: ColorFilter?) {}
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     }
 
     fun addPlaceholders(views: List<View>) {

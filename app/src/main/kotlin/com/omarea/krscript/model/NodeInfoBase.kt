@@ -28,4 +28,7 @@ open class NodeInfoBase(val currentPageConfigPath: String) : Serializable {
     var summarySh: String = ""
 
     var loadAfter: Boolean = false
+
+    // true khi node đứng ngay sau [[end]] ở ngoài group: bắt đầu một khối (thẻ ngầm) mới
+    var newBlock: Boolean = false
 }
