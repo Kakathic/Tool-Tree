@@ -10,7 +10,7 @@ class ListItemTerminal(context: Context, config: TerminalNode, card: Boolean = f
     private val widgetView = layout.findViewById<ImageView?>(R.id.kr_widget)
 
     init {
-        widgetView?.visibility = if (card) View.GONE else View.VISIBLE
+        widgetView?.visibility = View.VISIBLE
         widgetView?.setImageDrawable(context.getDrawable(R.drawable.icon_terminal))
         WidgetTintHelper.applyTint(context, widgetView, iconDrawable)
     }

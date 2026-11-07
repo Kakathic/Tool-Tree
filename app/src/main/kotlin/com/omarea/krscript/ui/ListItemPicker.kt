@@ -20,7 +20,7 @@ class ListItemPicker(context: Context, private val config: PickerNode, card: Boo
     }
 
     init {
-        widgetView?.visibility = if (card) View.GONE else View.VISIBLE
+        widgetView?.visibility = View.VISIBLE
         widgetView?.setImageDrawable(context.getDrawable(R.drawable.kr_picker))
         WidgetTintHelper.applyTint(context, widgetView, iconDrawable)
 

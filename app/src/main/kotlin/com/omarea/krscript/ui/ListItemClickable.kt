@@ -2,9 +2,14 @@ package com.omarea.krscript.ui
 
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.util.TypedValue
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.RelativeLayout
+import androidx.core.graphics.ColorUtils
 import com.tool.tree.R
 import com.omarea.krscript.config.IconPathAnalysis
 import com.omarea.krscript.model.ClickableNode
@@ -61,6 +66,8 @@ open class ListItemClickable(
             }
         }
 
+        if (card) placeCardWidget(iconView?.visibility == View.VISIBLE)
+
         extraIconView?.let { view ->
             view.visibility = View.GONE
             if (config.photoPath.isNotEmpty()) {
@@ -104,6 +111,37 @@ open class ListItemClickable(
         }
 
         applyIconPhotoBg()
+    }
+
+    // Thẻ lưới: có icon thì widget nhỏ ở cuối dòng tiêu đề; không icon thì widget nằm trong khung bo ở góc trái trên
+    private fun placeCardWidget(hasIcon: Boolean) {
+        val box = layout.findViewById<ViewGroup>(R.id.kr_widget_box) ?: return
+        val top = layout.findViewById<ViewGroup>(R.id.kr_card_top) ?: return
+        val titleRow = layout.findViewById<ViewGroup>(R.id.kr_card_title_row) ?: return
+        val density = context.resources.displayMetrics.density
+        val target = if (hasIcon) titleRow else top
+        if (box.parent !== target) {
+            (box.parent as? ViewGroup)?.removeView(box)
+            target.addView(box)
+        }
+        val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        if (hasIcon) {
+            params.marginStart = (6 * density).toInt()
+            box.background = null
+            box.minimumWidth = 0
+            box.minimumHeight = 0
+        } else {
+            params.bottomMargin = (8 * density).toInt()
+            val tv = TypedValue()
+            context.theme.resolveAttribute(android.R.attr.colorAccent, tv, true)
+            box.background = GradientDrawable().apply {
+                cornerRadius = 10 * density
+                setColor(ColorUtils.setAlphaComponent(tv.data, 0x26))
+            }
+            box.minimumWidth = (36 * density).toInt()
+            box.minimumHeight = (36 * density).toInt()
+        }
+        box.layoutParams = params
     }
 
     private fun applyPhotoRealSize(imageView: ImageView?, realSize: Boolean) {

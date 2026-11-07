@@ -20,7 +20,7 @@ class ListItemEditor(context: Context, private val config: EditorNode, card: Boo
     }
 
     init {
-        widgetView?.visibility = if (card) View.GONE else View.VISIBLE
+        widgetView?.visibility = View.VISIBLE
         widgetView?.setImageDrawable(context.getDrawable(R.drawable.icon_edit))
         WidgetTintHelper.applyTint(context, widgetView, iconDrawable)
 
