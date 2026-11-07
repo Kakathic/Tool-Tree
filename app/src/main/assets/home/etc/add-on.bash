@@ -94,6 +94,7 @@ Download() {
       echo '
       [[download.rows]]
       text = "'$description'"
+      margin-top = 8
       line = true
       '
     fi
@@ -148,6 +149,7 @@ Homeadd() {
   else
     text_line='[[page.rows]]
     text = "'$description'"
+    margin-top = 8
     line = true'
   fi
   

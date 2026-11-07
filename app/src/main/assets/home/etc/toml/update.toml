@@ -32,31 +32,27 @@ html-file = "{HOME}/etc/html/tool-tree.html"
 html-height = 100
 
 [[group]]
-[[page]]
-title = "@author_text"
-icon = "{ICON}/like.png"
-link = "https://Kakathic.github.io/Tool-Tree/website/Information.html"
+columns = true
 
-[[group]]
 [[page]]
 title = "@update_text_5"
 icon = "{ICON}/website.png"
 link = "https://Kakathic.github.io/Tool-Tree"
 
-[[group]]
 [[page]]
 title = "Telegram"
 icon = "{ICON}/telegram.png"
 link = "https://t.me/tooltree"
 
 [[group]]
+columns = true
+
 [[download]]
 title = "@download_text stable"
 icon = "{ICON}/update.png"
 url-sh = "linkgit https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest Tool-Tree"
 script = "openfile $state"
 
-[[group]]
 [[download]]
 title = "@download_text beta"
 icon = "{ICON}/update2.png"

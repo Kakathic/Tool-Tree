@@ -35,6 +35,8 @@ object TomlKeys {
     val BG_COLOR = arrayOf("bg-color", "bg", "background", "bgcolor")
     val PROGRESS_TRACK_COLOR = arrayOf("progress-track-color", "progress-bg")
     val LINE = arrayOf("line", "divider", "separator")
+    val CARD = arrayOf("card", "cards")
+    val CELL = arrayOf("cell")
     val COLUMNS = arrayOf("columns", "cols", "grid")
     val COLUMN_WIDTH = arrayOf("column-width", "col-width")
     val MIN_COLUMNS = arrayOf("min-columns", "min-cols")

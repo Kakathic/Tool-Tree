@@ -86,7 +86,7 @@ remember = false
 
 [[action.params]]
 name = "OPENROUTER_API_KEY"
-label = "Openroute"
+label = "Openrouter"
 placeholder-sh = "list_provider=openrouter chatbot --show 2>/dev/null"
 type = "password"
 remember = false
@@ -116,6 +116,7 @@ remember = false
 type = "rows"
 [[action.params.rows]]
 text-sh = "chatbot --list-websites"
+margin-top = 8
 line = true
 
 [[group]]

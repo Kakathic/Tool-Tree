@@ -106,6 +106,7 @@ class PageLayoutRender(private val mContext: Context,
     }
 
     private val groupViewMap = HashMap<GroupNode, ListItemGroup>()
+    private val lastCell = HashMap<ListItemGroup, Pair<String, ListItemGroup>>()
     private val groupParentMap = HashMap<GroupNode, ListItemGroup>()
     private val groupInsertIndexMap = HashMap<GroupNode, Int>()
     private val attachedGroups = HashSet<GroupNode>()
@@ -119,7 +120,23 @@ class PageLayoutRender(private val mContext: Context,
     private fun renderNode(parent: ListItemGroup, it: NodeInfoBase, atIndex: Int = -1, replacePlaceholder: Boolean = false) {
         try {
             if (parent === rootGroup && it !is GroupNode && it !is TextNode) return
-            val card = parent.gridMode
+            if (parent.cardMode && it !is TextNode && it !is GroupNode) {
+                val last = lastCell[parent]
+                val cell: ListItemGroup
+                if (it.cell.isNotEmpty() && atIndex < 0 && !replacePlaceholder && last != null && last.first == it.cell) {
+                    cell = last.second
+                } else {
+                    cell = ListItemGroup(mContext, false, GroupNode(""), true)
+                    cell.enableDividers()
+                    if (atIndex >= 0) parent.addView(cell, atIndex)
+                    else if (replacePlaceholder) parent.addViewBeforePlaceholder(cell)
+                    else parent.addView(cell)
+                    if (it.cell.isNotEmpty()) lastCell[parent] = Pair(it.cell, cell) else lastCell.remove(parent)
+                }
+                renderNode(cell, it)
+                return
+            }
+            val card = parent.childCard
             var uiRender: ListItemView? = null
             if (it is PageNode) {
                 uiRender = createPageItem(it, card)
@@ -274,7 +291,7 @@ class PageLayoutRender(private val mContext: Context,
 
     private fun createItemGroup(node: GroupNode): ListItemGroup {
         val group = ListItemGroup(mContext, false, node)
-        if (node.line) group.enableDividers()
+        if (node.line && !node.card) group.enableDividers()
         return group
     }
 

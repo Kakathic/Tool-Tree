@@ -692,6 +692,7 @@ script = "..."</code></pre>
 <tr><td class="field-name">summary</td><td>-</td><td class="field-type">String</td><td>""</td><td>Extra info shown in small grey text</td></tr>
 <tr><td class="field-name">summary-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that produces summary dynamically</td></tr>
 <tr><td class="field-name">key</td><td>index, id</td><td class="field-type">String</td><td>""</td><td>Explicit key/ID used by the node. The parser default is empty; the model also has an internal UUID in <code>index</code>, but that does <strong>not</strong> become <code>key</code> automatically. Long-pressing an item (add to the menu favorites / home screen) needs an id. If <code>key</code> is empty, the id is generated from the raw <code>title</code> as <code>auto:&lt;title&gt;</code> (a repeated title gets <code>#2</code>, <code>#3</code>...; a <code>@key</code> language reference is kept as <code>@key</code> so the id does not change with the app language). Not generated when <code>title-sh</code> is used or the title is empty. Editing or reordering same-titled items can break saved favorites - set an explicit <code>key</code> for stability.</td></tr>
+<tr><td class="field-name">cell</td><td>-</td><td class="field-type">String</td><td>""</td><td>Only used inside a <code>[[group]]</code> with <code>card = true</code> (section <a href="#group-card">4.5</a>): adjacent entries with the same <code>cell</code> value share one card, stacked with divider lines. Empty = the entry gets a card of its own</td></tr>
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>true</td><td>Hide/show this node. Accepts <code>true</code>/<code>false</code> or a <span class="badge shell">shell</span> returning <code>"1"</code></td></tr>
 <tr><td class="field-name">load-after</td><td>-</td><td class="field-type">Bool</td><td>false</td><td>true: a supported root-level page node is deferred instead of being built with the initial page result, then inserted at its original position (inside its group if any) after the page has already loaded. Use for a slow-to-build entry that would otherwise delay initial rendering. Parsed as an ordinary boolean; shell is not supported.</td></tr>
 </table>
@@ -765,6 +766,7 @@ script = "..."</code></pre>
 <tr><td class="field-name">key</td><td>index, id</td><td class="field-type">String</td><td>auto</td><td>Unique ID</td></tr>
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>true</td><td>Hide/show the group - a hidden group ALSO hides all of its children (every entry until the next <code>[[group]]</code> is skipped, their shells are not run). Accepts shell too!</td></tr>
 <tr><td class="field-name">line</td><td>divider, separator</td><td class="field-type">Bool</td><td>false</td><td>Draws a thin divider line between the entries of the group. Only shown between visible entries, so it appears from 2 visible entries up. In a grid group (see <a href="#group-grid">4.4</a>) it separates the rows and the cells</td></tr>
+<tr><td class="field-name">card</td><td>cards</td><td class="field-type">Bool</td><td>false</td><td>Each entry gets its own framed card instead of sharing one frame for the whole group; entries can be merged into one card with <code>cell</code> (section <a href="#group-card">4.5</a>). Works with or without <code>columns</code></td></tr>
 <tr><td class="field-name">columns</td><td>cols, grid</td><td class="field-type">Int|Bool</td><td>1</td><td>Number of columns, 1-6. Above 1 the entries of the group are laid out as a grid of cards (section <a href="#group-grid">4.4</a>). <code>columns = true</code> (or <code>"auto"</code>) turns the grid on with an automatic column count, using <code>column-width = 160</code> unless you set another; <code>false</code> = 1</td></tr>
 <tr><td class="field-name">column-width</td><td>col-width</td><td class="field-type">Int (dp)</td><td>0 (160 when <code>columns = true</code>)</td><td>Automatic column count: group width &divide; <code>column-width</code>, clamped to <code>min-columns</code>..<code>max-columns</code>, recalculated when the screen rotates, folds or is resized. Takes priority over a numeric <code>columns</code></td></tr>
 <tr><td class="field-name">min-columns</td><td>min-cols</td><td class="field-type">Int</td><td>1</td><td>Minimum <strong>number of columns</strong> in automatic mode (1-6), even when the screen is narrow</td></tr>
@@ -852,6 +854,26 @@ max-columns = 4
 </code></pre>
 <div class="callout tip"><strong>Choosing <code>column-width</code>:</strong> a 1080 px wide screen is about 360-410 dp wide (density 2.6-3.0), so the group is about 330-380 dp wide. <code>160</code> gives <strong>2 columns</strong> in portrait and 4-5 in landscape (capped by <code>max-columns</code>); <code>120</code> would give 3 columns in portrait but the cards get tight for titles. A card needs about 110 dp for its icon, widget and padding. Recommended: <code>columns = true</code>, <code>min-columns = 2</code>, <code>max-columns = 4</code>.</div>
 <div class="callout tip">Rules: entries that are not cards (<code>[[text]]</code>) take a full row of their own. The last row is padded with empty cells, so every card keeps the same width. Cards in one row have the same height. <code>rows</code>, <code>photo</code> and <code>bg</code> of an entry are drawn inside its card. <code>columns</code> is capped at 6; when <code>column-width</code> is set it wins over <code>columns</code>, and a narrow screen may give 1 column (still drawn as cards).</div>
+<h3 id="group-card">4.5. Card mode (card = true)</h3>
+<p>By default a group is <strong>one</strong> frame holding all its entries. With <code>card = true</code> the group itself has no frame; every entry becomes a small card with its own frame (same look as a normal group: background, corners, blur, border), separated by a small gap. It works with <code>columns</code> / <code>column-width</code> for a grid of separate cards, and alone (<code>columns</code> = 1) for a vertical list of separate cards. <code>line</code> is ignored in card mode.</p>
+<p>To put several entries into <strong>one</strong> card, give them the same <code>cell</code> value. Adjacent entries with the same <code>cell</code> are stacked inside one card, separated by divider lines; the neighbouring cards in the row stretch to the same height.</p>
+<pre><code>[[group]]
+title = "Tools"
+card = true
+columns = 2
+
+[[action]]
+title = "A"                # card 1 (one entry)
+
+[[action]]
+title = "B1"
+cell = "b"                 # card 2 (B1 + B2 stacked)
+
+[[action]]
+title = "B2"
+cell = "b"
+</code></pre>
+<div class="callout tip">Rules: <code>[[text]]</code> entries are not cards and take a full row. Entries with an empty <code>cell</code> always get their own card, and only <strong>adjacent</strong> entries are merged. Each card is a small group with its own blur, so a group with very many cards costs a bit more than a normal group.</div>
 </section>
 <section id="page">
 <h2>5. [[page]] - Sub-page</h2>
@@ -2267,7 +2289,7 @@ script = "sh $state"
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
 <li>2026-11-07 - <code>margin-top</code> / <code>margin-bottom</code> on text rows now apply once per row: <code>margin-top</code> as a single gap above the row, <code>margin-bottom</code> on the last line, instead of on every line of a multi-line row.</li>
-<li>2026-11-07 - <code>[[group]]</code>: new <code>columns</code> (number, or <code>true</code> for automatic grid of cards) and <code>column-width</code> / <code>min-columns</code> / <code>max-columns</code> (automatic column count by screen width, section 4.4).</li>
+<li>2026-11-07 - <code>[[group]]</code>: new <code>columns</code> (number, or <code>true</code> for automatic grid of cards), <code>column-width</code> / <code>min-columns</code> / <code>max-columns</code> (automatic column count by screen width, section 4.4), <code>card</code> (a separate frame per entry) and the per-entry <code>cell</code> field to merge entries into one card (section 4.5).</li>
 <li>2026-11-07 - Items without <code>key</code> now get an automatic id <code>auto:&lt;title&gt;</code> used by long-press favorites (see <code>key</code> in section 3.1).</li>
 </ul>
 </section>

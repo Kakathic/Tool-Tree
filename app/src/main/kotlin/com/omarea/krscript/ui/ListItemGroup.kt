@@ -17,10 +17,14 @@ import com.omarea.krscript.model.GroupNode
 
 class ListItemGroup(context: Context,
                     var isRootGroup: Boolean,
-                    config: GroupNode) :
+                    config: GroupNode,
+                    val isCell: Boolean = false) :
         ListItemView(
                 context,
-                if (isRootGroup) R.layout.kr_group_list_root else R.layout.kr_group_list_item,
+                if (isRootGroup) R.layout.kr_group_list_root
+                else if (isCell) R.layout.kr_group_cell_item
+                else if (config.card) R.layout.kr_group_list_item_card
+                else R.layout.kr_group_list_item,
                 config) {
     protected var children = ArrayList<ListItemView>()
 
@@ -28,7 +32,11 @@ class ListItemGroup(context: Context,
     private val minColumns: Int = config.minColumns.coerceIn(1, 6)
     private val maxColumns: Int = config.maxColumns.coerceIn(minColumns, 6)
 
-    val gridMode: Boolean = !isRootGroup && (config.columns > 1 || columnWidthDp > 0)
+    val cardMode: Boolean = !isRootGroup && !isCell && config.card
+
+    val gridMode: Boolean = !isRootGroup && !isCell && (config.columns > 1 || columnWidthDp > 0 || config.card)
+
+    val childCard: Boolean get() = isCell || (gridMode && !cardMode)
 
     var columns: Int = if (isRootGroup) 1 else if (columnWidthDp > 0) {
         val metrics = context.resources.displayMetrics
@@ -111,13 +119,14 @@ class ListItemGroup(context: Context,
     private fun relayoutGrid() {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         val density = context.resources.displayMetrics.density
+        val gap = if (cardMode) (4 * density).toInt() else 0
         content.removeAllViews()
         val rows = ArrayList<LinearLayout>()
         var row: LinearLayout? = null
         for (child in children) {
             val view = child.getView()
             (view.parent as? ViewGroup)?.removeView(view)
-            if (child is ListItemClickable && child.card) {
+            if ((child is ListItemClickable && child.card) || (child is ListItemGroup && child.isCell)) {
                 var current = row
                 if (current == null || current.childCount >= columns) {
                     current = LinearLayout(context)
@@ -132,7 +141,9 @@ class ListItemGroup(context: Context,
                     rows.add(current)
                     row = current
                 }
-                current.addView(view, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+                current.addView(view, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+                    setMargins(gap, gap, gap, gap)
+                })
             } else {
                 row = null
                 content.addView(view)
@@ -140,7 +151,9 @@ class ListItemGroup(context: Context,
         }
         for (r in rows) {
             while (r.childCount < columns) {
-                r.addView(View(context), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+                r.addView(View(context), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+                    setMargins(gap, gap, gap, gap)
+                })
             }
         }
     }
@@ -226,6 +239,8 @@ class ListItemGroup(context: Context,
         for (child in this.children) {
             if (child is ListItemClickable && child.index.equals(index)) {
                 child.triggerAction()
+                return true
+            } else if (child is ListItemGroup && child.triggerActionByIndex(index)) {
                 return true
             }
         }

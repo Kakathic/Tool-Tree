@@ -746,6 +746,7 @@ class PageConfigReader {
             if (!resolveBoolOrShell(it, "support", "visible")) return null
         }
         tomlGet(table, *TomlKeys.KEY)?.let { nodeInfoBase.key = it.trim() }
+        tomlGet(table, *TomlKeys.CELL)?.let { nodeInfoBase.cell = it.trim() }
         if (readTexts) {
             tomlGet(table, *TomlKeys.TITLE_SH)?.let {
                 nodeInfoBase.titleSh = it
@@ -875,6 +876,7 @@ class PageConfigReader {
         }
         tomlGet(table, *TomlKeys.SUPPORT)?.let { group.supported = resolveBoolOrShell(it, "support", "visible") }
         tomlGet(table, *TomlKeys.LINE)?.let { group.line = tomlTruthy(it, "line", "divider", "separator") }
+        tomlGet(table, *TomlKeys.CARD)?.let { group.card = tomlTruthy(it, "card", "cards") }
         var autoColumns = false
         tomlGet(table, *TomlKeys.COLUMNS)?.let { raw ->
             val v = raw.trim().lowercase(getDefault())

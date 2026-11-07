@@ -19,6 +19,8 @@ open class NodeInfoBase(val currentPageConfigPath: String) : Serializable {
     )
 
     var key: String = ""
+    // Các mục liền kề cùng cell (trong group card = true) được bọc chung một card
+    var cell: String = ""
     // Id tự sinh từ tiêu đề gốc cho mục không có key; chỉ dùng cho Yêu thích/lối tắt
     var autoKey: String = ""
     val effectiveKey: String get() = key.ifEmpty { autoKey }
