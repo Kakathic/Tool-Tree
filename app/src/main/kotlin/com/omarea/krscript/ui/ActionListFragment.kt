@@ -310,7 +310,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                         }
                         val options = android.widget.LinearLayout(act).apply {
                             orientation = android.widget.LinearLayout.VERTICAL
-                            setPadding((8 * density).toInt(), 0, (8 * density).toInt(), 0)
+                            setPadding((10 * density).toInt(), (12 * density).toInt(), (10 * density).toInt(), 0)
                             addView(checkDrawer)
                             addView(checkHome)
                         }
