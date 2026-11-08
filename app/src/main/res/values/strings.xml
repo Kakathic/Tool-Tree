@@ -8,6 +8,7 @@
     <string name="channel_name">Download</string>
     <string name="author_name">Kakathic</string>
     <string name="about_title">About</string>
+    <string name="about_desc">Tool-Tree: a tool app configured through TOML and scripts.</string>
     <string name="appliction_desc">Lots of utilities on the phone</string>
     <string name="appliction_name">[•-•]</string>
     <string name="appliction_author">Great tools</string>

@@ -4,6 +4,7 @@
     <string name="please_wait">Vui lòng chờ</string>
     <string name="title_activity_action_page">Trang chức năng</string>
     <string name="about_title">Giới thiệu</string>
+    <string name="about_desc">Tool-Tree: ứng dụng công cụ được cấu hình bằng TOML và script.</string>
     <string name="appliction_desc">Rất nhiều tiện ích trên điện thoại</string>
     <string name="appliction_author">Công cụ tuyệt vời</string>
     <string name="about_donate">Ủng hộ</string>
