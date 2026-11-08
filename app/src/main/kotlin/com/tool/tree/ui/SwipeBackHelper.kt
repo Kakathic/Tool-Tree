@@ -30,6 +30,7 @@ class SwipeBackHelper(
 ) {
     companion object {
         private const val COMMIT_DISTANCE_RATIO = 0.28f
+        private const val REVERT_DISTANCE_RATIO = 0.22f
 
         private const val SETTLE_DURATION_MIN_MS = 150L
         private const val SETTLE_DURATION_MAX_MS = 300L
@@ -78,8 +79,16 @@ class SwipeBackHelper(
 
     private var dragSessionId = 0
 
+    private var autoCommitted = false
+    private var swallow = false
+
     fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         if (!enabled) return false
+
+        if (swallow) {
+            if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) swallow = false
+            return true
+        }
 
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
@@ -156,7 +165,22 @@ class SwipeBackHelper(
 
                 if (dragging) {
                     val clampedDx = dx.coerceIn(0f, contentView.width.toFloat().coerceAtLeast(1f))
+                    val width = contentView.width.toFloat().coerceAtLeast(1f)
+                    if (autoCommitted) {
+                        if (clampedDx < width * REVERT_DISTANCE_RATIO) {
+                            autoCommitted = false
+                            dragging = false
+                            swallow = true
+                            recycleTracker()
+                            animateTo(0f, 0f, null, durationMultiplier = 1.3f, bounce = true)
+                        }
+                        return true
+                    }
                     applyProgress(clampedDx)
+                    if (clampedDx > width * COMMIT_DISTANCE_RATIO) {
+                        autoCommitted = true
+                        animateTo(width, 3000f, { onBack() })
+                    }
                     return true
                 }
 
@@ -171,6 +195,13 @@ class SwipeBackHelper(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 val wasDragging = dragging
                 val wasDraggingLeft = draggingLeft
+                if (wasDragging && autoCommitted) {
+                    autoCommitted = false
+                    recycleTracker()
+                    candidate = false
+                    dragging = false
+                    return true
+                }
                 if (wasDragging) {
                     velocityTracker?.addMovement(ev)
                     velocityTracker?.computeCurrentVelocity(1000, maxFlingVelocity.toFloat())
@@ -201,6 +232,7 @@ class SwipeBackHelper(
     }
 
     private fun beginNewDragSession() {
+        autoCommitted = false
         settleAnimator?.cancel()
         settleAnimator = null
         dragSessionId++
@@ -239,6 +271,8 @@ class SwipeBackHelper(
             interpolator = if (bounce) SwipeBounceEffect.bounceInterpolator else DecelerateInterpolator(1.2f)
             addUpdateListener { applyProgress(it.animatedValue as Float) }
             addListener(object : AnimatorListenerAdapter() {
+                private var canceled = false
+                override fun onAnimationCancel(animation: Animator) { canceled = true }
                 override fun onAnimationEnd(animation: Animator) {
                     BlurEngine.isPaused = !ThemeModeState.isBlurActive()
                     val isStale = dragSessionId != sessionAtStart
@@ -247,7 +281,7 @@ class SwipeBackHelper(
                         contentView.elevation = 0f
                         if (notifyStateChange) onDragStateChanged(false)
                     }
-                    onEnd?.invoke()
+                    if (!canceled) onEnd?.invoke()
                 }
             })
             start()

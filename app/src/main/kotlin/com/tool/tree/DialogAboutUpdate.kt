@@ -50,6 +50,7 @@ class DialogAboutUpdate(
         const val PANEL_IN_MS = 220L
         const val TRIPLE_TAP_GAP_MS = 600L
         const val COMMIT_RATIO = 0.28f
+        const val REVERT_RATIO = 0.22f
         const val CHANGELOG_FIRST_CHUNK = 4
         const val CHANGELOG_NEXT_CHUNK = 3
         const val AUTHOR_URL = "https://github.com/Kakathic"
@@ -136,12 +137,22 @@ class DialogAboutUpdate(
         private var dragging = false
         private var anim: ValueAnimator? = null
         private var swallow = false
+        private var autoCommitted = false
 
         fun handle(ev: MotionEvent, dispatch: (MotionEvent) -> Boolean): Boolean {
             if (!viewReady || !::updatePanel.isInitialized) return false
             val cfg = ViewConfiguration.get(requireContext())
             if (swallow) {
-                if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) swallow = false
+                if (autoCommitted && ev.actionMasked == MotionEvent.ACTION_MOVE &&
+                    ev.rawX - downX < updatePanel.width * REVERT_RATIO
+                ) {
+                    autoCommitted = false
+                    finishSwipe(false)
+                }
+                if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) {
+                    swallow = false
+                    autoCommitted = false
+                }
                 return true
             }
             when (ev.actionMasked) {
@@ -179,6 +190,7 @@ class DialogAboutUpdate(
                     applyDrag(dx)
                     if (dx > updatePanel.width * COMMIT_RATIO) {
                         swallow = true
+                        autoCommitted = true
                         candidate = false
                         dragging = false
                         velocity?.recycle()
@@ -217,7 +229,12 @@ class DialogAboutUpdate(
         private fun settle(vx: Float, minFling: Int, force: Boolean) {
             val w = updatePanel.width.toFloat().coerceAtLeast(1f)
             val from = updatePanel.translationX
-            val commit = force || from > w * COMMIT_RATIO || vx > minFling
+            finishSwipe(force || from > w * COMMIT_RATIO || vx > minFling)
+        }
+
+        private fun finishSwipe(commit: Boolean) {
+            val w = updatePanel.width.toFloat().coerceAtLeast(1f)
+            val from = updatePanel.translationX
             val to = if (commit) w else 0f
             val duration = (160L + (Math.abs(to - from) / w * 140f).toLong())
             anim?.cancel()
