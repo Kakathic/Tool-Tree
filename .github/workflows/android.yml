@@ -27,7 +27,7 @@ env:
 
 jobs:
   build-release:
-    if: ${{ github.repository_owner == 'Zenlua' }}
+    if: ${{ github.repository_owner == 'Kakathic' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: Stable
@@ -60,7 +60,7 @@ jobs:
             cp -f app/build/outputs/apk/*/*.apk "Beta/Tool-Tree-beta.apk"
           fi
           ls -l Up Beta
-          echo -e "- ![Downloads](https://img.shields.io/github/downloads/Zenlua/Tool-Tree/V$VER/total?label=Downloads&color=%230072F4)\n- See version notes: [Changelog](https://zenlua.github.io/Tool-Tree/Version.html)" > change.txt
+          echo -e "- ![Downloads](https://img.shields.io/github/downloads/Kakathic/Tool-Tree/V$VER/total?label=Downloads&color=%230072F4)\n- See version notes: [Changelog](https://Kakathic.github.io/Tool-Tree/Version.html)" > change.txt
 
           if [ "$UPTG" == "true" ]; then
             echo "Telegram"
@@ -72,11 +72,11 @@ jobs:
           • 🪴 <b>Author:</b> Kakathic
           • 📱 <b>Device:</b> Arm64
 
-          • 🧾 <b>Notes:</b> <a href=\"https://github.com/Zenlua/Tool-Tree/blob/main/Version.md\">Changelog</a>
-          • 📚 <b>Instruct:</b> Root | <a href=\"https://zenlua.github.io/Tool-Tree/website/Guide.html\">No-Root</a>
-          • 📥 <b><a href=\"https://github.com/Zenlua/Tool-Tree/releases/tag/V$VER\">Download</a></b>
+          • 🧾 <b>Notes:</b> <a href=\"https://github.com/Kakathic/Tool-Tree/blob/main/Version.md\">Changelog</a>
+          • 📚 <b>Instruct:</b> Root | <a href=\"https://Kakathic.github.io/Tool-Tree/website/Guide.html\">No-Root</a>
+          • 📥 <b><a href=\"https://github.com/Kakathic/Tool-Tree/releases/tag/V$VER\">Download</a></b>
 
-          🌐 <b>Language:</b> Help <a href=\"https://github.com/Zenlua/Tool-Tree#-language\">translation</a>
+          🌐 <b>Language:</b> Help <a href=\"https://github.com/Kakathic/Tool-Tree#-language\">translation</a>
 
           #release@tool_tree"
 
