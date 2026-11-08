@@ -271,6 +271,12 @@ If you agree, press the confirm button to continue."</string>
     <string name="kr_favorite_to_drawer">Menu</string>
     <string name="kr_favorite_to_home">Home screen</string>
     <string name="kr_favorite_added">Added to the menu favorites</string>
+    <string name="tab_index">Index</string>
+    <string name="index_tools">Tools</string>
+    <string formatted="false" name="index_remove_desc">Remove “%s” from the index?</string>
+    <string name="index_empty">Long-press any item to add it to Favorites or Tools.</string>
+    <string name="kr_tools_added">Added to the Tools of the index</string>
+    <string name="kr_tools_exists">Already in the Tools of the index</string>
     <string name="kr_favorite_exists">Already in the menu favorites</string>
     <string formatted="false" name="kr_favorite_remove_desc">Remove “%s” from favorites?</string>
     <string name="about_check">Check</string>

@@ -257,6 +257,12 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="kr_favorite_to_drawer">Mục lục</string>
     <string name="kr_favorite_to_home">Màn hình chính</string>
     <string name="kr_favorite_added">Đã thêm vào Yêu thích của mục lục</string>
+    <string name="tab_index">Mục lục</string>
+    <string name="index_tools">Công cụ</string>
+    <string formatted="false" name="index_remove_desc">Xoá “%s” khỏi mục lục?</string>
+    <string name="index_empty">Nhấn giữ một mục bất kỳ để thêm vào Yêu thích hoặc Công cụ.</string>
+    <string name="kr_tools_added">Đã thêm vào Công cụ của mục lục</string>
+    <string name="kr_tools_exists">Đã có trong Công cụ của mục lục</string>
     <string name="kr_favorite_exists">Đã có trong Yêu thích của mục lục</string>
     <string formatted="false" name="kr_favorite_remove_desc">Xoá “%s” khỏi Yêu thích?</string>
     <string name="about_check">Kiểm tra</string>

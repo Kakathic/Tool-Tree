@@ -22,10 +22,8 @@ import android.widget.TextView
 import android.widget.Toast
 import android.view.Choreographer
 import androidx.activity.addCallback
-import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import android.widget.ListPopupWindow
 import androidx.appcompat.widget.Toolbar
@@ -71,6 +69,7 @@ class MainActivity : AppCompatActivity() {
     private var aboutPending = false
 
     companion object {
+        private const val INDEX_POSITION = 0
         private var updateChecked = false
         private var cachedUpdateInfo: AppUpdateInfo? = null
         @Volatile var reopenAbout = false
@@ -80,7 +79,8 @@ class MainActivity : AppCompatActivity() {
     private val ACTION_FILE_PATH_CHOOSER = 65400
     private val ACTION_FILE_PATH_CHOOSER_INNER = 65300
     private lateinit var adapter: MainPagerAdapter
-    private lateinit var mainDrawer: MainDrawer
+    private var indexVersion = 0L
+    private var initialPageApplied = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,12 +99,10 @@ class MainActivity : AppCompatActivity() {
 
         initAdapter()
         loadTabs()
-        setupDrawer(versionName)
-        loadDrawer()
 
         onBackPressedDispatcher.addCallback(this) {
-            if (binding.mainDrawer.isDrawerOpen(GravityCompat.START)) {
-                binding.mainDrawer.closeDrawer(GravityCompat.START)
+            if (binding.viewPager.currentItem == INDEX_POSITION && adapter.getItemCount() > 1) {
+                binding.viewPager.setCurrentItem(INDEX_POSITION + 1, true)
             } else {
                 finish()
             }
@@ -193,6 +191,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        refreshIndexPage()
+    }
+
     override fun onResumeFragments() {
         super.onResumeFragments()
         if (reopenAbout) {
@@ -221,130 +224,46 @@ class MainActivity : AppCompatActivity() {
         title = spannable
     }
 
-    private fun setupDrawer(versionName: String) {
-        val drawer = binding.mainDrawer
-        val panel = binding.mainDrawerPanel
-        binding.mainDrawerTitle.text = "${getString(R.string.app_name)} $versionName"
-        mainDrawer = MainDrawer(
-            binding.mainDrawerList,
-            { page -> onDrawerPageClick(page) },
-            { entry ->
-                DialogHelper.confirm(this, entry.title, getString(R.string.kr_favorite_remove_desc).format(entry.title), Runnable {
-                    DrawerFavorites(this).remove(entry.id)
-                    mainDrawer.render()
-                })
-            }
-        )
-
-        drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START)
-        drawer.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
-            override fun onDrawerOpened(drawerView: View) {
-                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.START)
-            }
-
-            override fun onDrawerClosed(drawerView: View) {
-                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START)
-            }
-        })
-
-        ViewCompat.setOnApplyWindowInsetsListener(panel) { v, insets ->
-            val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(0, sys.top, 0, sys.bottom)
-            insets
-        }
-        ViewCompat.requestApplyInsets(panel)
-
-        toolbar.post {
-            for (i in 0 until toolbar.childCount) {
-                val child = toolbar.getChildAt(i)
-                if (child is TextView) child.setOnClickListener { openDrawer() }
-            }
-        }
-        binding.viewPager.onOverscrollStart = { openDrawer() }
-    }
-
-    private fun openDrawer() {
-        mainDrawer.render()
-        if (binding.mainDrawerList.childCount == 0) return
-        binding.mainDrawer.openDrawer(GravityCompat.START)
-    }
-
-    private fun loadDrawer() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val items = getItems(krScriptConfig.getDrawerConfig())
-            withContext(Dispatchers.Main) {
-                if (isFinishing || isDestroyed || !::mainDrawer.isInitialized) return@withContext
-                mainDrawer.refresh(items)
-            }
-        }
-    }
-
-    private fun onDrawerPageClick(page: PageNode) {
-        binding.mainDrawer.closeDrawer(GravityCompat.START, false)
-        // Chờ 2 frame để ảnh chụp xem trước (swipe-back) không còn thấy ngăn kéo
-        Choreographer.getInstance().postFrameCallback {
-            Choreographer.getInstance().postFrameCallback {
-                if (isFinishing || isDestroyed) return@postFrameCallback
-                runIfUnlocked(page) {
-                    when {
-                        page.link.isNotEmpty() -> try {
-                            WebLauncher.open(this, page.link)
-                        } catch (ex: Exception) {
-                            Toast.makeText(this, getString(R.string.kr_slice_activity_fail), Toast.LENGTH_SHORT).show()
-                        }
-                        page.activity.isNotEmpty() -> TryOpenActivity(this, page.activity).tryOpen()
-                        else -> OpenPageHelper(this).openPage(page)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun runIfUnlocked(node: ClickableNode, onUnlocked: () -> Unit) {
-        val sdk = Build.VERSION.SDK_INT
-        val sdkMessage = getString(R.string.kr_sdk_message).format(node.minSdkVersion, node.maxSdkVersion)
-        when {
-            node.targetSdkVersion > 0 && sdk != node.targetSdkVersion -> {
-                DialogHelper.helpInfo(this, getString(R.string.kr_sdk_discrepancy), getString(R.string.kr_sdk_discrepancy_message).format(node.targetSdkVersion))
-                return
-            }
-            sdk > node.maxSdkVersion -> {
-                DialogHelper.helpInfo(this, getString(R.string.kr_sdk_overtop), sdkMessage)
-                return
-            }
-            sdk < node.minSdkVersion -> {
-                DialogHelper.helpInfo(this, getString(R.string.kr_sdk_too_low), sdkMessage)
-                return
-            }
-        }
-
-        if (node.lockShell.isEmpty()) {
-            if (node.locked) {
-                Toast.makeText(this, node.lockMessage.ifEmpty { getString(R.string.kr_lock_message) }, Toast.LENGTH_SHORT).show()
-            } else {
-                onUnlocked()
-            }
-            return
-        }
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            val message = ScriptEnvironmen.executeResultRoot(this@MainActivity, node.lockShell, node)
-            withContext(Dispatchers.Main) {
-                if (isFinishing || isDestroyed) return@withContext
-                if (message == "unlock" || message == "unlocked" || message == "false" || message == "0") {
-                    onUnlocked()
-                } else {
-                    Toast.makeText(this@MainActivity, message.ifEmpty { getString(R.string.kr_lock_message) }, Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
     private fun initAdapter() {
         if (!::adapter.isInitialized) {
             adapter = MainPagerAdapter(this)
             adapter.attach(binding.viewPager)
             binding.viewPager.setPageTransformer(FadeScalePageTransformer())
+            indexVersion = DrawerFavorites(this).version()
+            adapter.addFragment(
+                ActionListFragment.create(IndexPageBuilder.build(this), getIndexHandler(), null, ThemeModeState.getThemeMode()),
+                getString(R.string.tab_index)
+            )
+        }
+    }
+
+    private fun refreshIndexPage(force: Boolean = false) {
+        if (!::adapter.isInitialized) return
+        val fragment = adapter.getFragment(INDEX_POSITION) ?: return
+        val version = DrawerFavorites(this).version()
+        if (!force && version == indexVersion) return
+        indexVersion = version
+        fragment.updateData(IndexPageBuilder.build(this), getIndexHandler(), ThemeModeState.getThemeMode())
+    }
+
+    private fun getIndexHandler(): KrScriptActionHandler {
+        return object : KrScriptActionHandler {
+            override fun onActionCompleted(runnableNode: RunnableNode) {}
+
+            override fun addToFavorites(clickableNode: ClickableNode, addToFavoritesHandler: KrScriptActionHandler.AddToFavoritesHandler) {
+                val store = DrawerFavorites(this@MainActivity)
+                val entry = store.list().firstOrNull { it.id == clickableNode.key } ?: return
+                DialogHelper.confirm(this@MainActivity, entry.title, getString(R.string.index_remove_desc).format(entry.title), Runnable {
+                    store.remove(entry.id)
+                    refreshIndexPage(true)
+                })
+            }
+
+            override fun onSubPageClick(pageNode: PageNode) {
+                OpenPageHelper(this@MainActivity).openPage(pageNode)
+            }
+
+            override fun openFileChooser(fileSelectedInterface: ParamsFileChooserRender.FileSelectedInterface): Boolean = false
         }
     }
 
@@ -395,11 +314,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            updateTab(0, favorites, R.string.tab_favorites, krScriptConfig.getFavoriteConfig(), true)
-            updateTab(1, pages, R.string.tab_pages, krScriptConfig.getPageListConfig(), false)
-            updateTab(2, tab3Items, R.string.tab_custom3, krScriptConfig.getCustomTab3Config(), false)
-            updateTab(3, tab4Items, R.string.tab_custom4, krScriptConfig.getCustomTab4Config(), false)
+            updateTab(1, favorites, R.string.tab_favorites, krScriptConfig.getFavoriteConfig(), true)
+            updateTab(2, pages, R.string.tab_pages, krScriptConfig.getPageListConfig(), false)
+            updateTab(3, tab3Items, R.string.tab_custom3, krScriptConfig.getCustomTab3Config(), false)
+            updateTab(4, tab4Items, R.string.tab_custom4, krScriptConfig.getCustomTab4Config(), false)
 
+            if (!initialPageApplied && adapter.getItemCount() > 1) {
+                initialPageApplied = true
+                binding.viewPager.setCurrentItem(INDEX_POSITION + 1, false)
+            }
             setupTabs()
         } catch (e: Exception) {
             android.util.Log.e("MainActivity", "applyTabsData UI update failed", e)
@@ -407,7 +330,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun reloadTabs() {
-        loadDrawer()
         lifecycleScope.launch(Dispatchers.IO) {
             val favorites = getItems(krScriptConfig.getFavoriteConfig())
             val pages = getItems(krScriptConfig.getPageListConfig())
@@ -422,10 +344,10 @@ class MainActivity : AppCompatActivity() {
                 val theme = ThemeModeState.getThemeMode()
 
                 try {
-                    favorites?.let { adapter.getFragment(0)?.updateData(it, getKrScriptActionHandler(krScriptConfig.getFavoriteConfig(), true), theme) }
-                    pages?.let { adapter.getFragment(1)?.updateData(it, getKrScriptActionHandler(krScriptConfig.getPageListConfig(), false), theme) }
-                    tab3Items?.let { adapter.getFragment(2)?.updateData(it, getKrScriptActionHandler(krScriptConfig.getCustomTab3Config(), false), theme) }
-                    tab4Items?.let { adapter.getFragment(3)?.updateData(it, getKrScriptActionHandler(krScriptConfig.getCustomTab4Config(), false), theme) }
+                    favorites?.let { adapter.getFragment(1)?.updateData(it, getKrScriptActionHandler(krScriptConfig.getFavoriteConfig(), true), theme) }
+                    pages?.let { adapter.getFragment(2)?.updateData(it, getKrScriptActionHandler(krScriptConfig.getPageListConfig(), false), theme) }
+                    tab3Items?.let { adapter.getFragment(3)?.updateData(it, getKrScriptActionHandler(krScriptConfig.getCustomTab3Config(), false), theme) }
+                    tab4Items?.let { adapter.getFragment(4)?.updateData(it, getKrScriptActionHandler(krScriptConfig.getCustomTab4Config(), false), theme) }
                 } catch (e: Exception) {
                     android.util.Log.e("MainActivity", "reloadTabs UI update failed", e)
                 }
@@ -439,9 +361,9 @@ class MainActivity : AppCompatActivity() {
         binding.tabLayout.clearOnTabSelectedListeners()
         binding.tabLayout.removeAllTabs()
 
-        for (position in 0 until adapter.getItemCount()) {
+        for (position in (INDEX_POSITION + 1) until adapter.getItemCount()) {
             val title = adapter.getTitle(position)
-            val iconRes = when (position) {
+            val iconRes = when (position - 1) {
                 0 -> R.drawable.tab_favorites
                 1 -> R.drawable.tab_pages
                 2 -> R.drawable.tab_custom3
@@ -458,20 +380,30 @@ class MainActivity : AppCompatActivity() {
 
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
-                if (binding.viewPager.currentItem != tab.position) {
-                    binding.viewPager.setCurrentItem(tab.position, true)
+                if (binding.viewPager.currentItem != tab.position + 1) {
+                    binding.viewPager.setCurrentItem(tab.position + 1, true)
                 }
                 tabHelper.updateHighlight(binding.tabLayout, tab.position)
                 isFavoritesTab = (tab.position == 0)
             }
             override fun onTabUnselected(tab: TabLayout.Tab) {}
-            override fun onTabReselected(tab: TabLayout.Tab) {}
+            override fun onTabReselected(tab: TabLayout.Tab) {
+                if (binding.viewPager.currentItem != tab.position + 1) {
+                    binding.viewPager.setCurrentItem(tab.position + 1, true)
+                }
+            }
         })
 
         var userSwiping = false
         binding.viewPager.setOnPageChangeListener(object : SwipePager.OnPageChangeListener {
             override fun onPageSelected(position: Int) {
-                binding.tabLayout.getTabAt(position)?.select()
+                if (position == INDEX_POSITION) {
+                    tabHelper.updateHighlight(binding.tabLayout, -1)
+                    refreshIndexPage()
+                } else {
+                    binding.tabLayout.getTabAt(position - 1)?.select()
+                    tabHelper.updateHighlight(binding.tabLayout, position - 1)
+                }
             }
 
             override fun onPageScrollStateChanged(state: Int) {
@@ -482,7 +414,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageScrolled(position: Int, offset: Float) {
                 if (!userSwiping) return
-                val highlightPosition = if (offset > 0.5f) position + 1 else position
+                val highlightPosition = (if (offset > 0.5f) position + 1 else position) - 1
                 tabHelper.updateHighlight(binding.tabLayout, highlightPosition)
             }
         })

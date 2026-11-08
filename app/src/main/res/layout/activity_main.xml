@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/main_drawer"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-<RelativeLayout
     android:id="@+id/main_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -46,38 +41,3 @@
     </com.omarea.common.ui.BlurBottomBarLayout>
 
 </RelativeLayout>
-
-    <com.tool.tree.MainDrawerPanelLayout
-        android:id="@+id/main_drawer_panel"
-        android:layout_width="280dp"
-        android:layout_height="match_parent"
-        android:layout_gravity="start"
-        android:background="?android:attr/colorBackground"
-        android:clickable="true"
-        android:focusable="false"
-        android:orientation="vertical">
-
-        <TextView
-            android:id="@+id/main_drawer_title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="16dp"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:requiresFadingEdge="vertical">
-
-            <LinearLayout
-                android:id="@+id/main_drawer_list"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-        </ScrollView>
-    </com.tool.tree.MainDrawerPanelLayout>
-
-</androidx.drawerlayout.widget.DrawerLayout>

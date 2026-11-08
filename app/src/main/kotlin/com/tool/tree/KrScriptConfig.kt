@@ -134,14 +134,6 @@ class KrScriptConfig {
         return PageNode("")
     }
 
-    fun getDrawerConfig(): PageNode {
-        val pageInfo = PageNode("")
-        val info = configInfo ?: return pageInfo
-        info[DRAWER_CONFIG_SH]?.let { pageInfo.pageConfigSh = it }
-        info[DRAWER_CONFIG]?.let { pageInfo.pageConfigPath = it }
-        return pageInfo
-    }
-
     fun getBeforeStartSh(): String {
         val info = configInfo
         if (info != null && info.containsKey(BEFORE_START_SH)) {
@@ -165,8 +157,6 @@ class KrScriptConfig {
         private const val CUSTOM_TAB3_CONFIG_SH = "custom_tab3_config_sh"
         private const val CUSTOM_TAB4_CONFIG = "custom_tab4_config"
         private const val CUSTOM_TAB4_CONFIG_SH = "custom_tab4_config_sh"
-        private const val DRAWER_CONFIG = "drawer_config"
-        private const val DRAWER_CONFIG_SH = "drawer_config_sh"
         private const val BEFORE_START_SH = "before_start_sh"
 
         private var configInfo: HashMap<String, String>? = null

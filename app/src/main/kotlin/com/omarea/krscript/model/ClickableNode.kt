@@ -2,6 +2,7 @@ package com.omarea.krscript.model
 
 open class ClickableNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPath) {
     var iconPath = ""
+    var iconPageDir: String = ""
     var iconSh: String = ""
     var iconGifNum: Int = 0
     var iconGifTime: Int = 300

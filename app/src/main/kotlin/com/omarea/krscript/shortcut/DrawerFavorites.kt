@@ -4,14 +4,20 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import com.omarea.krscript.model.ClickableNode
+import com.omarea.krscript.model.NodeInfoBase
 import com.omarea.krscript.model.PageNode
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.UUID
 
-// Danh sách Yêu thích của mục lục bên trái, lưu bằng JSON (filesDir/drawer_favorites.json)
+// Các mục của trang Mục lục (nhóm Yêu thích và Công cụ), lưu bằng JSON (filesDir/drawer_favorites.json)
 class DrawerFavorites(private val context: Context) {
+
+    companion object {
+        const val SECTION_FAVORITE = "favorite"
+        const val SECTION_TOOL = "tool"
+    }
 
     class Entry(
         val id: String,
@@ -24,11 +30,14 @@ class DrawerFavorites(private val context: Context) {
         val html: String,
         val link: String,
         val activity: String,
-        val openId: String
+        val openId: String,
+        val section: String = SECTION_FAVORITE
     ) {
         fun toPage(): PageNode = PageNode(src).also {
+            it.key = id
             it.title = title
             it.iconPath = icon
+            it.iconPageDir = runCatching { NodeInfoBase(iconSrc).pageConfigDir }.getOrDefault("")
             it.pageConfigPath = config
             it.pageConfigSh = configSh
             it.onlineHtmlPage = html
@@ -37,26 +46,27 @@ class DrawerFavorites(private val context: Context) {
             it.openItemId = openId
         }
 
-        fun toIconNode(): ClickableNode = ClickableNode(iconSrc).also { it.iconPath = icon }
-
-        fun isSameTarget(o: Entry) = src == o.src && config == o.config && configSh == o.configSh &&
-            html == o.html && link == o.link && activity == o.activity && openId == o.openId
+        fun isSameTarget(o: Entry) = section == o.section && src == o.src && config == o.config &&
+            configSh == o.configSh && html == o.html && link == o.link && activity == o.activity && openId == o.openId
     }
 
     private val file get() = File(context.filesDir, "drawer_favorites.json")
 
+    fun version(): Long = if (file.isFile) file.lastModified() xor (file.length() shl 40) else 0L
+
     @Synchronized
-    fun list(): List<Entry> {
+    fun list(section: String? = null): List<Entry> {
         return try {
             if (!file.isFile) return emptyList()
             val array = JSONArray(file.readText(Charsets.UTF_8))
             (0 until array.length()).mapNotNull { fromJson(array.optJSONObject(it)) }
+                .filter { section == null || it.section == section }
         } catch (_: Exception) {
             emptyList()
         }
     }
 
-    // false nếu đã có mục cùng đích hoặc ghi thất bại
+    // false nếu đã có mục cùng đích trong cùng nhóm hoặc ghi thất bại
     @Synchronized
     fun add(entry: Entry): Boolean {
         val current = list()
@@ -70,7 +80,7 @@ class DrawerFavorites(private val context: Context) {
     }
 
     // intent do addToFavorites tạo ra: "page" = trang đích, "autoRunItemId" = id mục cần chạy
-    fun addFromIntent(intent: Intent, node: ClickableNode): Boolean {
+    fun addFromIntent(intent: Intent, node: ClickableNode, section: String = SECTION_FAVORITE): Boolean {
         val page = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getSerializableExtra("page", PageNode::class.java)
         } else {
@@ -89,7 +99,8 @@ class DrawerFavorites(private val context: Context) {
             html = page.onlineHtmlPage,
             link = page.link,
             activity = page.activity,
-            openId = openId
+            openId = openId,
+            section = section
         ))
     }
 
@@ -108,7 +119,7 @@ class DrawerFavorites(private val context: Context) {
     private fun toJson(e: Entry) = JSONObject().apply {
         put("id", e.id); put("title", e.title); put("icon", e.icon); put("iconSrc", e.iconSrc)
         put("src", e.src); put("config", e.config); put("configSh", e.configSh); put("html", e.html)
-        put("link", e.link); put("activity", e.activity); put("openId", e.openId)
+        put("link", e.link); put("activity", e.activity); put("openId", e.openId); put("section", e.section)
     }
 
     private fun fromJson(o: JSONObject?): Entry? {
@@ -118,7 +129,8 @@ class DrawerFavorites(private val context: Context) {
         return Entry(
             id, o.optString("title"), o.optString("icon"), o.optString("iconSrc"), o.optString("src"),
             o.optString("config"), o.optString("configSh"), o.optString("html"),
-            o.optString("link"), o.optString("activity"), o.optString("openId")
+            o.optString("link"), o.optString("activity"), o.optString("openId"),
+            o.optString("section").ifEmpty { SECTION_FAVORITE }
         )
     }
 }

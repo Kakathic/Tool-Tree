@@ -46,17 +46,18 @@ class IconPathAnalysis {
 
     fun loadIcon(context: Context, clickableNode: ClickableNode): Drawable? {
         if (clickableNode.iconPath.isEmpty()) return null
+        val iconDir = clickableNode.iconPageDir.ifEmpty { clickableNode.pageConfigDir }
         val paths = splitMultiPaths(clickableNode.iconPath)
         if (paths.isEmpty()) return null
         if (clickableNode.iconRealGif) {
-            decodeRealGif(context, clickableNode.pageConfigDir, paths[0])?.let { return it }
+            decodeRealGif(context, iconDir, paths[0])?.let { return it }
         }
         if (paths.size > 1) {
-            loadAnimatedFromPaths(context, clickableNode.pageConfigDir, paths, clickableNode.iconGifTime)?.let { return it }
+            loadAnimatedFromPaths(context, iconDir, paths, clickableNode.iconGifTime)?.let { return it }
         } else if (clickableNode.iconGifNum > 0) {
-            loadAnimatedFrames(context, clickableNode.pageConfigDir, paths[0], clickableNode.iconGifNum, clickableNode.iconGifTime)?.let { return it }
+            loadAnimatedFrames(context, iconDir, paths[0], clickableNode.iconGifNum, clickableNode.iconGifTime)?.let { return it }
         }
-        decodeBitmap(context, clickableNode.pageConfigDir, paths[0])?.let {
+        decodeBitmap(context, iconDir, paths[0])?.let {
             return bitmap2Drawable(it)
         }
         return null

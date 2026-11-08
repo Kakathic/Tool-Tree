@@ -302,8 +302,11 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                         val act = activity!!
                         val density = act.resources.displayMetrics.density
                         val checkDrawer = android.widget.CheckBox(act).apply {
-                            text = getString(R.string.kr_favorite_to_drawer)
+                            text = getString(R.string.tab_favorites)
                             isChecked = true
+                        }
+                        val checkTools = android.widget.CheckBox(act).apply {
+                            text = getString(R.string.index_tools)
                         }
                         val checkHome = android.widget.CheckBox(act).apply {
                             text = getString(R.string.kr_favorite_to_home)
@@ -312,6 +315,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                             orientation = android.widget.LinearLayout.VERTICAL
                             setPadding((10 * density).toInt(), (12 * density).toInt(), (10 * density).toInt(), 0)
                             addView(checkDrawer)
+                            addView(checkTools)
                             addView(checkHome)
                         }
                         DialogHelper.confirm(
@@ -324,6 +328,10 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
                                 if (checkDrawer.isChecked) {
                                     val added = DrawerFavorites(ctx).addFromIntent(intent, clickableNode)
                                     Toast.makeText(ctx, if (added) R.string.kr_favorite_added else R.string.kr_favorite_exists, Toast.LENGTH_SHORT).show()
+                                }
+                                if (checkTools.isChecked) {
+                                    val added = DrawerFavorites(ctx).addFromIntent(intent, clickableNode, DrawerFavorites.SECTION_TOOL)
+                                    Toast.makeText(ctx, if (added) R.string.kr_tools_added else R.string.kr_tools_exists, Toast.LENGTH_SHORT).show()
                                 }
                                 if (checkHome.isChecked) {
                                     val result = ActionShortcutManager(ctx).addShortcut(intent, IconPathAnalysis().loadLogo(ctx, clickableNode), clickableNode)
