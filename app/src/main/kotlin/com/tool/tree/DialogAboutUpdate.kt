@@ -287,6 +287,7 @@ class DialogAboutUpdate(
         bindSettings(view, activity)
         bindUpdate(view, activity)
         setupCardSize(view)
+        viewReady = true
         if (openedDirectly) {
             inUpdate = true
             aboutPanel.visibility = View.GONE
@@ -294,7 +295,6 @@ class DialogAboutUpdate(
             refreshSwipe()
             renderChangelog()
         }
-        viewReady = true
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
