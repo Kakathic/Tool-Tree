@@ -1,5 +1,6 @@
 package com.tool.tree
 
+import com.omarea.krscript.WebLauncher
 import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
@@ -599,7 +600,7 @@ object ChatMarkdown {
                     out.setSpan(object : ClickableSpan() {
                         override fun onClick(widget: View) {
                             try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(href)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                WebLauncher.open(context, href)
                             } catch (ex: Exception) {
                                 Toast.makeText(context, href, Toast.LENGTH_SHORT).show()
                             }

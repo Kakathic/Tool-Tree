@@ -1374,9 +1374,7 @@ object RowsRenderHelper {
                     spannableString.setSpan(object : ClickableSpan() {
                         override fun onClick(widget: View) {
                             try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(href))
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
+                                WebLauncher.open(context, href)
                             } catch (ex: Exception) {
                                 Toast.makeText(context, context.getString(R.string.kr_slice_activity_fail), Toast.LENGTH_SHORT).show()
                             }
@@ -1419,9 +1417,7 @@ object RowsRenderHelper {
             target.setSpan(object : ClickableSpan() {
                 override fun onClick(widget: View) {
                     try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(href))
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        context.startActivity(intent)
+                        WebLauncher.open(context, href)
                     } catch (ex: Exception) {
                         Toast.makeText(context, context.getString(R.string.kr_slice_activity_fail), Toast.LENGTH_SHORT).show()
                     }

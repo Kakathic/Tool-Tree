@@ -1,5 +1,6 @@
 package com.tool.tree
 
+import com.omarea.krscript.WebLauncher
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -131,9 +132,7 @@ object TerminalMoreDialog {
 
     private fun openUrl(context: Context, url: String) {
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE)
-            if (context !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
+            WebLauncher.open(context, url)
         } catch (e: Exception) {
             Toast.makeText(context, R.string.terminal_url_open_fail, Toast.LENGTH_SHORT).show()
         }

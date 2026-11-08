@@ -23,6 +23,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
 import com.omarea.common.ui.DialogFullScreen
+import com.omarea.krscript.WebLauncher
 import com.omarea.krscript.ui.DownloadProgressRing
 import com.omarea.krscript.ui.ListItemDownload
 import com.tool.tree.ui.SpinnerPopupHelper
@@ -43,6 +44,7 @@ class DialogAboutUpdate(
         const val REQUEST_WALLPAPER = 4101
         const val CHECKING_MIN_VISIBLE_MS = 800L
         const val PANEL_IN_MS = 220L
+        const val TRIPLE_TAP_GAP_MS = 600L
         const val CHANGELOG_FIRST_CHUNK = 4
         const val CHANGELOG_NEXT_CHUNK = 3
         const val AUTHOR_URL = "https://github.com/Kakathic"
@@ -137,8 +139,8 @@ class DialogAboutUpdate(
 
         view.findViewById<View>(R.id.dialog_root).setOnClickListener { onOutsideTap() }
 
-        view.findViewById<View>(R.id.about_version_row).setOnClickListener { openLink(activity, GITHUB_URL) }
-        view.findViewById<View>(R.id.about_author_row).setOnClickListener { openLink(activity, AUTHOR_URL) }
+        view.findViewById<View>(R.id.about_version_row).setOnClickListener(tripleTap { openLink(activity, GITHUB_URL) })
+        view.findViewById<View>(R.id.about_author_row).setOnClickListener(tripleTap { openLink(activity, AUTHOR_URL) })
         view.findViewById<View>(R.id.about_donate).setOnClickListener { openLink(activity, DONATE_URL) }
         view.findViewById<View>(R.id.about_telegram).setOnClickListener { openLink(activity, TELEGRAM_URL) }
         val versionName = runCatching { activity.packageManager.getPackageInfo(activity.packageName, 0).versionName }.getOrNull()
@@ -173,8 +175,22 @@ class DialogAboutUpdate(
 
     private fun openLink(activity: Activity, url: String) {
         try {
-            activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            WebLauncher.open(activity, url)
         } catch (_: Exception) {
+        }
+    }
+
+    private fun tripleTap(onTriple: () -> Unit): View.OnClickListener {
+        var count = 0
+        var lastTap = 0L
+        return View.OnClickListener {
+            val now = SystemClock.elapsedRealtime()
+            count = if (now - lastTap <= TRIPLE_TAP_GAP_MS) count + 1 else 1
+            lastTap = now
+            if (count >= 3) {
+                count = 0
+                onTriple()
+            }
         }
     }
 
