@@ -19,10 +19,6 @@ on:
       - 'gradle.properties'
       - 'gradle-wrapper.properties'
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions: write-all
 
 env:
@@ -52,7 +48,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.7.0'
+          gradle-version: '9.8.2'
 
       - name: Build APK
         run: |
@@ -95,7 +91,6 @@ jobs:
           fi
 
       - name: Beta APK
-        if: ${{ inputs.UPAPK != true }}
         uses: softprops/action-gh-release@v2
         with:
           name: "Tool-Tree ${{ env.VER }} beta"
