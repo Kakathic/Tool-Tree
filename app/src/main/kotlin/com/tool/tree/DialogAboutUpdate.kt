@@ -92,7 +92,6 @@ class DialogAboutUpdate(
     private lateinit var updateAction: TextView
     private lateinit var updateMeta: TextView
     private lateinit var updateTimeline: ViewGroup
-    private lateinit var updateLog: TextView
     private lateinit var destFile: File
     private lateinit var appContext: android.content.Context
 
@@ -586,9 +585,7 @@ class DialogAboutUpdate(
         updateAction = view.findViewById(R.id.update_action)
         updateMeta = view.findViewById(R.id.update_meta)
         updateTimeline = view.findViewById(R.id.update_timeline)
-        updateLog = view.findViewById(R.id.update_log)
 
-        updateLog.movementMethod = ChatMarkdown.SelectableLinkMovement
 
         view.findViewById<View>(R.id.about_update_row).setOnClickListener { openUpdatePanel(activity) }
 
@@ -738,11 +735,8 @@ class DialogAboutUpdate(
         applyVersionLabel()
         if (entries.isEmpty()) {
             updateTimeline.visibility = View.GONE
-            updateLog.visibility = View.VISIBLE
-            updateLog.text = HtmlCompat.fromHtml(AppUpdateInstaller.markdownToHtml(changelog), HtmlCompat.FROM_HTML_MODE_LEGACY)
             return
         }
-        updateLog.visibility = View.GONE
         updateTimeline.visibility = View.VISIBLE
         addChangelogEntries(entries, 0, generation)
     }
@@ -768,7 +762,8 @@ class DialogAboutUpdate(
             row.findViewById<TextView>(R.id.cl_items).apply {
                 val html = AppUpdateInstaller.markdownToHtml(entry.items.joinToString("\n"))
                 text = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_LEGACY).trimEnd()
-                movementMethod = LinkMovementMethod.getInstance()
+                setTextIsSelectable(true)
+                movementMethod = ChatMarkdown.SelectableLinkMovement
                 alpha = if (latest) 0.95f else 0.6f
             }
             updateTimeline.addView(row)

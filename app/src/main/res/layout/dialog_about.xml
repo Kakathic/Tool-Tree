@@ -564,13 +564,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical" />
-          <TextView
-            android:id="@+id/update_log"
-            style="@style/textSmall"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textIsSelectable="true"
-            android:visibility="gone" />
         </LinearLayout>
       </ScrollView>
     </LinearLayout>

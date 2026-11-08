@@ -37,7 +37,7 @@
             android:layout_height="0dp"
             android:visibility="gone" />
 
-        <com.tool.tree.ChatRecyclerView
+        <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/chat_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
