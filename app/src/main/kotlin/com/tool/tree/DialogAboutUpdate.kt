@@ -159,6 +159,12 @@ class DialogAboutUpdate(
         viewReady = true
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val root = view ?: return
+        root.post { if (viewReady) setupCardSize(root) }
+    }
+
     override fun onDestroyView() {
         if (::aboutPanel.isInitialized) aboutPanel.animate().cancel()
         if (::updatePanel.isInitialized) updatePanel.animate().cancel()
