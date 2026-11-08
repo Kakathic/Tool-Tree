@@ -248,9 +248,31 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="about_theme_system">Sistem</string>
     <string name="about_theme_dark">Gelap</string>
     <string name="about_theme_light">Terang</string>
-    <string name="about_wallpaper_none">Tanpa wallpaper</string>
+    <string name="about_wallpaper_none">Tidak ada</string>
     <string name="about_changelog">Riwayat perubahan</string>
     <string name="about_badge_latest">Terbaru</string>
     <string name="about_download">Unduh</string>
     <string name="about_author">Penulis</string>
+    <string name="about_desc">Tool-Tree: aplikasi alat yang dikonfigurasi lewat TOML dan skrip.</string>
+    <string name="index_empty">Tekan lama item untuk menambahkannya ke Favorit atau Alat.</string>
+    <string formatted="false" name="index_remove_desc">Hapus “%s” dari indeks?</string>
+    <string name="index_tools">Alat</string>
+    <string formatted="false" name="kr_favorite_add_desc">Ke mana “%s” akan ditambahkan?</string>
+    <string name="kr_favorite_add_title">Tambahkan ke</string>
+    <string name="kr_favorite_added">Ditambahkan ke favorit indeks</string>
+    <string name="kr_favorite_exists">Sudah ada di favorit indeks</string>
+    <string formatted="false" name="kr_favorite_remove_desc">Hapus “%s” dari Favorit?</string>
+    <string name="kr_favorite_to_drawer">Indeks</string>
+    <string name="kr_favorite_to_home">Layar utama</string>
+    <string name="kr_tools_added">Ditambahkan ke alat indeks</string>
+    <string name="kr_tools_exists">Sudah ada di alat indeks</string>
+    <string name="msg_dir_access_denied">Izin ditolak: folder ini tidak dapat dibaca</string>
+    <string name="online_browser_not_found">Browser yang sesuai tidak ditemukan.</string>
+    <string name="online_find_in_page">Cari di halaman</string>
+    <string name="online_fullscreen">Layar penuh</string>
+    <string name="online_fullscreen_hint">Tekan Kembali untuk keluar dari layar penuh</string>
+    <string name="tab_index">Indeks</string>
+    <string name="tab_custom3">Add-on</string>
+    <string name="tab_custom4">Pengaturan</string>
+    <string name="script_losted">Sumber daya skrip hilang</string>
 </resources>

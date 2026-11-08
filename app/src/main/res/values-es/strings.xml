@@ -253,9 +253,28 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="about_theme_system">Sistema</string>
     <string name="about_theme_dark">Oscuro</string>
     <string name="about_theme_light">Claro</string>
-    <string name="about_wallpaper_none">Sin fondo de pantalla</string>
+    <string name="about_wallpaper_none">Ninguno</string>
     <string name="about_changelog">Historial de cambios</string>
     <string name="about_badge_latest">Última</string>
     <string name="about_download">Descargar</string>
     <string name="about_author">Autor</string>
+    <string name="about_desc">Tool-Tree: aplicación de herramientas configurada mediante TOML y scripts.</string>
+    <string name="index_empty">Mantén pulsado un elemento para añadirlo a Favoritos o Herramientas.</string>
+    <string formatted="false" name="index_remove_desc">¿Quitar “%s” del índice?</string>
+    <string name="index_tools">Herramientas</string>
+    <string formatted="false" name="kr_favorite_add_desc">¿Dónde quieres añadir “%s”?</string>
+    <string name="kr_favorite_add_title">Añadir a</string>
+    <string name="kr_favorite_added">Añadido a los favoritos del índice</string>
+    <string name="kr_favorite_exists">Ya está en los favoritos del índice</string>
+    <string formatted="false" name="kr_favorite_remove_desc">¿Quitar “%s” de Favoritos?</string>
+    <string name="kr_favorite_to_drawer">Índice</string>
+    <string name="kr_favorite_to_home">Pantalla de inicio</string>
+    <string name="kr_tools_added">Añadido a las herramientas del índice</string>
+    <string name="kr_tools_exists">Ya está en las herramientas del índice</string>
+    <string name="msg_dir_access_denied">Permiso denegado: no se puede leer esta carpeta</string>
+    <string name="online_browser_not_found">No se encontró un navegador adecuado.</string>
+    <string name="online_find_in_page">Buscar en la página</string>
+    <string name="online_fullscreen">Pantalla completa</string>
+    <string name="online_fullscreen_hint">Pulsa Atrás para salir de pantalla completa</string>
+    <string name="tab_index">Índice</string>
 </resources>

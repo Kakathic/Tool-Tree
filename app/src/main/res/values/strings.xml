@@ -284,7 +284,7 @@ If you agree, press the confirm button to continue."</string>
     <string name="about_theme_system">System</string>
     <string name="about_theme_dark">Dark</string>
     <string name="about_theme_light">Light</string>
-    <string name="about_wallpaper_none">No wallpaper</string>
+    <string name="about_wallpaper_none">None</string>
     <string name="about_changelog">Changelog</string>
     <string name="about_badge_latest">Latest</string>
     <string name="about_download">Download</string>

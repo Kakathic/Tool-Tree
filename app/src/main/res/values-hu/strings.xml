@@ -248,9 +248,30 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="about_theme_system">Rendszer</string>
     <string name="about_theme_dark">Sötét</string>
     <string name="about_theme_light">Világos</string>
-    <string name="about_wallpaper_none">Nincs háttérkép</string>
+    <string name="about_wallpaper_none">Nincs</string>
     <string name="about_changelog">Változásnapló</string>
     <string name="about_badge_latest">Legújabb</string>
     <string name="about_download">Letöltés</string>
     <string name="about_author">Szerző</string>
+    <string name="about_desc">Tool-Tree: TOML-lal és szkriptekkel konfigurált eszközalkalmazás.</string>
+    <string name="index_empty">Tartsd lenyomva egy elemet, hogy hozzáadd a Kedvencekhez vagy az Eszközökhöz.</string>
+    <string formatted="false" name="index_remove_desc">Eltávolítod a(z) „%s” elemet a tartalomjegyzékből?</string>
+    <string name="index_tools">Eszközök</string>
+    <string formatted="false" name="kr_favorite_add_desc">Hová szeretnéd hozzáadni: „%s”?</string>
+    <string name="kr_favorite_add_title">Hozzáadás ide</string>
+    <string name="kr_favorite_added">Hozzáadva a tartalomjegyzék kedvenceihez</string>
+    <string name="kr_favorite_exists">Már szerepel a tartalomjegyzék kedvenceiben</string>
+    <string formatted="false" name="kr_favorite_remove_desc">Eltávolítod a(z) „%s” elemet a Kedvencekből?</string>
+    <string name="kr_favorite_to_drawer">Tartalomjegyzék</string>
+    <string name="kr_favorite_to_home">Kezdőképernyő</string>
+    <string name="kr_tools_added">Hozzáadva a tartalomjegyzék eszközeihez</string>
+    <string name="kr_tools_exists">Már szerepel a tartalomjegyzék eszközeiben</string>
+    <string name="msg_dir_access_denied">Hozzáférés megtagadva: a mappa nem olvasható</string>
+    <string name="online_browser_not_found">Nem található megfelelő böngésző.</string>
+    <string name="online_find_in_page">Keresés az oldalon</string>
+    <string name="online_fullscreen">Teljes képernyő</string>
+    <string name="online_fullscreen_hint">A kilépéshez nyomd meg a Vissza gombot</string>
+    <string name="tab_index">Tartalomjegyzék</string>
+    <string name="tab_custom3">Kiegészítők</string>
+    <string name="tab_custom4">Beállítások</string>
 </resources>

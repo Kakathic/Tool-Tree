@@ -248,9 +248,30 @@
     <string name="about_theme_system">Система</string>
     <string name="about_theme_dark">Тёмная</string>
     <string name="about_theme_light">Светлая</string>
-    <string name="about_wallpaper_none">Без обоев</string>
+    <string name="about_wallpaper_none">Нет</string>
     <string name="about_changelog">История изменений</string>
     <string name="about_badge_latest">Новейшая</string>
     <string name="about_download">Скачать</string>
     <string name="about_author">Автор</string>
+    <string name="about_desc">Tool-Tree: приложение с инструментами, настраиваемое через TOML и скрипты.</string>
+    <string name="index_empty">Удерживайте элемент, чтобы добавить его в «Избранное» или «Инструменты».</string>
+    <string formatted="false" name="index_remove_desc">Удалить «%s» из оглавления?</string>
+    <string name="index_tools">Инструменты</string>
+    <string formatted="false" name="kr_favorite_add_desc">Куда добавить «%s»?</string>
+    <string name="kr_favorite_add_title">Добавить в</string>
+    <string name="kr_favorite_added">Добавлено в избранное оглавления</string>
+    <string name="kr_favorite_exists">Уже есть в избранном оглавления</string>
+    <string formatted="false" name="kr_favorite_remove_desc">Удалить «%s» из избранного?</string>
+    <string name="kr_favorite_to_drawer">Оглавление</string>
+    <string name="kr_favorite_to_home">Главный экран</string>
+    <string name="kr_tools_added">Добавлено в инструменты оглавления</string>
+    <string name="kr_tools_exists">Уже есть в инструментах оглавления</string>
+    <string name="msg_dir_access_denied">Нет доступа: невозможно прочитать эту папку</string>
+    <string name="online_browser_not_found">Подходящий браузер не найден.</string>
+    <string name="online_find_in_page">Поиск на странице</string>
+    <string name="online_fullscreen">Во весь экран</string>
+    <string name="online_fullscreen_hint">Нажмите «Назад», чтобы выйти из полноэкранного режима</string>
+    <string name="tab_index">Оглавление</string>
+    <string name="tab_custom3">Дополнения</string>
+    <string name="tab_custom4">Настройки</string>
 </resources>
