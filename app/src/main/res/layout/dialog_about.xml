@@ -48,7 +48,7 @@
                         android:id="@+id/about_version" android:layout_width="wrap_content" android:layout_height="wrap_content"
                          android:alpha="0.7" android:textColor="?android:attr/textColorSecondary" android:textSize="14sp" />
                 </LinearLayout>
-                <View android:id="@+id/about_div1" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:background="?attr/colorPirm" />
+                <View android:id="@+id/about_div1" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:layout_marginEnd="20dp" android:background="?attr/colorPirm" />
                 <LinearLayout
                     android:id="@+id/about_author_row"
                     android:layout_width="match_parent"
@@ -67,7 +67,7 @@
                         android:text="@string/author_name" android:alpha="0.7" android:textColor="?android:attr/textColorSecondary" android:textSize="14sp" android:layout_marginEnd="4dp" />
                     <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="2dp" android:alpha="0.5" android:src="@drawable/kr_arrow" android:tint="?android:attr/textColorPrimary" android:importantForAccessibility="no" />
                 </LinearLayout>
-                <View android:id="@+id/about_div_author" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:background="?attr/colorPirm" />
+                <View android:id="@+id/about_div_author" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:layout_marginEnd="20dp" android:background="?attr/colorPirm" />
                 <LinearLayout
                     android:id="@+id/about_update_row"
                     android:layout_width="match_parent"
@@ -117,7 +117,7 @@
                             android:text="@string/about_theme_light" android:textColor="?android:attr/textColorSecondary" android:textSize="13sp" />
                     </LinearLayout>
                 </LinearLayout>
-                <View android:id="@+id/about_div2" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:background="?attr/colorPirm" />
+                <View android:id="@+id/about_div2" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:layout_marginEnd="20dp" android:background="?attr/colorPirm" />
                 <LinearLayout
                     android:id="@+id/blur_disable_row"
                     android:layout_width="match_parent"
@@ -135,7 +135,7 @@
                         android:clickable="false" android:focusable="false" android:textOff="" android:textOn=""
                         android:switchTextAppearance="@null" android:track="@drawable/kr_switch_track" android:thumb="@drawable/kr_switch_thumb" />
                 </LinearLayout>
-                <View android:id="@+id/about_div3" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:background="?attr/colorPirm" />
+                <View android:id="@+id/about_div3" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:layout_marginEnd="20dp" android:background="?attr/colorPirm" />
                 <LinearLayout
                     android:id="@+id/direct_bg_row"
                     android:layout_width="match_parent"
@@ -153,7 +153,7 @@
                         android:clickable="false" android:focusable="false" android:textOff="" android:textOn=""
                         android:switchTextAppearance="@null" android:track="@drawable/kr_switch_track" android:thumb="@drawable/kr_switch_thumb" />
                 </LinearLayout>
-                <View android:id="@+id/about_div4" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:background="?attr/colorPirm" />
+                <View android:id="@+id/about_div4" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:layout_marginEnd="20dp" android:background="?attr/colorPirm" />
                 <LinearLayout
                     android:id="@+id/wallpaper_row"
                     android:layout_width="match_parent"
@@ -188,7 +188,7 @@
                         android:textColor="?android:attr/textColorPrimary" android:textSize="15sp" />
 <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="2dp" android:alpha="0.5" android:src="@drawable/kr_arrow" android:tint="?android:attr/textColorPrimary" android:importantForAccessibility="no" />
                 </LinearLayout>
-                <View android:id="@+id/about_div5" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:background="?attr/colorPirm" />
+                <View android:id="@+id/about_div5" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:layout_marginEnd="20dp" android:background="?attr/colorPirm" />
                 <LinearLayout
                     android:id="@+id/about_telegram"
                     android:layout_width="match_parent"
