@@ -1,8 +1,18 @@
 ### Changelog
 
+**Version: 1.6.2 (8-11-2026)**
+
++ Add automated AI agents
++ Fix Terminal feature
++ Redesign info UI
++ Redesign update UI
++ Add favorites & tools section
++ Various other fixes
++ Numerous TOML feature updates
+
 **Version: 1.6.1 (12-10-2026)**
 
-+ Add terminal page [NEW]
++ Add terminal page
 + Update suggestion
 + Delete all data when updating to this version
 + Update layout changes
