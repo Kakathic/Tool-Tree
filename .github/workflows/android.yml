@@ -49,7 +49,7 @@ jobs:
         run: |
           chmod +x ./gradlew
           [ "$UPAPK" == "true" ] || echo 1 > app/src/main/assets/beta
-          ./gradlew assembleDebug -x lint -x test
+          ./gradlew assembleRelease -x lint -x test
           VER=$(grep -m1 'versionName ' app/build.gradle | cut -d'"' -f2)
           echo "Tool-Tree $VER"
           echo "VER=$VER" >> $GITHUB_ENV
