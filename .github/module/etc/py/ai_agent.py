@@ -54,7 +54,7 @@ DEFAULT_LANGUAGE = "English"
 API_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 THINKING_LEVELS = ("auto", "low", "medium", "high")
 THINKING_UNSUPPORTED = set()
-RECENT_CONTEXT_CHARS = 16000
+RECENT_CONTEXT_CHARS = 12000
 SUMMARY_CHUNK_CHARS = 8000
 MAX_SUMMARY_CHARS = 6000
 DEFAULT_SHELL_TIMEOUT = 0  # 0 = no time limit for commands
@@ -205,6 +205,8 @@ def describe_tool_call(step):
     value = arguments.get("command", "")
   elif name == "search_files":
     value = arguments.get("pattern") or arguments.get("path") or ""
+  elif name == "get_guide":
+    value = arguments.get("topic", "")
   else:
     value = arguments.get("path", "")
   return " ".join(str(value).split())
@@ -227,7 +229,7 @@ PROTECTED_DIRS = {
   "/mnt", "/opt", "/var", "/lib", "/boot",
 }
 MAX_READ_LINES = 1000
-CONTEXT_COMPACT_CHARS = 150000  # compact old tool results of a turn above this size
+CONTEXT_COMPACT_CHARS = 60000  # compact old tool results of a turn above this size
 OLD_RESULT_KEEP_CHARS = 1500    # results at most this long are never compacted
 MAX_IDENTICAL_FAILURES = 2      # the same failing call is not run a third time
 DEFAULT_READ_LINES = 500
@@ -885,8 +887,8 @@ def parse_args():
     "--markdown",
     action="store_true",
     help=(
-      "Allow Markdown in answers: removes the instruction that tells the AI to "
-      "answer in plain text (also: GEMINI_CLI_MARKDOWN=1)."
+      "Allow Markdown in answers: replaces the plain-text instruction with a list of the "
+      "Markdown syntax the viewer supports (also: GEMINI_CLI_MARKDOWN=1)."
     ),
   )
   parser.add_argument(
@@ -1053,6 +1055,67 @@ def load_instruction(args):
     "Admit uncertainty when information is insufficient."
   )
 
+MARKDOWN_GUIDE = (
+  "Answers render only this Markdown. Blocks (at line start): #..###### headings; - * + "
+  "bullets (indent to nest); 1. or 1) lists; - [ ] / - [x] tasks; > quote; ---/***/___ rule; "
+  "``` or ~~~ fenced code with optional language (boxed, copy button, verbatim: put commands, "
+  "files and ANSI samples here); tables (header row, |---|:---:|---:| separator, inline-only "
+  "cells, \\| for a literal pipe); [id]: url reference links. Inline: **bold** *italic* "
+  "***both*** ~~strike~~ ==highlight== ^sup^ ~sub~ (short, no spaces) `code` [text](url) "
+  "<url> (bare URLs auto-link) ![alt](url) (shown as a link, never a picture) "
+  "{text}(#RRGGBB or name); names: black white red green blue yellow cyan magenta gray "
+  "darkgray lightgray aqua fuchsia lime maroon navy olive purple silver teal. "
+  "Not supported: HTML, underline, LaTeX, footnotes, :emoji: shortcodes, nested tables. "
+  "Escape literal markers with a backslash. Use Markdown only when it aids readability; "
+  "keep short answers plain. Use colored text and ==highlight== only when the user asks or "
+  "when it distinguishes information; never for decoration."
+)
+COLOR_GUIDE = (
+  "The terminal renders ANSI SGR. To show colors/styles, write \\033[<codes>m (literal "
+  "backslash,0,3,3,[ ; auto-converted), e.g. \\033[1;32mbold green\\033[0m, "
+  "\\033[38;5;208morange\\033[0m, \\033[38;2;255;105;180mpink\\033[0m. Always close with "
+  "\\033[0m. Never put them in code fences (shown literally) except to display the raw "
+  "sequences. Never say colors are unsupported, and never run a shell command just to show "
+  "colors (its output goes to you, not the user). Use color only when the user asks or when "
+  "it distinguishes information (e.g. errors vs success); never for decoration."
+)
+
+MARKDOWN_STUB = (
+  "Answers render Markdown: headings, lists, bold/italic, quotes, links, `code` and fenced code "
+  "work as usual. Call get_guide(topic=\"markdown\") once before using tables, colored text, "
+  "highlight, sup/sub, task lists or reference links. Not supported: HTML, underline, LaTeX, "
+  "footnotes, :emoji: shortcodes. Keep short answers plain. Use colored text and ==highlight== "
+  "only when the user asks or when it distinguishes information; never for decoration."
+)
+COLOR_STUB = (
+  "The terminal renders ANSI colors and styles. To show colors or styled text, call "
+  "get_guide(topic=\"color\") first. Never say colors are unsupported. "
+  "Use color only when the user asks or when it distinguishes information (e.g. errors vs "
+  "success); never for decoration."
+)
+
+def guide_topics():
+  return ["color"] + (["markdown"] if ALLOW_MARKDOWN else [])
+
+def guide_tool():
+  return {
+    "type": "function",
+    "name": "get_guide",
+    "description": "Return detailed formatting instructions for a topic. Call it only when the topic is needed.",
+    "parameters": {
+      "type": "object",
+      "properties": {"topic": {"type": "string", "enum": guide_topics()}},
+      "required": ["topic"],
+    },
+  }
+
+def guide_text(topic):
+  if topic == "color":
+    return COLOR_GUIDE
+  if topic == "markdown" and ALLOW_MARKDOWN:
+    return MARKDOWN_GUIDE
+  return None
+
 def build_system_instruction(
   instruction,
   language,
@@ -1061,127 +1124,73 @@ def build_system_instruction(
   files_enabled=False,
 ):
   language_rule = (
-    f"Always write the complete response in the application language: {language} "
-    "(a language name or a BCP-47 language tag; use the language it denotes). "
-    "The application language has priority over the language used in the user's input. "
-    "Do not automatically switch response language. Keep source-code identifiers, "
-    "function names, library names, API names, shell commands and technical terms "
-    "unchanged when translating them would alter their meaning. Keep the language "
-    "and conventions of existing file content unless the user requests otherwise; "
-    "explicit output-language or file-language requirements apply to the requested artifact. "
-    "Use natural grammar, spelling, terminology and writing conventions."
+    f"Always reply in {language} (name or BCP-47 tag), whatever language the user writes in. "
+    "Keep code identifiers, commands, API/library names and technical terms unchanged. "
+    "Keep the language and conventions of existing file content unless asked; an explicit "
+    "language requirement applies to the requested artifact."
   )
   plain_text_rule = (
-    "For ordinary text responses, use plain text. Do not wrap ordinary text in Markdown "
-    "formatting, headings, bold/italic markers or code fences. Use natural paragraphs "
-    "and line breaks. When code is requested, output code directly without surrounding "
-    "Markdown fences; preserve syntax, indentation and all meaningful characters."
-  )
-  color_rule = (
-    "The answer is shown in a terminal that renders ANSI SGR color and style sequences. "
-    "When the user asks to print, show or demonstrate colors or styled text, write the "
-    "ANSI sequences directly in the answer text, spelled as \\033[<codes>m (backslash, 0, "
-    "3, 3, open bracket); they are converted to real escape characters automatically. "
-    "Examples: \\033[31mred\\033[0m, \\033[1;32mbold green\\033[0m, "
-    "\\033[38;5;208morange\\033[0m, \\033[38;2;255;105;180mpink\\033[0m. Close every "
-    "colored part with \\033[0m. Do not say colors are unsupported, do not print the "
-    "sequences inside code fences to produce color (text inside a code fence is shown literally and "
-    "never converted; use a fence only to show the sequences themselves as code), and do not run "
-    "a shell command only to display colors: "
-    "command output goes to you, not directly to the user."
+    "Use plain text: no Markdown, headings, bold/italic markers or code fences. "
+    "Output requested code directly, unfenced, preserving syntax and indentation."
   )
   scope_rule = (
-    "Stay within the scope of the user's request. Do not expand the task, redesign "
-    "architecture, optimize unrelated components, add dependencies or change project "
-    "configuration unless required. Do not ask for information already available in "
-    "the conversation or environment. Ask one focused question only when ambiguity "
-    "could cause a materially different or risky result. Distinguish confirmed facts "
-    "from assumptions and admit uncertainty when evidence is insufficient."
+    "Stay within the request: do not expand scope, redesign, optimize unrelated parts, add "
+    "dependencies or change configuration unless required. Do not ask for what is already "
+    "known; ask one focused question only if ambiguity could materially change the result or "
+    "risk harm. Separate facts from assumptions and admit uncertainty."
   )
   parts = [instruction, language_rule]
-  if not ALLOW_MARKDOWN:
+  lazy = bool(shell_enabled or files_enabled)
+  if ALLOW_MARKDOWN:
+    parts.append(MARKDOWN_STUB if lazy else MARKDOWN_GUIDE)
+  else:
     parts.append(plain_text_rule)
-  parts.extend([color_rule, scope_rule])
+  parts.extend([COLOR_STUB if lazy else COLOR_GUIDE, scope_rule])
   if shell_enabled:
     parts.append(
-      "You can run shell commands on the user's device with the run_command tool. "
-      "Current directory: " + os.getcwd() + ". System: " + platform.system() + ". "
-      "Run only commands needed for the task. If the user gave a specific path, "
-      "inspect only that path; do not run ls, find or wc on parent or unrelated "
-      "directories. Prefer read-only inspection only of what the task needs. "
-      "Check and report each command's exit code; a command is not successful merely "
-      "because execution ended, and a nonzero exit code must not be reported as success. "
-      "Avoid unrelated side effects and destructive operations such as deleting data, "
-      "formatting, bulk changes or overwriting unless clearly requested. Do not expose "
-      "API keys, passwords, tokens or other secrets in output. If the user denies a "
-      "command, do not retry it in disguised form."
+      "Tool run_command on the user's device. Run only needed commands; for a given path "
+      "inspect only it (no ls/find/wc on parents or unrelated dirs); prefer read-only. Check "
+      "exit codes: nonzero is a failure. Avoid unrelated side effects and destructive actions "
+      "(delete, format, bulk change, overwrite) unless asked. Never expose secrets. If a "
+      "command is denied, do not retry it in another form."
     )
   if files_enabled:
     parts.append(
-      "You can use read_file, edit_file, write_file and search_files on the user's device. "
-      "Always read a file before editing it and use exact old_text copied from the read "
-      "content. Read each file once, fully, with a large limit, and read all needed files "
-      "in the same round. Put every change for one file into a single edit_file call "
-      "using edits. If edit_file reports that old_text was not found or is ambiguous, "
-      "re-read only the affected lines (offset and limit) and resend the corrected "
-      "complete edits list; do not re-read the whole file. "
-      "When the user names a specific directory or file, work only inside that "
-      "path. Do not list, count, search or read its parent directories, sibling "
-      "directories or the current directory unless the task clearly requires "
-      "them (for example to resolve an import or a reference found in the code). "
-      "Do not scan directories just to get an overview. "
-      "Prefer edit_file for localized changes; do not rewrite an entire file "
-      "when a small edit is sufficient. Preserve existing features, behavior, structure, "
-      "interfaces, naming conventions, encoding and line endings unless the request "
-      "requires changing them. Change only what is necessary; do not remove, simplify "
-      "or refactor unrelated code. Check directly dependent components when a change "
-      "could affect them. Preserve the file's existing language and format unless the "
-      "user specifies otherwise. Do not overwrite user data or reveal secrets. "
-      + ("Use search_files instead of shell grep or find. " if shell_enabled else "")
-      + "If the user denies a change, do not retry it in another form."
+      "Tools: read_file, edit_file, write_file, search_files. Read each file fully once (large "
+      "limit, all needed files in one round) before editing; old_text must be copied exactly. "
+      "One edit_file call per file with all edits; if old_text is not found or ambiguous, "
+      "re-read only the affected lines and resend the full edits list. Work only inside the "
+      "named path; do not list/search parents, siblings or cwd unless required (e.g. resolving "
+      "an import), and never scan for an overview. Prefer edit_file over rewriting; change only "
+      "what is needed and preserve behavior, structure, interfaces, naming, encoding, line "
+      "endings, language and format; check directly dependent code. Never overwrite user data "
+      "or reveal secrets. "
+      + ("Use search_files instead of shell grep/find. " if shell_enabled else "")
+      + "If a change is denied, do not retry it in another form."
     )
   if shell_enabled or files_enabled:
     batch = (
-      "Batch independent operations to minimize tool-call overhead. Before calling "
-      "any tool, identify all currently known operations and group independent ones "
-      "into the fewest possible tool calls. Do not execute independent operations "
-      "one by one when they can safely be grouped. "
+      "Group independent operations into the fewest tool calls; run dependent ones "
+      "sequentially, using each result before the next step. "
     )
     if shell_enabled:
       batch += (
-        "For shell work, you MUST combine all currently known independent shell "
-        "commands into a single shell invocation whenever possible. Prefer one concise "
-        "multi-command script over multiple shell tool calls. Do not make a separate "
-        "shell call for each command when those commands can be executed together. "
-        "Use && when a command depends on the successful completion of the previous "
-        "command, and use ; or explicit status handling for independent commands that "
-        "should run regardless of previous failures. Preserve and report individual "
-        "command failures instead of silently ignoring them. "
-        "Only make another shell call when the next operation depends on a previous "
-        "result, requires information that was not available earlier, or is needed to "
-        "correct a failure. Before every additional shell call, check whether the "
-        "remaining independent operations can also be included. "
+        "Combine all known independent shell commands into one invocation: && when "
+        "dependent, ; for independent, and report each failure. Make another shell call only "
+        "if it depends on a previous result or fixes a failure. "
       )
     if files_enabled:
       batch += (
-        "For file work, read multiple required files in the same tool round and group "
-        "independent edits or searches when the API supports it. Read-only calls "
-        "(read_file, search_files) issued in the same round run in parallel, so put "
-        "all independent reads and searches in one round; "
+        "read_file/search_files in one round run in parallel; "
         + ("shell commands and file edits" if shell_enabled else "file edits")
-        + " always run one after another in the order given. "
+        + " run sequentially in order. "
       )
     batch += (
-      "Execute dependent "
-      "actions sequentially, using each result before deciding the next step. "
-      "Never batch in a way that obscures errors, weakens safety or bypasses "
-      "confirmation. Keep output concise and relevant. "
-      "Retry only for plausibly temporary failures or when a specific corrective "
-      "action is available; keep retries bounded and never repeat a denied or "
-      "destructive action. Distinguish API, tool, syntax, build and logic errors. "
-      "If an operation fails, inspect the actual result, correct it when safe and "
-      "within scope, or explain the cause and current state. Do not claim an "
-      "operation succeeded without evidence."
+      "Never batch in a way that hides errors, weakens safety or bypasses confirmation. "
+      "Keep output concise. Retry only plausibly temporary failures or with a specific fix, "
+      "bounded, never denied or destructive actions. On failure inspect the actual result, "
+      "fix if safe and in scope, or explain cause and state. Never claim success without "
+      "evidence."
     )
     parts.append(batch)
     if files_enabled:
@@ -1248,6 +1257,8 @@ def build_system_instruction(
         "that could not be performed."
       )
     parts.append(verify)
+  if shell_enabled:
+    parts.append("Dir: " + os.getcwd() + ". System: " + platform.system() + ".")
   if memory_summary:
     parts.append(
       "Persistent conversation memory (use as background context; prefer newer messages "
@@ -1303,6 +1314,8 @@ def _compatible_messages(history, instruction):
 
 def _compatible_tools(shell_enabled, files_enabled):
   tools = ([RUN_COMMAND_TOOL] if shell_enabled else []) + (FILE_TOOLS if files_enabled else [])
+  if shell_enabled or files_enabled:
+    tools = tools + [guide_tool()]
   return [{"type": "function", "function": {"name": tool["name"], "description": tool["description"], "parameters": tool["parameters"]}} for tool in tools]
 
 def _compatible_urlopen(request, timeout, status_callback=None):
@@ -2015,6 +2028,8 @@ def call_gemini(
     tools.append(RUN_COMMAND_TOOL)
   if files_enabled:
     tools.extend(FILE_TOOLS)
+  if shell_enabled or files_enabled:
+    tools.append(guide_tool())
   if tools:
     payload["tools"] = tools
   if stream_callback is not None:
@@ -3262,6 +3277,9 @@ def run_tool_call(step, policy, ui):
     else:
       result = {"error": "The user denied this command."}
       print(COLORS.error(ui["run_denied"]), file=sys.stderr)
+  elif name == "get_guide" and (policy.enabled or policy.files_enabled):
+    text = guide_text(str(arguments.get("topic", "")))
+    result = {"guide": text} if text else {"error": "Unknown topic. Available: " + ", ".join(guide_topics())}
   elif name in FILE_TOOL_NAMES and policy.files_enabled:
     if name == "read_file":
       result = tool_read_file(arguments, policy)

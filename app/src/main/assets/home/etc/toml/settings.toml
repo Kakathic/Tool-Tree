@@ -63,7 +63,7 @@ max-lines = 8
 markdown = true
 greeting = "@chat_greeting"
 script = '''
-chatbot --all --any-path --markdown --progress \
+ai_agent --all --any-path --markdown --progress \
 --lang "$chatai_lang" --model "$ai_models" \
 --provider "$list_provider" --instruction "$chatai_nextrule" \
 --thinking "$models_thinking" \
@@ -89,13 +89,13 @@ rm -f "$HOME/.cache/api.log" 2>/dev/null
 [[chat.menu]]
 title = "@api_website_title"
 script = '''
-chatbot --list-websites
+ai_agent --list-websites
 '''
 
 [[chat.menu]]
 title = "@model_list_title"
 script = '''
-chatbot --provider "$(glog list_provider)" --list-models
+ai_agent --provider "$(glog list_provider)" --list-models
 '''
 
 [[chat.params]]

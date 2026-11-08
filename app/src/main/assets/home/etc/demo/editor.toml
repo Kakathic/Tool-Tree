@@ -2,6 +2,8 @@
 [[toml]]
 load-key-sh = 'ETC="$ETC/demo" langpath'
 
+[[group]]
+title = "@path_toml"
 [[text]]
 [[text.rows]]
 sh = 'echo "${PAGE_CONFIG_FILE:-$ETC/demo/editor.toml}"'
@@ -9,8 +11,6 @@ monospace = true
 size = 11
 alpha = 0.7
 copy = true
-[[text.rows]]
-line = true
 
 [[group]]
 title = "#1 @ed_001"

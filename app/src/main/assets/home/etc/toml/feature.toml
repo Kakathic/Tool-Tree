@@ -62,60 +62,60 @@ title = "@api_key_text"
 icon = "{ICON}/apikey.png"
 script = '''
 slog ai_models "$ai_models"
-[ "$GEMINI_API_KEY" ] && list_provider=gemini chatbot -c
-[ "$OPENAI_API_KEY" ] && list_provider=openai chatbot -c
-[ "$OPENROUTER_API_KEY" ] && list_provider=openrouter chatbot -c
-[ "$GROQ_API_KEY" ] && list_provider=groq chatbot -c
-[ "$TOGETHER_API_KEY" ] && list_provider=together chatbot -c
-[ "$DEEPSEEK_API_KEY" ] && list_provider=deepseek chatbot -c
+[ "$GEMINI_API_KEY" ] && list_provider=gemini ai_agent -c
+[ "$OPENAI_API_KEY" ] && list_provider=openai ai_agent -c
+[ "$OPENROUTER_API_KEY" ] && list_provider=openrouter ai_agent -c
+[ "$GROQ_API_KEY" ] && list_provider=groq ai_agent -c
+[ "$TOGETHER_API_KEY" ] && list_provider=together ai_agent -c
+[ "$DEEPSEEK_API_KEY" ] && list_provider=deepseek ai_agent -c
 '''
 
 [[action.params]]
 name = "GEMINI_API_KEY"
 label = "Gemini"
-placeholder-sh = "list_provider=gemini chatbot --show 2>/dev/null"
+placeholder-sh = "list_provider=gemini ai_agent --show 2>/dev/null"
 type = "password"
 remember = false
 
 [[action.params]]
 name = "OPENAI_API_KEY"
 label = "Openai"
-placeholder-sh = "list_provider=openai chatbot --show 2>/dev/null"
+placeholder-sh = "list_provider=openai ai_agent --show 2>/dev/null"
 type = "password"
 remember = false
 
 [[action.params]]
 name = "OPENROUTER_API_KEY"
 label = "Openrouter"
-placeholder-sh = "list_provider=openrouter chatbot --show 2>/dev/null"
+placeholder-sh = "list_provider=openrouter ai_agent --show 2>/dev/null"
 type = "password"
 remember = false
 
 [[action.params]]
 name = "GROQ_API_KEY"
 label = "Groq"
-placeholder-sh = "list_provider=groq chatbot --show 2>/dev/null"
+placeholder-sh = "list_provider=groq ai_agent --show 2>/dev/null"
 type = "password"
 remember = false
 
 [[action.params]]
 name = "TOGETHER_API_KEY"
 label = "Together"
-placeholder-sh = "list_provider=together chatbot --show 2>/dev/null"
+placeholder-sh = "list_provider=together ai_agent --show 2>/dev/null"
 type = "password"
 remember = false
 
 [[action.params]]
 name = "DEEPSEEK_API_KEY"
 label = "Deepseek"
-placeholder-sh = "list_provider=deepseek chatbot --show 2>/dev/null"
+placeholder-sh = "list_provider=deepseek ai_agent --show 2>/dev/null"
 type = "password"
 remember = false
 
 [[action.params]]
 type = "rows"
 [[action.params.rows]]
-text-sh = "chatbot --list-websites"
+text-sh = "ai_agent --list-websites"
 margin-top = 8
 line = true
 
@@ -151,8 +151,8 @@ name = "ai_models_trans"
 title = "@select_provider_title"
 editable = true
 label = "Models"
-items = [ "gemini-3.5-flash-lite" ]
-value-sh = "glog ai_models_trans gemini-3.5-flash-lite"
+items = [ "gemini-3.1-flash-lite" ]
+value-sh = "glog ai_models_trans gemini-3.1-flash-lite"
 
 [[action.params]]
 name = "transai_hd"

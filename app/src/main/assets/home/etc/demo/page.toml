@@ -2,6 +2,8 @@
 [[toml]]
 load-key-sh = 'ETC="$ETC/demo" langpath'
 
+[[group]]
+title = "@path_toml"
 [[text]]
 [[text.rows]]
 sh = 'echo "${PAGE_CONFIG_FILE:-$ETC/demo/page.toml}"'

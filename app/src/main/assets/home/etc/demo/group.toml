@@ -2,16 +2,19 @@
 [[toml]]
 load-key-sh = 'ETC="$ETC/demo" langpath'
 
+[[group]]
 [[text]]
 [[text.rows]]
 break = true
 text = "@grp_001"
 size = 12
-alpha = 0.85
+alpha = 1
+
+[[group]]
+title = "@path_toml"
+[[text]]
 [[text.rows]]
-line = true
-[[text.rows]]
-sh = 'echo "@path_toml ${PAGE_CONFIG_FILE:-$ETC/demo/group.toml}"'
+sh = 'echo "${PAGE_CONFIG_FILE:-$ETC/demo/group.toml}"'
 monospace = true
 size = 11
 alpha = 0.7
