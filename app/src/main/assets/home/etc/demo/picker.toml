@@ -13,7 +13,7 @@ copy = true
 line = true
 
 [[group]]
-title = "@pk_001"
+title = "#1 @pk_001"
 [[picker]]
 title = "@prm_028"
 desc = "@pk_002"
@@ -46,7 +46,7 @@ get = "glog demo_picker_sh"
 set = 'slog demo_picker_sh "$state"; echo "@pk_003"'
 
 [[group]]
-title = "@pk_006"
+title = "#2 @pk_006"
 [[picker]]
 title = "multiple = true"
 desc = "@pk_007"
@@ -57,7 +57,7 @@ get = "glog demo_picker_multi"
 set = 'slog demo_picker_multi "$state"; echo "@pk_003"'
 
 [[group]]
-title = "@dep_039"
+title = "#3 @dep_039"
 [[picker]]
 title = "confirm"
 confirm = true

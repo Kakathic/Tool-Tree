@@ -13,7 +13,7 @@ copy = true
 line = true
 
 [[group]]
-title = "@dyn_001"
+title = "#1 @dyn_001"
 [[action]]
 title-sh = 'echo "@dyn_002"'
 desc-sh = 'echo "@dyn_003"'
@@ -30,7 +30,7 @@ lock-sh = 'echo 0'
 script = 'echo "@dyn_005"'
 
 [[group]]
-title = "@dyn_006"
+title = "#2 @dyn_006"
 [[action]]
 title = "support = shell"
 desc = "@dyn_007"
@@ -48,7 +48,7 @@ lock = "{LOT}|@dyn_013"
 script = 'echo "@dyn_014"'
 
 [[group]]
-title = "@dyn_015"
+title = "#3 @dyn_015"
 [[action]]
 title = "@dyn_016"
 desc = "load-after = true"
@@ -57,7 +57,7 @@ title-sh = 'sleep 1; echo "@dyn_017"'
 script = 'echo ok'
 
 [[group]]
-title = "@dyn_018"
+title = "#4 @dyn_018"
 [[text]]
 [[text.rows]]
 text = "Root: {ROT} @dyn_019"

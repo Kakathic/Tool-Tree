@@ -11,7 +11,7 @@ alpha = 0.7
 copy = true
 
 [[group]]
-title = "@pg_001"
+title = "#1 @pg_001"
 [[page]]
 title = "@pg_002"
 desc = "@pg_003"
@@ -28,7 +28,7 @@ process = true
 placeholder-count = 3
 
 [[group]]
-title = "@pg_007"
+title = "#2 @pg_007"
 [[page]]
 title = "@pg_008"
 desc = "@pg_009"
@@ -37,7 +37,7 @@ cat << 'TOMLEND'
 [[toml]]
 
 [[group]]
-title = "@pg_010"
+title = "#3 @pg_010"
 [[text]]
 [[text.rows]]
 text = "@pg_011"
@@ -54,7 +54,7 @@ desc = "@pg_016"
 config-sh = 'echo "$HOME/etc/demo/switch.toml"'
 
 [[group]]
-title = "@pg_017"
+title = "#4 @pg_017"
 [[page]]
 title = "link"
 desc = "@pg_018"
@@ -69,7 +69,7 @@ desc = "@pg_020"
 activity = "android.settings.SETTINGS"
 
 [[group]]
-title = "@pg_021"
+title = "#5 @pg_021"
 [[page]]
 title = "@pg_022"
 desc = "@pg_023"
@@ -88,7 +88,7 @@ italic = true
 size = 12
 
 [[group]]
-title = "@pg_027"
+title = "#6 @pg_027"
 [[page]]
 title = "@pg_028"
 desc = "@pg_029"

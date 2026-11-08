@@ -13,7 +13,7 @@ copy = true
 line = true
 
 [[group]]
-title = "@sw_001"
+title = "#1 @sw_001"
 [[switch]]
 title = "@sw_002"
 desc = "@sw_003"
@@ -29,7 +29,7 @@ desc = "@sw_007"
 get = "echo 1"
 
 [[group]]
-title = "@sw_008"
+title = "#2 @sw_008"
 [[switch]]
 title = "@sw_009"
 get = "glog demo_switch_log"
@@ -54,7 +54,7 @@ get = "glog demo_switch_bg"
 set = 'slog demo_switch_bg "$state"'
 
 [[group]]
-title = "@sw_012"
+title = "#3 @sw_012"
 [[switch]]
 title = "confirm"
 desc = "@sw_013"
@@ -73,7 +73,7 @@ get = "glog demo_switch_reload"
 set = 'slog demo_switch_reload "$state"'
 
 [[group]]
-title = "@sw_016"
+title = "#4 @sw_016"
 [[switch]]
 title = "@sw_017"
 get = "glog demo_switch_rows"

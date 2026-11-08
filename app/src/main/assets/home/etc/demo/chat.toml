@@ -13,7 +13,7 @@ copy = true
 line = true
 
 [[group]]
-title = "@ch_001"
+title = "#1 @ch_001"
 [[chat]]
 title = "@ch_002"
 desc = "@ch_003"
@@ -24,7 +24,7 @@ placeholder = "@ch_007"
 script = 'echo "@ch_008"'
 
 [[group]]
-title = "@ch_009"
+title = "#2 @ch_009"
 [[chat]]
 title = "Chat Markdown"
 desc = "@ch_010"
@@ -40,7 +40,7 @@ echo "@ch_013 \`$CHAT_ID\`"
 '''
 
 [[group]]
-title = "@ch_014"
+title = "#3 @ch_014"
 [[chat]]
 title = "@ch_015"
 desc = "@ch_016"

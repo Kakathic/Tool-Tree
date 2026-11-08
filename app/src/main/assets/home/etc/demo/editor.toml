@@ -13,7 +13,7 @@ copy = true
 line = true
 
 [[group]]
-title = "@ed_001"
+title = "#1 @ed_001"
 [[editor]]
 title = "@ed_002"
 desc = "@ed_003"
@@ -41,7 +41,7 @@ echo "@act_027"
 '''
 
 [[group]]
-title = "@ed_013"
+title = "#2 @ed_013"
 [[editor]]
 title = "@ed_014"
 desc = "@ed_015"
@@ -49,7 +49,7 @@ file = "{HOME}/demo_files/test_page.toml"
 placeholder = "[[toml]]"
 value = '''# toml
 [[group]]
-title = "@ed_016"
+title = "#3 @ed_016"
 [[switch]]
 title = "@ed_017"
 get = "glog demo_editor_page_sw"
@@ -60,7 +60,7 @@ script = 'echo "@ed_019"'
 '''
 
 [[group]]
-title = "@ed_020"
+title = "#4 @ed_020"
 [[editor]]
 title = "wrap = false"
 desc = "@ed_021"
@@ -93,7 +93,7 @@ value-sh = "date '+@ed_027 %H:%M:%S @ed_028 %d/%m/%Y'"
 run = false
 
 [[group]]
-title = "@ed_029"
+title = "#5 @ed_029"
 [[editor]]
 title = "@ed_030"
 file = "{HOME}/demo_files/notes.txt"

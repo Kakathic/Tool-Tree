@@ -13,7 +13,7 @@ copy = true
 line = true
 
 [[group]]
-title = "@act_001"
+title = "#1 @act_001"
 [[action]]
 title = "@act_002"
 desc = "@act_003"
@@ -29,7 +29,7 @@ key = "demo_action_key"
 script = 'echo "key = demo_action_key"'
 
 [[group]]
-title = "@act_008"
+title = "#2 @act_008"
 [[action]]
 title = "confirm = true"
 desc = "@act_009"
@@ -52,7 +52,7 @@ warn-sh = 'echo "@act_014"'
 script = 'echo "Done"'
 
 [[group]]
-title = "@act_015"
+title = "#3 @act_015"
 [[action]]
 title = "@act_016"
 script = '''
@@ -96,7 +96,7 @@ echo "@act_027"
 '''
 
 [[group]]
-title = "shell-by, shell-value, shell-mode"
+title = "#4 shell-by, shell-value, shell-mode"
 [[action]]
 title = "@act_028"
 desc = "@act_029"
@@ -113,7 +113,7 @@ value = "log"
 items = ["@act_031", "@act_032", "@act_033"]
 
 [[group]]
-title = "@act_034"
+title = "#5 @act_034"
 [[action]]
 title = "keep-dialog"
 desc = "@act_035"
@@ -138,7 +138,7 @@ TOMLEND
 '''
 
 [[group]]
-title = "@act_042"
+title = "#6 @act_042"
 [[action]]
 title = "@act_043"
 script = 'echo ok'
@@ -163,7 +163,7 @@ TOMLEND
 '''
 
 [[group]]
-title = "@act_048"
+title = "#7 @act_048"
 [[switch]]
 key = "demo_reload_sw"
 title = "@act_049"
@@ -181,7 +181,7 @@ script = 'echo "@act_053"'
 reload-page = true
 
 [[group]]
-title = "@act_054"
+title = "#8 @act_054"
 [[action]]
 title = "lock"
 lock = "@act_055"

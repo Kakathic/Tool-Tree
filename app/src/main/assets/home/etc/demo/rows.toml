@@ -13,7 +13,7 @@ copy = true
 line = true
 
 [[group]]
-title = "@rw_001"
+title = "#1 @rw_001"
 [[text]]
 [[text.rows]]
 sh = "date '+@rw_002 %H:%M:%S'"
@@ -23,7 +23,7 @@ sh = "echo @rw_004 $(getprop ro.product.model)"
 break = true
 
 [[group]]
-title = "@rw_005"
+title = "#2 @rw_005"
 [[text]]
 [[text.rows]]
 sh = "date '+@rw_006 %H:%M:%S'"
@@ -52,7 +52,7 @@ underline = true
 break = true
 
 [[group]]
-title = "@rw_014"
+title = "#3 @rw_014"
 [[text]]
 [[text.rows]]
 text = "@rw_015"
@@ -76,7 +76,7 @@ underline = true
 break = true
 
 [[group]]
-title = "@rw_018"
+title = "#4 @rw_018"
 [[text]]
 [[text.rows]]
 sh = "date '+@rw_019 %H:%M:%S'"
@@ -85,7 +85,7 @@ refresh-bar = true
 refresh-bar-color = "#0DBDA2"
 
 [[group]]
-title = "@rw_020"
+title = "#5 @rw_020"
 [[text]]
 [[text.rows]]
 text = "@rw_021"
@@ -108,7 +108,7 @@ set = 'slog demo_row_confirm "$state"'
 break = true
 
 [[group]]
-title = "@rw_025"
+title = "#6 @rw_025"
 [[text]]
 [[text.rows]]
 text = "@rw_026"
@@ -122,7 +122,7 @@ support = "echo 1"
 break = true
 
 [[group]]
-title = "@rw_029"
+title = "#7 @rw_029"
 [[text]]
 [[text.rows]]
 text = "@rw_030"
@@ -133,7 +133,7 @@ html-height = 200
 break = true
 
 [[group]]
-title = "@rw_031"
+title = "#8 @rw_031"
 [[text]]
 rows-sh = '''
 cat << TOMLEND

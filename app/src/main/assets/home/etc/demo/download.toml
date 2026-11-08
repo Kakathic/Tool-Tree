@@ -13,7 +13,7 @@ copy = true
 line = true
 
 [[group]]
-title = "@dl_001"
+title = "#1 @dl_001"
 [[download]]
 title = "@dl_002"
 desc = "@dl_003"
@@ -29,7 +29,7 @@ url-sh = 'echo "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/du
 script = 'echo "@dl_006"'
 
 [[group]]
-title = "@dl_007"
+title = "#2 @dl_007"
 [[download]]
 title = "@dl_008"
 desc = "@dl_009"
@@ -49,7 +49,7 @@ lock = "@dl_012"
 url = "https://example.com/file.zip"
 
 [[group]]
-title = "@dl_013"
+title = "#3 @dl_013"
 [[download]]
 title = "@dl_014"
 url = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"

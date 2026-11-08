@@ -23,7 +23,7 @@ alpha = 0.7
 copy = true
 
 [[group]]
-title = "@idx_003"
+title = "#1 @idx_003"
 [[page]]
 title = "@idx_004"
 desc = "@idx_005"
@@ -34,7 +34,7 @@ desc = "@idx_006"
 config = "{HOME}/etc/demo/page.toml"
 
 [[group]]
-title = "@idx_007"
+title = "#2 @idx_007"
 [[page]]
 title = "action"
 desc = "@idx_008"
@@ -53,7 +53,7 @@ desc = "choose, pick, input, progress, am, exit"
 config = "{HOME}/etc/demo/control.toml"
 
 [[group]]
-title = "@idx_012"
+title = "#3 @idx_012"
 [[page]]
 title = "switch"
 desc = "@idx_013"
@@ -64,7 +64,7 @@ desc = "@idx_014"
 config = "{HOME}/etc/demo/picker.toml"
 
 [[group]]
-title = "@idx_015"
+title = "#4 @idx_015"
 [[page]]
 title = "@idx_016"
 desc = "@idx_017"
@@ -75,7 +75,7 @@ desc = "reset, progress, toggle, refresh, html"
 config = "{HOME}/etc/demo/rows.toml"
 
 [[group]]
-title = "@idx_019"
+title = "#5 @idx_019"
 [[page]]
 title = "editor"
 desc = "@idx_020"
@@ -94,7 +94,7 @@ desc = "@idx_023"
 config = "{HOME}/etc/demo/download.toml"
 
 [[group]]
-title = "@idx_024"
+title = "#6 @idx_024"
 [[page]]
 title = "@idx_025"
 desc = "@idx_026"

@@ -13,7 +13,7 @@ copy = true
 line = true
 
 [[group]]
-title = "@prm_001"
+title = "#1 @prm_001"
 [[action]]
 title = "text, int, number, password"
 desc = "@prm_002"
@@ -52,7 +52,7 @@ type = "password"
 placeholder = "@prm_011"
 
 [[group]]
-title = "@prm_012"
+title = "#2 @prm_012"
 [[action]]
 title = "max-lines"
 desc = "@prm_013"
@@ -65,7 +65,7 @@ max-lines = 5
 placeholder = "@prm_015"
 
 [[group]]
-title = "@prm_016"
+title = "#3 @prm_016"
 [[action]]
 title = "bool, checkbox, switch"
 desc = "@prm_017"
@@ -95,7 +95,7 @@ desc = "@prm_023"
 desc-on = "@prm_024"
 
 [[group]]
-title = "@prm_025"
+title = "#4 @prm_025"
 [[action]]
 title = "seekbar"
 script = 'echo "brightness = $brightness"'
@@ -108,7 +108,7 @@ max = 100
 value = "40"
 
 [[group]]
-title = "@prm_027"
+title = "#5 @prm_027"
 [[action]]
 title = "@prm_028"
 desc = "@prm_029"
@@ -157,7 +157,7 @@ editable = true
 items = ["abc", "xyz"]
 
 [[group]]
-title = "@prm_041"
+title = "#6 @prm_041"
 [[action]]
 title = "multi-select"
 desc = "@prm_042"
@@ -172,7 +172,7 @@ value = ["a", "c"]
 items = ["@prm_044", "@prm_045", "@prm_046", "@prm_047"]
 
 [[group]]
-title = "@prm_048"
+title = "#7 @prm_048"
 [[action]]
 title = "file, folder"
 script = '''
@@ -207,7 +207,7 @@ multiple = true
 separator = ","
 
 [[group]]
-title = "@prm_053"
+title = "#8 @prm_053"
 [[action]]
 title = "color"
 script = 'echo "color = $color"'
@@ -218,7 +218,7 @@ type = "color"
 value = "#0DBDA2"
 
 [[group]]
-title = "@prm_055"
+title = "#9 @prm_055"
 [[action]]
 title = "value-sh, placeholder-sh, label-sh, desc-sh, title-sh"
 script = 'echo "clock = $clock"'
@@ -250,7 +250,7 @@ value = "@prm_063"
 remember = false
 
 [[group]]
-title = "@prm_064"
+title = "#10 @prm_064"
 [[action]]
 title = "@prm_065"
 desc = "@prm_066"
@@ -285,7 +285,7 @@ value = "hai"
 apply = 'echo "@prm_078"'
 
 [[group]]
-title = "@prm_079"
+title = "#11 @prm_079"
 [[action]]
 title = "type = rows"
 desc = "@prm_080"

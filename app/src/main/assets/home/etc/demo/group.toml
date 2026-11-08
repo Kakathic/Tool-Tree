@@ -18,7 +18,7 @@ alpha = 0.7
 copy = true
 
 [[group]]
-title = "@grp_002"
+title = "#1 @grp_002"
 [[action]]
 title = "@grp_003"
 desc = "@grp_004"
@@ -28,7 +28,7 @@ title = "@grp_006"
 script = 'echo "@grp_007"'
 
 [[group]]
-title = "@grp_008"
+title = "#2 @grp_008"
 line = true
 [[switch]]
 title = "@grp_009"
@@ -41,20 +41,20 @@ get = "glog demo_group_picker"
 set = 'slog demo_group_picker "$state"'
 
 [[group]]
-title-sh = 'echo "@grp_013"'
+title = "#3 @grp_013"
 [[action]]
 title = "@grp_014"
 script = 'echo ok'
 
 [[group]]
-title = "@grp_015"
+title = "#4 @grp_015"
 support = "false"
 [[action]]
 title = "@grp_016"
 script = 'echo hidden'
 
 [[group]]
-title = "@grp_017"
+title = "#5 @grp_017"
 [[action]]
 title = "@grp_018"
 script = 'echo ok'
@@ -67,7 +67,76 @@ size = 12
 alpha = 0.85
 
 [[group]]
-title = "@grp_023"
+title = "#6 @grp_023"
 [[action]]
 title = "@grp_024"
 script = 'echo ok'
+
+[[text]]
+[[text.rows]]
+text = "@grp_025"
+size = 12
+alpha = 0.85
+
+[[group]]
+title = "#7 @grp_026"
+columns = 2
+[[action]]
+title = "@grp_027"
+desc = "@grp_028"
+script = 'echo "@grp_027"'
+[[action]]
+title = "@grp_029"
+desc = "@grp_028"
+script = 'echo "@grp_029"'
+[[switch]]
+title = "@grp_030"
+get = "glog demo_group_grid_switch"
+set = 'slog demo_group_grid_switch "$state"'
+[[action]]
+title = "@grp_031"
+desc = "@grp_028"
+script = 'echo "@grp_031"'
+
+[[group]]
+title = "#8 @grp_032"
+columns = true
+column-width = 140
+min-columns = 2
+max-columns = 4
+[[action]]
+title = "@grp_027"
+script = 'echo "@grp_027"'
+[[action]]
+title = "@grp_029"
+script = 'echo "@grp_029"'
+[[action]]
+title = "@grp_031"
+script = 'echo "@grp_031"'
+[[action]]
+title = "@grp_033"
+script = 'echo "@grp_033"'
+[[action]]
+title = "@grp_034"
+script = 'echo "@grp_034"'
+
+[[group]]
+title = "#9 @grp_035"
+card = true
+columns = 2
+[[action]]
+title = "@grp_027"
+desc = "@grp_028"
+script = 'echo "@grp_027"'
+[[action]]
+title = "@grp_029"
+cell = "b"
+script = 'echo "@grp_029"'
+[[action]]
+title = "@grp_031"
+cell = "b"
+script = 'echo "@grp_031"'
+[[action]]
+title = "@grp_033"
+desc = "@grp_028"
+script = 'echo "@grp_033"'

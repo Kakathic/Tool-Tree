@@ -13,7 +13,7 @@ copy = true
 line = true
 
 [[group]]
-title = "@txt_001"
+title = "#1 @txt_001"
 [[text]]
 [[text.rows]]
 text = "@txt_003"
@@ -54,7 +54,7 @@ line-height = 1.6
 break = true
 
 [[group]]
-title = "@txt_012"
+title = "#2 @txt_012"
 [[text]]
 [[text.rows]]
 text = "@txt_013"
@@ -75,7 +75,7 @@ text = "@txt_017"
 break = true
 
 [[group]]
-title = "@txt_018"
+title = "#3 @txt_018"
 [[text]]
 [[text.rows]]
 text = "@txt_019"
@@ -96,7 +96,7 @@ align = "right"
 link = "https://kakathic.github.io/Tool-Tree/website/Toml.html"
 
 [[group]]
-title = "@txt_022"
+title = "#4 @txt_022"
 [[text]]
 [[text.rows]]
 text = "@txt_023"
@@ -115,7 +115,7 @@ markdown = true
 break = true
 
 [[group]]
-title = "@txt_027"
+title = "#5 @txt_027"
 [[text]]
 [[text.rows]]
 text = "@txt_028"
@@ -134,7 +134,7 @@ copy = true
 break = true
 
 [[group]]
-title = "@txt_032"
+title = "#6 @txt_032"
 [[text]]
 [[text.rows]]
 text = "@txt_033"
@@ -151,7 +151,7 @@ photo = "{ICON}/info.png"
 break = true
 
 [[group]]
-title = "@txt_040"
+title = "#7 @txt_040"
 [[text]]
 [[text.rows]]
 text = "@txt_041"

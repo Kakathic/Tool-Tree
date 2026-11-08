@@ -13,7 +13,7 @@ copy = true
 line = true
 
 [[group]]
-title = "@dep_001"
+title = "#1 @dep_001"
 [[action]]
 title = "depend-on, depend-value"
 desc = "@dep_002"
@@ -59,7 +59,7 @@ depend-value = "1"
 depend-mode = "hide"
 
 [[group]]
-title = "@dep_010"
+title = "#2 @dep_010"
 [[action]]
 title = "depend-readonly, depend-sort"
 desc = "@dep_011"
@@ -80,7 +80,7 @@ depend-readonly = true
 depend-sort = true
 
 [[group]]
-title = "@dep_014"
+title = "#3 @dep_014"
 [[action]]
 title = "@dep_015"
 desc = "@dep_016"
@@ -193,7 +193,7 @@ depend-value = "1|1|1"
 depend-threshold = 67
 
 [[group]]
-title = "@dep_029"
+title = "#4 @dep_029"
 [[action]]
 title = "@dep_030"
 desc = "@dep_031"
@@ -218,7 +218,7 @@ depend-on = "type_sel"
 depend-value = "dd*"
 
 [[group]]
-title = "@dep_039"
+title = "#5 @dep_039"
 [[action]]
 title = "depend-negate, depend-initial, depend-cascade"
 script = 'echo "an = $hidden_sent / hien = $child_text"'
