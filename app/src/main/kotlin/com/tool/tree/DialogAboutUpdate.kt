@@ -571,7 +571,7 @@ class DialogAboutUpdate(
         updateTimeline = view.findViewById(R.id.update_timeline)
         updateLog = view.findViewById(R.id.update_log)
 
-        updateLog.movementMethod = LinkMovementMethod.getInstance()
+        updateLog.movementMethod = ChatMarkdown.SelectableLinkMovement
 
         view.findViewById<View>(R.id.about_update_row).setOnClickListener { openUpdatePanel(activity) }
 
