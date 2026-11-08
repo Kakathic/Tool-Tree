@@ -230,7 +230,7 @@ class DialogAboutUpdate(
             checking -> renderCheckingUi(activity)
             activeDownload != null -> {}
             info != null -> showAvailable(info, activity)
-            else -> startCheck(activity, silent = false)
+            else -> startCheck(activity)
         }
     }
 
@@ -290,7 +290,7 @@ class DialogAboutUpdate(
         themeSegments.forEachIndexed { index, seg ->
             val selected = index == base
             seg.background = if (selected) ContextCompat.getDrawable(activity, R.drawable.about_seg_selected) else null
-            if (selected) seg.setTextColor(android.graphics.Color.WHITE) else seg.setTextColor(textSecondary)
+            seg.setTextColor(if (selected) textPrimary else textSecondary)
             seg.setTypeface(null, if (selected) Typeface.BOLD else Typeface.NORMAL)
         }
         val visibility = if (wallpaper) View.VISIBLE else View.GONE
@@ -421,7 +421,7 @@ class DialogAboutUpdate(
             }
             if (checking) return@setOnClickListener
             when (mode) {
-                UpdateMode.CHECK -> startCheck(activity, silent = false)
+                UpdateMode.CHECK -> startCheck(activity)
                 UpdateMode.UPDATE -> startDownload(activity)
                 UpdateMode.INSTALL -> openApk(activity, destFile)
             }
@@ -430,11 +430,9 @@ class DialogAboutUpdate(
         updateMeta.text = ""
 
         val info = knownInfo
-        if (info != null) {
-            showAvailable(info, activity)
-        } else {
-            startCheck(activity, silent = true)
-        }
+        // Không tự kiểm tra khi mở Giới thiệu: chỉ kiểm tra khi người dùng vào màn Cập nhật.
+        // Chấm đỏ dựa trên kết quả MainActivity đã kiểm tra lúc khởi động (knownInfo)
+        if (info != null) showAvailable(info, activity)
         refreshUpdateRow()
     }
 
@@ -636,27 +634,34 @@ class DialogAboutUpdate(
         setBusy(true)
     }
 
-    private fun startCheck(activity: Activity, silent: Boolean) {
+    private fun startCheck(activity: Activity) {
         if (checking) return
         checking = true
-        if (!silent) renderCheckingUi(activity)
-        val checkStart = SystemClock.elapsedRealtime()
+        renderCheckingUi(activity)
 
-        Thread {
-            val result = try {
-                AppUpdateChecker.checkCached(activity)
-            } catch (_: Exception) {
-                AppUpdateCheckResult.Failed
-            }
-            val remaining = if (silent) 0L
-            else (CHECKING_MIN_VISIBLE_MS - (SystemClock.elapsedRealtime() - checkStart)).coerceAtLeast(0L)
-            mainHandler.postDelayed({
+        // Kiểm tra gồm tải mạng + băm SHA-256 cả APK: chờ hiệu ứng chuyển màn xong rồi mới chạy, ưu tiên luồng nền
+        mainHandler.postDelayed({
+            if (!viewReady || !isAdded) {
                 checking = false
-                onResult(result)
-                if (!viewReady || !isAdded) return@postDelayed
-                applyResult(activity, result)
-            }, remaining)
-        }.apply { isDaemon = true }.start()
+                return@postDelayed
+            }
+            val checkStart = SystemClock.elapsedRealtime()
+            Thread {
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+                val result = try {
+                    AppUpdateChecker.checkCached(activity)
+                } catch (_: Exception) {
+                    AppUpdateCheckResult.Failed
+                }
+                val remaining = (CHECKING_MIN_VISIBLE_MS - (SystemClock.elapsedRealtime() - checkStart)).coerceAtLeast(0L)
+                mainHandler.postDelayed({
+                    checking = false
+                    onResult(result)
+                    if (!viewReady || !isAdded) return@postDelayed
+                    applyResult(activity, result)
+                }, remaining)
+            }.apply { isDaemon = true }.start()
+        }, PANEL_IN_MS + 40L)
     }
 
     private fun applyResult(activity: Activity, result: AppUpdateCheckResult) {
