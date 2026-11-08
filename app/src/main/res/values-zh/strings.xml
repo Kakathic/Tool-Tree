@@ -221,6 +221,7 @@
     <string name="about_theme_light">浅色</string>
     <string name="about_wallpaper_none">不使用</string>
     <string name="about_changelog">更新日志</string>
+    <string name="about_changelog_empty">无法加载更新日志</string>
     <string name="about_badge_latest">最新</string>
     <string name="about_download">下载</string>
     <string name="about_author">作者</string>

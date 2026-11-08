@@ -199,6 +199,7 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="about_theme_light">Világos</string>
     <string name="about_wallpaper_none">Nincs</string>
     <string name="about_changelog">Változásnapló</string>
+    <string name="about_changelog_empty">A változásnapló nem tölthető be</string>
     <string name="about_badge_latest">Legújabb</string>
     <string name="about_download">Letöltés</string>
     <string name="about_author">Szerző</string>

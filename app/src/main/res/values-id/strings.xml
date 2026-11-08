@@ -201,6 +201,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="about_theme_light">Terang</string>
     <string name="about_wallpaper_none">Tidak ada</string>
     <string name="about_changelog">Riwayat perubahan</string>
+    <string name="about_changelog_empty">Tidak dapat memuat riwayat perubahan</string>
     <string name="about_badge_latest">Terbaru</string>
     <string name="about_download">Unduh</string>
     <string name="about_author">Penulis</string>

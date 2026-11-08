@@ -200,6 +200,7 @@
     <string name="about_theme_light">Светлая</string>
     <string name="about_wallpaper_none">Нет</string>
     <string name="about_changelog">История изменений</string>
+    <string name="about_changelog_empty">Не удалось загрузить историю изменений</string>
     <string name="about_badge_latest">Новейшая</string>
     <string name="about_download">Скачать</string>
     <string name="about_author">Автор</string>

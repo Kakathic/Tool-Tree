@@ -92,6 +92,7 @@ class DialogAboutUpdate(
     private lateinit var updateAction: TextView
     private lateinit var updateMeta: TextView
     private lateinit var updateTimeline: ViewGroup
+    private lateinit var updateChangelogEmpty: View
     private lateinit var destFile: File
     private lateinit var appContext: android.content.Context
 
@@ -251,6 +252,7 @@ class DialogAboutUpdate(
                         aboutPanel.translationX = 0f
                         aboutPanel.alpha = 1f
                         if (commit) {
+                            autoCommitted = false
                             inUpdate = false
                             updatePanel.visibility = View.GONE
                             refreshSwipe()
@@ -585,6 +587,7 @@ class DialogAboutUpdate(
         updateAction = view.findViewById(R.id.update_action)
         updateMeta = view.findViewById(R.id.update_meta)
         updateTimeline = view.findViewById(R.id.update_timeline)
+        updateChangelogEmpty = view.findViewById(R.id.update_changelog_empty)
 
 
         view.findViewById<View>(R.id.about_update_row).setOnClickListener { openUpdatePanel(activity) }
@@ -711,6 +714,8 @@ class DialogAboutUpdate(
                 if (cached != null && changelogText == null) {
                     changelogText = cached
                     if (viewReady && inUpdate) renderChangelog()
+                } else if (viewReady && ::updateChangelogEmpty.isInitialized && changelogText.isNullOrBlank()) {
+                    updateChangelogEmpty.visibility = if (checking) View.GONE else View.VISIBLE
                 }
             }
         }.apply { isDaemon = true }.start()
@@ -735,8 +740,10 @@ class DialogAboutUpdate(
         applyVersionLabel()
         if (entries.isEmpty()) {
             updateTimeline.visibility = View.GONE
+            updateChangelogEmpty.visibility = View.VISIBLE
             return
         }
+        updateChangelogEmpty.visibility = View.GONE
         updateTimeline.visibility = View.VISIBLE
         addChangelogEntries(entries, 0, generation)
     }

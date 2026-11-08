@@ -205,6 +205,7 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="about_theme_light">Claro</string>
     <string name="about_wallpaper_none">Ninguno</string>
     <string name="about_changelog">Historial de cambios</string>
+    <string name="about_changelog_empty">No se pudo cargar el historial de cambios</string>
     <string name="about_badge_latest">Última</string>
     <string name="about_download">Descargar</string>
     <string name="about_author">Autor</string>

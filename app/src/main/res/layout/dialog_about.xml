@@ -564,6 +564,18 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical" />
+          <TextView
+            android:id="@+id/update_changelog_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:alpha="0.6"
+            android:gravity="center"
+            android:paddingTop="24dp"
+            android:paddingBottom="24dp"
+            android:text="@string/about_changelog_empty"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="14sp"
+            android:visibility="gone" />
         </LinearLayout>
       </ScrollView>
     </LinearLayout>
