@@ -61,7 +61,6 @@ id = "gemini_api"
 title = "@api_key_text"
 icon = "{ICON}/apikey.png"
 script = '''
-slog ai_models "$ai_models"
 [ "$GEMINI_API_KEY" ] && list_provider=gemini ai_agent -c
 [ "$OPENAI_API_KEY" ] && list_provider=openai ai_agent -c
 [ "$OPENROUTER_API_KEY" ] && list_provider=openrouter ai_agent -c
