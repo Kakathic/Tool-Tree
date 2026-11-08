@@ -290,7 +290,7 @@ class DialogAboutUpdate(
         themeSegments.forEachIndexed { index, seg ->
             val selected = index == base
             seg.background = if (selected) ContextCompat.getDrawable(activity, R.drawable.about_seg_selected) else null
-            seg.setTextColor(if (selected) textPrimary else textSecondary)
+            if (selected) seg.setTextColor(android.graphics.Color.WHITE) else seg.setTextColor(textSecondary)
             seg.setTypeface(null, if (selected) Typeface.BOLD else Typeface.NORMAL)
         }
         val visibility = if (wallpaper) View.VISIBLE else View.GONE

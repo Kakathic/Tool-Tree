@@ -87,7 +87,7 @@
                         android:text="@string/about_check" android:alpha="0.7" android:textColor="?android:attr/textColorSecondary" android:textSize="14sp" />
 <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="2dp" android:alpha="0.5" android:src="@drawable/kr_arrow" android:tint="?android:attr/textColorPrimary" android:importantForAccessibility="no" />
                 </LinearLayout>
-                <View android:id="@+id/about_band1" android:layout_width="match_parent" android:layout_height="8dp" android:background="#14808080" />
+                <View android:id="@+id/about_band1" android:layout_width="match_parent" android:layout_height="8dp" android:background="?attr/cardDialog" />
                 <LinearLayout
                     android:id="@+id/theme_row"
                     android:layout_width="match_parent"
@@ -172,7 +172,7 @@
                          android:alpha="0.7" android:textColor="?android:attr/textColorSecondary" android:textSize="14sp" android:layout_marginEnd="4dp" android:ellipsize="end" android:singleLine="true" android:maxWidth="150dp" />
 <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="2dp" android:alpha="0.5" android:src="@drawable/kr_arrow" android:tint="?android:attr/textColorPrimary" android:importantForAccessibility="no" />
                 </LinearLayout>
-                <View android:id="@+id/about_band2" android:layout_width="match_parent" android:layout_height="8dp" android:background="#14808080" />
+                <View android:id="@+id/about_band2" android:layout_width="match_parent" android:layout_height="8dp" android:background="?attr/cardDialog" />
                 <LinearLayout
                     android:id="@+id/about_donate"
                     android:layout_width="match_parent"
@@ -213,11 +213,11 @@
             android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
             android:visibility="gone">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:gravity="center_vertical" android:orientation="horizontal"
+                android:orientation="vertical"
                 android:paddingStart="20dp" android:paddingTop="20dp" android:paddingEnd="20dp" android:paddingBottom="16dp">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                    android:orientation="vertical">
-                    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                         android:orientation="horizontal" android:gravity="center_vertical">
                         <TextView android:id="@+id/update_title" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:text="@string/update_text" android:textColor="?android:attr/textColorPrimary"
@@ -226,20 +226,20 @@
                             android:layout_marginStart="8dp" android:textColor="@color/colorAccent"
                             android:textSize="22sp" android:textStyle="bold" android:visibility="gone" />
                     </LinearLayout>
-                    <TextView android:id="@+id/update_meta" android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" android:alpha="0.7" android:textColor="?android:attr/textColorSecondary"
-                        android:textSize="13sp" />
+                    <com.omarea.krscript.ui.DownloadProgressRing
+                        android:id="@+id/update_ring" android:layout_width="22dp" android:layout_height="22dp"
+                        android:layout_marginStart="10dp" android:visibility="gone" />
+                    <TextView android:id="@+id/update_action" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp" android:background="@drawable/about_btn_accent"
+                        android:clickable="true" android:focusable="true" android:gravity="center"
+                        android:paddingStart="14dp" android:paddingTop="7dp" android:paddingEnd="14dp" android:paddingBottom="7dp"
+                        android:textColor="#FFFFFF" android:textSize="13sp" android:textStyle="bold" android:visibility="gone" />
                 </LinearLayout>
-                <com.omarea.krscript.ui.DownloadProgressRing
-                    android:id="@+id/update_ring" android:layout_width="22dp" android:layout_height="22dp"
-                    android:layout_marginStart="10dp" android:visibility="gone" />
-                <TextView android:id="@+id/update_action" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp" android:background="@drawable/about_btn_small_gradient"
-                    android:clickable="true" android:focusable="true" android:gravity="center"
-                    android:paddingStart="14dp" android:paddingTop="7dp" android:paddingEnd="14dp" android:paddingBottom="7dp"
-                    android:textColor="#FFFFFF" android:textSize="13sp" android:textStyle="bold" android:visibility="gone" />
+                <TextView android:id="@+id/update_meta" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp" android:alpha="0.7" android:textColor="?android:attr/textColorSecondary"
+                    android:textSize="13sp" />
             </LinearLayout>
-            <View android:layout_width="match_parent" android:layout_height="8dp" android:background="#14808080" />
+            <View android:layout_width="match_parent" android:layout_height="8dp" android:background="?attr/cardDialog" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:paddingStart="20dp" android:paddingTop="14dp" android:paddingEnd="20dp" android:paddingBottom="8dp"
                 android:alpha="0.8" android:letterSpacing="0.08" android:text="@string/about_changelog" android:textAllCaps="true"
