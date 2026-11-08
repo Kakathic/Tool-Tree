@@ -45,11 +45,6 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-cache-release
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.8.2'
-
       - name: Build APK
         run: |
           chmod +x ./gradlew
