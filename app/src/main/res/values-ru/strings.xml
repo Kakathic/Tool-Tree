@@ -252,4 +252,5 @@
     <string name="about_changelog">История изменений</string>
     <string name="about_badge_latest">Новейшая</string>
     <string name="about_download">Скачать</string>
+    <string name="about_author">Автор</string>
 </resources>

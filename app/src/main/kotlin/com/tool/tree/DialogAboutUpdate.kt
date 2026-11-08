@@ -43,6 +43,9 @@ class DialogAboutUpdate(
         const val REQUEST_WALLPAPER = 4101
         const val CHECKING_MIN_VISIBLE_MS = 800L
         const val PANEL_IN_MS = 220L
+        const val CHANGELOG_FIRST_CHUNK = 4
+        const val CHANGELOG_NEXT_CHUNK = 3
+        const val AUTHOR_URL = "https://github.com/Kakathic"
         const val PANEL_OUT_MS = 160L
         const val GITHUB_URL = "https://github.com/Kakathic/Tool-Tree"
         const val DONATE_URL = "https://Kakathic.github.io/Tool-Tree/website/Information.html"
@@ -86,6 +89,11 @@ class DialogAboutUpdate(
     private lateinit var appContext: android.content.Context
 
     private var viewReady = false
+    private var changelogText: String? = null
+    private var renderedChangelog: String? = null
+    private var latestVersion: String? = null
+    private var renderGeneration = 0
+    private var loadingCachedChangelog = false
     private var inUpdate = false
     private var checking = false
     private var mode = UpdateMode.CHECK
@@ -130,6 +138,7 @@ class DialogAboutUpdate(
         view.findViewById<View>(R.id.dialog_root).setOnClickListener { onOutsideTap() }
 
         view.findViewById<View>(R.id.about_version_row).setOnClickListener { openLink(activity, GITHUB_URL) }
+        view.findViewById<View>(R.id.about_author_row).setOnClickListener { openLink(activity, AUTHOR_URL) }
         view.findViewById<View>(R.id.about_donate).setOnClickListener { openLink(activity, DONATE_URL) }
         view.findViewById<View>(R.id.about_telegram).setOnClickListener { openLink(activity, TELEGRAM_URL) }
         val versionName = runCatching { activity.packageManager.getPackageInfo(activity.packageName, 0).versionName }.getOrNull()
@@ -143,6 +152,7 @@ class DialogAboutUpdate(
             aboutPanel.visibility = View.GONE
             updatePanel.visibility = View.VISIBLE
             refreshSwipe()
+            renderChangelog()
         }
         viewReady = true
     }
@@ -183,6 +193,7 @@ class DialogAboutUpdate(
         to.translationX = dx
         to.visibility = View.VISIBLE
         to.animate().alpha(1f).translationX(0f).setDuration(PANEL_IN_MS).start()
+        if (update) to.post { if (viewReady && inUpdate) renderChangelog() }
         from.animate().alpha(0f).translationX(-dx).setDuration(PANEL_OUT_MS).withEndAction {
             from.alpha = 1f
             from.translationX = 0f
@@ -416,7 +427,6 @@ class DialogAboutUpdate(
             }
         }
 
-        showChangelog(AppUpdateChecker.cachedChangelog(activity))
         updateMeta.text = ""
 
         val info = knownInfo
@@ -507,10 +517,49 @@ class DialogAboutUpdate(
         return parts[0].padStart(2, '0') + "/" + parts[1].padStart(2, '0') + "/" + parts[2]
     }
 
-    private fun showChangelog(changelog: String?) {
-        if (changelog.isNullOrBlank() || !::updateTimeline.isInitialized) return
+    // Lịch sử thay đổi chỉ được dựng khi màn Cập nhật hiện ra, và dựng dần từng đợt để không làm khựng dialog
+    private fun setChangelog(text: String?) {
+        if (!text.isNullOrBlank()) changelogText = text
+        if (inUpdate) renderChangelog()
+    }
+
+    private fun applyVersionLabel() {
+        setVersionLabel(if (loadedInfo != null) latestVersion else null)
+    }
+
+    private fun loadCachedChangelog() {
+        if (loadingCachedChangelog) return
+        loadingCachedChangelog = true
+        val context = appContext
+        Thread {
+            val cached = AppUpdateChecker.cachedChangelog(context)
+            mainHandler.post {
+                loadingCachedChangelog = false
+                if (cached != null && changelogText == null) {
+                    changelogText = cached
+                    if (viewReady && inUpdate) renderChangelog()
+                }
+            }
+        }.apply { isDaemon = true }.start()
+    }
+
+    private fun renderChangelog() {
+        if (!::updateTimeline.isInitialized) return
+        val changelog = changelogText
+        if (changelog.isNullOrBlank()) {
+            loadCachedChangelog()
+            return
+        }
+        if (changelog == renderedChangelog) {
+            applyVersionLabel()
+            return
+        }
+        renderedChangelog = changelog
+        val generation = ++renderGeneration
         val entries = parseChangelog(changelog)
         updateTimeline.removeAllViews()
+        latestVersion = entries.firstOrNull()?.version
+        applyVersionLabel()
         if (entries.isEmpty()) {
             updateTimeline.visibility = View.GONE
             updateLog.visibility = View.VISIBLE
@@ -519,8 +568,15 @@ class DialogAboutUpdate(
         }
         updateLog.visibility = View.GONE
         updateTimeline.visibility = View.VISIBLE
+        addChangelogEntries(entries, 0, generation)
+    }
+
+    private fun addChangelogEntries(entries: List<ChangelogEntry>, from: Int, generation: Int) {
+        if (generation != renderGeneration || !viewReady) return
+        val to = minOf(from + (if (from == 0) CHANGELOG_FIRST_CHUNK else CHANGELOG_NEXT_CHUNK), entries.size)
         val inflater = LayoutInflater.from(updateTimeline.context)
-        entries.forEachIndexed { index, entry ->
+        for (index in from until to) {
+            val entry = entries[index]
             val row = inflater.inflate(R.layout.item_about_changelog, updateTimeline, false)
             val latest = index == 0
             row.findViewById<TextView>(R.id.cl_version).text = entry.version
@@ -541,8 +597,9 @@ class DialogAboutUpdate(
             }
             updateTimeline.addView(row)
         }
-        // Số phiên bản mới nhất trên tiêu đề (chỉ khi có bản cập nhật)
-        if (loadedInfo != null) setVersionLabel(entries.first().version)
+        if (to < entries.size) {
+            updateTimeline.post { addChangelogEntries(entries, to, generation) }
+        }
     }
 
     private fun shortSha(sha: String): String =
@@ -566,8 +623,8 @@ class DialogAboutUpdate(
             if (info.apkSize > 0) append(AppUpdateInstaller.formatFileSize(info.apkSize)).append("  ·  ")
             append("SHA-256 ").append(shortSha(info.sha256))
         }
-        showChangelog(info.changelogText)
-        if (info.changelogText.isNullOrBlank()) setVersionLabel(null)
+        setChangelog(info.changelogText)
+        applyVersionLabel()
         setMode(if (destFile.exists() && destFile.length() > 0) UpdateMode.INSTALL else UpdateMode.UPDATE)
         setBusy(false)
         refreshUpdateRow()
@@ -610,14 +667,14 @@ class DialogAboutUpdate(
                 loadedInfo = null
                 setVersionLabel(null)
                 updateMeta.text = activity.getString(R.string.app_update_latest)
-                showChangelog(result.changelogText)
+                setChangelog(result.changelogText)
                 setMode(UpdateMode.CHECK)
                 setBusy(false)
             }
             is AppUpdateCheckResult.Failed -> {
                 setVersionLabel(null)
                 updateMeta.text = if (inUpdate) activity.getString(R.string.app_update_check_fail) else ""
-                showChangelog(AppUpdateChecker.cachedChangelog(activity))
+                setChangelog(null)
                 setMode(UpdateMode.CHECK)
                 setBusy(false)
             }

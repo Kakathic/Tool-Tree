@@ -257,4 +257,5 @@ Si estás de acuerdo, pulsa el botón de confirmar para continuar."</string>
     <string name="about_changelog">Historial de cambios</string>
     <string name="about_badge_latest">Última</string>
     <string name="about_download">Descargar</string>
+    <string name="about_author">Autor</string>
 </resources>

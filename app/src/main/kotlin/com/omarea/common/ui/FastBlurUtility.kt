@@ -17,6 +17,8 @@ import kotlin.math.round
 
 object FastBlurUtility {
 
+    private const val BLUR_SOURCE_SCALE = 0.20f
+
     @JvmStatic
     fun getPageBlurBackground(activity: Activity): Bitmap? {
         val screenWidth = activity.resources.displayMetrics.widthPixels
@@ -35,10 +37,10 @@ object FastBlurUtility {
         val screenHeight = activity.resources.displayMetrics.heightPixels
         if (screenWidth <= 0 || screenHeight <= 0) return null
 
-        val screenshot = takeScreenShot(activity)
+        val screenshot = takeScreenShot(activity, BLUR_SOURCE_SCALE)
         if (screenshot == null || screenshot.isRecycled) return null
 
-        val result = blurViaController(activity, screenshot, screenWidth, screenHeight)
+        val result = blurViaController(activity, screenshot, screenWidth, screenHeight, prescaled = true)
         if (!screenshot.isRecycled) {
             screenshot.recycle()
         }
@@ -111,13 +113,17 @@ object FastBlurUtility {
         return blurViaController(activity, sourceBitmap, sourceBitmap.width, sourceBitmap.height)
     }
 
-    private fun takeScreenShot(activity: Activity): Bitmap? {
+    // Vẽ thẳng view vào bitmap đã thu nhỏ: nhanh hơn nhiều so với vẽ full-res rồi mới scale (ảnh sau đó chỉ để làm mờ)
+    private fun takeScreenShot(activity: Activity, scale: Float): Bitmap? {
         return try {
             val view: View = activity.window.decorView
             if (view.width <= 0 || view.height <= 0) return null
 
-            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            val bitmapWidth = max(round(view.width * scale).toInt(), 1)
+            val bitmapHeight = max(round(view.height * scale).toInt(), 1)
+            val bitmap = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
+            canvas.scale(bitmapWidth / view.width.toFloat(), bitmapHeight / view.height.toFloat())
             view.draw(canvas)
             bitmap
         } catch (e: Exception) {
@@ -154,16 +160,19 @@ object FastBlurUtility {
         }
     }
 
-    private fun blurViaController(activity: Activity, screenshot: Bitmap, screenWidth: Int, screenHeight: Int): Bitmap? {
+    private fun blurViaController(activity: Activity, screenshot: Bitmap, screenWidth: Int, screenHeight: Int, prescaled: Boolean = false): Bitmap? {
         return try {
-            val scale = 0.20f
-            val width = max(round(screenshot.width * scale).toInt(), 1)
-            val height = max(round(screenshot.height * scale).toInt(), 1)
-            val scaled = Bitmap.createScaledBitmap(screenshot, width, height, true)
+            val scaled = if (prescaled) {
+                screenshot
+            } else {
+                val width = max(round(screenshot.width * BLUR_SOURCE_SCALE).toInt(), 1)
+                val height = max(round(screenshot.height * BLUR_SOURCE_SCALE).toInt(), 1)
+                Bitmap.createScaledBitmap(screenshot, width, height, true)
+            }
 
             val blurred = BlurEngine.controller.cacheBlurBitmap(activity.applicationContext, scaled, 16f)
 
-            if (!scaled.isRecycled) {
+            if (!prescaled && !scaled.isRecycled) {
                 scaled.recycle()
             }
 

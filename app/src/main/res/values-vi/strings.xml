@@ -267,4 +267,5 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string name="about_changelog">Lịch sử thay đổi</string>
     <string name="about_badge_latest">Mới nhất</string>
     <string name="about_download">Tải về</string>
+    <string name="about_author">Tác giả</string>
 </resources>

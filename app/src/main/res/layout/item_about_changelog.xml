@@ -71,7 +71,6 @@
             android:layout_marginTop="4dp"
             android:lineSpacingMultiplier="1.15"
             android:textColor="?android:attr/textColorSecondary"
-            android:textIsSelectable="true"
             android:textSize="13sp" />
     </LinearLayout>
 </LinearLayout>

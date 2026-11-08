@@ -42,13 +42,32 @@
                     android:paddingEnd="20dp" android:clickable="true" android:focusable="true" android:foreground="?android:attr/selectableItemBackground">
                     <TextView 
                         android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                        android:text="@string/appliction_name" android:textStyle="bold"
+                        android:text="@string/app_name" android:textStyle="bold"
                         android:textColor="?android:attr/textColorPrimary" android:textSize="15sp" />
                     <TextView
                         android:id="@+id/about_version" android:layout_width="wrap_content" android:layout_height="wrap_content"
                          android:alpha="0.7" android:textColor="?android:attr/textColorSecondary" android:textSize="14sp" />
                 </LinearLayout>
                 <View android:id="@+id/about_div1" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:background="?attr/colorPirm" />
+                <LinearLayout
+                    android:id="@+id/about_author_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="54dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp" android:clickable="true" android:focusable="true" android:foreground="?android:attr/selectableItemBackground">
+                    <TextView
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="@string/about_author"
+                        android:textColor="?android:attr/textColorPrimary" android:textSize="15sp" />
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/author_name" android:alpha="0.7" android:textColor="?android:attr/textColorSecondary" android:textSize="14sp" android:layout_marginEnd="4dp" />
+                    <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="2dp" android:alpha="0.5" android:src="@drawable/kr_arrow" android:tint="?android:attr/textColorPrimary" android:importantForAccessibility="no" />
+                </LinearLayout>
+                <View android:id="@+id/about_div_author" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="20dp" android:background="?attr/colorPirm" />
                 <LinearLayout
                     android:id="@+id/about_update_row"
                     android:layout_width="match_parent"

@@ -252,4 +252,5 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="about_changelog">Riwayat perubahan</string>
     <string name="about_badge_latest">Terbaru</string>
     <string name="about_download">Unduh</string>
+    <string name="about_author">Penulis</string>
 </resources>

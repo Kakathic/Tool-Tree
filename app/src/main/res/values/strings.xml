@@ -281,4 +281,5 @@ If you agree, press the confirm button to continue."</string>
     <string name="about_changelog">Changelog</string>
     <string name="about_badge_latest">Latest</string>
     <string name="about_download">Download</string>
+    <string name="about_author">Author</string>
 </resources>
