@@ -49,6 +49,7 @@ class DialogAboutUpdate(
         const val CHECKING_MIN_VISIBLE_MS = 800L
         const val PANEL_IN_MS = 220L
         const val TRIPLE_TAP_GAP_MS = 600L
+        const val COMMIT_RATIO = 0.28f
         const val CHANGELOG_FIRST_CHUNK = 4
         const val CHANGELOG_NEXT_CHUNK = 3
         const val AUTHOR_URL = "https://github.com/Kakathic"
@@ -134,10 +135,15 @@ class DialogAboutUpdate(
         private var candidate = false
         private var dragging = false
         private var anim: ValueAnimator? = null
+        private var swallow = false
 
         fun handle(ev: MotionEvent, dispatch: (MotionEvent) -> Boolean): Boolean {
             if (!viewReady || !::updatePanel.isInitialized) return false
             val cfg = ViewConfiguration.get(requireContext())
+            if (swallow) {
+                if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) swallow = false
+                return true
+            }
             when (ev.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     candidate = inUpdate && !openedDirectly && activeDownload == null &&
@@ -171,6 +177,14 @@ class DialogAboutUpdate(
                         } else return false
                     }
                     applyDrag(dx)
+                    if (dx > updatePanel.width * COMMIT_RATIO) {
+                        swallow = true
+                        candidate = false
+                        dragging = false
+                        velocity?.recycle()
+                        velocity = null
+                        settle(0f, Int.MAX_VALUE, true)
+                    }
                     return true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -178,7 +192,7 @@ class DialogAboutUpdate(
                     if (was) {
                         velocity?.addMovement(ev)
                         velocity?.computeCurrentVelocity(1000, cfg.scaledMaximumFlingVelocity.toFloat())
-                        settle(velocity?.xVelocity ?: 0f, cfg.scaledMinimumFlingVelocity)
+                        settle(velocity?.xVelocity ?: 0f, cfg.scaledMinimumFlingVelocity, false)
                     }
                     velocity?.recycle()
                     velocity = null
@@ -200,10 +214,10 @@ class DialogAboutUpdate(
             aboutPanel.alpha = p
         }
 
-        private fun settle(vx: Float, minFling: Int) {
+        private fun settle(vx: Float, minFling: Int, force: Boolean) {
             val w = updatePanel.width.toFloat().coerceAtLeast(1f)
             val from = updatePanel.translationX
-            val commit = from > w * 0.28f || vx > minFling
+            val commit = force || from > w * COMMIT_RATIO || vx > minFling
             val to = if (commit) w else 0f
             val duration = (160L + (Math.abs(to - from) / w * 140f).toLong())
             anim?.cancel()
