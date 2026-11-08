@@ -48,19 +48,15 @@ link = "https://t.me/tooltree"
 cell = "b"
 
 [[group]]
-columns = true
-card = true
-
 [[download]]
 title = "@download_text stable"
 icon = "{ICON}/update.png"
 url-sh = "linkgit https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest Tool-Tree"
 script = "openfile $state"
-cell = "a"
 
+[[group]]
 [[download]]
 title = "@download_text beta"
 icon = "{ICON}/update2.png"
 url = "https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-beta.apk"
 script = "openfile $state"
-cell = "b"

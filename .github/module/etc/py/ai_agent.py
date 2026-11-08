@@ -410,6 +410,8 @@ UI_TEXT = {
     "thinking_prefix": "Mức suy nghĩ: {value}",
     "mode_label": "Chế độ",
     "model_label": "Mô hình",
+    "model_invalid": "Mô hình \"{model}\" không dùng được với {who}. Chọn một mô hình trong danh sách dưới đây (--model):",
+    "model_list_failed": "Không lấy được danh sách mô hình",
     "thinking_usage": "Cách dùng: /thinking auto|low|medium|high",
     "instruction_usage": "Cách dùng: /instruction <text>",
     "timeout_error": "Timeout phải lớn hơn 0.",
@@ -521,6 +523,8 @@ UI_TEXT = {
     "thinking_prefix": "Thinking: {value}",
     "mode_label": "Mode",
     "model_label": "Model",
+    "model_invalid": "Model \"{model}\" is not available for {who}. Choose one from the list below (--model):",
+    "model_list_failed": "Could not fetch the model list",
     "thinking_usage": "Usage: /thinking auto|low|medium|high",
     "instruction_usage": "Usage: /instruction <text>",
     "timeout_error": "Timeout must be greater than zero.",
@@ -1340,7 +1344,7 @@ def _compatible_urlopen(request, timeout, status_callback=None):
           attempt += 1
           _wait(delay + 1, _ui_text("retry_wait", code=exc.code, n=attempt, max=RETRY["max"]), status_callback)
           continue
-      raise RuntimeError(f"{provider} HTTP {exc.code}: {message}") from exc
+      raise _http_error(exc.code, message, f"{provider} ") from exc
     except NETWORK_ERRORS as exc:
       raise _net_error(exc, provider) from exc
 
@@ -1521,6 +1525,18 @@ def print_models(provider, models, selected=None):
     marker = " *" if model_id == selected else "  "
     label = f" — {item['name']}" if item.get("name") and item["name"] != model_id else ""
     print(f"{marker} {model_id}{label}")
+
+def report_wrong_model(provider, api_key, base_url, timeout, model, ui):
+  """Tell the user the model is not available and list the models of the current provider."""
+  label = PROVIDERS[provider]["label"]
+  shown = model or PROVIDERS[provider]["default_model"]
+  print(COLORS.error(ui["model_invalid"].format(model=shown, who=label)), file=sys.stderr)
+  try:
+    models = fetch_provider_models(provider, api_key, base_url, timeout)
+  except (RuntimeError, ValueError) as exc:
+    print(COLORS.error(f"{ui['model_list_failed']}: {exc}"), file=sys.stderr)
+    return
+  print_models(provider, models)
 
 def check_api_key_model(api_key, model, timeout):
   base_url = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -1745,17 +1761,33 @@ def result_summary(result_step, ui):
       return ui["result_file"].format(tool=name, path=data["path"])
   return ui["result_ok"].format(tool=name)
 
-def responder_label(model):
-  """Provider and model that answer the request, e.g. "Google Gemini · gemini-3.5-flash-lite"."""
+def responder_label(model=None):
+  """Provider that answers the request, e.g. "Google Gemini" (the model name is not shown)."""
   name = ACTIVE_PROVIDER.get("name", "")
-  label = PROVIDERS.get(name, {}).get("label", name)
-  return f"{label} · {model}" if model else label
+  return PROVIDERS.get(name, {}).get("label", name)
 
 def _ui_text(key, **values):
   ui = ACTIVE_UI["ui"] or UI_TEXT["en"]
   return ui[key].format(**values)
 
 NETWORK_ERRORS = (OSError, http.client.HTTPException)
+
+class ModelError(RuntimeError):
+  """The provider rejected the model id (unknown, unavailable or no access)."""
+
+_MODEL_ERROR_RE = re.compile(
+  r"not[ _]?found|not[ _]?exist|does not exist|not a valid model|invalid model|unknown model"
+  r"|unable to access|no such model|model_not_found|not available|not_available",
+  re.IGNORECASE,
+)
+
+def _http_error(code, message, prefix=""):
+  """RuntimeError for an HTTP failure; ModelError when the model id is the problem."""
+  text = f"{prefix}HTTP {code}: {message}"
+  if code in (400, 403, 404, 422) and re.search(r"model", str(message), re.IGNORECASE) \
+      and _MODEL_ERROR_RE.search(str(message)):
+    return ModelError(text)
+  return RuntimeError(text)
 
 def _net_error(exc, provider=""):
   """Build a readable RuntimeError for network failures
@@ -1866,9 +1898,7 @@ def _send_request(request, timeout, stream_callback, status):
           )
           _wait(delay + 1, label, status)
           continue
-      raise RuntimeError(
-        f"HTTP {exc.code}: {error_message}"
-      ) from exc
+      raise _http_error(exc.code, error_message) from exc
     except NETWORK_ERRORS as exc:
       raise _net_error(exc) from exc
     except json.JSONDecodeError as exc:
@@ -4125,6 +4155,8 @@ def run():
         f"\n{ui['error']}: {exc}",
         file=sys.stderr,
       )
+      if isinstance(exc, ModelError):
+        report_wrong_model(args.provider, api_key, args.base_url, args.timeout, model, ui)
       return 1
     except KeyboardInterrupt:
       if pending_id is not None:
@@ -4404,6 +4436,8 @@ def run():
         COLORS.error(f"\n{ui['error']}: {exc}"),
         file=sys.stderr,
       )
+      if isinstance(exc, ModelError):
+        report_wrong_model(args.provider, api_key, args.base_url, args.timeout, model, ui)
       print_edited_files(policy, ui)
       print()
       continue
