@@ -1,0 +1,227 @@
+<resources>
+    <string name="processing">处理中...</string>
+    <string name="please_wait">请稍候</string>
+    <string name="title_activity_action_page">功能页面</string>
+    <string name="about_title">关于</string>
+    <string name="about_desc">Tool-Tree：通过 TOML 和脚本配置的工具应用。</string>
+    <string name="about_donate">赞助</string>
+    <string name="about_telegram">Telegram</string>
+    <string name="tab_favorites">收藏</string>
+    <string name="tab_pages">实用工具</string>
+    <string name="tab_custom3">Add-on</string>
+    <string name="tab_custom4">设置</string>
+    <string name="copy_success">复制成功</string>
+    <string name="pop_before_start">正在启动应用…</string>
+    <string name="pop_started">应用已启动</string>
+    <string name="title_activity_file_selector">请选择文件</string>
+    <string name="title_activity_folder_selector">请选择文件夹</string>
+    <string name="text_power_shutdown">关机</string>
+    <string name="text_power_reboot">重启</string>
+    <string name="text_power_dowload">Download</string>
+    <string name="text_power_recovery">Recovery</string>
+    <string name="text_power_fastboot">Fastboot</string>
+    <string name="text_power_edl">9008 (EDL)</string>
+    <string name="menu_power">选择电源操作（root）</string>
+    <string name="permission_dialog_message">"用户警告：
+
+• 修改 ROM 时请务必小心
+• 请勿使用来源不可信的 add-on
+• 没有经验请勿修改 ROM
+
+需要以下权限：
+
+• 通知（保持应用后台运行）
+• 访问文件
+• 应用列表
+• Root（如已授权）
+• 创建主屏幕快捷方式
+• 访问移动数据网络
+
+如果同意，请点击确认按钮继续。"</string>
+    <string name="permission_dialog_title">应用使用条款</string>
+    <string name="stop">停止</string>
+    <string name="turn_off_wakelock">关闭 WakeLock</string>
+    <string name="turn_on_wakelock">开启 WakeLock</string>
+    <string name="msg_folder_mode">长按选择文件夹</string>
+    <string name="msg_file_extension_required">需要的文件类型：%1$s</string>
+    <string name="dialog_title_select_directory">要选择此文件夹吗？</string>
+    <string name="dialog_title_select_file">要选择此文件吗？</string>
+    <string name="msg_dir_access_denied">没有读取此文件夹的权限</string>
+    <string name="execute_success">执行成功</string>
+    <string name="execute_fail">执行失败</string>
+    <string name="execute_wait">正在执行，请稍候...</string>
+    <string name="app_chooser_search_hint">输入应用名称或包名进行搜索</string>
+    <string name="item_chooser_search_hint">搜索选项</string>
+    <string name="select_all">全选</string>
+    <string name="help_title">帮助</string>
+    <string name="confirm_message">提示内容</string>
+    <string name="confirm_title">提示</string>
+    <string name="btn_exit">返回</string>
+    <string name="btn_cancel">取消</string>
+    <string name="btn_confirm">确认</string>
+    <string name="btn_execute">执行</string>
+    <string name="app_update_btn_install">安装</string>
+    <string name="app_update_download_fail">下载更新失败</string>
+    <string name="app_update_download_cancelled">已取消下载更新</string>
+    <string name="app_update_checking">正在检查更新...</string>
+    <string name="app_update_latest">您使用的已是最新版本</string>
+    <string name="app_update_check_fail">无法检查更新</string>
+    <string name="onloading">正在加载数据…</string>
+    <string name="kr_shell_completed">脚本执行完成</string>
+    <string name="kr_shell_finish_error">执行已结束，发现错误</string>
+    <string name="btn_copy_output">复制</string>
+    <string name="hint_shell_input">输入要发送给脚本的内容</string>
+    <string name="input_send_fail">无法发送，脚本已结束</string>
+    <string name="copy_fail">复制失败</string>
+    <string name="do_not_empty">不能为空</string>
+    <string name="kr_param_options_load">正在加载列表</string>
+    <string name="kr_params_render">正在构建界面…</string>
+    <string name="action_done_select">完成</string>
+    <string name="msg_multiple_select_mode">逐项点击进行多选，然后点击“完成”</string>
+    <string name="msg_nothing_selected">请至少选择 1 项</string>
+    <string name="msg_path_home_not_found">未找到文件夹：%1$s。已改为显示 /sdcard</string>
+    <string name="kr_please_choose_folder">请选择文件夹</string>
+    <string name="kr_please_choose_file">请选择文件</string>
+    <string name="kr_please_choose_app">请选择应用</string>
+    <string name="kr_please_input_color">请输入颜色</string>
+    <string name="kr_hint_input_text">输入内容...</string>
+    <string name="kr_hint_input_password">输入密码...</string>
+    <string name="kr_hint_input_number">输入数字...</string>
+    <string name="kr_hint_select_or_input">选择或输入...</string>
+    <string name="kr_hint_select_or_input_path">选择或输入路径...</string>
+    <string name="kr_please_select">请选择</string>
+    <string name="kr_no_selection">不选择</string>
+    <string name="kr_download_create_fail">无法创建下载任务</string>
+    <string name="kr_download_create_success">已开始下载文件</string>
+    <string name="kr_download_confirm">下载此文件？</string>
+    <string name="kr_confirm_default">确定要继续吗？</string>
+    <string name="kr_download_completed">文件下载成功</string>
+    <string name="kr_banner_confirm">确认</string>
+    <string name="kr_banner_cancel">取消</string>
+    <string name="kr_download_error">文件下载失败</string>
+    <string name="kr_download_paused_tap">已暂停 – 点击继续</string>
+    <string name="kr_download_retrying">正在尝试重新连接…</string>
+    <string name="kr_download_execute_wait">正在运行脚本…</string>
+    <string name="kr_download_execute_success">成功</string>
+    <string name="kr_download_execute_fail">失败</string>
+    <string name="kr_download_cancel_confirm_title">取消下载？</string>
+    <string name="kr_download_cancel_confirm_message">已下载的数据将被删除。</string>
+    <string name="kr_color_picker">选择颜色</string>
+    <string name="kr_invalid_color">颜色值无效。支持 #ff88aa00 或 @color/颜色名 等格式</string>
+    <string name="kr_expand_fullscreen">全屏展开</string>
+    <string name="kr_duplicate_param_name">配置错误：参数名 (name) \"%1$s\" 重复 - 仅显示第一项</string>
+    <string name="kr_shortcut_create_fail">创建快捷方式失败</string>
+    <string name="kr_shortcut_create_success">已发送创建快捷方式的请求</string>
+    <string formatted="false" name="kr_shortcut_create_desc">要将“%s”添加到主屏幕以便快速访问吗？</string>
+    <string name="kr_ushortcut_nsupported">此功能不支持添加快捷方式</string>
+    <string name="kr_script_task_notification">后台任务通知</string>
+    <string name="kr_bg_task_start">后台任务已开始</string>
+    <string name="kr_script_task_has_error">发生错误</string>
+    <string name="kr_script_task_finished">任务已完成</string>
+    <string name="kr_task_notify_copy_empty">暂无可复制的日志</string>
+    <string name="kr_bg_task_start_desc">您可以通过系统通知中心查看任务进度和日志</string>
+    <string name="kr_slice_script_result">脚本结果</string>
+    <string name="kr_slice_activity_fail">无法打开 activity~</string>
+    <string name="kr_page_before_load">正在准备解析配置</string>
+    <string name="kr_page_loading">正在解析配置</string>
+    <string name="kr_page_sh_invalid">页面配置输出无效</string>
+    <string name="kr_page_sh_file_permission">指定的配置文件不存在或没有读取权限</string>
+    <string name="kr_page_load_fail">页面加载失败</string>
+    <string name="kr_auto_run_item_losted">指定的项目不存在</string>
+    <string name="kr_hidden_task_running">太快了！上一个操作尚未完成</string>
+    <string name="kr_lock_message">此功能已被锁定</string>
+    <string name="kr_lock_title">已锁定</string>
+    <string name="kr_sdk_too_low">系统版本过低</string>
+    <string name="kr_sdk_overtop">系统版本过高</string>
+    <string formatted="false" name="kr_sdk_message">此功能仅支持 SDK 从 %d 到 %d 的系统</string>
+    <string name="kr_sdk_discrepancy">系统版本不匹配</string>
+    <string formatted="false" name="kr_sdk_discrepancy_message">此功能仅支持 SDK %d 的系统</string>
+    <string name="picker_not_item">没有可选项</string>
+    <string name="kr_more_options">更多选项</string>
+    <string name="picker_select_none">尚未选择任何项</string>
+    <string name="theme_text">主题</string>
+    <string name="theme_disable_blur">关闭模糊</string>
+    <string name="theme_direct_bg">直接背景</string>
+    <string name="about_latest_version">最新版本</string>
+    <string name="about_wallpaper">壁纸</string>
+    <string name="about_wallpaper_hint">系统壁纸</string>
+    <string name="about_import_image">导入图片</string>
+    <string name="about_wallpaper_custom">自定义壁纸</string>
+    <string name="about_wallpaper_invalid">无法使用此图片</string>
+    <string name="about_update_downloading">正在下载...</string>
+    <string name="about_update_recheck">重新检查</string>
+    <string name="open_in_browser">用浏览器打开</string>
+    
+    <string name="update_text">更新</string>
+
+    <string name="editor_file_missing">没有文件路径</string>
+    <string name="editor_hint_empty">文件为空</string>
+    <string name="editor_hint_new_file">此文件尚不存在 — 保存时将会创建</string>
+    <string name="editor_unsaved_title">更改尚未保存</string>
+    <string name="editor_unsaved_message">此文件有未保存的更改。退出前要保存吗？</string>
+    <string name="editor_save">保存</string>
+    <string name="editor_save_file">保存文件</string>
+    <string name="editor_discard">放弃</string>
+    <string name="editor_save_success">文件已保存</string>
+    <string name="editor_save_fail">保存文件失败</string>
+    <string name="editor_toggle_wrap">自动换行</string>
+    <string name="editor_run_test">运行测试</string>
+    <string name="editor_undo">撤销</string>
+    <string name="editor_redo">重做</string>
+    <string name="loading_data">正在检查数据...</string>
+    <string name="check_time">总耗时</string>
+    <string name="online_find_in_page">在页面中查找</string>
+    <string name="online_browser_not_found">未找到合适的浏览器。</string>
+    <string name="online_fullscreen">全屏</string>
+    <string name="online_fullscreen_hint">按返回键退出全屏</string>
+    
+    <string name="terminal_paste">粘贴</string>
+    <string name="terminal_share">分享内容</string>
+    <string name="share">分享</string>
+    <string name="terminal_close_confirm">关闭终端？正在运行的 shell 将被停止。</string>
+    <string name="terminal_sessions">运行中的会话</string>
+    <string name="terminal_new_session">新会话</string>
+    <string name="terminal_keep_screen_on">保持屏幕常亮</string>
+    <string name="terminal_more">更多...</string>
+    <string name="terminal_more_title">终端选项</string>
+    <string name="terminal_wakelock">WakeLock（保持 CPU 唤醒）</string>
+    <string name="terminal_mono_toolbar">工具栏等宽字体</string>
+    <string name="terminal_url_list">URL 列表</string>
+    <string name="terminal_url_empty">未找到 URL</string>
+    <string name="terminal_url_open_fail">没有可打开链接的应用</string>
+    <string name="terminal_notif_sessions">运行中的会话数：%d</string>
+    <string name="terminal_notif_exit_all">全部退出</string>
+    <string name="terminal_input_hint">输入命令或文本...</string>
+    <string name="log_share_fail">分享日志失败</string>
+    <string name="log_share_empty">暂无可分享的日志</string>
+    <string name="chat_default_title">聊天</string>
+    <string name="chat_input_hint">输入消息…</string>
+    <string name="chat_copied">已复制</string>
+    <string name="chat_clear_input">清除文本</string>
+    <string name="chat_script_empty">聊天页面尚未配置脚本</string>
+    <string name="chat_cleared_stop">正在停止脚本并清除历史记录</string>
+    <string name="chat_params_title">设置</string>
+    <string name="chat_sessions_title">聊天会话</string>
+    <string name="chat_delete_session_confirm">删除此会话？</string>
+    <string name="kr_favorite_add_title">添加到</string>
+    <string formatted="false" name="kr_favorite_add_desc">您想把“%s”添加到哪里？</string>
+    <string name="kr_favorite_to_home">主屏幕</string>
+    <string name="kr_favorite_added">已添加到目录的“收藏”</string>
+    <string name="tab_index">目录</string>
+    <string name="index_tools">工具</string>
+    <string formatted="false" name="index_remove_desc">从目录中移除“%s”？</string>
+    <string name="index_empty">长按任意项目，可添加到“收藏”或“工具”。</string>
+    <string name="kr_tools_added">已添加到目录的“工具”</string>
+    <string name="kr_tools_exists">目录的“工具”中已存在</string>
+    <string name="kr_favorite_exists">目录的“收藏”中已存在</string>
+    <string formatted="false" name="kr_favorite_remove_desc">从“收藏”中移除“%s”？</string>
+    <string name="about_check">检查</string>
+    <string name="about_theme_system">系统</string>
+    <string name="about_theme_dark">深色</string>
+    <string name="about_theme_light">浅色</string>
+    <string name="about_wallpaper_none">不使用</string>
+    <string name="about_changelog">更新日志</string>
+    <string name="about_badge_latest">最新</string>
+    <string name="about_download">下载</string>
+    <string name="about_author">作者</string>
+</resources>

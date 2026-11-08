@@ -1,15 +1,10 @@
 <resources>
     <string name="processing">Memproses...</string>
-    <string name="completed">Selesai</string>
     <string name="please_wait">Harap tunggu</string>
     <string name="title_activity_action_page">Halaman Fitur</string>
     <string name="about_title">Tentang</string>
-    <string name="appliction_desc">Banyak utilitas di ponsel</string>
-    <string name="appliction_author">Alat yang Luar Biasa</string>
     <string name="about_donate">Dukung</string>
     <string name="about_telegram">Telegram</string>
-    <string name="engine_version_name">Pengembang Proyek</string>
-    <string name="tab_home">Beranda</string>
     <string name="tab_favorites">Favorit</string>
     <string name="tab_pages">Utilitas</string>
     <string name="copy_success">Berhasil menyalin</string>
@@ -48,7 +43,6 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="msg_file_extension_required">Jenis berkas yang diperlukan: %1$s</string>
     <string name="dialog_title_select_directory">Apakah Anda ingin memilih folder ini?</string>
     <string name="dialog_title_select_file">Apakah Anda ingin memilih berkas ini?</string>
-    <string name="no_files_in_directory">Folder kosong dan tidak ada berkas!</string>
     <string name="execute_success">Eksekusi berhasil</string>
     <string name="execute_fail">Eksekusi gagal</string>
     <string name="execute_wait">Sedang mengeksekusi, harap tunggu...</string>
@@ -58,10 +52,7 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="help_title">Panduan</string>
     <string name="confirm_message">Konten pengingat</string>
     <string name="confirm_title">Pengingat</string>
-    <string name="shell_executor">Eksekutor skrip</string>
-    <string name="btn_skip">Lewati</string>
     <string name="btn_exit">Kembali</string>
-    <string name="btn_hide">Sembunyikan</string>
     <string name="btn_cancel">Batal</string>
     <string name="btn_confirm">Konfirmasi</string>
     <string name="btn_execute">Jalankan</string>
@@ -70,16 +61,11 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="kr_shell_finish_error">Eksekusi selesai, terdeteksi kesalahan</string>
     <string name="btn_copy_output">Salin</string>
     <string name="hint_shell_input">Masukkan konten untuk dikirim ke skrip</string>
-    <string name="btn_send_input">Kirim</string>
     <string name="input_send_fail">Gagal mengirim, skrip telah berakhir</string>
     <string name="copy_fail">Gagal menyalin</string>
     <string name="do_not_empty">Tidak boleh kosong</string>
     <string name="kr_param_options_load">Memuat daftar</string>
     <string name="kr_params_render">Memuat antarmuka…</string>
-    <string name="hint_answer">Silakan masukkan nilai...</string>
-    <string name="btn_send">Selesai</string>
-    <string name="toast_invalid_number">Silakan masukkan angka</string>
-    <string name="toast_out_of_range">Angka harus antara %1$d hingga %2$d</string>
     <string name="action_done_select">Selesai</string>
     <string name="msg_multiple_select_mode">Ketuk setiap item untuk memilih banyak, lalu ketuk Selesai</string>
     <string name="msg_nothing_selected">Silakan pilih setidaknya 1 item</string>
@@ -103,12 +89,8 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="kr_banner_confirm">Konfirmasi</string>
     <string name="kr_banner_cancel">Batal</string>
     <string name="kr_download_error">Unduhan gagal</string>
-    <string name="kr_download_paused">Unduhan dijeda</string>
     <string name="kr_download_paused_tap">Dijeda – ketuk untuk melanjutkan</string>
     <string name="kr_download_retrying">Mencoba lagi...</string>
-    <string name="kr_download_pause">Jeda</string>
-    <string name="kr_download_resume">Lanjutkan</string>
-    <string name="kr_download_cancel">Batal</string>
     <string name="kr_download_execute_wait">Menjalankan skrip…</string>
     <string name="kr_download_execute_success">Berhasil</string>
     <string name="kr_download_execute_fail">Gagal</string>
@@ -120,12 +102,10 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="kr_duplicate_param_name">Kesalahan konfigurasi: nama parameter duplikat \"%1$s\" - hanya yang pertama yang akan ditampilkan</string>
     <string name="kr_shortcut_create_fail">Gagal membuat pintasan</string>
     <string name="kr_shortcut_create_success">Permintaan pembuatan pintasan telah dikirim</string>
-    <string name="kr_shortcut_create">Tambah pintasan</string>
     <string formatted="false" name="kr_shortcut_create_desc">Apakah Anda ingin menambahkan “%s” ke layar utama untuk akses cepat?</string>
     <string name="kr_ushortcut_nsupported">Fitur ini tidak mendukung penambahan pintasan</string>
     <string name="kr_script_task_notification">Notifikasi tugas latar belakang</string>
     <string name="kr_bg_task_start">Tugas latar belakang telah dimulai</string>
-    <string name="kr_script_task_running">Eksekusi telah dimulai</string>
     <string name="kr_script_task_has_error">Terjadi kesalahan</string>
     <string name="kr_script_task_finished">Tugas telah selesai</string>
     <string name="kr_task_notify_copy_empty">Belum ada log untuk disalin</string>
@@ -134,11 +114,9 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="kr_slice_activity_fail">Gagal membuka aktivitas~</string>
     <string name="kr_page_before_load">Mempersiapkan analisis konfigurasi</string>
     <string name="kr_page_loading">Menganalisis konfigurasi</string>
-    <string name="kr_page_after_load">Analisis konfigurasi selesai</string>
     <string name="kr_page_sh_invalid">Output konfigurasi halaman tidak valid</string>
     <string name="kr_page_sh_file_permission">Berkas konfigurasi yang ditentukan tidak ada atau tidak memiliki izin baca</string>
     <string name="kr_page_load_fail">Gagal memuat halaman</string>
-    <string name="kr_page_load_success">Berhasil memuat halaman</string>
     <string name="kr_auto_run_item_losted">Item yang ditentukan tidak ada</string>
     <string name="kr_hidden_task_running">Terlalu cepat! Operasi sebelumnya belum selesai</string>
     <string name="kr_lock_message">Fitur ini telah terkunci</string>
@@ -151,35 +129,20 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="picker_not_item">Tidak ada pilihan</string>
     <string name="kr_more_options">Opsi lainnya</string>
     <string name="picker_select_none">Belum ada item yang dipilih</string>
-    <string name="theme_system_default">Sistem (default)</string>
-    <string name="theme_light">Mode terang</string>
-    <string name="theme_dark">Mode gelap</string>
-    <string name="theme_wallpaper_system">Wallpaper (default)</string>
-    <string name="theme_wallpaper_dark">Wallpaper gelap</string>
-    <string name="theme_wallpaper_light">Wallpaper terang</string>
     <string name="theme_text">Tema</string>
     <string name="theme_disable_blur">Nonaktifkan blur</string>
     <string name="theme_direct_bg">Latar langsung</string>
     <string name="about_latest_version">Versi terbaru</string>
-    <string name="about_back">Kembali</string>
     <string name="about_wallpaper">Wallpaper</string>
     <string name="about_wallpaper_hint">Wallpaper sistem</string>
-    <string name="about_choose">Pilih</string>
     <string name="about_import_image">Impor gambar</string>
     <string name="about_wallpaper_custom">Wallpaper kustom</string>
-    <string name="about_remove">Hapus</string>
     <string name="about_wallpaper_invalid">Gambar ini tidak dapat digunakan</string>
     <string name="about_update_downloading">Mengunduh...</string>
     <string name="about_update_recheck">Periksa lagi</string>
     <string name="open_in_browser">Buka di peramban</string>
     
     <string name="update_text">Perbarui</string>
-    <string name="warning_root_text">Fitur ini memerlukan akses (root) untuk digunakan!</string>
-    <string name="refresh_text">Segarkan</string>
-    <string name="translation_text">Google Terjemahan</string>
-    <string name="options_text">Opsi</string>
-    <string name="save_text">Simpan di</string>
-    <string name="remove_text">Hapus</string>
 
     <string name="editor_file_missing">Tidak ada jalur berkas</string>
     <string name="editor_hint_empty">Berkas kosong</string>
@@ -189,20 +152,13 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="editor_save">Simpan</string>
     <string name="editor_save_file">Simpan berkas</string>
     <string name="editor_discard">Abaikan</string>
-    <string name="editor_saving">Menyimpan…</string>
     <string name="editor_save_success">Berkas berhasil disimpan</string>
     <string name="editor_save_fail">Gagal menyimpan berkas</string>
     <string name="editor_toggle_wrap">Bungkus teks</string>
     <string name="editor_run_test">Jalankan pengujian</string>
-    <string name="editor_exit">Keluar</string>
     <string name="editor_undo">Urungkan</string>
     <string name="editor_redo">Ulangi</string>
     <string name="loading_data">Memeriksa data...</string>
-    <string name="debug_text_network">Silakan hubungkan ke jaringan dan coba lagi!</string>
-    <string name="debug_text_version">Versi saat ini</string>
-    <string name="debug_text_delay">Waktu uji coba telah habis, aplikasi telah berhenti beroperasi.</string>
-    <string name="debug_text_notes">Beralih ke mode debug</string>
-    <string name="debug_text_quit">Aplikasi tidak memenuhi langkah pemeriksaan, akan berhenti beroperasi.</string>
     <string name="check_time">Total waktu</string>
 
     <string name="terminal_paste">Tempel</string>
@@ -220,15 +176,10 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="terminal_url_empty">URL tidak ditemukan</string>
     <string name="terminal_url_open_fail">Tidak ada app untuk tautan</string>
     <string name="terminal_notif_sessions">Sesi berjalan: %d</string>
-    <string name="terminal_notif_open">Buka</string>
     <string name="terminal_notif_exit_all">Keluar semua</string>
-    <string name="app_update_title">Pembaruan baru</string>
-    <string name="app_update_desc">Versi baru tersedia, apakah Anda ingin memperbarui aplikasi?</string>
     <string name="app_update_btn_install">Instal</string>
-    <string name="app_update_install_success">Berhasil diinstal</string>
     <string name="app_update_download_fail">Gagal mengunduh pembaruan</string>
     <string name="app_update_download_cancelled">Unduhan pembaruan dibatalkan</string>
-    <string name="app_update_changelog_fail">Gagal memuat detail pembaruan</string>
     <string name="app_update_checking">Memeriksa pembaruan...</string>
     <string name="app_update_latest">Anda menggunakan versi terbaru</string>
     <string name="app_update_check_fail">Tidak dapat memeriksa pembaruan</string>
@@ -262,7 +213,6 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="kr_favorite_added">Ditambahkan ke favorit indeks</string>
     <string name="kr_favorite_exists">Sudah ada di favorit indeks</string>
     <string formatted="false" name="kr_favorite_remove_desc">Hapus “%s” dari Favorit?</string>
-    <string name="kr_favorite_to_drawer">Indeks</string>
     <string name="kr_favorite_to_home">Layar utama</string>
     <string name="kr_tools_added">Ditambahkan ke alat indeks</string>
     <string name="kr_tools_exists">Sudah ada di alat indeks</string>
@@ -274,5 +224,4 @@ Jika setuju, tekan tombol konfirmasi untuk melanjutkan."</string>
     <string name="tab_index">Indeks</string>
     <string name="tab_custom3">Add-on</string>
     <string name="tab_custom4">Pengaturan</string>
-    <string name="script_losted">Sumber daya skrip hilang</string>
 </resources>
