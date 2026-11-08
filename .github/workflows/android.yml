@@ -14,75 +14,88 @@ on:
   push:
     paths:
       - 'app/**'
+      - 'gradle/**'
+      - '**/*.gradle'
+      - 'gradle.properties'
+      - 'gradle-wrapper.properties'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions: write-all
+
 env:
-    KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-    KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-    CHAT_ID: ${{ secrets.CHAT_ID }}
-    TG_TOKEN: ${{ secrets.TG_TOKEN }}
-    UPAPK: ${{ inputs.UPAPK }}
-    UPTG: ${{ inputs.UPTG }}
+  KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+  KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+  CHAT_ID: ${{ secrets.CHAT_ID }}
+  TG_TOKEN: ${{ secrets.TG_TOKEN }}
+  UPAPK: ${{ inputs.UPAPK }}
+  UPTG: ${{ inputs.UPTG }}
+
 jobs:
   build-release:
-    if: ${{ github.repository_owner == 'Kakathic' }}
+    if: ${{ github.repository_owner == 'Zenlua' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     environment: Stable
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-cache-release
+          gradle-version: '9.7.0'
 
       - name: Build APK
         run: |
-          chmod +x ./gradlew
           [ "$UPAPK" == "true" ] || echo 1 > app/src/main/assets/beta
-          ./gradlew assembleRelease -x lint -x test
+          gradle assembleRelease -x lint -x test
           VER=$(grep -m1 'versionName ' app/build.gradle | cut -d'"' -f2)
           echo "Tool-Tree $VER"
-          echo "VER=$VER" >> $GITHUB_ENV
+          echo "VER=$VER" >> "$GITHUB_ENV"
           mkdir -p Up Beta
-          [ "$UPAPK" == "true" ] && cp -rf app/build/outputs/apk/*/*.apk "Up/Tool-Tree.$VER.apk"
-          [ "$UPAPK" == "true" ] || cp -rf app/build/outputs/apk/*/*.apk "Beta/Tool-Tree-beta.apk"
-          ls Up
-          echo -e "- ![Downloads](https://img.shields.io/github/downloads/Kakathic/Tool-Tree/V$VER/total?label=Downloads&color=%230072F4)\n- See version notes: [Changelog](https://Kakathic.github.io/Tool-Tree/Version.html)" > change.txt
+          if [ "$UPAPK" == "true" ]; then
+            cp -f app/build/outputs/apk/*/*.apk "Up/Tool-Tree.$VER.apk"
+          else
+            cp -f app/build/outputs/apk/*/*.apk "Beta/Tool-Tree-beta.apk"
+          fi
+          ls -l Up Beta
+          echo -e "- ![Downloads](https://img.shields.io/github/downloads/Zenlua/Tool-Tree/V$VER/total?label=Downloads&color=%230072F4)\n- See version notes: [Changelog](https://zenlua.github.io/Tool-Tree/Version.html)" > change.txt
+
           if [ "$UPTG" == "true" ]; then
-          echo "Telegram"
-          chat_tg="🎉 <b>Update new version Tool-Tree</b>
-           
+            echo "Telegram"
+            chat_tg="🎉 <b>Update new version Tool-Tree</b>
+
           • Application has many tools, ROM and APK editing, Many add-on utilities
-           
+
           • 🎋 <b>Version:</b> $VER
           • 🪴 <b>Author:</b> Kakathic
           • 📱 <b>Device:</b> Arm64
-           
-          • 🧾 <b>Notes:</b> <a href=\"https://github.com/Kakathic/Tool-Tree/blob/main/Version.md\">Changelog</a>
-          • 📚 <b>Instruct:</b> Root | <a href=\"https://Kakathic.github.io/Tool-Tree/website/Guide.html\">No-Root</a>
-          • 📥 <b><a href=\"https://github.com/Kakathic/Tool-Tree/releases/tag/V$VER\">Download</a></b>
-           
-          🌐 <b>Language:</b> Help <a href=\"https://github.com/Kakathic/Tool-Tree#-language\">translation</a>
-                    
+
+          • 🧾 <b>Notes:</b> <a href=\"https://github.com/Zenlua/Tool-Tree/blob/main/Version.md\">Changelog</a>
+          • 📚 <b>Instruct:</b> Root | <a href=\"https://zenlua.github.io/Tool-Tree/website/Guide.html\">No-Root</a>
+          • 📥 <b><a href=\"https://github.com/Zenlua/Tool-Tree/releases/tag/V$VER\">Download</a></b>
+
+          🌐 <b>Language:</b> Help <a href=\"https://github.com/Zenlua/Tool-Tree#-language\">translation</a>
+
           #release@tool_tree"
-          
-          curl -s -X POST "https://api.telegram.org/bot$TG_TOKEN/sendMessage" \
-          -d chat_id="$CHAT_ID" \
-          -d parse_mode="HTML" \
-          --data-urlencode text="$chat_tg"
+
+            curl -sS -X POST "https://api.telegram.org/bot$TG_TOKEN/sendMessage" \
+              -d chat_id="$CHAT_ID" \
+              -d parse_mode="HTML" \
+              --data-urlencode text="$chat_tg"
           fi
 
       - name: Beta APK
+        if: ${{ inputs.UPAPK != true }}
         uses: softprops/action-gh-release@v2
         with:
           name: "Tool-Tree ${{ env.VER }} beta"
@@ -99,35 +112,3 @@ jobs:
           files: Up/*
           prerelease: false
           body_path: "change.txt"
-
-  # build-debug:
-    # runs-on: ubuntu-latest
-    # environment: Debug
-    # steps:
-      # - uses: actions/checkout@v4
-      # - name: Set up JDK 21
-        # uses: actions/setup-java@v4
-        # with:
-          # java-version: '21'
-          # distribution: 'temurin'
-
-      # - name: Cache Gradle
-        # uses: actions/cache@v4
-        # with:
-          # path: |
-            # ~/.gradle/caches
-            # ~/.gradle/wrapper
-          # key: gradle-cache-debug
-
-      # - name: Build APK
-        # run: |
-          # chmod +x ./gradlew ./.github/modun.sh
-          # ./.github/modun.sh
-          # ./gradlew assembleDebug -x lint -x test
-
-      # - name: Upload APK
-        # uses: actions/upload-artifact@v4
-        # with:
-          # name: debug-apk
-          # path: app/build/outputs/apk/*/*.apk
-
