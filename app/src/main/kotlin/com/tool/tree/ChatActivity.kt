@@ -59,6 +59,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.omarea.common.ui.DialogHelper
 import com.omarea.krscript.config.IconPathAnalysis
 import com.omarea.krscript.config.ActionParamMemory
+import com.omarea.krscript.config.ActionShowMemory
 import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.executor.ShellExecutor
 import com.omarea.common.ui.BlurTopBarLayout
@@ -243,6 +244,16 @@ class ChatActivity : AppCompatActivity(), KrScriptActionHandler {
                 }
             }
         })
+
+        node.paramsNode?.let { paramsNode ->
+            if (paramsNode.show && !ActionShowMemory.isConfirmed(this, paramsNode)) {
+                pendingAutoShowIme = false
+                window.decorView.post {
+                    if (isFinishing || isDestroyed) return@post
+                    actionHost?.takeIf { it.isAdded }?.onActionClick(paramsNode, Runnable {}, true)
+                }
+            }
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

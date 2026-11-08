@@ -1110,6 +1110,7 @@ class PageConfigReader {
                 setState = paramsScript
                 paramsOnly = paramsScript.isEmpty()
                 tomlGet(table, "params-icon")?.let { iconPath = it.trim() }
+                tomlGet(table, "show")?.let { show = resolveBoolOrShell(it, "show") }
                 tomlGet(table, "params-shell")?.let {
                     when (it.trim().lowercase()) {
                         "hidden" -> shell = RunnableNode.shellModeHidden
