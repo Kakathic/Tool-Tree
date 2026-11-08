@@ -45,11 +45,16 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-cache-release
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.7.0'
+
       - name: Build APK
         run: |
           chmod +x ./gradlew
           [ "$UPAPK" == "true" ] || echo 1 > app/src/main/assets/beta
-          ./gradlew assembleRelease -x lint -x test
+          gradle assembleDebug -x lint -x test
           VER=$(grep -m1 'versionName ' app/build.gradle | cut -d'"' -f2)
           echo "Tool-Tree $VER"
           echo "VER=$VER" >> $GITHUB_ENV
