@@ -12,7 +12,11 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.text.method.LinkMovementMethod
+import android.animation.ValueAnimator
 import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.VelocityTracker
+import android.view.ViewConfiguration
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -110,9 +114,129 @@ class DialogAboutUpdate(
             override fun onBackPressed() {
                 if (!handleBack()) super.onBackPressed()
             }
+
+            override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+                if (panelSwipe.handle(ev) { super.dispatchTouchEvent(it) }) return true
+                return super.dispatchTouchEvent(ev)
+            }
         }
         dialog.window?.setWindowAnimations(R.style.windowAnim2)
         return dialog
+    }
+
+    private val panelSwipe = PanelSwipe()
+
+    // Vuốt phải ở màn Cập nhật (mở từ Giới thiệu): màn Cập nhật trượt theo ngón tay, Giới thiệu hiện dần phía sau như khi bấm Back
+    private inner class PanelSwipe {
+        private var velocity: VelocityTracker? = null
+        private var downX = 0f
+        private var downY = 0f
+        private var candidate = false
+        private var dragging = false
+        private var anim: ValueAnimator? = null
+
+        fun handle(ev: MotionEvent, dispatch: (MotionEvent) -> Boolean): Boolean {
+            if (!viewReady || !::updatePanel.isInitialized) return false
+            val cfg = ViewConfiguration.get(requireContext())
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    candidate = inUpdate && !openedDirectly && activeDownload == null &&
+                        anim?.isRunning != true && updatePanel.visibility == View.VISIBLE && updatePanel.translationX == 0f
+                    dragging = false
+                    downX = ev.rawX
+                    downY = ev.rawY
+                    velocity?.recycle()
+                    velocity = if (candidate) VelocityTracker.obtain().also { it.addMovement(ev) } else null
+                    return false
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (!candidate && !dragging) return false
+                    velocity?.addMovement(ev)
+                    val dx = ev.rawX - downX
+                    val dy = ev.rawY - downY
+                    if (!dragging) {
+                        if (Math.abs(dy) > cfg.scaledTouchSlop && Math.abs(dy) > Math.abs(dx)) {
+                            candidate = false
+                            return false
+                        }
+                        if (dx > cfg.scaledTouchSlop && dx > Math.abs(dy)) {
+                            dragging = true
+                            val cancel = MotionEvent.obtain(ev)
+                            cancel.action = MotionEvent.ACTION_CANCEL
+                            dispatch(cancel)
+                            cancel.recycle()
+                            updatePanel.animate().cancel()
+                            aboutPanel.animate().cancel()
+                            aboutPanel.visibility = View.VISIBLE
+                        } else return false
+                    }
+                    applyDrag(dx)
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    val was = dragging
+                    if (was) {
+                        velocity?.addMovement(ev)
+                        velocity?.computeCurrentVelocity(1000, cfg.scaledMaximumFlingVelocity.toFloat())
+                        settle(velocity?.xVelocity ?: 0f, cfg.scaledMinimumFlingVelocity)
+                    }
+                    velocity?.recycle()
+                    velocity = null
+                    candidate = false
+                    dragging = false
+                    return was
+                }
+            }
+            return false
+        }
+
+        private fun applyDrag(dx: Float) {
+            val w = updatePanel.width.toFloat().coerceAtLeast(1f)
+            val d = dx.coerceIn(0f, w)
+            val p = d / w
+            updatePanel.translationX = d
+            updatePanel.alpha = 1f - p
+            aboutPanel.translationX = -resources.displayMetrics.density * 32f * (1f - p)
+            aboutPanel.alpha = p
+        }
+
+        private fun settle(vx: Float, minFling: Int) {
+            val w = updatePanel.width.toFloat().coerceAtLeast(1f)
+            val from = updatePanel.translationX
+            val commit = from > w * 0.28f || vx > minFling
+            val to = if (commit) w else 0f
+            val duration = (160L + (Math.abs(to - from) / w * 140f).toLong())
+            anim?.cancel()
+            anim = ValueAnimator.ofFloat(from, to).apply {
+                this.duration = duration
+                interpolator = android.view.animation.DecelerateInterpolator(1.2f)
+                addUpdateListener { applyDrag(it.animatedValue as Float) }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    private var canceled = false
+                    override fun onAnimationCancel(animation: android.animation.Animator) { canceled = true }
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        if (canceled || !viewReady) return
+                        updatePanel.translationX = 0f
+                        updatePanel.alpha = 1f
+                        aboutPanel.translationX = 0f
+                        aboutPanel.alpha = 1f
+                        if (commit) {
+                            inUpdate = false
+                            updatePanel.visibility = View.GONE
+                            refreshSwipe()
+                        } else {
+                            aboutPanel.visibility = View.GONE
+                        }
+                    }
+                })
+                start()
+            }
+        }
+
+        fun cancel() {
+            anim?.cancel()
+            anim = null
+        }
     }
 
     // Trong màn Cập nhật: Back quay về Giới thiệu (đang tải thì bỏ qua)
@@ -166,6 +290,7 @@ class DialogAboutUpdate(
     }
 
     override fun onDestroyView() {
+        panelSwipe.cancel()
         if (::aboutPanel.isInitialized) aboutPanel.animate().cancel()
         if (::updatePanel.isInitialized) updatePanel.animate().cancel()
         viewReady = false
@@ -224,7 +349,7 @@ class DialogAboutUpdate(
         refreshSwipe()
     }
 
-    // Vuốt để đóng: tắt khi đang tải, và ở màn Cập nhật mở từ Giới thiệu (vuốt sẽ đóng cả dialog)
+    // Vuốt đóng cả dialog: tắt khi đang tải và ở màn Cập nhật mở từ Giới thiệu (ở đó dùng PanelSwipe để lùi về Giới thiệu)
     private fun refreshSwipe() {
         setSwipeBackRuntimeEnabled(activeDownload == null && (!inUpdate || openedDirectly))
     }
