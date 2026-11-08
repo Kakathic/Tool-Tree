@@ -14,10 +14,6 @@ on:
   push:
     paths:
       - 'app/**'
-      - 'gradle/**'
-      - '**/*.gradle'
-      - 'gradle.properties'
-      - 'gradle-wrapper.properties'
 
 permissions: write-all
 
