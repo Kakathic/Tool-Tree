@@ -572,7 +572,7 @@ title = "Battery"
 [[switch]]        # child of group "Battery"
 ...</code></pre>
 <div class="callout danger"><strong>Unsupported:</strong> entries nested as page nodes via dotted paths such as <code>[[group.action]]</code> are not collected as page nodes. Only supported node tables at the document root are traversed for the page content; specialized child tables such as <code>[[action.params]]</code> are still parsed by their owning node.</div>
-<div class="callout tip"><strong>Reserved name:</strong> <code>[[toml]]</code> is not a node type. It is only a marker used to recognize inline TOML output from <code>config-sh</code> (see <a href="#page">section 5</a>). If it appears in a file, the parser skips it harmlessly.</div>
+<div class="callout tip"><strong>Reserved name:</strong> <code>[[toml]]</code> is not a node type. It is only a marker used to recognize inline TOML output from <code>config-sh</code> (see <a href="#page">section 5</a>). If it appears in a file, the parser skips it harmlessly. It may carry one page-level setting, <code>auto-refresh</code> (see <a href="#menu-fab">section 17.4</a>).</div>
 <h3>2.4. Display order = position in file</h3>
 <p>Display order is always <strong>top-to-bottom</strong> by the position of the <code>[[name]]</code> entry in the file, regardless of node type (group, action, page, text, switch ...) - even when types are <strong>interleaved</strong> (e.g. an action, then a page, then another action). The position is read directly from the <code>tomlj</code> API, so there is no need for an <code>order</code> field.</p>
 <div class="callout tip">The parser uses <code>TomlArray.inputPositionOf(index).line()</code> to obtain the line number of each array element. If the API returns null (due to error or unsupported feature), the parser falls back to read order (seq) - it never crashes.</div>
@@ -1837,10 +1837,10 @@ script = "sh /data/data/com.tool.tree/files/run.sh"
 <tr><th>Field</th><th>Alias</th><th>Type</th><th>Description</th></tr>
 <tr><td class="field-name">title</td><td>text</td><td class="field-type">String</td><td>Title</td></tr>
 <tr><td class="field-name">key</td><td>index, id</td><td class="field-type">String</td><td>Item ID. Passed to the item's script as <code>$state</code> and <code>$menu_id</code> when clicked (spinner items get <code>$state</code> = the chosen value instead, file items also get <code>$file</code>/<code>$folder</code> = the picked path). If omitted, an auto key is derived from the title (or <code>"menu"</code>/<code>"fab"</code> when the title is empty); auto keys that would collide get a <code>#menu2</code>/<code>#fab2</code>... suffix so two items never share one. Explicitly declared keys are kept as-is even when duplicated</td></tr>
-<tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td><code>refresh</code>/<code>reload</code> (rerun the page), <code>restart</code> (restart the app), <code>finish</code>/<code>exit</code>/<code>close</code> (close the page), <code>killapp</code> (kill the app process), <code>file</code>/<code>folder</code>, <code>spinner</code>, <code>checkbox</code></td></tr>
+<tr><td class="field-name">type</td><td>-</td><td class="field-type">String</td><td><code>refresh</code>/<code>reload</code> (rerun the page), <code>restart</code> (restart the app), <code>finish</code>/<code>exit</code>/<code>close</code> (close the page), <code>killapp</code> (kill the app process), <code>file</code>/<code>folder</code>, <code>spinner</code>, <code>checkbox</code>, <code>autorefresh</code> (choose the page auto-refresh interval, see §17.4)</td></tr>
 <tr><td class="field-name">style</td><td>-</td><td class="field-type">String</td><td>Set to <code>fab</code> to render this item as a floating action button (useful inside <code>[[menu]]</code>)</td></tr>
 <tr><td class="field-name">script</td><td>set, setstate</td><td class="field-type">String</td><td>Script to run on click. If empty, the parent container's <code>handler</code>/<code>handler-sh</code> is used when provided. The parser treats the inherited handler as the item script; no separate <code>handler-sh</code> item field is needed.</td></tr>
-<tr><td class="field-name">get</td><td>getstate</td><td class="field-type">String</td><td><span class="badge shell">shell</span> (type=checkbox) script that decides the tick; (type=spinner) script that reads the current selection for highlighting. Re-run every time the menu opens</td></tr>
+<tr><td class="field-name">get</td><td>getstate</td><td class="field-type">String</td><td><span class="badge shell">shell</span> (type=checkbox) script that decides the tick; (type=spinner) script that reads the current selection for highlighting. Re-run every time the menu opens. When <code>get</code> is omitted, the checkbox tick / spinner selection is remembered by the app itself (see §17.5)</td></tr>
 <tr><td class="field-name">silent</td><td>hidden</td><td class="field-type">Bool</td><td>true: run silently in background (no log)</td></tr>
 <tr><td class="field-name">fab-spin</td><td>-</td><td class="field-type">Bool</td><td>Only for <code>[[fab.items]]</code>. The FAB icon spins <strong>only</strong> when this is <code>true</code>; without it the FAB never spins. It spins while the item's script is running (silent or with the log dialog, including after a <code>file</code>/<code>folder</code>/<code>spinner</code> pick) and, for <code>type = "refresh"</code>/<code>"reload"</code> or <code>reload-page = true</code>, while the page reloads. Ignored for menu items and for link/activity/page items</td></tr>
 <tr><td class="field-name">link</td><td>href</td><td class="field-type">String</td><td>URL</td></tr>
@@ -1867,6 +1867,31 @@ script = "sh /data/data/com.tool.tree/files/run.sh"
 </table>
 </div>
 <div class="callout warn"><strong>Important: menu/FAB items do not inherit every field documented for RunnableNode, ClickableNode, or NodeInfoBase.</strong> The parser can read some inherited fields into the item object, but the menu/FAB runtime does not use all of them. Do <strong>not</strong> use <code>desc</code>, <code>summary</code>, <code>min-sdk</code>, <code>max-sdk</code>, <code>target-sdk</code>, <code>lock</code>, <code>lock-sh</code>, <code>load-after</code>, <code>confirm</code>, <code>warn</code>, <code>warn-sh</code>, <code>bg-task</code>, <code>shell = "bg-task"</code>, or <code>shell = "hidden"</code> as if they were implemented menu/FAB features. In particular, <code>silent = true</code> is a separate menu-item feature and is <strong>not</strong> the same as <code>shell = "hidden"</code>.</div>
+<h3>17.4. Page auto-refresh (countdown bar)</h3>
+<p>A page can refresh itself on a timer. The thin progress bar under the toolbar counts down from full to empty; when it reaches zero the page content is reloaded <strong>silently</strong> (no loading dialog, the scroll position is kept) and the countdown starts again.</p>
+<pre><code>[[toml]]
+auto-refresh = 30        # default interval in seconds; 0 or omitted = off
+
+[[menu]]
+[[menu.items]]
+title = "Auto refresh"
+key = "page_auto_refresh"
+type = "autorefresh"
+items = ["0|Off", "5|5s", "10|10s", "30|30s", "60|1 min"]</code></pre>
+<ul>
+<li><code>auto-refresh</code> (alias <code>autorefresh</code>): Int, seconds. May be written inside <code>[[toml]]</code> or at the very top of the file. The value may end with <code>s</code> (<code>"30s"</code>). A positive value below 3 is raised to 3.</li>
+<li><code>type = "autorefresh"</code>: a menu item that opens a choice list (same <code>"value|title"</code> syntax as a <code>spinner</code>; the value is the number of seconds, <code>0</code> = off). Without <code>items</code>/<code>options</code> the list defaults to Off / 5s / 10s / 30s / 60s / 300s. The item runs no script. Only the first <code>autorefresh</code> item of the page is used.</li>
+<li>The choice is saved on the device per page and overrides the <code>auto-refresh</code> default, so it survives closing the app. Without the menu item the page simply uses <code>auto-refresh</code>.</li>
+<li>The countdown pauses (and then continues) while the page is loading, a script is running, a dialog or popup is open, or the page is not in the foreground. It restarts after each refresh.</li>
+<li>An auto refresh re-reads the page content only: the menu/FAB are not rebuilt, <code>before-load</code>/<code>after-load</code> of the page run again as in any reload, and a failed refresh keeps the current content instead of closing the page.</li>
+</ul>
+<h3>17.5. Remembered menu state</h3>
+<p>Menu items that cannot read their state from a script remember it on the device (per page, per item <code>key</code>):</p>
+<ul>
+<li><code>type = "checkbox"</code> <strong>without</strong> <code>get</code>: the tick is restored the next time the page opens. With <code>get</code>, the script stays the source of truth.</li>
+<li><code>type = "spinner"</code> <strong>without</strong> <code>get</code>: the last picked value is highlighted the next time the list opens. With <code>get</code>, the script decides the highlighted value.</li>
+<li>Set an explicit <code>key</code> on these items; otherwise the key is derived from the title and the saved state is lost if the title changes.</li>
+</ul>
 <h3>17.3. Demo</h3>
 <div class="demo-block"><div class="demo-label">Demo (Android UI)</div><div class="demo-frame">
 <div class="d-toolbar"><span class="d-back">&lt;</span><span class="d-title">CPU</span><span class="d-menu">⋮</span></div>
@@ -2289,9 +2314,9 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
-<li>2026-11-07 - <code>[[group]]</code>: new <code>columns</code> (number, or <code>true</code> for automatic grid of cards), <code>column-width</code> / <code>min-columns</code> / <code>max-columns</code> (automatic column count by screen width, section 4.4), <code>card</code> (a separate frame per entry) and the per-entry <code>cell</code> field to merge entries into one card (section 4.5).</li>
 <li>2026-11-07 - Items without <code>key</code> now get an automatic id <code>auto:&lt;title&gt;</code> used by long-press favorites (see <code>key</code> in section 3.1).</li>
 <li>2026-11-08 - <code>[[chat]]</code>: new <code>show</code> (Bool|Shell, default false) - auto-opens the <code>[[chat.params]]</code> dialog the first time the chat page is opened (section 14.1 / 14.2).</li>
+<li>2026-11-09 - Page auto-refresh: <code>auto-refresh</code> in <code>[[toml]]</code> and menu item <code>type = "autorefresh"</code> with a countdown bar under the toolbar (section 17.4); menu <code>checkbox</code>/<code>spinner</code> without <code>get</code> now remember their state (section 17.5).</li>
 </ul>
 </section>
 </main>

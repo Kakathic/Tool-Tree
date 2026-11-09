@@ -1,6 +1,7 @@
 # app/src/main/assets/home/etc/demo/menu_fab.toml
 [[toml]]
 load-key-sh = 'ETC="$ETC/demo" langpath'
+auto-refresh = 0
 
 [[group]]
 title = "@path_toml"
@@ -46,6 +47,11 @@ type = "spinner"
 items = ["@mf_010", "@mf_011", "@mf_012"]
 get = "glog demo_menu_mode"
 script = 'slog demo_menu_mode "$state"; echo "@mf_013"'
+[[menu.items]]
+title = "Auto refresh"
+key = "demo_auto_refresh"
+type = "autorefresh"
+items = ["0|Off", "5|5s", "10|10s", "30|30s", "60|60s"]
 [[menu.items]]
 title = "@mf_014"
 [[menu.items]]

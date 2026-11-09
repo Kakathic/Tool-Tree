@@ -115,15 +115,17 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         }
     }
 
-    private fun renderInterface() {
+    private fun renderInterface(keepScroll: Boolean = false) {
         val context = context ?: run { onRendered?.invoke(); return }
         val currentActionInfos = actionInfos ?: run { onRendered?.invoke(); return }
         rootGroup = ListItemGroup(context, true, GroupNode(""))
         pageLayoutRender = PageLayoutRender(context, currentActionInfos, this, rootGroup)
         val layout = rootGroup.getView()
         val rootView = (this.view?.findViewById<ScrollView?>(R.id.kr_content))
+        val oldScrollY = if (keepScroll) rootView?.scrollY ?: 0 else 0
         rootView?.removeAllViews()
         rootView?.addView(layout)
+        if (keepScroll && oldScrollY > 0) rootView?.post { rootView.scrollTo(0, oldScrollY) }
         triggerAction(autoRunTask)
         onRendered?.invoke()
     }
@@ -187,7 +189,7 @@ class ActionListFragment : androidx.fragment.app.Fragment(), PageLayoutRender.On
         this.progressiveMode = false
         this.onRendered = onRendered
         if (isAdded && view != null) {
-            renderInterface()
+            renderInterface(true)
         } else {
             onRendered?.invoke()
         }

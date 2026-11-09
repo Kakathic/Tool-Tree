@@ -430,6 +430,21 @@ class PageConfigReader {
         }
     }
 
+    var autoRefresh: Int = -1
+        private set
+
+    private fun parseAutoRefresh(root: TomlTable): Int {
+        var raw = tomlGet(root, *TomlKeys.AUTO_REFRESH)
+        if (raw == null) {
+            for (t in tomlEntries(root, "toml")) {
+                raw = tomlGet(t, *TomlKeys.AUTO_REFRESH)
+                if (raw != null) break
+            }
+        }
+        val v = raw?.trim()?.lowercase(getDefault())?.removeSuffix("s")?.trim()?.toIntOrNull() ?: return -1
+        return v.coerceAtLeast(0)
+    }
+
     private val tomlNodeTypeOrder = listOf("group", "end", "text", "switch", "picker", "action", "page", "download", "editor", "terminal", "chat", "resource", "menu", "fab")
 
     private val collectedMenuOptions = ArrayList<PageMenuOption>()
@@ -585,6 +600,7 @@ class PageConfigReader {
                 Log.e("KrConfig Fail！", message)
                 return null
             }
+            autoRefresh = parseAutoRefresh(result)
             val nodes = tomlChildren(result, onNodeReady)
             resolvePendingStates()
             nodes

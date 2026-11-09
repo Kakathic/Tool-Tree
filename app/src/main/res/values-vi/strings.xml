@@ -140,6 +140,8 @@ Nếu đồng ý hãy ấn vào nút xác nhận để tiếp tục."</string>
     <string formatted="false" name="kr_sdk_discrepancy_message">Tính năng này chỉ chạy trên hệ thống có SDK %d</string>
     <string name="picker_not_item">Không có lựa chọn nào</string>
     <string name="kr_more_options">Tuỳ chọn khác</string>
+    <string name="kr_auto_refresh_title">Tự làm mới</string>
+    <string name="kr_auto_refresh_off">Tắt</string>
     <string name="picker_select_none">Chưa chọn mục nào</string>
     <string name="theme_text">Chủ đề</string>
     <string name="theme_disable_blur">Tắt làm mờ</string>

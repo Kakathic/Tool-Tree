@@ -47,5 +47,6 @@ object TomlKeys {
     val CONFIG_SH = arrayOf("config-sh")
     val OPTION_SH = arrayOf("option-sh", "options-sh")
     val PATH_HOME = arrayOf("path-home", "home-path", "pathhome")
+    val AUTO_REFRESH = arrayOf("auto-refresh", "autorefresh")
     val VALUE_SH = arrayOf("value-sh")
 }

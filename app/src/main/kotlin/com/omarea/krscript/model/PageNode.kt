@@ -24,4 +24,5 @@ class PageNode(currentConfigXml: String) : ClickableNode(currentConfigXml) {
 
     var process: Boolean = false
     var placeholderCount: Int = 1
+    var autoRefresh: Int = -1
 }

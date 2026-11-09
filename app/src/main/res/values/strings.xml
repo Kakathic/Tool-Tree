@@ -151,6 +151,8 @@ If you agree, press the confirm button to continue."</string>
     <string formatted="false" name="kr_sdk_discrepancy_message">This feature only runs on systems with SDK %d</string>
     <string name="picker_not_item">No available options</string>
     <string name="kr_more_options">More options</string>
+    <string name="kr_auto_refresh_title">Auto refresh</string>
+    <string name="kr_auto_refresh_off">Off</string>
     <string name="picker_select_none">No item selected</string>
     <string name="theme_text">Theme</string>
     <string name="theme_disable_blur">Disable blur</string>

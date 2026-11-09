@@ -22,6 +22,7 @@ class PageConfigSh(private var activity: Activity, private var pageConfigSh: Str
     val autoShowActions: ArrayList<ActionNode> get() = lastReader?.autoShowActions ?: ArrayList()
     val menuIcon: ClickableNode? get() = lastReader?.menuIcon
     val fabIcon: ClickableNode? get() = lastReader?.fabIcon
+    val autoRefresh: Int get() = lastReader?.autoRefresh ?: -1
 
     val hasDeferredEntries: Boolean get() = lastReader?.hasDeferredEntries ?: false
     fun buildDeferredNodes(): ArrayList<PageConfigReader.DeferredNodeResult> =

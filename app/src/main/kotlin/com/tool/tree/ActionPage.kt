@@ -39,6 +39,7 @@ import com.omarea.common.ui.DialogHelper
 import com.omarea.common.ui.DialogItemChooser
 import com.omarea.common.ui.ProgressBarDialog
 import com.omarea.krscript.config.ActionShowMemory
+import com.omarea.krscript.config.MenuStateStore
 import com.omarea.krscript.TryOpenActivity
 import com.omarea.krscript.WebLauncher
 import com.omarea.krscript.config.IconPathAnalysis
@@ -68,6 +69,9 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         private const val PARENT_REFRESH_WINDOW_MS = 3000L
         @Volatile private var parentRefreshDeadline = 0L
         private const val CHECKBOX_REFRESH_DEBOUNCE_MS = 1000L
+        private const val AUTO_REFRESH_KEY = "auto_refresh"
+        private const val AUTO_REFRESH_MIN_SEC = 3
+        private const val AUTO_REFRESH_TICK_MS = 100L
         private const val SKELETON_AFTER_DIALOG_MAX = 1
         private const val SKELETON_FIRST_FRAME_DELAY_MS = 48L
     }
@@ -101,6 +105,11 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     private var checkboxRefreshJob: Job? = null
     private var loadPageJob: Job? = null
     private var pendingReloadWhileLoading = false
+    private var autoRefreshTotalMs = 0L
+    private var autoRefreshDeadline = 0L
+    private var autoRefreshLastTick = 0L
+    private var autoRefreshShowing = false
+    private val autoRefreshTick = Runnable { onAutoRefreshTick() }
     private var spinnerLoadJob: Job? = null
     private var lockCheckJob: Job? = null
     private var pendingDeferredBuilder: (() -> ArrayList<PageConfigReader.DeferredNodeResult>)? = null
@@ -261,6 +270,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         val config = currentPageConfig ?: return false
         if (menuOptions == null) {
             menuOptions = config.pageMenuOptions
+            restoreMenuState(menuOptions)
         }
         if (headerActions == null) {
             headerActions = config.headerActions
@@ -457,7 +467,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
 
         val typeIcon = when {
             option.type == "checkbox" -> PopupRowTypeIcon.CHECKBOX
-            option.type == "spinner" -> PopupRowTypeIcon.DROPDOWN
+            option.type == "spinner" || option.type == "autorefresh" -> PopupRowTypeIcon.DROPDOWN
             opensInternalPage -> PopupRowTypeIcon.PAGE
             opensLink -> PopupRowTypeIcon.LINK
             isResetType -> PopupRowTypeIcon.REFRESH
@@ -480,6 +490,9 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         ) {
             if (option.type == "checkbox") {
                 option.checked = !option.checked
+                if (option.checkedSh.isEmpty()) {
+                    MenuStateStore.putBool(this, menuPageId(), option.key, option.checked)
+                }
 
                 val uniqueItemId = checkboxItemId(option)
                 justClickedItemIds.add(uniqueItemId)
@@ -528,6 +541,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             "killapp" -> killApp()
             "file", "folder" -> menuItemChooseFile(menuOption)
             "spinner" -> menuItemSpinner(menuOption, anchor)
+            "autorefresh" -> menuItemAutoRefresh(anchor)
             else -> {
                 if (menuOption.silent) {
                     menuItemExecuteSilent(menuOption)
@@ -540,6 +554,8 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
 
     override fun onPause() {
         super.onPause()
+        handler.removeCallbacks(autoRefreshTick)
+        stopAutoRefreshBar()
         webViewLifecyclePaused = true
         applyWebViewFreezeState()
     }
@@ -549,6 +565,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         webViewLifecyclePaused = false
         applyWebViewFreezeState()
         consumeParentRefreshRequest()
+        restartAutoRefresh()
     }
 
     private fun markParentRefresh() {
@@ -919,6 +936,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             var loadedAutoShowActions: ArrayList<ActionNode>? = null
             var loadedMenuIcon: ClickableNode? = null
             var loadedFabIcon: ClickableNode? = null
+            var loadedAutoRefresh = -1
             if (config.pageConfigSh.isNotEmpty()) {
                 val shReader = PageConfigSh(this@ActionPage, config.pageConfigSh, config)
                 items = shReader.execute(onNodeReady)
@@ -927,6 +945,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                 loadedAutoShowActions = shReader.autoShowActions
                 loadedMenuIcon = shReader.menuIcon
                 loadedFabIcon = shReader.fabIcon
+                loadedAutoRefresh = shReader.autoRefresh
                 if (shReader.hasDeferredEntries) pendingDeferredBuilder = { shReader.buildDeferredNodes() }
             }
             if (items == null && config.pageConfigPath.isNotEmpty()) {
@@ -937,6 +956,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                 loadedAutoShowActions = reader.autoShowActions
                 loadedMenuIcon = reader.menuIcon
                 loadedFabIcon = reader.fabIcon
+                loadedAutoRefresh = reader.autoRefresh
                 if (reader.hasDeferredEntries) pendingDeferredBuilder = { reader.buildDeferredNodes() }
             }
             config.pageMenuOptions = loadedMenuOptions
@@ -944,6 +964,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             config.autoShowActions = loadedAutoShowActions
             config.menuIconNode = loadedMenuIcon
             config.fabIconNode = loadedFabIcon
+            config.autoRefresh = loadedAutoRefresh
 
             if (config.afterRead.isNotEmpty()) {
                 ScriptEnvironmen.executeResultRoot(this@ActionPage, config.afterRead, config)
@@ -990,7 +1011,9 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
                     } else {
                         updateActionList(items, showLoading) { tryAutoShowActions() }
                     }
-                    rebuildMenuAfterLoad()
+                    if (showLoading) rebuildMenuAfterLoad()
+                } else if (!showLoading) {
+                    progressBarDialog.hideDialog()
                 } else {
                     handleLoadError(config)
                     hideLoadProgress()
@@ -1040,6 +1063,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     private fun tryAutoShowActions() {
         stopFabSpinIfPending()
         startDeferredLoadIfNeeded()
+        restartAutoRefresh()
         if (autoShowTriggered) return
         val toShow = currentPageConfig?.autoShowActions?.filter { it.show && !ActionShowMemory.isConfirmed(this, it) }.orEmpty()
         if (toShow.isEmpty()) return
@@ -1231,6 +1255,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
 
             val options = parseSpinnerOptions(menuOption, shellResults["options"])
             val currentValue = shellResults["state"]?.trim()
+                ?: if (menuOption.spinnerGetState.isEmpty()) MenuStateStore.getString(this@ActionPage, menuPageId(), menuOption.key) else null
 
             withContext(Dispatchers.Main) {
                 progressBarDialog.hideDialog()
@@ -1264,16 +1289,135 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         return options
     }
 
+    private fun handleSpinnerPicked(menuOption: PageMenuOption, value: String, onPicked: ((String) -> Unit)?) {
+        if (onPicked != null) {
+            onPicked(value)
+            return
+        }
+        if (menuOption.spinnerGetState.isEmpty()) {
+            MenuStateStore.putString(this, menuPageId(), menuOption.key, value)
+        }
+        val params = hashMapOf("state" to value, "menu_id" to menuOption.key)
+        if (menuOption.silent) {
+            menuItemExecuteSilent(menuOption, params)
+        } else {
+            menuItemExecute(menuOption, params)
+        }
+    }
+
+    private fun menuPageId(): String = currentPageConfig?.let { MenuStateStore.pageId(it) } ?: ""
+
+    private fun restoreMenuState(options: List<PageMenuOption>?) {
+        val pageId = menuPageId()
+        options?.forEach { option ->
+            if (option.type == "checkbox" && option.checkedSh.isEmpty()) {
+                MenuStateStore.getBool(this, pageId, option.key)?.let { option.checked = it }
+            }
+            if (option.type == "autorefresh" && option.title.isEmpty()) {
+                option.title = getString(R.string.kr_auto_refresh_title)
+            }
+        }
+    }
+
+    private fun savedAutoRefreshSec(): Int {
+        val saved = MenuStateStore.getInt(this, menuPageId(), AUTO_REFRESH_KEY)
+        return (saved ?: currentPageConfig?.autoRefresh ?: 0).coerceAtLeast(0)
+    }
+
+    private fun effectiveAutoRefreshSec(): Int {
+        val sec = savedAutoRefreshSec()
+        return if (sec <= 0) 0 else sec.coerceAtLeast(AUTO_REFRESH_MIN_SEC)
+    }
+
+    private fun defaultAutoRefreshOptions(): ArrayList<SelectItem> {
+        val list = ArrayList<SelectItem>()
+        list.add(SelectItem().apply { value = "0"; title = getString(R.string.kr_auto_refresh_off) })
+        for (s in intArrayOf(5, 10, 30, 60, 300)) {
+            list.add(SelectItem().apply { value = s.toString(); title = "${s}s" })
+        }
+        return list
+    }
+
+    private fun menuItemAutoRefresh(anchor: View?) {
+        val option = menuOptions?.firstOrNull { it.type == "autorefresh" } ?: return
+        val resolvedAnchor = anchor ?: findViewById<View>(R.id.toolbar) ?: binding.root
+        val options = option.options?.takeIf { it.isNotEmpty() } ?: defaultAutoRefreshOptions()
+        showSpinnerPopup(resolvedAnchor, option, options, savedAutoRefreshSec().toString()) { value ->
+            val sec = (value.trim().toIntOrNull() ?: 0).coerceAtLeast(0)
+            MenuStateStore.putInt(this, menuPageId(), AUTO_REFRESH_KEY, sec)
+            restartAutoRefresh()
+        }
+    }
+
+    private fun restartAutoRefresh() {
+        handler.removeCallbacks(autoRefreshTick)
+        val sec = effectiveAutoRefreshSec()
+        if (sec <= 0 || isFinishing || isDestroyed) {
+            autoRefreshTotalMs = 0L
+            stopAutoRefreshBar()
+            return
+        }
+        val now = android.os.SystemClock.elapsedRealtime()
+        autoRefreshTotalMs = sec * 1000L
+        autoRefreshDeadline = now + autoRefreshTotalMs
+        autoRefreshLastTick = now
+        handler.post(autoRefreshTick)
+    }
+
+    private fun stopAutoRefreshBar() {
+        if (autoRefreshShowing) {
+            autoRefreshShowing = false
+            if (!loadProgressBar.isIndeterminate) hideLoadProgress()
+        }
+    }
+
+    private fun onAutoRefreshTick() {
+        if (isFinishing || isDestroyed || autoRefreshTotalMs <= 0L) return
+        val now = android.os.SystemClock.elapsedRealtime()
+        val bar = loadProgressBar
+        val barBusy = bar.visibility == View.VISIBLE && bar.isIndeterminate
+        val busy = !actionsLoaded || barBusy || rowRunProgressCount > 0 ||
+            loadPageJob?.isActive == true || spinnerLoadJob?.isActive == true ||
+            webViewLifecyclePaused || !window.decorView.hasWindowFocus()
+
+        if (busy) {
+            autoRefreshDeadline += now - autoRefreshLastTick
+            autoRefreshLastTick = now
+            handler.postDelayed(autoRefreshTick, AUTO_REFRESH_TICK_MS * 2)
+            return
+        }
+        autoRefreshLastTick = now
+
+        val remaining = autoRefreshDeadline - now
+        if (remaining <= 0L) {
+            autoRefreshDeadline = now + autoRefreshTotalMs
+            stopAutoRefreshBar()
+            loadPageConfig(false)
+            handler.postDelayed(autoRefreshTick, AUTO_REFRESH_TICK_MS)
+            return
+        }
+
+        if (!autoRefreshShowing || bar.visibility != View.VISIBLE || bar.isIndeterminate) {
+            bar.isIndeterminate = false
+            bar.max = 1000
+            bar.visibility = View.VISIBLE
+            autoRefreshShowing = true
+        }
+        bar.progress = (remaining * 1000L / autoRefreshTotalMs).toInt()
+        handler.postDelayed(autoRefreshTick, AUTO_REFRESH_TICK_MS)
+    }
+
     private fun showSpinnerPopup(
         anchor: View,
         menuOption: PageMenuOption,
         options: ArrayList<SelectItem>,
-        currentValue: String?
+        currentValue: String?,
+        onPicked: ((String) -> Unit)? = null
     ) {
         val selectedIndex = options.indexOfFirst { it.value == currentValue }.let { if (it < 0) 0 else it }
 
         if (options.size > 6) {
-            showSpinnerDialog(menuOption, options, selectedIndex)
+            showSpinnerDialog(menuOption, options, selectedIndex, onPicked)
             return
         }
 
@@ -1288,13 +1432,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         popup.setOnItemClickListener { _, _, position, _ ->
             popup.dismiss()
             val selected = options.getOrNull(position) ?: return@setOnItemClickListener
-            val value = selected.value ?: selected.title ?: ""
-            val params = hashMapOf("state" to value, "menu_id" to menuOption.key)
-            if (menuOption.silent) {
-                menuItemExecuteSilent(menuOption, params)
-            } else {
-                menuItemExecute(menuOption, params)
-            }
+            handleSpinnerPicked(menuOption, selected.value ?: selected.title ?: "", onPicked)
         }
 
         val extraTopGapPx = if (anchor === binding.actionPageFab) fabPopupGap() else 0
@@ -1319,7 +1457,8 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     private fun showSpinnerDialog(
         menuOption: PageMenuOption,
         options: ArrayList<SelectItem>,
-        selectedIndex: Int
+        selectedIndex: Int,
+        onPicked: ((String) -> Unit)? = null
     ) {
         val darkMode = ThemeModeState.getThemeMode().isDarkMode
         DialogItemChooser(darkMode, ArrayList(options.mapIndexed { index, item ->
@@ -1331,13 +1470,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
             override fun onConfirm(selected: List<SelectItem>, status: BooleanArray) {
                 val confirmedIndex = status.indexOf(true)
                 val option = options.getOrNull(confirmedIndex) ?: return
-                val value = option.value ?: option.title ?: ""
-                val params = hashMapOf("state" to value, "menu_id" to menuOption.key)
-                if (menuOption.silent) {
-                    menuItemExecuteSilent(menuOption, params)
-                } else {
-                    menuItemExecute(menuOption, params)
-                }
+                handleSpinnerPicked(menuOption, option.value ?: option.title ?: "", onPicked)
             }
         }).show(supportFragmentManager, "action-page-spinner")
     }
