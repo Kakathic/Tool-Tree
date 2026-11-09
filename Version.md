@@ -1,7 +1,8 @@
 ### Changelog
 
-**Version: 1.6.2 (8-11-2026)**
+**Version: 1.6.2 (9-11-2026)**
 
++ Add offline installation APK file
 + Add automated AI agents
 + Fix Terminal feature
 + Redesign info UI
