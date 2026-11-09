@@ -55,7 +55,7 @@ jobs:
         with:
           name: "Tool-Tree ${{ env.VER }} beta"
           tag_name: "beta"
-          files: Beta/*
+          files: Beta/*.apk
           prerelease: true
 
       - name: Release APK
@@ -64,6 +64,6 @@ jobs:
         with:
           name: "Tool-Tree ${{ env.VER }}"
           tag_name: "V${{ env.VER }}"
-          files: Up/*
+          files: Up/*.apk
           prerelease: false
           body_path: "change.txt"

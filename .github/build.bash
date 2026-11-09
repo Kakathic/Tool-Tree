@@ -43,12 +43,12 @@ zip -q -u "Tool-Tree.$VER-offline.apk" assets/module
 )
 else
 cp -f app/build/outputs/apk/*/*.apk "Beta/Tool-Tree-beta.apk"
-cp -f app/build/outputs/apk/*/*.apk "Tool-Tree-beta-offline.apk"
+cp -f app/build/outputs/apk/*/*.apk "Tool-Tree-offline-beta.apk"
 (
 mv .github/module.7z assets/module
-zip -q -u "Tool-Tree-beta-offline.apk" assets/module
-"$BUILD_TOOLS/zipalign" -f 4 "Tool-Tree-beta-offline.apk" "Tool-Tree-beta-off.apk"
-"$BUILD_TOOLS/apksigner" sign --ks app/Kakathic.jks --ks-pass pass:"$KEY_PASSWORD" --key-pass pass:"$KEY_PASSWORD" --out "Beta/Tool-Tree-beta-offline.apk" "Tool-Tree-beta-off.apk"
+zip -q -u "Tool-Tree-offline-beta.apk" assets/module
+"$BUILD_TOOLS/zipalign" -f 4 "Tool-Tree-offline-beta.apk" "Tool-Tree-beta-off.apk"
+"$BUILD_TOOLS/apksigner" sign --ks app/Kakathic.jks --ks-pass pass:"$KEY_PASSWORD" --key-pass pass:"$KEY_PASSWORD" --out "Beta/Tool-Tree-offline-beta.apk" "Tool-Tree-beta-off.apk"
 )
 fi
 ls -l Up Beta
