@@ -15,25 +15,25 @@ copy = true
 [[group]]
 title = "#1 @ctl_001"
 [[action]]
-need-input = true
 title = "choose:[...]"
 desc = "@ctl_002"
+need-input = true
 script = '''
-echo "@ctl_003"
+echo "choose:[performance|@ctl_003,balanced|@ctl_028,powersave|@ctl_029]"
 read mode_choice
 echo "@ctl_004"
 '''
 [[action]]
-need-input = true
 title = "pick:[...] / pickv / pickh"
 desc = "@ctl_005"
+need-input = true
 script = '''
 echo "@ctl_006"
-echo "@ctl_007"
+echo "pickh:[1|@ctl_007,2|@ctl_030,3|@ctl_031]"
 read level
 echo "@ctl_008"
 echo "@ctl_009"
-echo "@ctl_010"
+echo "pickv:[x|@ctl_010,y|@ctl_032]"
 read level2
 echo "@ctl_011"
 '''
@@ -41,13 +41,11 @@ echo "@ctl_011"
 [[group]]
 title = "#2 @ctl_012"
 [[action]]
-need-input = true
 title = "input:[...]"
 desc = "@ctl_013"
+need-input = true
 script = '''
-echo "@ctl_014"
-echo "Enter name"
-echo
+echo "input:[@ctl_014]"
 read user_name
 echo "@ctl_015"
 '''
@@ -55,7 +53,7 @@ echo "@ctl_015"
 [[group]]
 title = "#3 @ctl_016"
 [[action]]
-title = "@ctl_017"
+title = "progress:[current/total]"
 desc = "@ctl_018"
 script = '''
 total=10
