@@ -34,12 +34,12 @@ BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d |
 mkdir -p Up Beta assets
 if [ "$UPAPK" == "true" ]; then
 cp -f app/build/outputs/apk/*/*.apk "Up/Tool-Tree.$VER.apk"
-cp -f app/build/outputs/apk/*/*.apk "Tool-Tree.$VER-offline.apk"
+cp -f app/build/outputs/apk/*/*.apk "Tool-Tree-offline.$VER.apk"
 (
 mv .github/module.7z assets/module
-zip -q -u "Tool-Tree.$VER-offline.apk" assets/module
-"$BUILD_TOOLS/zipalign" -f 4 "Tool-Tree.$VER-offline.apk" "Tool-Tree-off.apk"
-"$BUILD_TOOLS/apksigner" sign --ks app/Kakathic.jks --ks-pass pass:"$KEY_PASSWORD" --key-pass pass:"$KEY_PASSWORD" --out "Up/Tool-Tree.$VER-offline.apk" "Tool-Tree-off.apk"
+zip -q -u "Tool-Tree-offline.$VER.apk" assets/module
+"$BUILD_TOOLS/zipalign" -f 4 "Tool-Tree-offline.$VER.apk" "Tool-Tree-off.apk"
+"$BUILD_TOOLS/apksigner" sign --ks app/Kakathic.jks --ks-pass pass:"$KEY_PASSWORD" --key-pass pass:"$KEY_PASSWORD" --out "Up/Tool-Tree-offline.$VER.apk" "Tool-Tree-off.apk"
 )
 else
 cp -f app/build/outputs/apk/*/*.apk "Beta/Tool-Tree-beta.apk"

@@ -15,8 +15,8 @@ object AppUpdateChecker {
     private const val ASSET_BETA_FLAG = "beta"
     private const val ASSET_MODULE = "module"
     private const val OFFLINE_BETA_NAME = "Tool-Tree-offline-beta.apk"
-    private const val OFFLINE_PREFIX = "Tool-Tree."
-    private const val OFFLINE_SUFFIX = "-offline.apk"
+    private const val OFFLINE_PREFIX = "Tool-Tree-offline."
+    private const val OFFLINE_SUFFIX = ".apk"
     private const val CHANGELOG_URL = "https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/Version.md"
     const val APK_FILE_NAME = "Tool-Tree.apk"
     private const val TAG = "AppUpdateChecker"
@@ -126,7 +126,7 @@ object AppUpdateChecker {
             val match = if (beta) {
                 name.equals(OFFLINE_BETA_NAME, ignoreCase = true)
             } else {
-                name.startsWith(OFFLINE_PREFIX, ignoreCase = true) && name.endsWith(OFFLINE_SUFFIX, ignoreCase = true)
+                name.startsWith(OFFLINE_PREFIX, ignoreCase = true) && name.endsWith(OFFLINE_SUFFIX, ignoreCase = true) && !name.contains("beta", ignoreCase = true)
             }
             if (match) return asset
         }

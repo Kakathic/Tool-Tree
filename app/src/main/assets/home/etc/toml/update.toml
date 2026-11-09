@@ -51,12 +51,24 @@ cell = "b"
 [[download]]
 title = "@download_text stable"
 icon = "{ICON}/update.png"
-url-sh = "linkgit https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest Tool-Tree"
+url-sh = """
+if unzip -l "$PATH_APK" | grep -q "assets/module"; then
+linkgit https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest Tool-Tree-offline | head -n 1
+else
+linkgit https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest Tool-Tree | grep -v offline | head -n 1
+fi
+"""
 script = "openfile $state"
 
 [[group]]
 [[download]]
 title = "@download_text beta"
 icon = "{ICON}/update2.png"
-url = "https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-beta.apk"
+url-sh = """
+if unzip -l "$PATH_APK" | grep -q "assets/module"; then
+echo "https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-offline-beta.apk"
+else
+echo "https://github.com/Kakathic/Tool-Tree/releases/download/beta/Tool-Tree-beta.apk"
+fi
+"""
 script = "openfile $state"
