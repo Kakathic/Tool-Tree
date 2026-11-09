@@ -1,6 +1,6 @@
 #!/data/data/com.tool.tree/files/home/termux/bin/python
 # -*- coding: utf-8 -*-
-"""Chatbot CLI
+"""AI agent
 Direct REST API client for Gemini and OpenAI-compatible providers.
 Interactive mode keeps context in RAM for the current run.
 One-shot mode stores full history and a compact summary in SQLite.
@@ -109,7 +109,7 @@ ACTIVE_SPINNER = {"s": None}
 # ("A › B › C │ newest log line") until the answer replaces it. "steps" holds those steps.
 # Some providers (e.g. Groq, behind Cloudflare) reject the default "Python-urllib" User-Agent
 # with HTTP 403 "error code: 1010". Send a normal User-Agent on every request instead.
-USER_AGENT = "Mozilla/5.0 (Linux; Android) ChatbotCLI/1.0 (+https://github.com/Zenlua/Tool-Tree)"
+USER_AGENT = "Mozilla/5.0 (Linux; Android) AIagent/1.0 (+https://github.com/Kakathic/Tool-Tree)"
 _opener = urllib.request.build_opener()
 _opener.addheaders = [("User-Agent", USER_AGENT)]
 urllib.request.install_opener(_opener)
@@ -376,7 +376,7 @@ FILE_TOOLS = [
 FILE_TOOL_NAMES = {tool["name"] for tool in FILE_TOOLS}
 UI_TEXT = {
   "vi": {
-    "title": "Chatbot CLI",
+    "title": "AI agent",
     "mode": "Bộ nhớ RAM",
     "thinking": "Suy nghĩ",
     "language": "Ngôn ngữ đầu ra",
@@ -489,7 +489,7 @@ UI_TEXT = {
     "clear_done": "Đã xóa ngữ cảnh hội thoại.",
   },
   "en": {
-    "title": "Chatbot CLI",
+    "title": "AI agent",
     "mode": "RAM Memory",
     "thinking": "Thinking",
     "language": "Output language",
@@ -522,7 +522,7 @@ UI_TEXT = {
     "help_title": "Commands:",
     "help": "Show available commands.",
     "thinking_help": "Change thinking level.",
-    "lang_help": "Change the chatbot output language (any language name or code, e.g. vi, ja, fr).",
+    "lang_help": "Change the ai agent output language (any language name or code, e.g. vi, ja, fr).",
     "instruction_help": "Change system instruction.",
     "exit_help": "Exit the program.",
     "invalid_command": "Invalid command. Type /help to see available commands.",
@@ -624,7 +624,7 @@ def display_language(language, ui):
   return ui["language_name_vi"] if language == "Vietnamese" else language
 
 def get_cli_language(language):
-  """Automatically match CLI interface language to the chatbot output language."""
+  """Automatically match CLI interface language to the ai agent output language."""
   return "vi" if language == "Vietnamese" else "en"
 
 class TerminalColors:
@@ -839,7 +839,7 @@ class Spinner:
 def parse_args():
   parser = argparse.ArgumentParser(
     description=(
-      "Chatbot CLI - RAM context in chat mode, "
+      "AI agent - RAM context in chat mode, "
       "persistent context in one-shot mode"
     )
   )
@@ -875,13 +875,13 @@ def parse_args():
   parser.add_argument(
     "--shell",
     action="store_true",
-    help="Let the chatbot run shell commands on this device (asks first).",
+    help="Let the ai agent run shell commands on this device (asks first).",
   )
   parser.add_argument(
     "--files",
     action="store_true",
     help=(
-      "Let the chatbot read, edit, write and search files "
+      "Let the ai agent read, edit, write and search files "
       "(writes ask first)."
     ),
   )
@@ -896,7 +896,7 @@ def parse_args():
   parser.add_argument(
     "--stream",
     action="store_true",
-    help="Show the answer gradually as the chatbot writes it.",
+    help="Show the answer gradually as the ai agent writes it.",
   )
   parser.add_argument(
     "--markdown",
@@ -1783,7 +1783,7 @@ def call_compatible_api(api_key, model, history, instruction, language, thinking
   )
   headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
   if ACTIVE_PROVIDER["name"] == "openrouter":
-    headers.update({"HTTP-Referer": "https://github.com/Zenlua/Tool-Tree", "X-Title": "Chatbot CLI"})
+    headers.update({"HTTP-Referer": "https://github.com/Kakathic/Tool-Tree", "X-Title": "AI CLI"})
 
   def build_request():
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")

@@ -17,7 +17,7 @@ jobs:
       - name: Build add-on
         run: |
           BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
-          "$BUILD_TOOLS/zipalign" --help 
+          #"$BUILD_TOOLS/zipalign" --help 
           "$BUILD_TOOLS/apksigner" --help 
           for vv in .github/list_addon/*; do
             [ -d "$vv" ] || continue
