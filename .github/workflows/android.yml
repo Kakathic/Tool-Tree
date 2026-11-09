@@ -16,7 +16,7 @@ on:
       - 'app/**'
       - '.github/workflows/android.yml'
 
-contents: write
+permissions: write-all
 
 env:
   KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
