@@ -1117,7 +1117,21 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     }
 
     private fun hideLoadProgress() {
-        loadProgressBar.visibility = View.GONE
+        val bar = loadProgressBar
+        if (autoRefreshTotalMs > 0L && !isFinishing && !isDestroyed) {
+            showAutoRefreshTrack(if (bar.isIndeterminate) 0 else bar.progress)
+        } else {
+            bar.visibility = View.GONE
+        }
+    }
+
+    private fun showAutoRefreshTrack(level: Int) {
+        val bar = loadProgressBar
+        if (bar.isIndeterminate) bar.isIndeterminate = false
+        bar.max = AUTO_REFRESH_BAR_MAX
+        bar.progress = level
+        bar.visibility = View.VISIBLE
+        autoRefreshShowing = true
     }
 
     private var rowRunProgressCount = 0
@@ -1397,7 +1411,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         val remaining = autoRefreshDeadline - now
         if (remaining <= 0L) {
             autoRefreshDeadline = now + autoRefreshTotalMs
-            stopAutoRefreshBar()
+            showAutoRefreshTrack(0)
             autoRefreshPending = true
             loadPageConfig(false)
             handler.postDelayed(autoRefreshTick, AUTO_REFRESH_TICK_MS)
