@@ -1073,7 +1073,8 @@ def parse_args():
     parser.error("--max-output-tokens must be a positive number.")
   if args.shell_timeout < 0:
     parser.error("--shell-timeout cannot be negative (0 = no limit).")
-  args.base_url = (args.base_url or PROVIDERS[args.provider]["base_url"]).rstrip("/")
+  env_base_url = os.environ.get("API_URL", "").strip() if args.provider != "gemini" else ""
+  args.base_url = (args.base_url or env_base_url or PROVIDERS[args.provider]["base_url"]).rstrip("/")
   args.model = args.model or PROVIDERS[args.provider]["default_model"]
   if args.provider == "openrouter":
     args.model = OPENROUTER_MODELS.get(args.model, args.model)
@@ -4549,7 +4550,7 @@ def run():
   ACTIVE_PROVIDER["name"] = args.provider
   ACTIVE_PROVIDER["base_url"] = args.base_url
   provider_env = PROVIDERS[args.provider]["env"]
-  api_key = args.api_key or os.environ.get(provider_env)
+  api_key = args.api_key or os.environ.get("API_KEY", "").strip() or os.environ.get(provider_env)
   if args.list_models and args.provider == "openrouter" and not api_key:
     api_key = ""
   elif not api_key:

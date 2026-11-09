@@ -143,6 +143,29 @@ placeholder = "@rule_placeholder"
 type = "text"
 max-lines = 6
 
+[[chat.params]]
+name = "chatai_advanced"
+label = "@api_other_label"
+type = "switch"
+
+[[chat.params]]
+name = "API_KEY"
+label = "API-Key"
+type = "password"
+depend = "chatai_advanced"
+depend-value = "1"
+depend-default = "hide"
+depend-include-hidden = "false"
+
+[[chat.params]]
+name = "API_URL"
+label = "API-Url"
+type = "text"
+depend = "chatai_advanced"
+depend-value = "1"
+depend-default = "hide"
+depend-include-hidden = "false"
+
 [[group]]
 [[terminal]]
 id = "terminal"
