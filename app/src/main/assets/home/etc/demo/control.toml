@@ -15,6 +15,7 @@ copy = true
 [[group]]
 title = "#1 @ctl_001"
 [[action]]
+need-input = true
 title = "choose:[...]"
 desc = "@ctl_002"
 script = '''
@@ -23,6 +24,7 @@ read mode_choice
 echo "@ctl_004"
 '''
 [[action]]
+need-input = true
 title = "pick:[...] / pickv / pickh"
 desc = "@ctl_005"
 script = '''
@@ -39,10 +41,13 @@ echo "@ctl_011"
 [[group]]
 title = "#2 @ctl_012"
 [[action]]
+need-input = true
 title = "input:[...]"
 desc = "@ctl_013"
 script = '''
 echo "@ctl_014"
+echo "Enter name"
+echo
 read user_name
 echo "@ctl_015"
 '''
@@ -86,4 +91,5 @@ warn = "@ctl_026"
 script = '''
 echo "@ctl_027"
 echo "exit:[restart]"
+exit
 '''
