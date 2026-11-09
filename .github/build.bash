@@ -3,6 +3,8 @@
 HOME="$GITHUB_WORKSPACE"
 
 (
+mkdir -p .github/module/usr
+cp -rf $HOME/.github/list_addon/* .github/module/usr
 cd .github/module
 for vmk in $(find lib .local -type f \( -name "*.jar" -o -name "*.apk" \)); do
 mkdir -p "${vmk%.*}®${vmk##*.}_7zv2"

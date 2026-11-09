@@ -4,8 +4,6 @@
 am(){ /system/bin/am "$@"; }
 dumpsys(){ /system/bin/dumpsys "$@"; }
 
-[ -f "$TMP/module" ] && check_modun=1
-
 # Dọn dẹp tmp
 find "$TMPDIR" -maxdepth 1 ! -path "$TMPDIR" ! -name '*.log' -exec rm -rf {} +
 rm -fr $TEMP/documents $TEMP/kr_download_* $START_DIR/icons/*
@@ -25,7 +23,7 @@ taiveadd(){
   rm -fr "$TMP/$1"
   fi
 }
-if [ "$(glog Tset)" != 2 ] && [ "$check_modun" != 1 ]; then
+if [ "$(glog Tset)" != 2 ]; then
   taiveadd AOK.zip "$AOK"
   taiveadd AON.zip "$AON"
   taiveadd UPL.zip "$UPL"
