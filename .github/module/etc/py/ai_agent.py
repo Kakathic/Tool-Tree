@@ -1225,7 +1225,6 @@ class _SafeRedirect(urllib.request.HTTPRedirectHandler):
       raise ValueError(problem)
     return super().redirect_request(req, fp, code, msg, headers, newurl)
 
-_WEB_OPENER = urllib.request.build_opener(_SafeRedirect)
 WEB_USER_AGENT = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
 _WEB_OPENER = urllib.request.build_opener(_SafeRedirect)
 _WEB_OPENER.addheaders = [("User-Agent", WEB_USER_AGENT)]
