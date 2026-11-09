@@ -709,7 +709,7 @@ class TerminalColors:
 COLORS = TerminalColors()
 
 ALLOW_MARKDOWN = False
-# Gemini built-in tools and output limit (flags --search, --url-context, --code-exec, --max-output-tokens)
+# Gemini built-in tools and output limit (flags --code-exec, --max-output-tokens); web access uses web_search/web_fetch
 GEMINI_EXTRAS = {"tools": [], "max_output_tokens": None}
 
 ANSI_ESC = "\x1b"
@@ -909,15 +909,10 @@ def parse_args():
   parser.add_argument(
     "--search",
     action="store_true",
-    help="Web search (also: GEMINI_CLI_SEARCH=1; turned on automatically by --all). Gemini: the "
-    "built-in Google Search tool. Other providers: a web_search tool (DuckDuckGo, no API key) "
-    "plus a web_fetch tool that reads a page; needs --shell or --files.",
-  )
-  parser.add_argument(
-    "--url-context",
-    action="store_true",
-    help="Gemini only: let the model read URLs (built-in url_context tool) "
-    "(also: GEMINI_CLI_URL_CONTEXT=1). Turned on automatically by --all.",
+    help="Web search for every provider, including Gemini (also: GEMINI_CLI_SEARCH=1; turned on "
+    "automatically by --all): a web_search tool (DuckDuckGo, no API key) plus a web_fetch "
+    "tool that reads a page; needs --shell or --files. Gemini's built-in Google Search "
+    "tool is not used.",
   )
   parser.add_argument(
     "--code-exec",
@@ -928,7 +923,7 @@ def parse_args():
   parser.add_argument(
     "--no-web",
     action="store_true",
-    help="With --all, do not turn on --search and --url-context automatically "
+    help="With --all, do not turn on web_search / web_fetch automatically "
     "(also: GEMINI_CLI_NO_WEB=1).",
   )
   parser.add_argument(
@@ -2486,6 +2481,10 @@ def call_gemini(
     tools.extend(FILE_TOOLS)
   if shell_enabled or files_enabled:
     tools.append(guide_tool())
+    if WEB_SEARCH["enabled"]:
+      tools.append(WEB_SEARCH_TOOL)
+    if WEB_FETCH["enabled"]:
+      tools.append(WEB_FETCH_TOOL)
   if use_extras:
     tools = tools + [{"type": name} for name in GEMINI_EXTRAS["tools"]]
   if tools:
@@ -4470,22 +4469,13 @@ def run():
   def _env_on(name):
     return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
 
+  # Web access always goes through the tool's own web_search / web_fetch (DuckDuckGo), for every
+  # provider. Gemini's built-in google_search is no longer used.
   extra_tools = []
-  if args.search or _env_on("GEMINI_CLI_SEARCH"):
-    extra_tools.append("google_search")
-  if args.url_context or _env_on("GEMINI_CLI_URL_CONTEXT"):
-    extra_tools.append("url_context")
   if args.code_exec or _env_on("GEMINI_CLI_CODE_EXEC"):
     extra_tools.append("code_execution")
   explicit_search = bool(args.search or _env_on("GEMINI_CLI_SEARCH"))
-  explicit_other = bool(
-    args.url_context or _env_on("GEMINI_CLI_URL_CONTEXT")
-    or args.code_exec or _env_on("GEMINI_CLI_CODE_EXEC")
-  )  # asked for by the user, not added by --all
-  if args.all and not (args.no_web or _env_on("GEMINI_CLI_NO_WEB")):
-    for name in ("google_search", "url_context"):
-      if name not in extra_tools:
-        extra_tools.append(name)
+  explicit_other = bool(args.code_exec or _env_on("GEMINI_CLI_CODE_EXEC"))
   max_out = args.max_output_tokens
   if max_out is None:
     try:
@@ -4494,23 +4484,21 @@ def run():
       max_out = None
   if args.provider != "gemini" and (explicit_other or max_out):
     print(
-      "Warning: --url-context, --code-exec and --max-output-tokens only work with "
+      "Warning: --code-exec and --max-output-tokens only work with "
       "the Gemini provider; ignored.",
       file=sys.stderr,
     )
   WEB_SEARCH["enabled"] = False
   WEB_FETCH["enabled"] = False
-  if args.provider != "gemini":
-    # Gemini keeps its own google_search / url_context; the tools below are for the other providers.
-    web_wanted = explicit_search or (args.all and not (args.no_web or _env_on("GEMINI_CLI_NO_WEB")))
-    if web_wanted and (args.shell or args.files):
-      WEB_SEARCH["enabled"] = True
-      WEB_FETCH["enabled"] = True
-    elif explicit_search:
-      print(
-        "Warning: --search needs --shell or --files for this provider; web search is off.",
-        file=sys.stderr,
-      )
+  web_wanted = explicit_search or (args.all and not (args.no_web or _env_on("GEMINI_CLI_NO_WEB")))
+  if web_wanted and (args.shell or args.files):
+    WEB_SEARCH["enabled"] = True
+    WEB_FETCH["enabled"] = True
+  elif explicit_search:
+    print(
+      "Warning: --search needs --shell or --files; web search is off.",
+      file=sys.stderr,
+    )
   if args.provider != "gemini":
     extra_tools, max_out = [], None
   GEMINI_EXTRAS["tools"] = extra_tools
@@ -4847,10 +4835,9 @@ def run():
       policy.files_enabled = flag
       policy.auto_approve = flag
       ACTION_LOG["path"] = policy.log_path if flag else None
-      if args.provider != "gemini":
-        web_flag = flag and not (args.no_web or _env_on("GEMINI_CLI_NO_WEB"))
-        WEB_SEARCH["enabled"] = web_flag
-        WEB_FETCH["enabled"] = web_flag
+      web_flag = flag and not (args.no_web or _env_on("GEMINI_CLI_NO_WEB"))
+      WEB_SEARCH["enabled"] = web_flag
+      WEB_FETCH["enabled"] = web_flag
       print(COLORS.value(ui["all_state"].format(value=choice)))
       continue
     if command.startswith("/stream"):
