@@ -16,6 +16,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build add-on
         run: |
+          apksigner --help 
+          zipalign --help 
           for vv in .github/list_addon/*; do
             [ -d "$vv" ] || continue
             echo "Processing: $vv"
