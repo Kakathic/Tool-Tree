@@ -130,6 +130,8 @@ Ha egyetért, nyomja meg a megerősítés gombot a folytatáshoz."</string>
     <string name="picker_select_none">Nincs kiválasztott elem</string>
     <string name="please_wait">Kérjük, várjon</string>
     <string name="pop_before_start">Alkalmazás indítása…</string>
+    <string name="pop_verify_failed">Az alkalmazás ellenőrzése sikertelen.\nAz alkalmazás átmenetileg nem használható.</string>
+    <string name="pop_install_data_failed">Az adatok telepítése sikertelen.\nEllenőrizd a hálózati kapcsolatot, az alkalmazás 15 másodperc múlva bezárul.</string>
     <string name="pop_started">Alkalmazás elindítva</string>
     <string name="processing">Feldolgozás...</string>
     <string name="select_all">Összes kijelölése</string>

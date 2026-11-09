@@ -12,6 +12,8 @@
     <string name="tab_custom4">Laboratorio</string>
     <string name="copy_success">Copia realizada correctamente</string>
     <string name="pop_before_start">Preparando el inicio de la aplicación…</string>
+    <string name="pop_verify_failed">La verificación de la aplicación falló.\nLa aplicación no está disponible temporalmente.</string>
+    <string name="pop_install_data_failed">Error al instalar los datos.\nComprueba tu conexión a internet; la aplicación se cerrará en 15 segundos.</string>
     <string name="pop_started">Iniciar aplicación</string>
     <string name="title_activity_file_selector">"Selecciona un archivo "</string>
     <string name="title_activity_folder_selector">Selecciona un directorio</string>

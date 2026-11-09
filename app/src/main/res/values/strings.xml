@@ -17,6 +17,8 @@
     <string name="copy_success">Copy successful</string>
     <string name="pio_starting">~•-•~</string>
     <string name="pop_before_start">Preparing to start the application…</string>
+    <string name="pop_verify_failed">Application verification failed.\nThe app is temporarily unavailable.</string>
+    <string name="pop_install_data_failed">Failed to install data.\nCheck your network connection, the app will close in 15 seconds.</string>
     <string name="pop_started">Starting application</string>
     <string name="title_activity_file_selector">"Please select a file "</string>
     <string name="title_activity_folder_selector">Please select a directory</string>

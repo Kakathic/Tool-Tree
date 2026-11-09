@@ -12,6 +12,8 @@
     <string name="tab_custom4">设置</string>
     <string name="copy_success">复制成功</string>
     <string name="pop_before_start">正在启动应用…</string>
+    <string name="pop_verify_failed">应用验证失败。\n应用暂时无法使用。</string>
+    <string name="pop_install_data_failed">数据安装失败。\n请检查网络连接，应用将在 15 秒后关闭。</string>
     <string name="pop_started">应用已启动</string>
     <string name="title_activity_file_selector">请选择文件</string>
     <string name="title_activity_folder_selector">请选择文件夹</string>

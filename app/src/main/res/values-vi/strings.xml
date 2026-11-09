@@ -12,6 +12,8 @@
     <string name="tab_custom4">Cài đặt</string>
     <string name="copy_success">Sao chép thành công</string>
     <string name="pop_before_start">Đang khởi động ứng dụng…</string>
+    <string name="pop_verify_failed">Xác minh ứng dụng thất bại.\nỨng dụng tạm thời không thể sử dụng.</string>
+    <string name="pop_install_data_failed">Cài đặt dữ liệu thất bại.\nHãy kiểm tra lại kết nối mạng, ứng dụng sẽ đóng sau 15 giây.</string>
     <string name="pop_started">Khởi động ứng dụng</string>
     <string name="title_activity_file_selector">"Vui lòng chọn tệp "</string>
     <string name="title_activity_folder_selector">Vui lòng chọn thư mục</string>

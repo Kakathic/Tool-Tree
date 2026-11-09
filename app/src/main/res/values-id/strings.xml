@@ -9,6 +9,8 @@
     <string name="tab_pages">Utilitas</string>
     <string name="copy_success">Berhasil menyalin</string>
     <string name="pop_before_start">Memulai aplikasi…</string>
+    <string name="pop_verify_failed">Verifikasi aplikasi gagal.\nAplikasi untuk sementara tidak dapat digunakan.</string>
+    <string name="pop_install_data_failed">Gagal memasang data.\nPeriksa koneksi jaringan Anda, aplikasi akan ditutup dalam 15 detik.</string>
     <string name="pop_started">Aplikasi dimulai</string>
     <string name="title_activity_file_selector">"Silakan pilih berkas "</string>
     <string name="title_activity_folder_selector">Silakan pilih folder</string>

@@ -13,6 +13,8 @@
     <string name="msg_path_home_not_found">Папка не найдена: %1$s. Вместо неё показана /sdcard</string>
     <string name="copy_success">Копирование выполнено успешно</string>
     <string name="pop_before_start">Запуск приложения…</string>
+    <string name="pop_verify_failed">Не удалось проверить приложение.\nПриложение временно недоступно.</string>
+    <string name="pop_install_data_failed">Не удалось установить данные.\nПроверьте подключение к сети — приложение закроется через 15 секунд.</string>
     <string name="pop_started">Приложение запущено</string>
     <string name="title_activity_file_selector">"Пожалуйста, выберите файл "</string>
     <string name="title_activity_folder_selector">Пожалуйста, выберите папку</string>
