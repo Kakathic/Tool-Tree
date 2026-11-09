@@ -36,39 +36,32 @@ object WidgetTintHelper {
         switchView.setOnCheckedChangeListener { _, _ -> updateTrackTint() }
     }
 
+    private val dominantCache = java.util.WeakHashMap<Drawable.ConstantState, FloatArray>()
+
     private fun resolveTintColor(context: Context, iconDrawable: Drawable?): Int {
         val defaultAccent = resolveAccentColor(context)
         iconDrawable ?: return defaultAccent
 
-        val topColors = extractTopColors(iconDrawable, topN = 3)
-        val blendedColor = if (topColors.isNotEmpty()) {
-            blendMultipleColors(topColors)
-        } else {
-            defaultAccent
-        }
+        val key = iconDrawable.constantState
+        val dominant = (if (key != null) dominantCache[key] else null)
+            ?: extractDominantHueSat(iconDrawable)?.also { if (key != null) dominantCache[key] = it }
+            ?: return defaultAccent
 
-        return brightenColor(blendedColor)
+        return toneForTheme(context, dominant[0], dominant[1])
     }
 
-    private fun blendMultipleColors(colorsWithScores: List<Pair<Int, Float>>): Int {
-        if (colorsWithScores.isEmpty()) return Color.BLACK
-        if (colorsWithScores.size == 1) return colorsWithScores[0].first
+    private fun isDarkTheme(context: Context): Boolean {
+        val tv = TypedValue()
+        if (!context.theme.resolveAttribute(android.R.attr.colorBackground, tv, true)) return false
+        if (tv.type < TypedValue.TYPE_FIRST_COLOR_INT || tv.type > TypedValue.TYPE_LAST_COLOR_INT) return false
+        return ColorUtils.calculateLuminance(tv.data) < 0.5
+    }
 
-        var currentColor = colorsWithScores[0].first
-        var currentScore = colorsWithScores[0].second
-
-        for (i in 1 until colorsWithScores.size) {
-            val nextColor = colorsWithScores[i].first
-            val nextScore = colorsWithScores[i].second
-            val totalScore = currentScore + nextScore
-
-            val ratio = if (totalScore > 0f) nextScore / totalScore else 0.5f
-
-            currentColor = ColorUtils.blendARGB(currentColor, nextColor, ratio)
-            currentScore = totalScore
-        }
-
-        return currentColor
+    private fun toneForTheme(context: Context, hue: Float, sat: Float): Int {
+        val dark = isDarkTheme(context)
+        val s = if (dark) sat.coerceIn(0.45f, 0.75f) else sat.coerceIn(0.50f, 0.85f)
+        val l = if (dark) 0.76f else 0.42f
+        return ColorUtils.HSLToColor(floatArrayOf(hue, s, l))
     }
 
     private fun resolveAccentColor(context: Context): Int {
@@ -77,25 +70,12 @@ object WidgetTintHelper {
         return typedValue.data
     }
 
-    private fun brightenColor(color: Int): Int {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(color, hsv)
-
-        if (hsv[2] < 0.9f) {
-            hsv[2] = 0.9f
-        }
-
-        return Color.HSVToColor(hsv)
-    }
-
-    private fun extractTopColors(drawable: Drawable?, topN: Int = 3): List<Pair<Int, Float>> {
-        drawable ?: return emptyList()
-
-        val sampleSize = 24
+    private fun extractDominantHueSat(drawable: Drawable): FloatArray? {
+        val sampleSize = 32
         val bitmap = try {
             Bitmap.createBitmap(sampleSize, sampleSize, Bitmap.Config.ARGB_8888)
         } catch (e: Exception) {
-            return emptyList()
+            return null
         }
 
         val canvas = Canvas(bitmap)
@@ -104,39 +84,59 @@ object WidgetTintHelper {
         drawable.draw(canvas)
         drawable.bounds = oldBounds
 
-        val colorScores = HashMap<Int, Float>()
+        val buckets = 24
+        val weight = FloatArray(buckets)
+        val vx = FloatArray(buckets)
+        val vy = FloatArray(buckets)
+        val satSum = FloatArray(buckets)
         val hsv = FloatArray(3)
 
         for (x in 0 until sampleSize) {
             for (y in 0 until sampleSize) {
                 val pixel = bitmap.getPixel(x, y)
-
                 if (Color.alpha(pixel) < 200) continue
 
                 Color.colorToHSV(pixel, hsv)
-                val sat = hsv[1]
-                val valVal = hsv[2]
+                if (hsv[1] < 0.20f || hsv[2] < 0.15f) continue
 
-                if (sat < 0.20f || valVal < 0.15f) continue
-
-                val r = (Color.red(pixel) shr 4) shl 4
-                val g = (Color.green(pixel) shr 4) shl 4
-                val b = (Color.blue(pixel) shr 4) shl 4
-
-                val quantizedColor = Color.rgb(r, g, b)
-
-                val weight = 1.0f + (sat * 2.0f) + (if (valVal > 0.15f && valVal < 0.95f) 0.5f else 0.0f)
-
-                val currentScore = colorScores[quantizedColor] ?: 0f
-                colorScores[quantizedColor] = currentScore + weight
+                val w = hsv[1] * (0.5f + hsv[2])
+                val b = ((hsv[0] / 360f) * buckets).toInt().coerceIn(0, buckets - 1)
+                val rad = Math.toRadians(hsv[0].toDouble())
+                weight[b] += w
+                vx[b] += (Math.cos(rad) * w).toFloat()
+                vy[b] += (Math.sin(rad) * w).toFloat()
+                satSum[b] += hsv[1] * w
             }
         }
 
         bitmap.recycle()
 
-        return colorScores.entries
-            .sortedByDescending { it.value }
-            .take(topN)
-            .map { Pair(it.key, it.value) }
+        var best = -1
+        var bestScore = 0f
+        for (b in 0 until buckets) {
+            val score = weight[b] + 0.5f * (weight[(b + buckets - 1) % buckets] + weight[(b + 1) % buckets])
+            if (score > bestScore) {
+                bestScore = score
+                best = b
+            }
+        }
+        if (best < 0) return null
+
+        var sx = 0f
+        var sy = 0f
+        var sw = 0f
+        var ss = 0f
+        for (d in -1..1) {
+            val b = (best + d + buckets) % buckets
+            sx += vx[b]
+            sy += vy[b]
+            sw += weight[b]
+            ss += satSum[b]
+        }
+        if (sw <= 0f) return null
+
+        var hue = Math.toDegrees(Math.atan2(sy.toDouble(), sx.toDouble())).toFloat()
+        if (hue < 0f) hue += 360f
+        return floatArrayOf(hue, ss / sw)
     }
 }
