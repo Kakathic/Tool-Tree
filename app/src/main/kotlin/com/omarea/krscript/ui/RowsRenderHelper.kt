@@ -118,6 +118,8 @@ object RowsRenderHelper {
 
     private val countdownStates = WeakHashMap<TextView, CountdownState>()
     private const val COUNTDOWN_FRAME_MS = 33L
+    private const val COUNTDOWN_HOLD_MS = 1000L
+    private const val COUNTDOWN_TICK_MS = 250L
 
     private fun countdownFraction(rowsView: TextView, rowIndex: Int, intervalSec: Int): Float? {
         val cs = countdownStates[rowsView] ?: return null
@@ -126,8 +128,11 @@ object RowsRenderHelper {
         val last = st.lastRefreshTimes[rowIndex] ?: return null
         val tickMs = st.refreshIntervalMs
         if (tickMs <= 0L || intervalSec <= 0) return null
+        if (rowRefreshInFlight[rowsView]?.contains(rowIndex) == true) return 1f
+        val elapsed = System.currentTimeMillis() - last
+        if (elapsed < COUNTDOWN_HOLD_MS) return 1f
         val total = Math.ceil(intervalSec * 1000.0 / tickMs) * tickMs
-        val remain = total - (System.currentTimeMillis() - last)
+        val remain = total - (elapsed - COUNTDOWN_HOLD_MS)
         return (remain / total).toFloat().coerceIn(0f, 1f)
     }
 
@@ -461,7 +466,9 @@ object RowsRenderHelper {
         applyTextBg(context, rowsView, rows, config)
 
         val minRefreshInterval = rows.filter { it.refreshInterval > 0 }.minOfOrNull { it.refreshInterval }
-        val refreshIntervalMs = (minRefreshInterval ?: 0) * 1000L
+        val hasRefreshBar = rows.any { it.refreshBar && it.refreshInterval > 0 }
+        val baseIntervalMs = (minRefreshInterval ?: 0) * 1000L
+        val refreshIntervalMs = if (hasRefreshBar) minOf(baseIntervalMs, COUNTDOWN_TICK_MS) else baseIntervalMs
 
         val now = System.currentTimeMillis()
         val lastRefreshTimes = HashMap<Int, Long>()
@@ -479,7 +486,8 @@ object RowsRenderHelper {
                         if (rowsView.getTag(R.id.kr_rows_refresh_runnable) !== tickRunnable) break
                         if (r.refreshInterval > 0) {
                             val last = (rowsView.tag as? RowsRenderState)?.lastRefreshTimes?.get(idx) ?: 0L
-                            if (tick - last >= r.refreshInterval * 1000L) {
+                            val holdMs = if (r.refreshBar) COUNTDOWN_HOLD_MS else 0L
+                            if (tick - last >= r.refreshInterval * 1000L + holdMs) {
                                 (rowsView.tag as? RowsRenderState)?.lastRefreshTimes?.set(idx, tick)
                                 resetRowAsync(context, rowsView, extraIconView, rows, config, idx, htmlContainer) {
                                     rowsView.isAttachedToWindow && rowsView.getTag(R.id.kr_rows_refresh_runnable) === tickRunnable
@@ -640,6 +648,7 @@ object RowsRenderHelper {
             }
         }
         state.animatedIcons.addAll(animated)
+        if (row.refreshBar && row.refreshInterval > 0) state.lastRefreshTimes[rowIndex] = System.currentTimeMillis()
         rowsView.tag = RowsRenderState(state.animatedIcons, newRanges, state.zoneGroupRows, state.flashAnimators, state.lastRefreshTimes, state.refreshIntervalMs)
 
         if (fetched.bgPath != null) {

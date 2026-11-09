@@ -71,7 +71,10 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         private const val CHECKBOX_REFRESH_DEBOUNCE_MS = 1000L
         private const val AUTO_REFRESH_KEY = "auto_refresh"
         private const val AUTO_REFRESH_MIN_SEC = 3
-        private const val AUTO_REFRESH_TICK_MS = 100L
+        private const val AUTO_REFRESH_TICK_MS = 16L
+        private const val AUTO_REFRESH_BUSY_TICK_MS = 250L
+        private const val AUTO_REFRESH_BAR_MAX = 10000
+        private const val AUTO_REFRESH_HOLD_MS = 1000L
         private const val SKELETON_AFTER_DIALOG_MAX = 1
         private const val SKELETON_FIRST_FRAME_DELAY_MS = 48L
     }
@@ -109,6 +112,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     private var autoRefreshDeadline = 0L
     private var autoRefreshLastTick = 0L
     private var autoRefreshShowing = false
+    private var autoRefreshPending = false
     private val autoRefreshTick = Runnable { onAutoRefreshTick() }
     private var spinnerLoadJob: Job? = null
     private var lockCheckJob: Job? = null
@@ -1063,7 +1067,9 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
     private fun tryAutoShowActions() {
         stopFabSpinIfPending()
         startDeferredLoadIfNeeded()
-        restartAutoRefresh()
+        val afterAutoRefresh = autoRefreshPending
+        autoRefreshPending = false
+        restartAutoRefresh(afterAutoRefresh)
         if (autoShowTriggered) return
         val toShow = currentPageConfig?.autoShowActions?.filter { it.show && !ActionShowMemory.isConfirmed(this, it) }.orEmpty()
         if (toShow.isEmpty()) return
@@ -1349,7 +1355,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
     }
 
-    private fun restartAutoRefresh() {
+    private fun restartAutoRefresh(hold: Boolean = false) {
         handler.removeCallbacks(autoRefreshTick)
         val sec = effectiveAutoRefreshSec()
         if (sec <= 0 || isFinishing || isDestroyed) {
@@ -1359,7 +1365,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         }
         val now = android.os.SystemClock.elapsedRealtime()
         autoRefreshTotalMs = sec * 1000L
-        autoRefreshDeadline = now + autoRefreshTotalMs
+        autoRefreshDeadline = now + autoRefreshTotalMs + if (hold) AUTO_REFRESH_HOLD_MS else 0L
         autoRefreshLastTick = now
         handler.post(autoRefreshTick)
     }
@@ -1383,7 +1389,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         if (busy) {
             autoRefreshDeadline += now - autoRefreshLastTick
             autoRefreshLastTick = now
-            handler.postDelayed(autoRefreshTick, AUTO_REFRESH_TICK_MS * 2)
+            handler.postDelayed(autoRefreshTick, AUTO_REFRESH_BUSY_TICK_MS)
             return
         }
         autoRefreshLastTick = now
@@ -1392,6 +1398,7 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
         if (remaining <= 0L) {
             autoRefreshDeadline = now + autoRefreshTotalMs
             stopAutoRefreshBar()
+            autoRefreshPending = true
             loadPageConfig(false)
             handler.postDelayed(autoRefreshTick, AUTO_REFRESH_TICK_MS)
             return
@@ -1399,11 +1406,12 @@ class ActionPage : AppCompatActivity(), RowRunProgressHost {
 
         if (!autoRefreshShowing || bar.visibility != View.VISIBLE || bar.isIndeterminate) {
             bar.isIndeterminate = false
-            bar.max = 1000
+            bar.max = AUTO_REFRESH_BAR_MAX
             bar.visibility = View.VISIBLE
             autoRefreshShowing = true
         }
-        bar.progress = (remaining * 1000L / autoRefreshTotalMs).toInt()
+        val level = (remaining * AUTO_REFRESH_BAR_MAX / autoRefreshTotalMs).toInt().coerceIn(0, AUTO_REFRESH_BAR_MAX)
+        if (bar.progress != level) bar.progress = level
         handler.postDelayed(autoRefreshTick, AUTO_REFRESH_TICK_MS)
     }
 
