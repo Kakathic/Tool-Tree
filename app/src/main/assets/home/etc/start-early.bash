@@ -4,6 +4,8 @@
 am(){ /system/bin/am "$@"; }
 dumpsys(){ /system/bin/dumpsys "$@"; }
 
+[ -f "$TMP/module" ] && check_modun=1
+
 # Dọn dẹp tmp
 find "$TMPDIR" -maxdepth 1 ! -path "$TMPDIR" ! -name '*.log' -exec rm -rf {} +
 rm -fr $TEMP/documents $TEMP/kr_download_* $START_DIR/icons/*
@@ -23,14 +25,14 @@ taiveadd(){
   rm -fr "$TMP/$1"
   fi
 }
-if [ "$(glog Tset)" != 2 ] && [ ! -f "$TMP/module" ]; then
+if [ "$(glog Tset)" != 2 ] && [ "$check_modun" != 1 ]; then
   taiveadd AOK.zip "$AOK"
   taiveadd AON.zip "$AON"
   taiveadd UPL.zip "$UPL"
   taiveadd UZE.zip "$UZE"
-  # Cấp quyền 755 tự động
-  set_permis $AON/*/* $AOK/*/* $UPL/*/* $UZE/*/* $UZZ/*/* &>/dev/null
 fi
+# Cấp quyền 755 tự động
+set_permis $AON/*/* $AOK/*/* $UPL/*/* $UZE/*/* $UZZ/*/* &>/dev/null
 } &
 
 {
