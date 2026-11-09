@@ -147,6 +147,7 @@ max-lines = 6
 name = "chatai_advanced"
 label = "@api_other_label"
 type = "switch"
+title = "@advanced_features_text"
 
 [[chat.params]]
 name = "API_KEY"
