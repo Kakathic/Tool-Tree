@@ -91,6 +91,7 @@ desc = "@act_025"
 need-input = true
 script = '''
 echo "@act_026"
+echo "input:[@act_026]"
 read user_name
 echo "@act_027"
 '''

@@ -1028,7 +1028,7 @@ type = "password"
 <tr><td class="field-name">path-home</td><td>home-path, pathhome</td><td class="field-type">String</td><td>Initial directory when opening file picker. Accepts <code>{HOME}</code> placeholders</td></tr>
 <tr><td class="field-name">editable</td><td>-</td><td class="field-type">Bool</td><td>Enables direct manual editing for supported chooser fields. For <code>type=file</code>/<code>type=folder</code>, the picker field becomes an editable path input, so the user can type or modify the path directly; the chooser button remains available. For <code>type=spinner</code>/<code>type=single-select</code>, the selected-value field becomes editable so the user can type a value manually or choose one from the options. Default: <code>false</code>.</td></tr>
 <tr><td class="field-name">support</td><td>visible</td><td class="field-type">Bool|Shell</td><td>Hide/show the param</td></tr>
-<tr><td class="field-name">sort</td><td>-</td><td class="field-type">Bool</td><td>Move readonly params to the bottom (only effective when <code>readonly</code> is declared)</td></tr>
+<tr><td class="field-name">sort</td><td>-</td><td class="field-type">Bool</td><td>Move readonly params to the bottom. Every param that should take part in the sorting must declare <code>sort = true</code> (a param without <code>readonly</code> counts as editable and stays above the readonly ones)</td></tr>
 <tr><td class="field-name">allow-no-selection</td><td>no-select</td><td class="field-type">Bool</td><td>Allow spinner to be empty (e.g. when you need to distinguish "not selected" from "first item")</td></tr>
 <tr><td class="field-name">remember</td><td>remember-value</td><td class="field-type">Bool</td><td>Persist the user's last chosen/entered value (keyed by page config path + action <code>key</code> + param <code>name</code>) and auto-restore it as the default the next time the dialog opens - overrides static <code>value</code>. If the param also has <code>value-sh</code>, the shell result still wins (it reflects the real current system state); the remembered value is only used when <code>value-sh</code> is absent. <strong>Default: <code>true</code></strong> - set <code>remember = "false"</code> to opt out and always fall back to static <code>value</code></td></tr>
 <tr><td class="field-name">apply</td><td>param-script</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script snippet merged into ONE script and run when the user confirms the action dialog, <b>before</b> the action's <code>script</code>. Uses <code>$name</code> of any param (not <code>$state</code>). Skipped when the param is <code>readonly</code>, or hidden by <code>depend-on</code> with <code>depend-include-hidden = false</code> (with the default <code>true</code>, a hidden param still runs its <code>apply</code> and passes its value). Works with params from <code>params-sh</code></td></tr>
@@ -1992,7 +1992,7 @@ script = "sh $state"
 <tr><td class="field-name">depend-cascade</td><td class="field-type">Bool</td><td>true</td><td>true: parent hidden =&gt; child hidden too. false: only visible parents are used</td></tr>
 <tr><td class="field-name">depend-onchange</td><td class="field-type">String</td><td>null</td><td>Shell callback run when this param's dependency-driven visibility changes. Aliases: <code>depend-on-change</code>, <code>depend-callback</code>. The callback receives <code>PARAM_NAME</code> and <code>PARAM_VISIBLE</code> (<code>1</code>/<code>0</code>) as extra parameters.</td></tr>
 <tr><td class="field-name">depend-readonly</td><td class="field-type">Bool</td><td>false</td><td>true: don't hide - just <em>dim</em> and lock interaction</td></tr>
-<tr><td class="field-name">depend-sort</td><td class="field-type">Bool</td><td>false</td><td>true: move locked params to the bottom (only effective when depend-readonly=true)</td></tr>
+<tr><td class="field-name">depend-sort</td><td class="field-type">Bool</td><td>false</td><td>true: move locked/hidden params to the bottom (no longer requires depend-readonly)</td></tr>
 </table>
 </div>
 <h3>18.2. Demo - simple dependency</h3>
@@ -2051,7 +2051,7 @@ type = "folder"
 depend-on = "mode"
 depend-value = "folder"
 </code></pre>
-<div class="callout warn"><code>depend-sort = true</code> only works when <code>depend-readonly = true</code>. If you declare <code>depend-sort = true</code> without <code>depend-readonly</code>, the parser forces it to <strong>false</strong> - because sort only makes sense for items "locked in place" (still visible, just dimmed), not for fully hidden items (View.GONE has no slot to "move down").</div>
+<div class="callout"><code>depend-sort = true</code> works on its own and no longer needs <code>depend-readonly = true</code>. Params that are shown and editable stay on top; locked (or hidden) params move to the bottom, same as <code>sort</code> with <code>readonly</code>.</div>
 <h3>18.3. depend-logic reference</h3>
 <div class="tbl-container">
 <table class="tbl cols-3">
@@ -2320,9 +2320,9 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
-<li>2026-11-07 - Items without <code>key</code> now get an automatic id <code>auto:&lt;title&gt;</code> used by long-press favorites (see <code>key</code> in section 3.1).</li>
-<li>2026-11-08 - <code>[[chat]]</code>: new <code>show</code> (Bool|Shell, default false) - auto-opens the <code>[[chat.params]]</code> dialog the first time the chat page is opened (section 14.1 / 14.2).</li>
 <li>2026-11-09 - Page auto-refresh: <code>auto-refresh</code> in <code>[[toml]]</code> and menu item <code>type = "autorefresh"</code> with a countdown bar under the toolbar (section 17.4); menu <code>checkbox</code>/<code>spinner</code> without <code>get</code> now remember their state (section 17.5); <code>[[text.rows]]</code> <code>refresh-bar</code> now holds the full bar for 1 second after each refresh (section 11).</li>
+<li>2026-11-10 - Param <code>sort = true</code> no longer requires <code>readonly</code> to be declared on the same param, so editable and readonly params that both declare <code>sort = true</code> now reorder correctly (section 3.1 / params).</li>
+<li>2026-11-10 - <code>depend-sort = true</code> no longer requires <code>depend-readonly</code> on the same param (section 4 / depend fields).</li>
 </ul>
 </section>
 </main>

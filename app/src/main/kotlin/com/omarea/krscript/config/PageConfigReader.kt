@@ -1224,7 +1224,7 @@ class PageConfigReader {
                 }
             }
         }
-        tomlGet(table, "sort")?.let { p.sort = (readonlyRaw != null) && tomlTruthy(it) }
+        tomlGet(table, "sort")?.let { p.sort = tomlTruthy(it) }
         tomlGet(table, "maxlength")?.let { p.maxLength = parseIntOr(it, p.maxLength) }
         tomlGet(table, "min")?.let { p.min = parseIntOr(it, p.min) }
         tomlGet(table, "max")?.let { p.max = parseIntOr(it, p.max) }
@@ -1253,7 +1253,7 @@ class PageConfigReader {
         tomlGet(table, "depend-cascade")?.let { p.dependCascade = !(it == "false" || it == "0") }
         tomlGet(table, "depend-onchange", "depend-on-change", "depend-callback")?.let { p.dependOnChangeCallback = it }
         tomlGet(table, "depend-readonly")?.let { p.dependReadonly = tomlTruthy(it) }
-        tomlGet(table, "depend-sort")?.let { p.dependSort = p.dependReadonly && tomlTruthy(it) }
+        tomlGet(table, "depend-sort")?.let { p.dependSort = tomlTruthy(it) }
         tomlGet(table, "allow-no-selection", "no-select")?.let { p.allowNoSelection = tomlTruthy(it) }
 
         if (p.type == "rows") {

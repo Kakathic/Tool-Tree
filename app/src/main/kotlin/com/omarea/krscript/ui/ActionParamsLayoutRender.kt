@@ -412,7 +412,7 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
 
     private fun applyDependSort() {
         val sortableNames = currentParamInfos
-            .filter { it.dependSort && it.dependReadonly && it.name != null }
+            .filter { it.dependSort && it.name != null }
             .map { it.name!! }
 
         reorderRowGroup(sortableNames) { name ->
