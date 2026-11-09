@@ -1,7 +1,7 @@
 # app/src/main/assets/home/etc/demo/menu_fab.toml
 [[toml]]
 load-key-sh = 'ETC="$ETC/demo" langpath'
-auto-refresh = 0
+auto-refresh = 5
 
 [[group]]
 title = "@path_toml"
@@ -12,6 +12,14 @@ monospace = true
 size = 11
 alpha = 0.7
 copy = true
+
+[[group]]
+title = "Auto refresh"
+[[text]]
+[[text.rows]]
+sh = 'echo "$(date +%H:%M:%S)"'
+monospace = true
+size = 22
 
 [[group]]
 title = "#1 @mf_001"

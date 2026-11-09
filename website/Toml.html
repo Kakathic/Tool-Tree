@@ -1877,7 +1877,12 @@ auto-refresh = 30        # default interval in seconds; 0 or omitted = off
 title = "Auto refresh"
 key = "page_auto_refresh"
 type = "autorefresh"
-items = ["0|Off", "5|5s", "10|10s", "30|30s", "60|1 min"]</code></pre>
+items = ["0|Off", "5|5s", "10|10s", "30|30s", "60|1 min"]
+
+# To see the refresh happen, show something that changes on every load:
+[[text]]
+[[text.rows]]
+sh = 'date +%H:%M:%S'</code></pre>
 <ul>
 <li><code>auto-refresh</code> (alias <code>autorefresh</code>): Int, seconds. May be written inside <code>[[toml]]</code> or at the very top of the file. The value may end with <code>s</code> (<code>"30s"</code>). A positive value below 3 is raised to 3.</li>
 <li><code>type = "autorefresh"</code>: a menu item that opens a choice list (same <code>"value|title"</code> syntax as a <code>spinner</code>; the value is the number of seconds, <code>0</code> = off). Without <code>items</code>/<code>options</code> the list defaults to Off / 5s / 10s / 30s / 60s / 300s. The item runs no script. Only the first <code>autorefresh</code> item of the page is used.</li>
