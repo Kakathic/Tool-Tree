@@ -23,7 +23,7 @@ taiveadd(){
   rm -fr "$TMP/$1"
   fi
 }
-if [ "$(glog Tset)" != 2 ]; then
+if [ "$(glog Tset)" != 2 ] && [ ! -f "$TMP/module" ]; then
   taiveadd AOK.zip "$AOK"
   taiveadd AON.zip "$AON"
   taiveadd UPL.zip "$UPL"
