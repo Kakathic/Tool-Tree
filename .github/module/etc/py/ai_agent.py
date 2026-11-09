@@ -425,6 +425,7 @@ UI_TEXT = {
     "instruction_usage": "Cách dùng: /instruction <text>",
     "timeout_error": "Timeout phải lớn hơn 0.",
     "missing_api_key": "Thiếu GEMINI_API_KEY.",
+    "key_hint": "Đăng ký hoặc lấy API key {provider} tại: {url}",
     "question_empty": "Câu hỏi không được để trống.",
     "instruction_error": "Lỗi hướng dẫn",
     "api_valid": "API key: HỢP LỆ",
@@ -538,6 +539,7 @@ UI_TEXT = {
     "instruction_usage": "Usage: /instruction <text>",
     "timeout_error": "Timeout must be greater than zero.",
     "missing_api_key": "Missing GEMINI_API_KEY.",
+    "key_hint": "Get or register a {provider} API key at: {url}",
     "question_empty": "Question cannot be empty.",
     "instruction_error": "Instruction error",
     "api_valid": "API key: VALID",
@@ -1758,7 +1760,8 @@ def _compatible_urlopen(request, timeout, status_callback=None):
       except json.JSONDecodeError:
         message = body
       api_log("ERROR", f"{provider} HTTP {exc.code}: " + _api_clip(message, 1500))
-      if exc.code in (429, 503) and attempt < RETRY["max"]:
+      failure = _http_error(exc.code, message, f"{provider} ")
+      if exc.code in (429, 503) and attempt < RETRY["max"] and not isinstance(failure, (ModelError, AuthError)):
         delay = _retry_delay(exc, message, body, attempt)
         if delay <= MAX_RETRY_WAIT:
           attempt += 1
@@ -2083,6 +2086,7 @@ def run_api_check(args, api_key, ui):
       print(f"  ! {ui['check_models_notice'].format(error=models_notice)}")
   elif key is False:
     print(f"  {bad} {ui['check_key_bad'].format(key=masked, error=key_error)}")
+    report_key_help(provider, ui, stream=sys.stdout)
   elif server_error:
     print(f"  {bad} {ui['check_server_error'].format(error=server_error)}")
   else:
@@ -2197,18 +2201,49 @@ class ModelError(RuntimeError):
 
 _MODEL_ERROR_RE = re.compile(
   r"not[ _]?found|not[ _]?exist|does not exist|not a valid model|invalid model|unknown model"
-  r"|unable to access|no such model|model_not_found|not available|not_available",
+  r"|unable to access|no such model|model_not_found|not available|not_available"
+  r"|not supported|unsupported|no endpoints found|no available channel",
+  re.IGNORECASE,
+)
+# Gateways and proxies sometimes answer 5xx for an unknown model; only these clear wordings
+# count then (a plain "model overloaded" 503 is temporary and must still be retried).
+_MODEL_ERROR_5XX_RE = re.compile(
+  r"model[_ ]not[_ ]found|not supported|unsupported|does not exist|not a valid model"
+  r"|unknown model|no such model|no endpoints found|no available channel",
+  re.IGNORECASE,
+)
+
+class AuthError(RuntimeError):
+  """The provider rejected the API key (missing, invalid, expired or not allowed)."""
+
+_AUTH_ERROR_RE = re.compile(
+  r"api[ _-]?key|unauthori[sz]ed|authenticat|invalid[ _]key|incorrect key",
   re.IGNORECASE,
 )
 
 def _http_error(code, message, prefix=""):
-  """RuntimeError for an HTTP failure; ModelError when the model id is the problem."""
+  """RuntimeError for an HTTP failure; ModelError when the model id is the problem,
+  AuthError when the API key is the problem."""
   text = f"{prefix}HTTP {code}: {message}"
-  if code in (400, 403, 404, 422) and re.search(r"model", str(message), re.IGNORECASE) \
+  client_error = code in (400, 403, 404, 422)
+  gateway_error = code in (500, 502, 503, 504) and _MODEL_ERROR_5XX_RE.search(str(message))
+  if (client_error or gateway_error) and re.search(r"model", str(message), re.IGNORECASE) \
       and _MODEL_ERROR_RE.search(str(message)) \
-      and not re.search(r"tool|grounding|search|function|code[ _]exec|url[ _]context", str(message), re.IGNORECASE):
+      and not re.search(r"tool|grounding|search|function|code[ _]exec|url[ _]context|reason|thinking|temperature|parameter", str(message), re.IGNORECASE):
     return ModelError(text)
+  if code == 401 or (code in (400, 403) and _AUTH_ERROR_RE.search(str(message))):
+    return AuthError(text)
   return RuntimeError(text)
+
+def report_key_help(provider, ui=None, stream=None):
+  """Print the registration link of the provider in use (to stderr by default)."""
+  ui = ui or ACTIVE_UI["ui"] or UI_TEXT["en"]
+  info = PROVIDERS.get(provider) or {}
+  url = info.get("key_url")
+  if not url:
+    return
+  text = ui["key_hint"].format(provider=info.get("label", provider), url=url)
+  print(COLORS.value(text), file=stream or sys.stderr)
 
 def _net_error(exc, provider=""):
   """Build a readable RuntimeError for network failures
@@ -2307,7 +2342,8 @@ def _send_request(request, timeout, stream_callback, status):
       except (json.JSONDecodeError, AttributeError):
         error_message = error_body
       api_log("ERROR", f"HTTP {exc.code}: " + _api_clip(error_message, 1500))
-      if exc.code in (429, 503) and attempt < RETRY["max"]:
+      failure = _http_error(exc.code, error_message)
+      if exc.code in (429, 503) and attempt < RETRY["max"] and not isinstance(failure, (ModelError, AuthError)):
         delay = _retry_delay(exc, error_message, error_body, attempt)
         if delay <= MAX_RETRY_WAIT:
           attempt += 1
@@ -4555,6 +4591,7 @@ def run():
     api_key = ""
   elif not api_key:
     print(COLORS.error(f"Missing {provider_env}."), file=sys.stderr)
+    report_key_help(args.provider, ui)
     return 2
   WEB_NET["timeout"] = max(1, min(args.timeout, 60))
   if args.list_models:
@@ -4686,6 +4723,8 @@ def run():
       )
       if isinstance(exc, ModelError):
         report_wrong_model(args.provider, api_key, args.base_url, args.timeout, model, ui)
+      elif isinstance(exc, AuthError):
+        report_key_help(args.provider, ui)
       return 1
     except KeyboardInterrupt:
       if pending_id is not None:
@@ -4971,6 +5010,8 @@ def run():
       )
       if isinstance(exc, ModelError):
         report_wrong_model(args.provider, api_key, args.base_url, args.timeout, model, ui)
+      elif isinstance(exc, AuthError):
+        report_key_help(args.provider, ui)
       print_edited_files(policy, ui)
       print()
       continue

@@ -88,12 +88,6 @@ rm -f "$HOME/.cache/api.log" 2>/dev/null
 '''
 
 [[chat.menu]]
-title = "@api_website_title"
-script = '''
-ai_agent --list-websites
-'''
-
-[[chat.menu]]
 title = "@model_list_title"
 script = '''
 ai_agent --provider "$(glog list_provider)" --list-models
@@ -151,7 +145,7 @@ title = "@advanced_features_text"
 
 [[chat.params]]
 name = "API_KEY"
-label = "API-Key"
+title = "API-Key"
 type = "password"
 depend = "chatai_advanced"
 depend-value = "1"
@@ -160,7 +154,7 @@ depend-include-hidden = "false"
 
 [[chat.params]]
 name = "API_URL"
-label = "API-Url"
+title = "API-Url"
 type = "text"
 depend = "chatai_advanced"
 depend-value = "1"
