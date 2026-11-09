@@ -50,6 +50,7 @@ PROVIDERS = {
   "deepseek": {"label": "DeepSeek", "env": "DEEPSEEK_API_KEY", "base_url": "https://api.deepseek.com", "default_model": "deepseek-flash", "key_url": "https://platform.deepseek.com/api_keys", "website": "https://api-docs.deepseek.com/"},
 }
 ACTIVE_PROVIDER = {"name": "gemini", "base_url": ""}
+ACTION_LOG = {"path": None}  # actions.log path while shell/files tools are on
 DEFAULT_LANGUAGE = "English"
 API_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 THINKING_LEVELS = ("auto", "low", "medium", "high")
@@ -1261,6 +1262,15 @@ def build_system_instruction(
         "that could not be performed."
       )
     parts.append(verify)
+  if (shell_enabled or files_enabled) and ACTION_LOG["path"]:
+    parts.append(
+      f"Action log: {ACTION_LOG['path']} (blocks start with a ── timestamp line; failed ones show "
+      "✘ and an Error output row). Before fixing anything that may follow an earlier failure "
+      "(the user mentions an error, 'again' or 'still', or an earlier step in this conversation "
+      "failed), first read the newest failed blocks at the end of the log (tail -n 60, or "
+      "read_file near the end) and fix the cause shown there instead of guessing. Errors "
+      "returned in the current turn are already visible: use them directly."
+    )
   if shell_enabled:
     parts.append("Dir: " + os.getcwd() + ". System: " + platform.system() + ".")
   if memory_summary:
@@ -2467,7 +2477,7 @@ def check_path_allowed(path, policy):
 
 LOG_TEXT = {
   "vi": {
-    "tool": "Công cụ", "approval": "Duyệt", "result": "Kết quả",
+    "tool": "Công cụ", "approval": "Duyệt", "result": "Kết quả", "output": "Đầu ra lỗi",
     "command": "Lệnh", "path": "Đường dẫn", "pattern": "Mẫu tìm", "other": "Tham số",
     "ok": "✔ xong", "fail": "✘ thất bại", "error": "✘ lỗi",
     "chars": "ký tự", "matches": "khớp",
@@ -2478,7 +2488,7 @@ LOG_TEXT = {
     },
   },
   "en": {
-    "tool": "Tool", "approval": "Approval", "result": "Result",
+    "tool": "Tool", "approval": "Approval", "result": "Result", "output": "Error output",
     "command": "Command", "path": "Path", "pattern": "Pattern", "other": "Argument",
     "ok": "✔ done", "fail": "✘ failed", "error": "✘ error",
     "chars": "chars", "matches": "matches",
@@ -2520,7 +2530,7 @@ def format_log_block(record):
     status = text["ok"]
   extras = []
   for key, value in result.items():
-    if key in ("error", "exit_code", "command_number"):
+    if key in ("error", "exit_code", "command_number", "output_tail"):
       continue
     if key == "path" and value == args.get("path"):
       continue
@@ -2531,6 +2541,8 @@ def format_log_block(record):
     else:
       extras.append(f"{key}: {value}")
   rows.append((text["result"], " · ".join([status] + extras)))
+  if result.get("output_tail"):
+    rows.append((text["output"], result["output_tail"]))
   width = max(len(label) for label, _ in rows)
   stamp = str(record.get("time", ""))[:19].replace("T", " ")
   header = f"── {stamp} " + "─" * 30
@@ -2767,8 +2779,22 @@ def _log_args(name, arguments):
       shown[key] = value
   return shown
 
+def _output_tail(result, limit=700):
+  """Last part of the output of a failed command (ANSI removed), so the log shows why it failed."""
+  failed = result.get("error") or result.get("exit_code") not in (0, None)
+  if not failed:
+    return ""
+  text = result.get("stderr") or result.get("stdout") or ""
+  if not isinstance(text, str):
+    return ""
+  text = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", text).strip()
+  return text[-limit:]
+
 def _log_result(result):
   summary = {}
+  tail = _output_tail(result)
+  if tail:
+    summary["output_tail"] = tail
   for key, value in result.items():
     if key in ("stdout", "stderr", "content"):
       summary[key + "_chars"] = (
@@ -2944,7 +2970,7 @@ def print_edited_files(policy, ui):
   if not PROGRESS["col0"]:
     sys.stdout.write("\n")
     PROGRESS["col0"] = True
-  lines = [COLORS.label(ui["edited_title"])]
+  lines = ["", COLORS.label(ui["edited_title"])]
   for item in items:
     if item["state"] in ("failed", "restored"):
       mark, note = "✘", ui["edited_" + item["state"]]
@@ -3011,7 +3037,7 @@ def _nearest_lines(text, old, limit=3):
   if not first:
     return []
   # Same key / identifier (text before "=" or ":") first, then plain similarity.
-  key = re.split(r"[=:]", first, 1)[0].strip()
+  key = re.split(r"[=:]", first, maxsplit=1)[0].strip()
   found = []
   if len(key) >= 3:
     found = [n for n, line in enumerate(lines, 1) if key in line]
@@ -4071,6 +4097,8 @@ def run():
       )
     ),
   )
+
+  ACTION_LOG["path"] = policy.log_path if (policy.enabled or policy.files_enabled) else None
 
   def current_ui():
     return ACTIVE_UI["ui"] or UI_TEXT["en"]
