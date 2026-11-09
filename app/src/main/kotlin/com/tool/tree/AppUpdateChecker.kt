@@ -13,6 +13,10 @@ object AppUpdateChecker {
     private const val API_LATEST = "https://api.github.com/repos/Kakathic/Tool-Tree/releases/latest"
     private const val API_BETA = "https://api.github.com/repos/Kakathic/Tool-Tree/releases/tags/beta"
     private const val ASSET_BETA_FLAG = "beta"
+    private const val ASSET_MODULE = "module"
+    private const val OFFLINE_BETA_NAME = "Tool-Tree-offline-beta.apk"
+    private const val OFFLINE_PREFIX = "Tool-Tree."
+    private const val OFFLINE_SUFFIX = "-offline.apk"
     private const val CHANGELOG_URL = "https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/Version.md"
     const val APK_FILE_NAME = "Tool-Tree.apk"
     private const val TAG = "AppUpdateChecker"
@@ -60,11 +64,16 @@ object AppUpdateChecker {
     private fun doCheck(activity: Activity): AppUpdateCheckResult {
         return try {
             val changelogText = fetchText(CHANGELOG_URL)?.also { saveChangelog(activity, it) }
-            val apiUrl = if (isBetaBuild(activity)) API_BETA else API_LATEST
+            val beta = isBetaBuild(activity)
+            val apiUrl = if (beta) API_BETA else API_LATEST
             val release = fetchJson(apiUrl) ?: return AppUpdateCheckResult.Failed
 
             val assets = release.optJSONArray("assets")
-            val firstAsset = if (assets != null && assets.length() > 0) assets.getJSONObject(0) else null
+            val firstAsset = if (hasOfflineModule(activity)) {
+                findOfflineAsset(assets, beta) ?: return AppUpdateCheckResult.UpToDate(changelogText)
+            } else if (assets != null && assets.length() > 0) {
+                assets.getJSONObject(0)
+            } else null
             val apkUrl = firstAsset?.optString("browser_download_url")?.takeIf { it.isNotEmpty() }
             val remoteSha256 = firstAsset?.optString("digest")?.substringAfter(":", "")?.takeIf { it.isNotEmpty() }
             if (firstAsset == null || apkUrl == null || remoteSha256 == null) {
@@ -95,6 +104,33 @@ object AppUpdateChecker {
             Log.w(TAG, "check failed: $ex")
             AppUpdateCheckResult.Failed
         }
+    }
+
+    private fun hasOfflineModule(activity: Activity): Boolean {
+        return try {
+            activity.assets.open(ASSET_MODULE).use { true }
+        } catch (_: Exception) {
+            try {
+                (activity.assets.list(ASSET_MODULE)?.isNotEmpty()) == true
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
+
+    private fun findOfflineAsset(assets: org.json.JSONArray?, beta: Boolean): JSONObject? {
+        if (assets == null) return null
+        for (i in 0 until assets.length()) {
+            val asset = assets.getJSONObject(i)
+            val name = asset.optString("name")
+            val match = if (beta) {
+                name.equals(OFFLINE_BETA_NAME, ignoreCase = true)
+            } else {
+                name.startsWith(OFFLINE_PREFIX, ignoreCase = true) && name.endsWith(OFFLINE_SUFFIX, ignoreCase = true)
+            }
+            if (match) return asset
+        }
+        return null
     }
 
     private fun isBetaBuild(activity: Activity): Boolean {
