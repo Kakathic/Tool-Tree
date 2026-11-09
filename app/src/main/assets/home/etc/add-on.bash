@@ -191,10 +191,6 @@ Vips() {
   fi
 
   # Phát hiện tính năng
-  if [ "$shortcut" == "true" ]; then
-  shortcut_text='key = "'$id'" '
-  fi
-  
   if [ "$(glog Ticon)" != 1 ]; then
     if [ -f "$dirvad/icon.png" ]; then
     icon_vb="$dirvad/icon.png"

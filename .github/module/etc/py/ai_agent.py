@@ -701,6 +701,8 @@ class TerminalColors:
 COLORS = TerminalColors()
 
 ALLOW_MARKDOWN = False
+# Gemini built-in tools and output limit (flags --search, --url-context, --code-exec, --max-output-tokens)
+GEMINI_EXTRAS = {"tools": [], "max_output_tokens": None}
 
 ANSI_ESC = "\x1b"
 _ANSI_TEXT_ESC = re.compile(
@@ -897,6 +899,38 @@ def parse_args():
     ),
   )
   parser.add_argument(
+    "--search",
+    action="store_true",
+    help="Gemini only: enable the built-in Google Search tool (also: GEMINI_CLI_SEARCH=1). "
+    "Turned on automatically by --all.",
+  )
+  parser.add_argument(
+    "--url-context",
+    action="store_true",
+    help="Gemini only: let the model read URLs (built-in url_context tool) "
+    "(also: GEMINI_CLI_URL_CONTEXT=1). Turned on automatically by --all.",
+  )
+  parser.add_argument(
+    "--code-exec",
+    action="store_true",
+    help="Gemini only: enable the built-in code execution sandbox "
+    "(also: GEMINI_CLI_CODE_EXEC=1).",
+  )
+  parser.add_argument(
+    "--no-web",
+    action="store_true",
+    help="With --all, do not turn on --search and --url-context automatically "
+    "(also: GEMINI_CLI_NO_WEB=1).",
+  )
+  parser.add_argument(
+    "--max-output-tokens",
+    type=int,
+    default=None,
+    metavar="N",
+    help="Gemini only: maximum output tokens per response, sent as max_output_tokens "
+    "(also: GEMINI_CLI_MAX_OUTPUT_TOKENS). Default: the server's default.",
+  )
+  parser.add_argument(
     "--progress-single",
     default=None,
     metavar="0|1",
@@ -1031,6 +1065,8 @@ def parse_args():
     parser.error("--yes requires --shell or --files.")
   if args.rpm < 0 or args.max_retries < 0:
     parser.error("--rpm and --max-retries cannot be negative.")
+  if args.max_output_tokens is not None and args.max_output_tokens < 1:
+    parser.error("--max-output-tokens must be a positive number.")
   if args.shell_timeout < 0:
     parser.error("--shell-timeout cannot be negative (0 = no limit).")
   args.base_url = (args.base_url or PROVIDERS[args.provider]["base_url"]).rstrip("/")
@@ -1795,7 +1831,8 @@ def _http_error(code, message, prefix=""):
   """RuntimeError for an HTTP failure; ModelError when the model id is the problem."""
   text = f"{prefix}HTTP {code}: {message}"
   if code in (400, 403, 404, 422) and re.search(r"model", str(message), re.IGNORECASE) \
-      and _MODEL_ERROR_RE.search(str(message)):
+      and _MODEL_ERROR_RE.search(str(message)) \
+      and not re.search(r"tool|grounding|search|function|code[ _]exec|url[ _]context", str(message), re.IGNORECASE):
     return ModelError(text)
   return RuntimeError(text)
 
@@ -2043,6 +2080,7 @@ def call_gemini(
   files_enabled=False,
   stream_callback=None,
   status_callback=None,
+  use_extras=True,
 ):
   if ACTIVE_PROVIDER["name"] != "gemini":
     effective_instruction = system_instruction_override if system_instruction_override is not None else instruction
@@ -2070,6 +2108,8 @@ def call_gemini(
     tools.extend(FILE_TOOLS)
   if shell_enabled or files_enabled:
     tools.append(guide_tool())
+  if use_extras:
+    tools = tools + [{"type": name} for name in GEMINI_EXTRAS["tools"]]
   if tools:
     payload["tools"] = tools
   if stream_callback is not None:
@@ -2078,6 +2118,8 @@ def call_gemini(
     payload["generation_config"] = {
       "thinking_level": thinking
     }
+  if use_extras and GEMINI_EXTRAS["max_output_tokens"]:
+    payload.setdefault("generation_config", {})["max_output_tokens"] = GEMINI_EXTRAS["max_output_tokens"]
   if API_LOG["path"]:
     # Ask for thought summaries so the API log can show what the model was thinking.
     payload.setdefault("generation_config", {})["thinking_summaries"] = "auto"
@@ -3904,6 +3946,7 @@ def _summarize_memory_chunk(
     language=language,
     thinking="low",
     timeout=timeout,
+    use_extras=False,
   )
   if len(answer) > MAX_SUMMARY_CHARS:
     compact_prompt = (
@@ -3929,6 +3972,7 @@ def _summarize_memory_chunk(
       language=language,
       thinking="low",
       timeout=timeout,
+      use_extras=False,
     )
   if len(answer) > MAX_SUMMARY_CHARS:
     raise RuntimeError(
@@ -4004,6 +4048,37 @@ def run():
   ALLOW_MARKDOWN = bool(args.markdown) or (
     os.environ.get("GEMINI_CLI_MARKDOWN", "").strip().lower() in ("1", "true", "yes", "on")
   )
+  def _env_on(name):
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+  extra_tools = []
+  if args.search or _env_on("GEMINI_CLI_SEARCH"):
+    extra_tools.append("google_search")
+  if args.url_context or _env_on("GEMINI_CLI_URL_CONTEXT"):
+    extra_tools.append("url_context")
+  if args.code_exec or _env_on("GEMINI_CLI_CODE_EXEC"):
+    extra_tools.append("code_execution")
+  explicit_extras = bool(extra_tools)  # asked for by the user, not added by --all
+  if args.all and not (args.no_web or _env_on("GEMINI_CLI_NO_WEB")):
+    for name in ("google_search", "url_context"):
+      if name not in extra_tools:
+        extra_tools.append(name)
+  max_out = args.max_output_tokens
+  if max_out is None:
+    try:
+      max_out = int(os.environ.get("GEMINI_CLI_MAX_OUTPUT_TOKENS", "") or 0) or None
+    except ValueError:
+      max_out = None
+  if args.provider != "gemini" and (explicit_extras or max_out):
+    print(
+      "Warning: --search, --url-context, --code-exec and --max-output-tokens only work with "
+      "the Gemini provider; ignored.",
+      file=sys.stderr,
+    )
+  if args.provider != "gemini":
+    extra_tools, max_out = [], None
+  GEMINI_EXTRAS["tools"] = extra_tools
+  GEMINI_EXTRAS["max_output_tokens"] = max_out
   env_target = os.environ.get("GEMINI_CLI_API_LOG", "").strip()
   # On by default in ~/.cache/api.log; GEMINI_CLI_API_LOG=0/false/no/off turns it off.
   if env_target.lower() not in ("0", "false", "no", "off"):
