@@ -16,7 +16,7 @@ on:
       - 'app/**'
       - '.github/workflows/android.yml'
 
-permissions: write-all
+contents: write
 
 env:
   KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -42,18 +42,12 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-cache-release
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.8.2'
+          cache-read-only: false
+          cache-cleanup: on-success
 
       - name: Build APK
         run: |
