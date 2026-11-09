@@ -2320,9 +2320,9 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
-<li>2026-11-09 - Page auto-refresh: <code>auto-refresh</code> in <code>[[toml]]</code> and menu item <code>type = "autorefresh"</code> with a countdown bar under the toolbar (section 17.4); menu <code>checkbox</code>/<code>spinner</code> without <code>get</code> now remember their state (section 17.5); <code>[[text.rows]]</code> <code>refresh-bar</code> now holds the full bar for 1 second after each refresh (section 11).</li>
 <li>2026-11-10 - Param <code>sort = true</code> no longer requires <code>readonly</code> to be declared on the same param, so editable and readonly params that both declare <code>sort = true</code> now reorder correctly (section 3.1 / params).</li>
 <li>2026-11-10 - <code>depend-sort = true</code> no longer requires <code>depend-readonly</code> on the same param (section 4 / depend fields).</li>
+<li>2026-11-10 - <code>sort</code> / <code>depend-sort</code>: unlocked params now return to their declared position (sorting is based on declaration order, then locked state), so a param that gets unlocked moves back up.</li>
 </ul>
 </section>
 </main>

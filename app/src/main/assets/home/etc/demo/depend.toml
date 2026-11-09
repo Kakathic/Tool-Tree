@@ -65,11 +65,6 @@ title = "depend-readonly, depend-sort"
 desc = "@dep_011"
 script = 'echo "allow = $allow / val_field = $val_field"'
 [[action.params]]
-name = "allow"
-title = "@dep_012"
-type = "switch"
-value = "0"
-[[action.params]]
 name = "val_field"
 title = "@dep_013"
 type = "text"
@@ -77,6 +72,12 @@ value = "abc"
 depend-on = "allow"
 depend-value = "1"
 depend-readonly = true
+depend-sort = true
+[[action.params]]
+name = "allow"
+title = "@dep_012"
+type = "switch"
+value = "0"
 depend-sort = true
 
 [[group]]

@@ -267,6 +267,7 @@ name = "a_edit"
 title = "@prm_069"
 type = "text"
 value = "@prm_070"
+sort = true
 [[action]]
 title = "@prm_071"
 desc = "@prm_072"
@@ -314,3 +315,8 @@ text = "@prm_084"
 size = 12
 [[action.params.rows]]
 line = true
+margin-top = 8
+margin-bottom = 8
+[[action.params.rows]]
+text = "@prm_084"
+size = 12

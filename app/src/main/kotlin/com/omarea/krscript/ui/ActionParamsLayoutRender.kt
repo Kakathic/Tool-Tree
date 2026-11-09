@@ -476,7 +476,11 @@ class ActionParamsLayoutRender(private var linearLayout: LinearLayout, activity:
         }
         if (blocks.isEmpty()) return
 
-        val sortedBlocks = blocks.sortedBy { if (isBright(it.first)) 0 else 1 }
+        val declaredIndex = HashMap<String, Int>()
+        currentParamInfos.forEachIndexed { idx, p -> p.name?.let { declaredIndex.putIfAbsent(it, idx) } }
+        val sortedBlocks = blocks.sortedWith(
+            compareBy<Pair<String, ArrayList<View>>>({ if (isBright(it.first)) 0 else 1 }, { declaredIndex[it.first] ?: Int.MAX_VALUE })
+        )
 
         val newOrder = ArrayList<View>(currentChildren.size)
         var blockCursor = 0
