@@ -32,7 +32,7 @@ set = "slog test_log_nut $state"
 [[group]]
 [[page]]
 title = "Demo TOML"
-icon = "{ICON}/search.png"
+icon = "{ICON}/documents.png"
 config = "{HOME}/etc/demo/index.toml"
 
 [[group]]
