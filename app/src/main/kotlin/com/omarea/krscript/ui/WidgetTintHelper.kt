@@ -3,34 +3,43 @@ package com.omarea.krscript.ui
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
+import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.graphics.PixelFormat
-import android.graphics.RadialGradient
-import android.graphics.Rect
-import android.graphics.Shader
+import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.util.TypedValue
+import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.Switch
 import androidx.core.graphics.ColorUtils
 
 /**
- * Phối màu widget theo màu chính của icon, kiểu "Phát sáng nhẹ":
- * - Mũi tên: màu chính của icon (đã chuẩn hóa), có quầng sáng mờ cùng màu phía sau.
- * - Switch: track màu chính khi bật.
+ * Phối màu widget theo màu chính của icon, kiểu "Phát sáng nhẹ" (giống demo HTML kiểu 6):
+ * - Mũi tên: màu chính của icon, quầng sáng ôm theo hình mũi tên (drop-shadow 0 0 5px, độ đậm 75%).
+ * - Switch: khi bật, track màu chính, quầng sáng quanh track (box-shadow 0 0 10px, độ đậm 55%).
  */
 object WidgetTintHelper {
+
+    private const val ARROW_GLOW_ALPHA = 0.75f
+    private const val ARROW_GLOW_SIGMA_DP = 2.5f   // CSS blur 5px = độ lệch chuẩn 2.5
+    private const val TRACK_GLOW_ALPHA = 0.55f
+    private const val TRACK_GLOW_SIGMA_DP = 5f     // CSS blur 10px = độ lệch chuẩn 5
 
     fun applyTint(context: Context, widgetView: ImageView?, iconDrawable: Drawable?) {
         widgetView ?: return
         val color = resolveTintColor(context, iconDrawable)
-        val dark = isDarkTheme(context)
 
         widgetView.imageTintList = ColorStateList.valueOf(color)
-        widgetView.background = GlowDrawable(color, if (dark) 0.40f else 0.30f)
+        widgetView.background = GlyphGlowDrawable(
+            widgetView, color, ARROW_GLOW_ALPHA,
+            ARROW_GLOW_SIGMA_DP * context.resources.displayMetrics.density
+        )
+        allowGlowOverflow(widgetView)
     }
 
     fun applyTint(context: Context, switchView: Switch?, iconDrawable: Drawable?) {
@@ -49,6 +58,23 @@ object WidgetTintHelper {
 
         updateTrackTint()
         switchView.setOnCheckedChangeListener { _, _ -> updateTrackTint() }
+
+        switchView.background = TrackGlowDrawable(
+            switchView, onColor, TRACK_GLOW_ALPHA,
+            TRACK_GLOW_SIGMA_DP * context.resources.displayMetrics.density,
+            10 * context.resources.displayMetrics.density
+        )
+        allowGlowOverflow(switchView)
+    }
+
+    /** Cho phép quầng sáng tràn ra ngoài khung view (tối đa 4 cấp cha bên trong item). */
+    private fun allowGlowOverflow(view: View) {
+        var p = view.parent
+        repeat(4) {
+            val group = p as? ViewGroup ?: return
+            group.clipChildren = false
+            p = group.parent
+        }
     }
 
     /** Lấy màu nổi nhất của icon, giữ nguyên tông, chuẩn hóa độ bão hòa và độ sáng. */
@@ -136,33 +162,15 @@ object WidgetTintHelper {
             .map { Pair(it.key, it.value) }
     }
 
-    /** Quầng sáng mờ tròn, đậm ở giữa và nhạt dần ra mép, vẽ gọn trong khung view. */
-    private class GlowDrawable(color: Int, alpha: Float) : Drawable() {
+    /** Đổi độ lệch chuẩn (px) sang bán kính của BlurMaskFilter. */
+    private fun blurRadiusFor(sigmaPx: Float): Float = Math.max(0.5f, (sigmaPx - 0.5f) / 0.57735f)
 
-        private val glowArgb = ColorUtils.setAlphaComponent(color, (255 * alpha).toInt())
-        private val glowClear = ColorUtils.setAlphaComponent(color, 0)
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        private var cx = 0f
-        private var cy = 0f
-        private var radius = 0f
-
-        override fun onBoundsChange(bounds: Rect) {
-            cx = bounds.exactCenterX()
-            cy = bounds.exactCenterY()
-            radius = Math.min(bounds.width(), bounds.height()) / 2f
-            paint.shader = if (radius > 0f) {
-                RadialGradient(
-                    cx, cy, radius,
-                    intArrayOf(glowArgb, glowClear),
-                    floatArrayOf(0.3f, 1f),
-                    Shader.TileMode.CLAMP
-                )
-            } else null
+    private abstract class BaseGlowDrawable(color: Int, alpha: Float, sigmaPx: Float) : Drawable() {
+        protected val colorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = ColorUtils.setAlphaComponent(color, (255 * alpha).toInt())
         }
-
-        override fun draw(canvas: Canvas) {
-            if (radius <= 0f) return
-            canvas.drawCircle(cx, cy, radius, paint)
+        protected val blurPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            maskFilter = BlurMaskFilter(blurRadiusFor(sigmaPx), BlurMaskFilter.Blur.NORMAL)
         }
 
         override fun setAlpha(alpha: Int) {}
@@ -171,5 +179,117 @@ object WidgetTintHelper {
 
         @Suppress("OVERRIDE_DEPRECATION")
         override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+    }
+
+    /** Quầng sáng ôm theo đúng hình của icon trong ImageView (giống drop-shadow của CSS), nằm dưới icon. */
+    private class GlyphGlowDrawable(
+        private val view: ImageView,
+        color: Int,
+        alpha: Float,
+        sigmaPx: Float
+    ) : BaseGlowDrawable(color, alpha, sigmaPx) {
+
+        private var cache: Bitmap? = null
+        private var cacheSrc: Drawable? = null
+        private var cacheW = 0
+        private var cacheH = 0
+        private var offX = 0f
+        private var offY = 0f
+
+        private fun rebuild(src: Drawable, w: Int, h: Int) {
+            cache = null
+            cacheSrc = src
+            cacheW = w
+            cacheH = h
+
+            val cl = view.paddingLeft
+            val ct = view.paddingTop
+            val cw = w - cl - view.paddingRight
+            val ch = h - ct - view.paddingBottom
+            if (cw <= 0 || ch <= 0) return
+
+            val bmp = try {
+                Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            } catch (e: Exception) {
+                return
+            }
+
+            // Vẽ icon vào đúng chỗ ImageView (fit center) rồi lấy độ trong suốt, làm mờ
+            val iw = if (src.intrinsicWidth > 0) src.intrinsicWidth else cw
+            val ih = if (src.intrinsicHeight > 0) src.intrinsicHeight else ch
+            val scale = Math.min(cw.toFloat() / iw, ch.toFloat() / ih)
+            val dw = (iw * scale).toInt()
+            val dh = (ih * scale).toInt()
+            val left = cl + (cw - dw) / 2
+            val top = ct + (ch - dh) / 2
+
+            val oldBounds = src.copyBounds()
+            src.setBounds(left, top, left + dw, top + dh)
+            src.draw(Canvas(bmp))
+            src.bounds = oldBounds
+
+            val off = IntArray(2)
+            cache = bmp.extractAlpha(blurPaint, off)
+            offX = off[0].toFloat()
+            offY = off[1].toFloat()
+            bmp.recycle()
+        }
+
+        override fun draw(canvas: Canvas) {
+            val src = view.drawable ?: return
+            val b = bounds
+            if (b.width() <= 0 || b.height() <= 0) return
+            if (cacheSrc !== src || cacheW != b.width() || cacheH != b.height()) {
+                rebuild(src, b.width(), b.height())
+            }
+            cache?.let { canvas.drawBitmap(it, b.left + offX, b.top + offY, colorPaint) }
+        }
+    }
+
+    /** Quầng sáng quanh track của Switch khi bật (giống box-shadow của CSS), nằm dưới track. */
+    private class TrackGlowDrawable(
+        private val view: Switch,
+        color: Int,
+        alpha: Float,
+        sigmaPx: Float,
+        private val cornerPx: Float
+    ) : BaseGlowDrawable(color, alpha, sigmaPx) {
+
+        private var cache: Bitmap? = null
+        private var cacheW = 0
+        private var cacheH = 0
+        private var offX = 0f
+        private var offY = 0f
+
+        private fun rebuild(w: Int, h: Int) {
+            cache = null
+            cacheW = w
+            cacheH = h
+            if (w <= 0 || h <= 0) return
+
+            val bmp = try {
+                Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            } catch (e: Exception) {
+                return
+            }
+            val radius = Math.min(cornerPx, Math.min(w, h) / 2f)
+            Canvas(bmp).drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()), radius, radius, Paint(Paint.ANTI_ALIAS_FLAG))
+
+            val off = IntArray(2)
+            cache = bmp.extractAlpha(blurPaint, off)
+            offX = off[0].toFloat()
+            offY = off[1].toFloat()
+            bmp.recycle()
+        }
+
+        override fun draw(canvas: Canvas) {
+            if (!view.isChecked) return
+            val track = view.trackDrawable?.bounds ?: return
+            if (track.width() <= 0 || track.height() <= 0) return
+            if (cache == null || cacheW != track.width() || cacheH != track.height()) {
+                rebuild(track.width(), track.height())
+            }
+            cache?.let { canvas.drawBitmap(it, track.left + offX, track.top + offY, colorPaint) }
+        }
     }
 }
