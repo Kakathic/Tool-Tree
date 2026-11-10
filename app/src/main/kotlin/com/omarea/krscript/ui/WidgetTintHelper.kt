@@ -79,14 +79,32 @@ object WidgetTintHelper {
 
     /** Lấy màu nổi nhất của icon, giữ nguyên tông, chuẩn hóa độ bão hòa và độ sáng. */
     private fun resolveTintColor(context: Context, iconDrawable: Drawable?): Int {
-        val base = extractTopColors(iconDrawable, topN = 1).firstOrNull()?.first
-            ?: resolveAccentColor(context)
+        val dominant = dominantOf(iconDrawable)
+            ?: return resolveAccentColor(context).let { base ->
+                val hsv = FloatArray(3)
+                Color.colorToHSV(base, hsv)
+                hsv[1] = hsv[1].coerceIn(0.55f, 0.85f)
+                hsv[2] = if (isDarkTheme(context)) 0.95f else 0.88f
+                Color.HSVToColor(hsv)
+            }
 
-        val hsv = FloatArray(3)
-        Color.colorToHSV(base, hsv)
-        hsv[1] = hsv[1].coerceIn(0.55f, 0.85f)
-        hsv[2] = if (isDarkTheme(context)) 0.95f else 0.88f
+        val hsv = floatArrayOf(
+            dominant[0],
+            dominant[1].coerceIn(0.55f, 0.85f),
+            if (isDarkTheme(context)) 0.95f else 0.88f
+        )
         return Color.HSVToColor(hsv)
+    }
+
+    private val dominantCache = java.util.WeakHashMap<Drawable.ConstantState, FloatArray>()
+
+    private fun dominantOf(drawable: Drawable?): FloatArray? {
+        drawable ?: return null
+        val key = drawable.constantState
+        if (key != null) dominantCache[key]?.let { return it }
+        val result = extractDominantHueSat(drawable) ?: return null
+        if (key != null) dominantCache[key] = result
+        return result
     }
 
     private fun isDarkTheme(context: Context): Boolean {
@@ -110,14 +128,12 @@ object WidgetTintHelper {
         return typedValue.data
     }
 
-    private fun extractTopColors(drawable: Drawable?, topN: Int = 3): List<Pair<Int, Float>> {
-        drawable ?: return emptyList()
-
-        val sampleSize = 24
+    private fun extractDominantHueSat(drawable: Drawable): FloatArray? {
+        val sampleSize = 32
         val bitmap = try {
             Bitmap.createBitmap(sampleSize, sampleSize, Bitmap.Config.ARGB_8888)
         } catch (e: Exception) {
-            return emptyList()
+            return null
         }
 
         val canvas = Canvas(bitmap)
@@ -126,40 +142,60 @@ object WidgetTintHelper {
         drawable.draw(canvas)
         drawable.bounds = oldBounds
 
-        val colorScores = HashMap<Int, Float>()
+        val buckets = 24
+        val weight = FloatArray(buckets)
+        val vx = FloatArray(buckets)
+        val vy = FloatArray(buckets)
+        val satSum = FloatArray(buckets)
         val hsv = FloatArray(3)
 
         for (x in 0 until sampleSize) {
             for (y in 0 until sampleSize) {
                 val pixel = bitmap.getPixel(x, y)
-
                 if (Color.alpha(pixel) < 200) continue
 
                 Color.colorToHSV(pixel, hsv)
-                val sat = hsv[1]
-                val valVal = hsv[2]
+                if (hsv[1] < 0.20f || hsv[2] < 0.15f) continue
 
-                if (sat < 0.20f || valVal < 0.15f) continue
-
-                val r = (Color.red(pixel) shr 4) shl 4
-                val g = (Color.green(pixel) shr 4) shl 4
-                val b = (Color.blue(pixel) shr 4) shl 4
-
-                val quantizedColor = Color.rgb(r, g, b)
-
-                val weight = 1.0f + (sat * 2.0f) + (if (valVal > 0.15f && valVal < 0.95f) 0.5f else 0.0f)
-
-                val currentScore = colorScores[quantizedColor] ?: 0f
-                colorScores[quantizedColor] = currentScore + weight
+                val w = hsv[1] * (0.5f + hsv[2])
+                val b = ((hsv[0] / 360f) * buckets).toInt().coerceIn(0, buckets - 1)
+                val rad = Math.toRadians(hsv[0].toDouble())
+                weight[b] += w
+                vx[b] += (Math.cos(rad) * w).toFloat()
+                vy[b] += (Math.sin(rad) * w).toFloat()
+                satSum[b] += hsv[1] * w
             }
         }
 
         bitmap.recycle()
 
-        return colorScores.entries
-            .sortedByDescending { it.value }
-            .take(topN)
-            .map { Pair(it.key, it.value) }
+        var best = -1
+        var bestScore = 0f
+        for (b in 0 until buckets) {
+            val score = weight[b] + 0.5f * (weight[(b + buckets - 1) % buckets] + weight[(b + 1) % buckets])
+            if (score > bestScore) {
+                bestScore = score
+                best = b
+            }
+        }
+        if (best < 0) return null
+
+        var sx = 0f
+        var sy = 0f
+        var sw = 0f
+        var ss = 0f
+        for (d in -1..1) {
+            val b = (best + d + buckets) % buckets
+            sx += vx[b]
+            sy += vy[b]
+            sw += weight[b]
+            ss += satSum[b]
+        }
+        if (sw <= 0f) return null
+
+        var hue = Math.toDegrees(Math.atan2(sy.toDouble(), sx.toDouble())).toFloat()
+        if (hue < 0f) hue += 360f
+        return floatArrayOf(hue, ss / sw)
     }
 
     /** Đổi độ lệch chuẩn (px) sang bán kính của BlurMaskFilter. */
