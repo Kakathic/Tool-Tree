@@ -771,7 +771,7 @@ object RowsRenderHelper {
         } else ""
         val spinnerValueStart = if (label.isEmpty()) 0 else label.length + 1
         val textBase = when {
-            isSpinner -> (if (label.isEmpty()) "" else "$label\u2002") + "$spinnerCurrent\u2002\u2002"
+            isSpinner -> (if (label.isEmpty()) "" else "$label\u2002") + spinnerCurrent + "\u200A\u2002"
             isToggle -> "$label \u2002 "
             showIcon && row.iconPosition == "before" -> "\u2002 $label"
             showIcon -> "$label \u2002"
