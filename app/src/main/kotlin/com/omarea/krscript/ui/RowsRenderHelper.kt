@@ -771,7 +771,7 @@ object RowsRenderHelper {
         } else ""
         val spinnerValueStart = if (label.isEmpty()) 0 else label.length + 1
         val textBase = when {
-            isSpinner -> (if (label.isEmpty()) "" else "$label\u2002") + "$spinnerCurrent \u25BE"
+            isSpinner -> (if (label.isEmpty()) "" else "$label\u2002") + "$spinnerCurrent\u2002\u2002"
             isToggle -> "$label \u2002 "
             showIcon && row.iconPosition == "before" -> "\u2002 $label"
             showIcon -> "$label \u2002"
@@ -792,6 +792,12 @@ object RowsRenderHelper {
             toggleIconIndex = textBase.length - 2
             toggleDrawable = buildToggleDrawable(context, row)
             spannableString.setSpan(ToggleIconSpan(toggleDrawable), toggleIconIndex, toggleIconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (isSpinner) {
+            toggleIconIndex = textBase.length - 1
+            toggleDrawable = buildSpinnerArrowDrawable(context, row)
+            spannableString.setSpan(VerticalCenterImageSpan(toggleDrawable), toggleIconIndex, toggleIconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
         var rowIconIndex = -1
@@ -898,6 +904,17 @@ object RowsRenderHelper {
         }
 
         if (isSpinner) {
+            if (spinnerValueStart > 0) {
+                spannableString.setSpan(object : ClickableSpan() {
+                    override fun onClick(widget: View) {
+                        showSpinnerPopup(context, rowsView, extraIconView, rows, config, htmlContainer, row, rowIndex, spinnerValueStart)
+                    }
+
+                    override fun updateDrawState(ds: TextPaint) {
+                        ds.isUnderlineText = false
+                    }
+                }, 0, spinnerValueStart, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
             spannableString.setSpan(object : ClickableSpan() {
                 override fun onClick(widget: View) {
                     showSpinnerPopup(context, rowsView, extraIconView, rows, config, htmlContainer, row, rowIndex, spinnerValueStart)
@@ -1588,6 +1605,19 @@ object RowsRenderHelper {
         val size = ((if (row.iconSize > 0) row.iconSize else defaultDp) * density).toInt()
         val drawable = loaded.mutate()
         drawable.setBounds(0, 0, size, size)
+        return drawable
+    }
+
+    // Mũi tên spinner dùng cùng icon kr_down và màu tint với spinner của param
+    private fun buildSpinnerArrowDrawable(context: Context, row: TextNode.TextRow): Drawable {
+        val size = (24 * context.resources.displayMetrics.density).toInt()
+        val drawable = context.getDrawable(R.drawable.kr_down)!!.mutate()
+        drawable.setBounds(0, 0, size, size)
+        if (row.color != -1) {
+            drawable.setTint(row.color)
+        } else {
+            drawable.setTintList(context.getColorStateList(R.drawable.kr_param_spinner_arrow_tint))
+        }
         return drawable
     }
 
