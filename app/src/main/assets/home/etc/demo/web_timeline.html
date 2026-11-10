@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Timeline Runner</title>
+<style>
+:root{
+  --bg:#0b0d12;--surface:#141821;--surface-2:#1b2030;--surface-3:#252c3f;--border:#262d3f;
+  --text:#e8eaf0;--muted:#8d95a8;--accent:#5aa9ff;--on-accent:#04172b;
+  --ok:#35d07f;--err:#ff6370;--warn:#ffb84d;--skip:#6f778a;
+  --code-bg:#090b10;--code-text:#cdd5e0;--code-err:#ff8a94;--code-dim:#6f7a8e;
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.22);
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:light){:root{
+  --bg:#f4f6fa;--surface:#ffffff;--surface-2:#f1f3f8;--surface-3:#e4e8f1;--border:#e0e4ee;
+  --text:#161a23;--muted:#667085;--accent:#0b6fd6;--on-accent:#ffffff;
+  --ok:#12a150;--err:#d92d3f;--warn:#b7791f;--skip:#8b93a5;
+  --code-bg:#0f1420;--code-text:#d5dbe6;--code-err:#ff8a94;--code-dim:#7d889c;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.06);
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}.mono{font-family:var(--mono)}
+
+.app{max-width:720px;margin:0 auto;padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+.top{position:sticky;top:0;z-index:30;background:var(--bg);background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:12px 16px}
+.row1{display:flex;align-items:center;gap:12px}
+.ring{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--surface-2);color:var(--muted);flex:none}
+.ring svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ring[data-s=running]{color:var(--accent)}.ring[data-s=running] svg{animation:spin 1s linear infinite}
+.ring[data-s=ok]{color:var(--ok);background:var(--surface-2);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.ring[data-s=err]{color:var(--err);background:var(--surface-2);background:color-mix(in srgb,var(--err) 14%,transparent)}
+.ring[data-s=warn]{color:var(--warn);background:var(--surface-2);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.grow{flex:1;min-width:0}
+h1{margin:0;font-size:16.5px;font-weight:650;line-height:1.25;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.elapsed{font:600 15px var(--mono)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+.pill i{width:6px;height:6px;border-radius:50%;background:var(--skip)}
+.pill.real{color:var(--ok)}.pill.real i{background:var(--ok)}.pill.mock{color:var(--warn)}.pill.mock i{background:var(--warn)}
+.pill.lang{background:none;cursor:pointer;gap:5px;padding:3px 8px}.pill.lang b{font-weight:600;opacity:.5}.pill.lang b.on{opacity:1;color:var(--accent)}
+.bar{height:4px;border-radius:2px;background:var(--surface-3);margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;transition:width .35s ease}
+
+main{padding:16px}
+.note{font-size:12.5px;color:var(--muted);border:1px dashed var(--border);border-radius:12px;padding:8px 12px;margin-bottom:12px}
+details.opts{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:14px}
+details.opts>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:11px 14px;font-weight:600;font-size:14px}
+details.opts>summary::-webkit-details-marker{display:none}
+details.opts>summary svg{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+details.opts[open]>summary svg{transform:rotate(90deg)}
+.opts-body{padding:4px 14px 14px;display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--border);padding-top:12px}
+.switch{position:relative;display:flex;align-items:flex-start;gap:12px;cursor:pointer}
+.switch input{position:absolute;opacity:0;pointer-events:none}
+.switch .track{flex:none;width:38px;height:22px;border-radius:99px;background:var(--surface-3);position:relative;transition:background .2s;margin-top:1px}
+.switch .track::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .2s}
+.switch input:checked+.track{background:var(--accent)}.switch input:checked+.track::after{transform:translateX(16px)}
+.switch input:focus-visible+.track{outline:2px solid var(--accent);outline-offset:2px}
+.switch .tx b{display:block;font-size:14px;font-weight:600}.switch .tx span{font-size:12.5px;color:var(--muted)}
+.tools{display:flex;justify-content:flex-end;gap:4px;margin:0 0 6px}
+.link{border:0;background:none;color:var(--accent);font-size:12.5px;font-weight:600;padding:2px 6px}
+
+/* ===== TIMELINE ===== */
+.tl{list-style:none;margin:0;padding:0}
+.node{display:flex;gap:14px;position:relative}
+.rail{display:flex;flex-direction:column;align-items:center;flex:none;width:28px}
+.dot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--border);background:var(--bg);color:var(--muted);font-size:12px;font-weight:700;flex:none;transition:background .25s,border-color .25s,color .25s;position:relative;z-index:1}
+.dot svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.node[data-s=running] .dot{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 5px rgba(90,169,255,.16)}
+.node[data-s=running] .dot svg{animation:spin .9s linear infinite}
+.node[data-s=ok] .dot{background:var(--ok);border-color:var(--ok);color:#fff}
+.node[data-s=err] .dot{background:var(--err);border-color:var(--err);color:#fff}
+.node[data-s=skip] .dot{background:var(--skip);border-color:var(--skip);color:#fff}
+.line{flex:1;width:2px;min-height:14px;background:var(--border);margin:2px 0;border-radius:1px;position:relative;overflow:hidden}
+.line::after{content:"";position:absolute;left:0;right:0;top:0;height:0;background:var(--ok);transition:height .4s ease}
+.node[data-s=ok] .line::after{height:100%}
+.node[data-s=running] .line::after{height:100%;background:linear-gradient(180deg,var(--accent),transparent);animation:flow 1.1s linear infinite}
+.node:last-child .line{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes flow{from{transform:translateY(-100%)}to{transform:translateY(100%)}}
+
+.body{flex:1;min-width:0;padding-bottom:12px}
+.head{width:100%;display:flex;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:3px 0 4px;min-height:28px}
+.head .n{flex:1;min-width:0}
+.head b{display:block;font-size:14.5px;font-weight:600;line-height:1.3}
+.head .cmd{display:block;font:12px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.head .meta{font:12px var(--mono);color:var(--muted);flex:none}
+.head .chev{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;flex:none}
+.node.open .head .chev{transform:rotate(90deg)}
+.node[data-s=wait] .head b,.node[data-s=skip] .head b{color:var(--muted);font-weight:500}
+.node[data-s=skip] .head{opacity:.7}
+.summary{display:block;font:12px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.node.open .summary{display:none}
+.node[data-s=wait] .summary,.node[data-s=running] .summary{display:none}
+
+/* thu gọn / mở rộng mượt, không cần biết trước chiều cao */
+.collapse{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease}
+.node.open .collapse{grid-template-rows:1fr}
+.collapse>.inner{overflow:hidden;min-height:0}
+.logbox{margin-top:8px;border-radius:12px;background:var(--code-bg);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow)}
+.node[data-s=running] .logbox{border-color:rgba(90,169,255,.5)}
+.node[data-s=err] .logbox{border-color:rgba(255,99,112,.55)}
+.logtool{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;color:var(--code-dim);font-size:11.5px;border-bottom:1px solid rgba(255,255,255,.06)}
+.logtool .live{display:none;align-items:center;gap:6px;color:var(--accent)}
+.logtool .live em{font-style:normal;color:var(--code-dim);margin:0 -1px 0 2px}
+.logtool .live i{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 1s ease-in-out infinite}
+.node[data-s=running] .live{display:inline-flex}
+@keyframes blink{50%{opacity:.25}}
+.logtool button{border:0;background:rgba(255,255,255,.07);color:var(--code-text);border-radius:7px;padding:3px 9px;font-size:11.5px;font-weight:600}
+.log{max-height:230px;overflow:auto;padding:8px 0;font:12px/1.55 var(--mono);color:var(--code-text)}
+.ln{display:flex;gap:10px;padding:0 10px}
+.ln i{flex:none;width:2.2em;text-align:right;color:var(--code-dim);font-style:normal;user-select:none}
+.ln span{white-space:pre-wrap;word-break:break-all;min-width:0}
+.ln.e span{color:var(--code-err)}.ln.m span{color:var(--code-dim)}
+.cursor{display:none;padding:0 10px 2px;color:var(--accent);font:12px var(--mono)}
+.node[data-s=running] .cursor{display:block}
+.cursor::after{content:"▍";animation:blink 1s steps(2) infinite}
+
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bg);background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+.dock-in{max-width:720px;margin:0 auto;display:flex;gap:10px}
+.btn{border:1px solid var(--border);background:var(--surface-2);border-radius:12px;padding:13px 16px;font-weight:600;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:filter .15s,transform .05s}
+.btn:active{transform:scale(.98)}.btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.btn.primary{flex:1;background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.danger{background:var(--surface-2);border-color:var(--err);color:var(--err)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translate(-50%,12px);background:var(--surface-3);border:1px solid var(--border);padding:8px 14px;border-radius:99px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:60}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ok" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-err" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+  <symbol id="i-run" viewBox="0 0 24 24"><path d="M12 3a9 9 0 019 9"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M20 12a8 8 0 11-2.6-5.9M20 4v5h-5"/></symbol>
+</svg>
+
+<div class="app">
+  <header class="top">
+    <div class="row1">
+      <div class="ring" id="ring" data-s="idle"><svg><use id="ringUse" href="#i-play"/></svg></div>
+      <div class="grow"><h1 id="sT"></h1><div class="sub" id="sD"></div></div>
+      <div style="text-align:right"><div class="elapsed num" id="sTime">0.0s</div><span class="pill" id="env"><i></i><span id="envT"></span></span> <button class="pill lang" id="lang" aria-label="Language"><b data-l="vi">VI</b><span>/</span><b data-l="en">EN</b></button></div>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+  </header>
+
+  <main>
+    <div class="note" id="note"></div>
+    <details class="opts">
+      <summary><svg><use href="#i-chev"/></svg><span id="optT"></span></summary>
+      <div class="opts-body">
+        <label class="switch"><input type="checkbox" id="oFail"><span class="track"></span><span class="tx"><b id="oFailT"></b><span id="oFailD"></span></span></label>
+        <label class="switch"><input type="checkbox" id="oCont"><span class="track"></span><span class="tx"><b id="oContT"></b><span id="oContD"></span></span></label>
+      </div>
+    </details>
+    <div class="tools"><button class="link" id="openAll"></button><button class="link" id="autoAll"></button></div>
+    <ol class="tl" id="tl"></ol>
+  </main>
+</div>
+
+<div class="dock"><div class="dock-in">
+  <button class="btn primary" id="run"></button>
+  <button class="btn danger" id="cancel" disabled></button>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+var pref='';try{pref=localStorage.getItem('kr_tl_lang')||''}catch(e){}
+var VI=pref?pref==='vi':(navigator.language||'').toLowerCase().indexOf('vi')===0;
+var T=VI?{
+ envReal:'Shell thật',envMock:'Giả lập',
+ real:'Đang chạy trong app: các bước được thực thi bằng shell thật qua KrScriptCore. Chỉ bước đang chạy hiện log, các bước khác thu gọn.',
+ mock:'Chế độ giả lập (trình duyệt thường, không có KrScriptCore). Mở trang trong app để chạy shell thật.',
+ ready:'Sẵn sàng chạy',run:'Chạy',again:'Chạy lại',cancel:'Dừng',running:'Đang chạy…',done:'Hoàn tất',failed:'Thất bại',stopped:'Đã dừng',
+ stepOf:function(a,b){return 'Bước '+a+'/'+b},allOk:function(n){return 'Cả '+n+' bước thành công'},failAt:function(n,h){return (h?'Dừng ở bước: ':'Có lỗi ở bước: ')+n},
+ optT:'Tùy chọn chạy',oFail:'Làm lỗi có chủ đích',oFailD:'Bước "Kiểm tra" sẽ thất bại để xem trạng thái lỗi',
+ oCont:'Tiếp tục khi lỗi',oContD:'Bước lỗi không dừng cả chuỗi (giống continue-on-error)',
+ openAll:'Mở hết',autoAll:'Tự động',copy:'Sao chép',copied:'Đã sao chép',live:'đang chạy',lines:function(n){return n+' dòng'},
+ stopNote:'Đã dừng (tiến trình đang chạy trên máy vẫn kết thúc nốt).',noExit:'Không nhận được mã thoát',timeout:'Quá thời gian',cantStart:'Không khởi chạy được tiến trình',noOut:'(không có đầu ra)'
+}:{
+ envReal:'Real shell',envMock:'Simulated',
+ real:'Running inside the app: steps run on a real shell through KrScriptCore. Only the running step shows its log; the rest stay collapsed.',
+ mock:'Simulation mode (regular browser, no KrScriptCore). Open the page inside the app to run a real shell.',
+ ready:'Ready to run',run:'Run',again:'Run again',cancel:'Stop',running:'Running…',done:'Completed',failed:'Failed',stopped:'Stopped',
+ stepOf:function(a,b){return 'Step '+a+'/'+b},allOk:function(n){return 'All '+n+' steps succeeded'},failAt:function(n,h){return (h?'Stopped at: ':'Failed at: ')+n},
+ optT:'Run options',oFail:'Fail on purpose',oFailD:'The "Verify" step fails so you can see the error state',
+ oCont:'Continue on error',oContD:'A failed step does not stop the whole chain (like continue-on-error)',
+ openAll:'Expand all',autoAll:'Auto',copy:'Copy',copied:'Copied',live:'live',lines:function(n){return n+(n===1?' line':' lines')},
+ stopNote:'Stopped (the process already running on the device finishes on its own).',noExit:'No exit code received',timeout:'Timed out',cantStart:'Could not start the process',noOut:'(no output)'
+};
+
+var P=VI?'đang xử lý':'processing',DN=VI?'xong':'done',CK=VI?'kiểm tra A và B':'checking A and B',OKV=VI?'tất cả hợp lệ':'all valid';
+var STEPS=[
+ {n:VI?'Kiểm tra môi trường':'Check environment',run:'echo "user: $(id -un)"; echo "kernel: $(uname -sr)"; echo "arch: $(uname -m)"; echo "mode: $MODE"',mock:['user: root','kernel: Linux 6.1','arch: aarch64','mode: fast'],ms:800},
+ {n:VI?'Dung lượng /data':'/data usage',run:'df -h /data | tail -n 1',mock:['/dev/block/dm-8  110G  41G  69G  38% /data'],ms:600},
+ {n:VI?'Tạo dữ liệu A':'Generate data A',run:'for i in 1 2 3 4; do echo "A: '+P+' $i/4"; sleep 1; done; echo "A: '+DN+'"',mock:['A: '+P+' 1/4','A: '+P+' 2/4','A: '+P+' 3/4','A: '+P+' 4/4','A: '+DN],ms:3200},
+ {n:VI?'Tạo dữ liệu B':'Generate data B',run:'for i in 1 2 3; do echo "B: '+P+' $i/3"; sleep 1; done; echo "B: '+DN+'"',mock:['B: '+P+' 1/3','B: '+P+' 2/3','B: '+P+' 3/3','B: '+DN],ms:2600},
+ {n:VI?'Kiểm tra':'Verify',id:'verify',run:'echo "'+CK+'"; echo "'+OKV+'"',mock:[CK,OKV],ms:700},
+ {n:VI?'Ghi tệp tạm':'Write temp file',run:'f="${TMPDIR:-/data/local/tmp}/kr_timeline.txt"; echo "hello $(date +%T)" > "$f" && cat "$f" && rm -f "$f"',mock:['hello 12:00:00'],ms:600},
+ {n:VI?'Báo cáo':'Report',run:'echo "timeline finished at $(date +%T)"',mock:['timeline finished at 12:00:01'],ms:400}
+];
+
+/* ---------- cầu nối app ---------- */
+var Core=(typeof KrScriptCore!=='undefined')?KrScriptCore:null,seq=0;
+function runShell(script,env,onLine,mockInfo){
+  return new Promise(function(resolve){
+    if(!Core)return mockShell(mockInfo,onLine,resolve);
+    var name='krcb_'+(++seq),code=null,finished=false;
+    function done(r){if(finished)return;finished=true;try{delete window[name]}catch(e){window[name]=null}resolve(r)}
+    window[name]=function(m){
+      if(m.type===2||m.type===4){
+        String(m.message).split('\n').forEach(function(l){
+          if(l==='')return;var mm=/@@KR_EXIT:(\d+)/.exec(l);
+          if(mm){code=parseInt(mm[1],10);return}
+          onLine(l,m.type===4);
+        });
+      }else if(m.type===-2){setTimeout(function(){done(code===null?{ok:false,code:-1,note:T.noExit}:{ok:code===0,code:code})},300)}
+    };
+    var started=false;
+    try{started=Core.executeShellAsync('( set -e\n'+script+'\n)\necho "@@KR_EXIT:$?"',name,JSON.stringify(env||{}))}catch(e){onLine(String(e),true)}
+    if(!started)done({ok:false,code:-1,note:T.cantStart});
+  });
+}
+function mockShell(info,onLine,resolve){
+  var lines=info.fail?['verify: FAILED']:info.mock,i=0,per=Math.max(150,info.ms/Math.max(1,lines.length));
+  (function tick(){if(i<lines.length){onLine(lines[i++],info.fail);setTimeout(tick,per)}else resolve({ok:!info.fail,code:info.fail?1:0})})();
+}
+
+/* ---------- DOM dựng một lần, cập nhật tại chỗ ---------- */
+function $(s){return document.querySelector(s)}
+function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function svg(id){return '<svg><use href="#i-'+id+'"/></svg>'}
+var toastTimer=null;
+function toast(t){var e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){e.classList.remove('show')},1500)}
+function copyText(t){
+  function fb(){var a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;opacity:0';document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(a);toast(T.copied)}
+  if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(t).then(function(){toast(T.copied)},fb);else fb();
+}
+var R=[],ov={},timer=null,startAt=0,runId=0,cancel=false,finishedInfo=null;
+var tl=$('#tl');
+STEPS.forEach(function(sp,i){
+  var li=document.createElement('li');li.className='node';li.dataset.s='wait';
+  li.innerHTML='<div class="rail"><span class="dot">'+(i+1)+'</span><span class="line"></span></div>'+
+   '<div class="body"><button class="head" data-i="'+i+'"><span class="n"><b>'+esc(sp.n)+'</b><code class="cmd">'+esc(sp.run.split('\n')[0])+'</code><span class="summary"></span></span><span class="meta num"></span>'+svg('chev').replace('<svg','<svg class="chev"')+'</button>'+
+   '<div class="collapse"><div class="inner"><div class="logbox"><div class="logtool"><span><span class="live"><i></i>'+T.live+'<em>·</em></span><span class="cnt"></span></span><button data-copy="'+i+'">'+T.copy+'</button></div><div class="log"></div><div class="cursor"></div></div></div></div></div>';
+  tl.appendChild(li);
+});
+var NODES=[].slice.call(tl.children);
+function reset(){R=STEPS.map(function(){return{s:'wait',t:0,t0:0,log:[],last:''}});ov={};finishedInfo=null;NODES.forEach(function(_,i){paintNode(i,true)})}
+function isOpen(i){return ov[i]!==undefined?ov[i]:(R[i].s==='running'||R[i].s==='err')}
+function paintNode(i,full){
+  var n=NODES[i],r=R[i],dot=n.querySelector('.dot');
+  if(n.dataset.s!==r.s||full){
+    n.dataset.s=r.s;
+    dot.innerHTML=r.s==='ok'?svg('ok'):r.s==='err'?svg('err'):r.s==='skip'?svg('skip'):r.s==='running'?svg('run'):(i+1);
+  }
+  n.classList.toggle('open',isOpen(i));
+  n.querySelector('.meta').textContent=(r.s==='wait'||r.s==='skip')?'':(r.t/1000).toFixed(1)+'s';
+  var sum=n.querySelector('.summary');
+  sum.textContent=(r.s==='ok'||r.s==='err')?(r.last||T.noOut):'';
+  n.querySelector('.cnt').textContent=T.lines(r.log.length);
+  if(full){n.querySelector('.log').innerHTML='';n.querySelector('.cursor').textContent=''}
+}
+function addLine(i,l){
+  var r=R[i];r.log.push(l);if(!l.m&&!l.e)r.last=l.t;else if(l.e&&!r.last)r.last=l.t;
+  var box=NODES[i].querySelector('.log'),near=box.scrollHeight-box.clientHeight-box.scrollTop<24;
+  var d=document.createElement('div');d.className='ln'+(l.e?' e':(l.m?' m':''));d.innerHTML='<i>'+r.log.length+'</i><span>'+esc(l.t)+'</span>';
+  box.appendChild(d);if(near)box.scrollTop=box.scrollHeight;
+  NODES[i].querySelector('.cnt').textContent=T.lines(r.log.length);
+}
+function head(ico,rs,t,d){$('#ring').dataset.s=rs;$('#ringUse').setAttribute('href','#i-'+ico);$('#sT').textContent=t;$('#sD').textContent=d}
+function progress(){
+  var done=R.filter(function(r){return r.s==='ok'||r.s==='err'||r.s==='skip'}).length;
+  $('#bar').style.width=(done/R.length*100)+'%';
+  $('#sTime').textContent=(timer?(performance.now()-startAt)/1000:(finishedInfo?finishedInfo:0)).toFixed(1)+'s';
+}
+
+/* ---------- chạy tuần tự ---------- */
+function withTimeout(p,ms){return Promise.race([p,new Promise(function(r){setTimeout(function(){r({ok:false,code:-1,note:T.timeout})},ms)})])}
+function setRun(label,ico,dis){$('#run').innerHTML=svg(ico)+'<span>'+label+'</span>';$('#run').disabled=dis}
+async function runAll(){
+  var id=++runId;cancel=false;reset();startAt=performance.now();
+  setRun(T.running,'run',true);$('#cancel').disabled=false;
+  var cont=$('#oCont').checked,failedName=null,anyErr=false,ticker=setInterval(function(){
+    R.forEach(function(r,i){if(r.s==='running'){r.t=performance.now()-r.t0;NODES[i].querySelector('.meta').textContent=(r.t/1000).toFixed(1)+'s'}});progress();
+  },100);
+  timer=ticker;head('run','running',T.running,'');
+  var halted=false;
+  for(var i=0;i<STEPS.length;i++){
+    var sp=STEPS[i],r=R[i];
+    if(cancel||halted){r.s='skip';paintNode(i);continue}
+    r.s='running';r.t0=performance.now();ov[i]=undefined;paintNode(i);
+    head('run','running',T.running,T.stepOf(i+1,STEPS.length)+' · '+sp.n);
+    NODES[i].scrollIntoView({behavior:'smooth',block:'center'});
+    addLine(i,{t:'$ '+sp.run.split('\n')[0],m:true});
+    var fail=$('#oFail').checked&&sp.id==='verify',script=sp.run;
+    if(fail)script='echo "verify: FAILED" >&2; false';
+    var res=await withTimeout(runShell(script,{MODE:'fast'},function(l,e){addLine(i,{t:l,e:e})},{mock:sp.mock,ms:sp.ms,fail:fail}),sp.timeout||60000);
+    if(id!==runId)return;
+    r.t=performance.now()-r.t0;
+    if(cancel){r.s='err';addLine(i,{t:T.stopNote,e:true})}
+    else if(res.ok)r.s='ok';
+    else{r.s='err';anyErr=true;failedName=failedName||sp.n;addLine(i,{t:'exit '+res.code+(res.note?' - '+res.note:''),e:true});if(!cont)halted=true}
+    paintNode(i);
+  }
+  clearInterval(ticker);timer=null;finishedInfo=(performance.now()-startAt)/1000;progress();
+  if(cancel)head('stop','warn',T.stopped,'');
+  else if(anyErr)head('err','err',T.failed,T.failAt(failedName,halted));
+  else head('ok','ok',T.done,T.allOk(STEPS.length));
+  setRun(T.again,'redo',false);$('#cancel').disabled=true;
+}
+$('#run').onclick=runAll;$('#cancel').onclick=function(){cancel=true};
+tl.onclick=function(e){
+  var c=e.target.closest('[data-copy]');
+  if(c){var i=+c.dataset.copy;return copyText(R[i].log.map(function(l){return l.t}).join('\n'))}
+  var h=e.target.closest('.head');if(!h)return;var i=+h.dataset.i;ov[i]=!isOpen(i);paintNode(i);
+};
+$('#openAll').onclick=function(){NODES.forEach(function(_,i){ov[i]=true;paintNode(i)})};
+$('#autoAll').onclick=function(){ov={};NODES.forEach(function(_,i){paintNode(i)})};
+
+/* ---------- khởi tạo ---------- */
+document.querySelectorAll('#lang b').forEach(function(b){b.classList.toggle('on',(b.dataset.l==='vi')===VI)});
+$('#lang').onclick=function(){try{localStorage.setItem('kr_tl_lang',VI?'en':'vi')}catch(e){}location.reload()};
+$('#env').className='pill '+(Core?'real':'mock');$('#envT').textContent=Core?T.envReal:T.envMock;
+$('#note').textContent=Core?T.real:T.mock;
+$('#optT').textContent=T.optT;$('#oFailT').textContent=T.oFail;$('#oFailD').textContent=T.oFailD;$('#oContT').textContent=T.oCont;$('#oContD').textContent=T.oContD;
+$('#openAll').textContent=T.openAll;$('#autoAll').textContent=T.autoAll;
+setRun(T.run,'play',false);$('#cancel').innerHTML=svg('stop')+'<span>'+T.cancel+'</span>';
+head('play','idle',T.ready,STEPS.length+(VI?' bước, chạy tuần tự':' steps, run in sequence'));
+document.documentElement.lang=VI?'vi':'en';
+reset();
+</script>
+</body>
+</html>
