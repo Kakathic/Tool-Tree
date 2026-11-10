@@ -76,6 +76,11 @@ title = "lock"
 lock = "@pk_010"
 items = ["@pk_008"]
 [[picker]]
+title = "disabled"
+desc = "@pk_013"
+disabled = true
+items = ["@pk_008", "@pk_009"]
+[[picker]]
 title = "@pk_011"
 items = ["@pk_008", "@pk_009"]
 get = "glog demo_picker_rows"

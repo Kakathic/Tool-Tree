@@ -150,6 +150,10 @@ act_054="Lock, hide and shortcuts"
 act_055="1|This item is locked"
 act_056="Locked when the script returns 1"
 act_057="Shown when the SDK is within range"
+act_058="Dimmed and not clickable"
+act_059="Turn on to enable the item below"
+act_060="Dimmed while the switch above is off (disabled-sh returns 1)"
+act_061="The item is enabled"
 
 # params.toml
 prm_001="Text and number input"
@@ -353,6 +357,7 @@ pk_009="y|Option Y"
 pk_010="1|The item is locked"
 pk_011="Picker with rows"
 pk_012="Note line under the picker"
+pk_013="Dimmed and not clickable"
 
 # text.toml
 txt_001="Text styles"

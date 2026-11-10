@@ -3,6 +3,8 @@ package com.omarea.krscript.config
 object TomlKeys {
     val LOCK = arrayOf("lock", "lock-state")
     val LOCK_SH = arrayOf("lock-sh")
+    val DISABLED = arrayOf("disabled", "disable")
+    val DISABLED_SH = arrayOf("disabled-sh", "disable-sh")
     val SUPPORT = arrayOf("support", "visible")
     val TITLE_SH = arrayOf("title-sh")
     val DESC_SH = arrayOf("desc-sh")

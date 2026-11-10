@@ -28,6 +28,10 @@ open class ClickableNode(currentPageConfigPath: String) : NodeInfoBase(currentPa
     var lockMessage: String = ""
     var lockShell: String = ""
 
+    // Làm mờ và chặn bấm; disabledShell in 1 = mờ
+    var disabled: Boolean = false
+    var disabledSh: String = ""
+
     var targetSdkVersion = 0
     var minSdkVersion = 0
     var maxSdkVersion = 100

@@ -150,6 +150,10 @@ act_054="Khoá, ẩn và lối tắt"
 act_055="1|Mục này bị khoá"
 act_056="Khoá khi script trả về 1"
 act_057="Hiện khi SDK trong khoảng"
+act_058="Bị làm mờ và không bấm được"
+act_059="Bật để mở mục bên dưới"
+act_060="Mờ khi switch phía trên đang tắt (disabled-sh trả về 1)"
+act_061="Mục đã được mở"
 
 # params.toml
 prm_001="Nhập văn bản và số"
@@ -353,6 +357,7 @@ pk_009="y|Tuỳ chọn Y"
 pk_010="1|Mục đang bị khoá"
 pk_011="Picker có rows"
 pk_012="Dòng chú thích dưới picker"
+pk_013="Bị làm mờ và không bấm được"
 
 # text.toml
 txt_001="Kiểu chữ"

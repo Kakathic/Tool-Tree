@@ -9,6 +9,7 @@ import android.widget.ImageView
 import android.widget.RelativeLayout
 import com.tool.tree.R
 import com.omarea.krscript.config.IconPathAnalysis
+import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.model.ClickableNode
 
 open class ListItemClickable(
@@ -42,7 +43,17 @@ open class ListItemClickable(
     }
 
     fun triggerAction() {
+        if (config.disabled) return
         this.mOnClickListener?.onClick(this)
+    }
+
+    // Mờ và chặn mọi thao tác bấm khi disabled; trả lại bình thường khi tắt
+    private fun applyDisabledState() {
+        val off = config.disabled
+        layout.alpha = if (off) 0.4f else 1f
+        layout.isClickable = !off
+        layout.isLongClickable = !off
+        layout.findViewById<View?>(R.id.kr_switch)?.isEnabled = !off
     }
 
     /** Kích thước gọn riêng cho thẻ (dùng ở trang Mục lục): icon 28dp, đệm 12dp, chữ 13sp, cao tối thiểu 56dp. */
@@ -74,6 +85,10 @@ open class ListItemClickable(
 
     override fun updateViewByShell() {
         super.updateViewByShell()
+        if (config.disabledSh.isNotEmpty()) {
+            config.disabled = ScriptEnvironmen.executeResultRoot(context, config.disabledSh, config).trim() == "1"
+        }
+        applyDisabledState()
         applyIconPhotoBg()
     }
 
@@ -120,11 +135,11 @@ open class ListItemClickable(
         summary = config.summary
 
         this.layout.setOnClickListener {
-            this.mOnClickListener?.onClick(this)
+            if (!config.disabled) this.mOnClickListener?.onClick(this)
         }
         
         this.layout.setOnLongClickListener {
-            if (allowLongClick()) {
+            if (!config.disabled && allowLongClick()) {
                 this.mOnLongClickListener?.onLongClick(this)
                 true
             } else {
@@ -133,6 +148,7 @@ open class ListItemClickable(
         }
 
         applyIconPhotoBg()
+        applyDisabledState()
     }
 
     private fun applyPhotoRealSize(imageView: ImageView?, realSize: Boolean) {

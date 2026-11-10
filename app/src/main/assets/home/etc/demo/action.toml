@@ -193,6 +193,23 @@ desc = "@act_056"
 lock-sh = 'echo 1'
 script = 'echo ok'
 [[action]]
+title = "disabled"
+desc = "@act_058"
+disabled = true
+script = 'echo ok'
+[[switch]]
+key = "demo_dis_sw"
+title = "@act_059"
+get = "glog demo_dis_sw"
+set = 'slog demo_dis_sw "$state"'
+reload = "demo_dis_item"
+[[action]]
+key = "demo_dis_item"
+title = "disabled-sh"
+desc = "@act_060"
+disabled-sh = '[ "$(glog demo_dis_sw)" = 1 ] || echo 1'
+script = 'echo "@act_061"'
+[[action]]
 title = "support = false"
 support = "false"
 script = 'echo ok'

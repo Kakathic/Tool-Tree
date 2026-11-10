@@ -121,7 +121,7 @@ class ListItemGroup(context: Context,
         override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     }
 
-    // Xếp lại toàn bộ con vào lưới: mục dạng thẻ chia đều từng hàng, mục khác chiếm cả hàng
+    // Xếp lại con vào lưới: thẻ chia đều từng hàng; hàng cuối còn lẻ thì thẻ giãn full hàng, không chèn ô trống
     private fun relayoutGrid() {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         val density = context.resources.displayMetrics.density
@@ -129,7 +129,6 @@ class ListItemGroup(context: Context,
         val cellCount = children.count { (it is ListItemClickable && it.card) || (it is ListItemGroup && it.isCell) }
         val cols = if (columnWidthDp > 0) columns.coerceAtMost(cellCount.coerceAtLeast(1)) else columns
         content.removeAllViews()
-        val rows = ArrayList<LinearLayout>()
         var row: LinearLayout? = null
         for (child in children) {
             val view = child.getView()
@@ -148,7 +147,6 @@ class ListItemGroup(context: Context,
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                         if (content.childCount > 0) topMargin = gap
                     })
-                    rows.add(current)
                     row = current
                 }
                 current.addView(view, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
@@ -159,13 +157,6 @@ class ListItemGroup(context: Context,
                 content.addView(view, LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     if (content.childCount > 0) topMargin = gap
-                })
-            }
-        }
-        for (r in rows) {
-            while (r.childCount < cols) {
-                r.addView(View(context), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
-                    marginStart = gap
                 })
             }
         }

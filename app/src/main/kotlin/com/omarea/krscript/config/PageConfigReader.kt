@@ -335,6 +335,8 @@ class PageConfigReader {
             val (target, fieldKey, _) = triple
             if (fieldKey == "bool-support" && target != null) {
                 if (!result) (target as GroupNode).supported = false
+            } else if (fieldKey == "bool-disabled" && target is ClickableNode) {
+                target.disabled = result
             }
         }
         pendingCheckboxStates.forEachIndexed { index, pair ->
@@ -795,6 +797,11 @@ class PageConfigReader {
         return (mainNodeToml(node, table) as ClickableNode?)?.apply {
             tomlGet(table, *TomlKeys.LOCK)?.let { parseLockAttr(it, this) }
             tomlGet(table, *TomlKeys.LOCK_SH)?.let { lockShell = it.trim() }
+            tomlGet(table, *TomlKeys.DISABLED)?.let { disabled = tomlTruthy(it) }
+            tomlGet(table, *TomlKeys.DISABLED_SH)?.let {
+                disabledSh = it.trim()
+                if (disabledSh.isNotEmpty()) pendingBoolShells.add(Triple(this, "bool-disabled", disabledSh))
+            }
             tomlGet(table, "min-sdk", "sdk-min")?.let { minSdkVersion = parseIntOr(it, minSdkVersion) }
             tomlGet(table, "max-sdk", "sdk-max")?.let { maxSdkVersion = parseIntOr(it, maxSdkVersion) }
             tomlGet(table, "target-sdk", "sdk-target")?.let { targetSdkVersion = parseIntOr(it, targetSdkVersion) }
