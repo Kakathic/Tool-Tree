@@ -6,7 +6,7 @@
     android:clickable="true"
     android:focusable="true"
     android:foreground="?android:attr/selectableItemBackground"
-    android:minHeight="56dp">
+    android:minHeight="?android:attr/listPreferredItemHeight">
 
     <ImageView
         android:id="@id/kr_shortcut_icon"
@@ -25,32 +25,32 @@
 
         <ImageView
             android:id="@id/kr_widget"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
             android:padding="5dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:layout_marginTop="12dp"
-            android:layout_marginEnd="12dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginTop="22dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="10dp"
             app:tint="?android:attr/colorAccent" />
 
         <com.omarea.krscript.ui.DownloadProgressRing
             android:id="@+id/kr_download_ring"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:layout_marginTop="12dp"
-            android:layout_marginEnd="12dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginTop="22dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="10dp"
             android:visibility="gone" />
 
         <LinearLayout
             android:orientation="horizontal"
             android:layout_marginStart="6dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginTop="15dp"
+            android:layout_marginBottom="10dp"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:gravity="center_vertical"
@@ -62,20 +62,19 @@
                 android:id="@id/kr_icon"
                 android:layout_marginStart="8dp"
                 android:layout_gravity="center_vertical"
-                android:layout_width="28dp"
-                android:layout_height="28dp" />
+                android:layout_width="35dp"
+                android:layout_height="35dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="10dp"
                 android:orientation="vertical">
 
                 <TextView
                     android:id="@id/kr_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="13sp"
                     style="@style/textTitle" />
 
                 <TextView
