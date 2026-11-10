@@ -423,7 +423,7 @@ UI_TEXT = {
     "model_list_failed": "Không lấy được danh sách mô hình",
     "thinking_usage": "Cách dùng: /thinking auto|low|medium|high",
     "instruction_usage": "Cách dùng: /instruction <text>",
-    "timeout_error": "Timeout phải lớn hơn 0.",
+    "timeout_error": "Timeout không được âm.",
     "missing_api_key": "Thiếu GEMINI_API_KEY.",
     "key_hint": "Đăng ký hoặc lấy API key {provider} tại: {url}",
     "question_empty": "Câu hỏi không được để trống.",
@@ -537,7 +537,7 @@ UI_TEXT = {
     "model_list_failed": "Could not fetch the model list",
     "thinking_usage": "Usage: /thinking auto|low|medium|high",
     "instruction_usage": "Usage: /instruction <text>",
-    "timeout_error": "Timeout must be greater than zero.",
+    "timeout_error": "Timeout must not be negative.",
     "missing_api_key": "Missing GEMINI_API_KEY.",
     "key_hint": "Get or register a {provider} API key at: {url}",
     "question_empty": "Question cannot be empty.",
@@ -873,7 +873,12 @@ def parse_args():
   parser.add_argument("--instruction")
   parser.add_argument("--instruction-file")
   parser.add_argument("--api-key")
-  parser.add_argument("--timeout", type=int, default=120)
+  parser.add_argument(
+    "--timeout",
+    type=int,
+    default=0,
+    help="Seconds to wait for the API (default 0 = no limit).",
+  )
   parser.add_argument(
     "--shell",
     action="store_true",
@@ -4571,7 +4576,7 @@ def run():
       )
       return 1
     return 0
-  if args.timeout <= 0:
+  if args.timeout < 0:
     print(
       COLORS.error(ui["timeout_error"]),
       file=sys.stderr,
@@ -4593,7 +4598,9 @@ def run():
     print(COLORS.error(f"Missing {provider_env}."), file=sys.stderr)
     report_key_help(args.provider, ui)
     return 2
-  WEB_NET["timeout"] = max(1, min(args.timeout, 60))
+  WEB_NET["timeout"] = max(1, min(args.timeout, 60)) if args.timeout else 30
+  if args.timeout == 0:
+    args.timeout = None  # urlopen(timeout=None) = no limit
   if args.list_models:
     try:
       models = fetch_provider_models(args.provider, api_key, args.base_url, args.timeout)
