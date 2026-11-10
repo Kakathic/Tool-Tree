@@ -2,7 +2,9 @@ package com.omarea.krscript.ui
 
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.util.TypedValue
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.RelativeLayout
 import com.tool.tree.R
@@ -41,6 +43,33 @@ open class ListItemClickable(
 
     fun triggerAction() {
         this.mOnClickListener?.onClick(this)
+    }
+
+    /** Kích thước gọn riêng cho thẻ (dùng ở trang Mục lục): icon 28dp, đệm 12dp, chữ 13sp, cao tối thiểu 56dp. */
+    fun applyCompactSize() {
+        val density = context.resources.displayMetrics.density
+        fun dp(v: Float): Int = (v * density).toInt()
+
+        layout.minimumHeight = dp(56f)
+        layout.findViewById<View>(R.id.kr_layout_ac)?.let {
+            it.setPadding(it.paddingLeft, dp(12f), it.paddingRight, dp(12f))
+        }
+        iconView?.let { v ->
+            val lp = v.layoutParams
+            lp.width = dp(28f)
+            lp.height = dp(28f)
+            (lp as? ViewGroup.MarginLayoutParams)?.marginEnd = dp(8f)
+            v.layoutParams = lp
+        }
+        titleView?.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        for (id in intArrayOf(R.id.kr_widget, R.id.kr_download_ring)) {
+            layout.findViewById<View>(id)?.let { v ->
+                val lp = v.layoutParams
+                lp.width = dp(34f)
+                lp.height = dp(34f)
+                v.layoutParams = lp
+            }
+        }
     }
 
     override fun updateViewByShell() {

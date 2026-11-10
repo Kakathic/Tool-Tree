@@ -32,6 +32,8 @@ class ListItemGroup(context: Context,
     private val minColumns: Int = config.minColumns.coerceIn(1, 6)
     private val maxColumns: Int = config.maxColumns.coerceIn(minColumns, 6)
 
+    val compact: Boolean = config.compact
+
     val cardMode: Boolean = !isRootGroup && !isCell && config.card
 
     val gridMode: Boolean = !isRootGroup && !isCell && (config.columns > 1 || columnWidthDp > 0 || config.card)

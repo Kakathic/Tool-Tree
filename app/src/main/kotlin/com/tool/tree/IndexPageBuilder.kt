@@ -17,6 +17,7 @@ object IndexPageBuilder {
             val group = GroupNode("").also {
                 it.title = title
                 it.card = true
+                it.compact = true
                 it.columnWidthDp = 160
                 it.minColumns = 2
                 it.maxColumns = 4
