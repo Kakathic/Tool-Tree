@@ -67,7 +67,8 @@
                     android:id="@id/kr_widget"
                     android:layout_width="35dp"
                     android:layout_height="35dp"
-                    android:layout_gravity="center"
+                    android:layout_gravity="center_vertical|end"
+                    android:layout_marginEnd="-6dp"
                     android:padding="5dp"
                     app:tint="?android:attr/colorAccent" />
 
@@ -75,7 +76,8 @@
                     android:id="@id/kr_switch"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center"
+                    android:layout_gravity="center_vertical|end"
+                    android:layout_marginEnd="-4dp"
                     android:clickable="false"
                     android:elevation="5dp"
                     android:enabled="false"
@@ -91,7 +93,8 @@
                     android:id="@+id/kr_download_ring"
                     android:layout_width="35dp"
                     android:layout_height="35dp"
-                    android:layout_gravity="center"
+                    android:layout_gravity="center_vertical|end"
+                    android:layout_marginEnd="-6dp"
                     android:visibility="gone" />
             </FrameLayout>
         </LinearLayout>
