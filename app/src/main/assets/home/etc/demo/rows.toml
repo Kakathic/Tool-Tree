@@ -106,6 +106,14 @@ confirm-text = "@rw_024"
 get = "glog demo_row_confirm"
 set = 'slog demo_row_confirm "$state"'
 break = true
+[[text.rows]]
+text = "@rw_034"
+toggle = "spinner"
+items = ["fast|@rw_035", "normal|@rw_036", "slow|@rw_037"]
+get = "glog demo_row_spinner"
+set = 'slog demo_row_spinner "$state"'
+toast = true
+break = true
 
 [[group]]
 title = "#6 @rw_025"

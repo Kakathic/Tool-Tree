@@ -441,6 +441,10 @@ rw_030="Trang HTML cục bộ"
 rw_031="Rows động bằng rows-sh"
 rw_032="Khối sinh bằng rows-sh"
 rw_033="Giờ hiện tại: $(date +%H:%M:%S)"
+rw_034="Spinner ngay trên dòng"
+rw_035="Nhanh"
+rw_036="Bình thường"
+rw_037="Chậm"
 
 # editor.toml
 ed_001="Tạo và sửa tệp"

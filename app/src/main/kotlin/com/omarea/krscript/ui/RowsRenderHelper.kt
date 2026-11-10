@@ -24,11 +24,14 @@ import android.text.Spanned
 import android.text.TextPaint
 import android.text.method.LinkMovementMethod
 import android.text.style.*
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.ListPopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import com.omarea.common.ui.BlurEngine
@@ -40,6 +43,7 @@ import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.model.NodeInfoBase
 import com.omarea.krscript.model.TextNode
 import com.tool.tree.R
+import com.tool.tree.ui.SpinnerPopupHelper
 import java.util.Collections
 import java.util.WeakHashMap
 
@@ -732,6 +736,7 @@ object RowsRenderHelper {
         animatedRowIcons: MutableList<Animatable>
     ): RowSpanResult {
         val isToggle = row.toggle == "checkbox" || row.toggle == "switch"
+        val isSpinner = row.toggle == "spinner" && row.spinnerValues.isNotEmpty()
         val rawLabel = if (row.dynamicTextSh.isNotEmpty()) {
             dynamicTextResults[rowIndex] ?: ""
         } else {
@@ -750,7 +755,7 @@ object RowsRenderHelper {
         }
 
         val effectiveIcon = if (row.iconSh.isNotEmpty()) (dynamicIconResults[rowIndex] ?: "") else row.icon
-        val hasIcon = !isToggle && effectiveIcon.isNotEmpty()
+        val hasIcon = !isToggle && !isSpinner && effectiveIcon.isNotEmpty()
         val rowIconDrawableRaw = if (hasIcon) buildRowIconDrawable(context, effectiveIcon, row, config) else null
         val showIcon = rowIconDrawableRaw != null
 
@@ -760,7 +765,13 @@ object RowsRenderHelper {
             row.progress
         }
         val hasProgress = effectiveProgress >= 0f
+        val spinnerCurrent = if (isSpinner) {
+            val at = row.spinnerValues.indexOf(row.spinnerValue)
+            if (at >= 0) row.spinnerTitles[at] else row.spinnerValue
+        } else ""
+        val spinnerValueStart = if (label.isEmpty()) 0 else label.length + 1
         val textBase = when {
+            isSpinner -> (if (label.isEmpty()) "" else "$label\u2002") + "$spinnerCurrent \u25BE"
             isToggle -> "$label \u2002 "
             showIcon && row.iconPosition == "before" -> "\u2002 $label"
             showIcon -> "$label \u2002"
@@ -867,7 +878,7 @@ object RowsRenderHelper {
                     ds.isUnderlineText = false
                 }
             }, 0, toggleIconIndex + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        } else if (row.link.isNotEmpty()) {
+        } else if (!isSpinner && row.link.isNotEmpty()) {
             spannableString.setSpan(object : ClickableSpan() {
                 override fun onClick(widget: View) {
                     if (row.link.isNotEmpty()) {
@@ -886,7 +897,20 @@ object RowsRenderHelper {
             }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
-        if (!isToggle && row.activity.isNotEmpty()) {
+        if (isSpinner) {
+            spannableString.setSpan(object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    showSpinnerPopup(context, rowsView, extraIconView, rows, config, htmlContainer, row, rowIndex, spinnerValueStart)
+                }
+
+                override fun updateDrawState(ds: TextPaint) {
+                    ds.color = if (row.color != -1) row.color else ds.linkColor
+                    ds.isUnderlineText = false
+                }
+            }, spinnerValueStart, textBase.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        if (!isToggle && !isSpinner && row.activity.isNotEmpty()) {
             spannableString.setSpan(object : ClickableSpan() {
                 override fun onClick(widget: View) {
                     TryOpenActivity(context, row.activity).tryOpen()
@@ -899,7 +923,7 @@ object RowsRenderHelper {
             }, 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
-        if (!isToggle && (row.onClickScript.isNotEmpty() || row.resetTarget != -1)) {
+        if (!isToggle && !isSpinner && (row.onClickScript.isNotEmpty() || row.resetTarget != -1)) {
             spannableString.setSpan(object : ClickableSpan() {
                 override fun onClick(widget: View) {
                     runRowAction(context, row.confirm) {
@@ -983,7 +1007,7 @@ object RowsRenderHelper {
         }
 
         // Tự nhận diện link trần (http://, https://, www.) trong text; bỏ qua khi hàng đã có hành động nhấn riêng
-        val rowHasOwnClick = isToggle || row.link.isNotEmpty() || row.activity.isNotEmpty() ||
+        val rowHasOwnClick = isToggle || isSpinner || row.link.isNotEmpty() || row.activity.isNotEmpty() ||
             row.onClickScript.isNotEmpty() || row.resetTarget != -1
         if (row.autolink && !rowHasOwnClick && label.isNotEmpty()) {
             applyAutoLinks(context, spannableString, markdownOffset, minOf(length, markdownOffset + label.length))
@@ -1039,6 +1063,111 @@ object RowsRenderHelper {
         }
 
         return RowSpanResult(spannableString, width)
+    }
+
+    private var lastSpinnerOpen = 0L
+
+    // Popup chọn giá trị cho row toggle = "spinner", đặt ngay dưới dòng chứa spinner
+    private fun showSpinnerPopup(
+        context: Context,
+        rowsView: TextView,
+        extraIconView: ImageView?,
+        rows: List<TextNode.TextRow>,
+        config: NodeInfoBase,
+        htmlContainer: FrameLayout?,
+        row: TextNode.TextRow,
+        rowIndex: Int,
+        valueStart: Int
+    ) {
+        val now = System.currentTimeMillis()
+        if (now - lastSpinnerOpen < 800) return
+        lastSpinnerOpen = now
+
+        val density = context.resources.displayMetrics.density
+        val items = ArrayList(row.spinnerTitles)
+        val background = context.getDrawable(R.drawable.kr_spinner_popup_bg)
+        val popup = ListPopupWindow(context)
+        popup.anchorView = rowsView
+        popup.setAdapter(ArrayAdapter(context, R.layout.kr_spinner_dropdown, R.id.text, items))
+        popup.setBackgroundDrawable(background)
+        popup.isModal = true
+        popup.setOnItemClickListener { _, _, position, _ ->
+            popup.dismiss()
+            val newValue = row.spinnerValues.getOrNull(position) ?: return@setOnItemClickListener
+            if (newValue != row.spinnerValue) {
+                applySpinnerChoice(context, rowsView, extraIconView, rows, config, htmlContainer, row, newValue)
+            }
+        }
+
+        val inflater = LayoutInflater.from(context)
+        val itemViews = items.map { title ->
+            inflater.inflate(R.layout.kr_spinner_dropdown, rowsView.parent as? ViewGroup, false).apply {
+                findViewById<TextView>(R.id.text).text = title
+            }
+        }
+        SpinnerPopupHelper.applyWidthAndPosition(popup, rowsView, itemViews, background, (160 * density).toInt(), alignRight = false)
+
+        val textLayout = rowsView.layout
+        val range = (rowsView.tag as? RowsRenderState)?.rowRanges?.get(rowIndex)
+        if (textLayout != null && range != null) {
+            val offset = (range[0] + valueStart).coerceIn(0, rowsView.length())
+            val line = textLayout.getLineForOffset(offset)
+            val x = (textLayout.getPrimaryHorizontal(offset) + rowsView.totalPaddingLeft).toInt()
+            val y = textLayout.getLineBottom(line) + rowsView.totalPaddingTop
+            val location = IntArray(2)
+            rowsView.getLocationOnScreen(location)
+            val screenWidth = context.resources.displayMetrics.widthPixels
+            val margin = (16 * density).toInt()
+            var horizontal = popup.horizontalOffset + x
+            val overflow = location[0] + horizontal + popup.width - (screenWidth - margin)
+            if (overflow > 0) horizontal -= overflow
+            if (location[0] + horizontal < margin) horizontal = margin - location[0]
+            popup.horizontalOffset = horizontal
+            popup.verticalOffset = y - rowsView.height
+        }
+
+        popup.show()
+        SpinnerPopupHelper.applyRoundedClip(popup, context.resources.getDimension(R.dimen.kr_spinner_popup_radius))
+        val current = row.spinnerValues.indexOf(row.spinnerValue)
+        if (current >= 0) popup.listView?.setSelection(current)
+    }
+
+    private fun applySpinnerChoice(
+        context: Context,
+        rowsView: TextView,
+        extraIconView: ImageView?,
+        rows: List<TextNode.TextRow>,
+        config: NodeInfoBase,
+        htmlContainer: FrameLayout?,
+        row: TextNode.TextRow,
+        newValue: String
+    ) {
+        runRowAction(context, row.confirm) {
+            row.spinnerValue = newValue
+            if (row.onChangeSh.isNotEmpty()) {
+                val progressHost = context as? RowRunProgressHost
+                progressHost?.showRowRunProgress()
+                Thread {
+                    val result = ScriptEnvironmen.executeResultRoot(context, row.onChangeSh, config, object : HashMap<String, String>() {
+                        init { put("state", newValue) }
+                    })
+                    rowsView.post {
+                        progressHost?.hideRowRunProgress()
+                        if (!rowsView.isAttachedToWindow) return@post
+                        if (result.trim().isNotEmpty()) {
+                            if (row.toastResult) {
+                                Toast.makeText(context, result.trim(), Toast.LENGTH_SHORT).show()
+                            } else {
+                                DialogHelper.helpInfo(context, context.getString(R.string.kr_slice_script_result), result)
+                            }
+                        }
+                        bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+                    }
+                }.start()
+            } else {
+                bind(context, rowsView, extraIconView, rows, config, htmlContainer)
+            }
+        }
     }
 
     private fun runRowAction(context: Context, confirmMessage: String, action: () -> Unit) {

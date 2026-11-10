@@ -66,6 +66,10 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         internal var checked: Boolean = false
         internal var onChangeSh: String = ""
 
+        internal var spinnerValues: ArrayList<String> = ArrayList()
+        internal var spinnerTitles: ArrayList<String> = ArrayList()
+        internal var spinnerValue: String = ""
+
         internal var confirm: String = ""
         internal var refreshInterval: Int = 0
         internal var refreshBar: Boolean = false

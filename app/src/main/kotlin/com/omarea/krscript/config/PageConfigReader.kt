@@ -250,6 +250,7 @@ class PageConfigReader {
     private val pendingSwitchStates = ArrayList<Pair<SwitchNode, String>>()
     private val pendingPickerStates = ArrayList<Pair<PickerNode, String>>()
     private val pendingRowCheckedStates = ArrayList<Pair<TextNode.TextRow, String>>()
+    private val pendingRowSpinnerStates = ArrayList<Pair<TextNode.TextRow, String>>()
     private val pendingRowVisibleStates = ArrayList<Triple<ArrayList<TextNode.TextRow>, TextNode.TextRow, String>>()
     private val pendingCheckboxStates = ArrayList<Pair<PageMenuOption, String>>()
 
@@ -263,7 +264,7 @@ class PageConfigReader {
 
     private fun resolvePendingStates() {
         if (pendingSwitchStates.isEmpty() && pendingPickerStates.isEmpty() &&
-            pendingRowCheckedStates.isEmpty() && pendingRowVisibleStates.isEmpty() &&
+            pendingRowCheckedStates.isEmpty() && pendingRowSpinnerStates.isEmpty() && pendingRowVisibleStates.isEmpty() &&
             pendingDynamicStrings.isEmpty() && pendingBoolShells.isEmpty() &&
             pendingCheckboxStates.isEmpty()) return
 
@@ -271,6 +272,7 @@ class PageConfigReader {
         pendingSwitchStates.forEachIndexed { index, pair -> scripts["switch:$index"] = pair.second }
         pendingPickerStates.forEachIndexed { index, pair -> scripts["picker:$index"] = pair.second }
         pendingRowCheckedStates.forEachIndexed { index, pair -> scripts["row-checked:$index"] = pair.second }
+        pendingRowSpinnerStates.forEachIndexed { index, pair -> scripts["row-spinner:$index"] = pair.second }
         pendingRowVisibleStates.forEachIndexed { index, triple -> scripts["row-visible:$index"] = triple.third }
         pendingDynamicStrings.forEachIndexed { index, triple -> scripts["dynstr:$index"] = triple.third }
         pendingBoolShells.forEachIndexed { index, triple -> scripts["boolsh:$index"] = triple.third }
@@ -291,6 +293,10 @@ class PageConfigReader {
         pendingRowCheckedStates.forEachIndexed { index, pair ->
             val shellResult = results["row-checked:$index"] ?: ""
             pair.first.checked = shellResult.trim() == "1"
+        }
+        pendingRowSpinnerStates.forEachIndexed { index, pair ->
+            val shellResult = results["row-spinner:$index"] ?: ""
+            if (shellResult != "error") pair.first.spinnerValue = shellResult.trim()
         }
         pendingRowVisibleStates.forEachIndexed { index, triple ->
             val shellResult = results["row-visible:$index"] ?: ""
@@ -347,6 +353,7 @@ class PageConfigReader {
         pendingSwitchStates.clear()
         pendingPickerStates.clear()
         pendingRowCheckedStates.clear()
+        pendingRowSpinnerStates.clear()
         pendingRowVisibleStates.clear()
         pendingDynamicStrings.clear()
         pendingBoolShells.clear()
@@ -1415,18 +1422,37 @@ class PageConfigReader {
         tomlGet(table, "html-height")?.let { row.htmlHeight = parseIntOr(it, row.htmlHeight) }
         tomlGet(table, "toggle", "toggle-type")?.let {
             val t = it.trim().lowercase(getDefault())
-            if (t == "checkbox" || t == "switch") row.toggle = t
+            if (t == "checkbox" || t == "switch" || t == "spinner") row.toggle = t
+        }
+        if (row.toggle == "spinner") {
+            itemsOrStringOptions(table)?.let { arr ->
+                for (i in 0 until arr.size()) {
+                    val str = arr.getString(i) ?: continue
+                    val parts = str.split("|", limit = 2)
+                    row.spinnerValues.add(parts[0].trim())
+                    row.spinnerTitles.add(if (parts.size > 1) StringResRef.resolve(context, parts[1].trim()) else parts[0].trim())
+                }
+            }
+            if (row.spinnerValues.isNotEmpty()) row.spinnerValue = row.spinnerValues[0]
         }
         tomlGet(table, *TomlKeys.GET)?.let {
             val v = it.trim()
             val lower = v.lowercase(getDefault())
-            row.checked = when {
-                lower.isEmpty() -> false
-                lower == "1" || lower == "true" -> true
-                lower == "0" || lower == "false" -> false
-                else -> {
-                    pendingRowCheckedStates.add(row to v)
-                    false
+            if (row.toggle == "spinner") {
+                if (row.spinnerValues.contains(v)) {
+                    row.spinnerValue = v
+                } else if (v.isNotEmpty()) {
+                    pendingRowSpinnerStates.add(row to v)
+                }
+            } else {
+                row.checked = when {
+                    lower.isEmpty() -> false
+                    lower == "1" || lower == "true" -> true
+                    lower == "0" || lower == "false" -> false
+                    else -> {
+                        pendingRowCheckedStates.add(row to v)
+                        false
+                    }
                 }
             }
         }

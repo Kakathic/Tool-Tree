@@ -1374,9 +1374,10 @@ text = "Temp: 41 C"
 <tr><td class="field-name">icon-real-gif</td><td>icon-gif-real</td><td class="field-type">Bool</td><td>false</td><td>Same as <code>photo-real-gif</code> but for the row's inline icon - REAL <code>.gif</code> file, Android 9/API 28+ only</td></tr>
 <tr><td class="field-name">script</td><td>run</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script to run when the row is clicked. Runs on a background thread (no longer blocks the UI) while a thin progress bar shows just below the toolbar; the bar disappears once the script finishes</td></tr>
 <tr><td class="field-name">toast</td><td>toast-result</td><td class="field-type">Bool</td><td>false</td><td>true: show the (non-empty) result of <code>script</code>/<code>run</code> <em>and</em> a toggle's <code>set</code> as a short Toast instead of the default log dialog. Applies to both <code>script</code>'s result and a toggle's <code>set</code> result</td></tr>
-<tr><td class="field-name">toggle</td><td>toggle-type</td><td class="field-type">String</td><td>""</td><td><code>checkbox</code>/<code>switch</code> = show a small toggle next to the row</td></tr>
-<tr><td class="field-name">get</td><td>getstate</td><td class="field-type">Bool|Shell</td><td>false</td><td>Toggle initial state. A shell returning exactly <code>"1"</code> = checked (queued into pending states - see <a href="#pending-states">section 21</a>)</td></tr>
-<tr><td class="field-name">set</td><td>setstate</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script run when the user toggles (receives <code>$state</code> = "1"/"0")</td></tr>
+<tr><td class="field-name">toggle</td><td>toggle-type</td><td class="field-type">String</td><td>""</td><td><code>checkbox</code>/<code>switch</code> = show a small toggle next to the row; <code>spinner</code> = the row shows its current value followed by a small arrow (e.g. <code>Mode  Fast ▾</code>); tapping opens a drop-down list to choose another value (see section <a href="#rows-spinner">11.7</a>)</td></tr>
+<tr><td class="field-name">get</td><td>getstate</td><td class="field-type">Bool|Shell</td><td>false</td><td>Toggle initial state. A shell returning exactly <code>"1"</code> = checked (queued into pending states - see <a href="#pending-states">section 21</a>). With <code>toggle = "spinner"</code>: the current value (a value from <code>items</code>, or a shell that prints it)</td></tr>
+<tr><td class="field-name">set</td><td>setstate</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script run when the user toggles (receives <code>$state</code> = "1"/"0"); with <code>toggle = "spinner"</code> it receives the chosen value in <code>$state</code></td></tr>
+<tr><td class="field-name">items</td><td>options</td><td class="field-type">Array</td><td>[]</td><td>Only with <code>toggle = "spinner"</code>: the choices, as strings <code>"value|Title"</code> (title optional, accepts <code>@string/...</code>), same format as <code>[[picker]]</code> <code>items</code></td></tr>
 <tr><td class="field-name">confirm</td><td>-</td><td class="field-type">Bool</td><td>false</td><td>Same meaning as on nodes: ask before running <code>script</code> or before applying a toggle change (<code>set</code>). <code>true</code> shows the default question; legacy: a string value is still accepted as the message</td></tr>
 <tr><td class="field-name">confirm-text</td><td>confirm-message</td><td class="field-type">String</td><td>""</td><td>Message of the confirmation (implies <code>confirm = true</code>)</td></tr>
 <tr><td class="field-name">refresh-interval</td><td>refresh, interval</td><td class="field-type">Int</td><td>0</td><td>Seconds interval to automatically re-run this row's <code>sh</code>/<code>icon-sh</code>/<code>photo-sh</code> and redraw it, without waiting for the whole item to rebind (e.g. list scroll). 0 (default) = no auto refresh; when several rows declare it, the shortest interval wins</td></tr>
@@ -1541,7 +1542,15 @@ reset = 0
 </table>
 </div>
 <div class="callout warn">If the target row happens to be part of a group using the multi-column pin layout from <a href="#text-rows">section 11.5</a>, <code>reset</code> automatically rebinds that whole block instead of just the one row, to avoid breaking the column spacing - this is expected, not a bug.</div>
-<h3>11.7. Inline progress bar (<code>progress</code>) and flash highlight (<code>flash</code>)</h3>
+<h3 id="rows-spinner">11.7. Spinner on a row (<code>toggle = "spinner"</code>)</h3>
+<p>A row with <code>toggle = "spinner"</code> and <code>items</code> shows its text followed by the currently selected title and a small arrow. Tapping the value opens a drop-down list (same style as the <code>[[picker]]</code> pop-up) right under the row; choosing an entry updates the row and runs <code>set</code> with <code>$state</code> = the chosen <code>value</code>. <code>confirm</code> asks before applying, <code>toast = true</code> shows the script output as a toast. <code>get</code> is either one of the item values or a shell that prints the current value; when omitted the first item is selected. A row with <code>toggle = "spinner"</code> but no <code>items</code> is shown as plain text.</p>
+<pre><code>[[text.rows]]
+text = "Mode"
+toggle = "spinner"
+items = ["fast|Fast", "normal|Normal", "slow|Slow"]
+get = "glog my_mode"
+set = 'slog my_mode "$state"'</code></pre>
+<h3>11.8. Inline progress bar (<code>progress</code>) and flash highlight (<code>flash</code>)</h3>
 <p>A row can embed a small horizontal progress bar <strong>inline, right after its text/icon</strong> - useful for battery/thermal/storage gauges without leaving the text flow. The bar is driven either statically or by a script:</p>
 <pre><code>[[text]]
 [[text.rows]]
@@ -2322,8 +2331,8 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
+<li>2026-11-10 - Text row <code>toggle = "spinner"</code> with <code>items</code>: the row shows the current value with an arrow and opens a drop-down to choose another; <code>set</code> receives the chosen value in <code>$state</code> (section 11.7).</li>
 <li>2026-11-10 - New <code>disabled</code> / <code>disabled-sh</code> on clickable nodes (action, picker, switch, page...): dims the item and blocks taps; the shell form can re-enable it (section 3.2).</li>
-<li>2026-11-10 - Param <code>sort = true</code> no longer requires <code>readonly</code> to be declared on the same param, so editable and readonly params that both declare <code>sort = true</code> now reorder correctly (section 3.1 / params).</li>
 <li>2026-11-10 - Group <code>columns</code> grid: a lone card in the last row now stretches to the full row width instead of being padded with an empty cell (section 4.4).</li>
 </ul>
 </section>
