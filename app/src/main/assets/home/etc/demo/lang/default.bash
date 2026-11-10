@@ -91,6 +91,7 @@ pg_029="Tap to show a message"
 pg_030="1|This item is locked for demonstration"
 pg_031="Needs a higher Android SDK than this device"
 pg_032="Long-press to create a shortcut"
+pg_033="Local web page that runs real shell through KrScriptCore (workflow demo)"
 
 # action.toml
 act_001="Basics"

@@ -91,6 +91,7 @@ pg_029="Bấm sẽ hiện thông báo"
 pg_030="1|Mục này bị khoá để minh hoạ"
 pg_031="Cần Android SDK cao hơn máy hiện tại"
 pg_032="Nhấn giữ để tạo lối tắt"
+pg_033="Trang web nội bộ chạy shell thật qua KrScriptCore (demo workflow)"
 
 # action.toml
 act_001="Cơ bản"
