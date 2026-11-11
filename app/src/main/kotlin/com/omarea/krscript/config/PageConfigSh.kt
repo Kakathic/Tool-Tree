@@ -1,9 +1,6 @@
 package com.omarea.krscript.config
 
 import android.app.Activity
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
 import com.tool.tree.R
 import com.omarea.krscript.executor.ScriptEnvironmen
 import com.omarea.krscript.model.ActionNode
@@ -14,7 +11,6 @@ import com.omarea.krscript.model.PageNode
 import java.io.ByteArrayInputStream
 
 class PageConfigSh(private var activity: Activity, private var pageConfigSh: String, private var parentConfig: PageNode?) {
-    private var handler = Handler(Looper.getMainLooper())
 
     private var lastReader: PageConfigReader? = null
     val pageMenuOptions: ArrayList<PageMenuOption> get() = lastReader?.pageMenuOptions ?: ArrayList()
@@ -34,15 +30,21 @@ class PageConfigSh(private var activity: Activity, private var pageConfigSh: Str
     }
 
     private fun pageConfigShError(content: String) {
-        handler.post {
-            Toast.makeText(activity, activity.getString(R.string.kr_page_sh_invalid) + "\n" + content, Toast.LENGTH_LONG).show()
-        }
+        TomlErrorReporter.show(
+            activity,
+            activity.getString(R.string.toml_error_title),
+            activity.getString(R.string.kr_page_sh_invalid) + "\n\n" + content,
+            repeatable = true
+        )
     }
 
-    private fun noReadPermission() {
-        handler.post {
-            Toast.makeText(activity, activity.getString(R.string.kr_page_sh_file_permission), Toast.LENGTH_LONG).show()
-        }
+    private fun noReadPermission(path: String) {
+        TomlErrorReporter.show(
+            activity,
+            activity.getString(R.string.toml_error_title),
+            activity.getString(R.string.toml_error_file, path) + "\n\n" + activity.getString(R.string.kr_page_sh_file_permission),
+            repeatable = true
+        )
     }
 
     fun execute(onNodeReady: ((NodeInfoBase?, Int, Int) -> Unit)? = null): ArrayList<NodeInfoBase>? {
@@ -54,8 +56,8 @@ class PageConfigSh(private var activity: Activity, private var pageConfigSh: Str
                 val reader = PageConfigReader(activity, result, parentConfig?.pageConfigDir)
                 lastReader = reader
                 items = reader.readConfigXml(onNodeReady)
-                if (items == null) {
-                    noReadPermission()
+                if (items == null && !reader.loadFailed) {
+                    noReadPermission(result)
                 }
             } else if (looksLikeInlineToml(result)) {
                 val inputStream = ByteArrayInputStream(result.toByteArray())

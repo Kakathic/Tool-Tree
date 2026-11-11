@@ -1,11 +1,8 @@
 package com.omarea.krscript.config
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.text.Layout
 import android.util.Log
-import android.widget.Toast
 import com.omarea.common.model.SelectItem
 import com.omarea.krscript.executor.ExtractAssets
 import com.omarea.krscript.executor.ScriptEnvironmen
@@ -17,6 +14,7 @@ import java.util.Locale.getDefault
 import androidx.core.graphics.toColorInt
 import org.tomlj.Toml
 import org.tomlj.TomlArray
+import org.tomlj.TomlParseError
 import org.tomlj.TomlTable
 
 class PageConfigReader {
@@ -26,6 +24,14 @@ class PageConfigReader {
     private var pageConfigAbsPath: String = ""
     private var pageConfigStream: InputStream? = null
     private var parentDir: String = ""
+
+    private val errors = ArrayList<String>()
+    private val warnings = ArrayList<String>()
+    private var lineShifted = false
+    private var currentLine = -1
+
+    var loadFailed: Boolean = false
+        private set
 
     constructor(context: Context, pageConfig: String, parentDir: String?) {
         this.context = context
@@ -50,9 +56,8 @@ class PageConfigReader {
                     return readConfigXml(fileInputStream, onNodeReady)
                 }
             } catch (ex: Exception) {
-                Handler(Looper.getMainLooper()).post {
-                    Toast.makeText(context, "Failed to parse configuration file\n" + ex.message, Toast.LENGTH_LONG).show()
-                }
+                addError(context.getString(R.string.toml_error_read_failed, ex.message ?: ex.javaClass.simpleName))
+                flushReport()
                 Log.e("KrConfig Fail！", "" + ex.message)
             }
 
@@ -71,13 +76,113 @@ class PageConfigReader {
     private fun readConfigXml(fileInputStream: InputStream, onNodeReady: ((NodeInfoBase?, Int, Int) -> Unit)? = null): ArrayList<NodeInfoBase>? {
         return try {
             val rawText = fileInputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            readConfigToml(applyLoadKey(applyBuiltinVars(rawText)), onNodeReady)
+            val builtinApplied = applyBuiltinVars(rawText)
+            val merged = applyLoadKey(builtinApplied)
+            lineShifted = merged.count { it == '\n' } != builtinApplied.count { it == '\n' }
+            readConfigToml(merged, onNodeReady)
         } catch (ex: Exception) {
-            Handler(Looper.getMainLooper()).post {
-                Toast.makeText(context, "Failed to parse configuration file\n" + ex.message, Toast.LENGTH_LONG).show()
-            }
+            addError(context.getString(R.string.toml_error_read_failed, ex.message ?: ex.javaClass.simpleName))
+            flushReport()
             Log.e("KrConfig Fail！", "" + ex.message)
             null
+        }
+    }
+
+    @Synchronized
+    private fun addError(message: String) {
+        errors.add(message)
+    }
+
+    @Synchronized
+    private fun warnAt(message: String) {
+        warnings.add(if (currentLine > 0) context.getString(R.string.toml_warn_line, currentLine, message) else message)
+    }
+
+    private fun formatTomlError(e: TomlParseError): String {
+        val clean = (e.message ?: "").replace(Regex("""\s*\(line \d+, column \d+\)\s*$"""), "")
+        val pos = e.position()
+        return context.getString(R.string.toml_error_pos, pos.line(), pos.column(), clean)
+    }
+
+    // Gom lỗi + cảnh báo của một lần đọc thành một dialog duy nhất
+    @Synchronized
+    private fun flushReport(dynamic: Boolean = false) {
+        if (errors.isEmpty() && warnings.isEmpty()) return
+        val isError = errors.isNotEmpty()
+        val sb = StringBuilder()
+        val path = pageConfigAbsPath.ifEmpty { pageConfig }
+        if (path.isNotEmpty()) sb.append(context.getString(R.string.toml_error_file, path)).append("\n\n")
+        for (m in errors) sb.append("• ").append(m).append('\n')
+        for (m in warnings) sb.append("• ").append(m).append('\n')
+        if (!dynamic && lineShifted) sb.append('\n').append(context.getString(R.string.toml_error_line_shift))
+        if (isError && !dynamic) loadFailed = true
+        errors.clear()
+        warnings.clear()
+        TomlErrorReporter.show(
+            context,
+            context.getString(if (isError) R.string.toml_error_title else R.string.toml_warning_title),
+            sb.toString().trimEnd(),
+            repeatable = isError && !dynamic
+        )
+    }
+
+    private fun editDistance(a: String, b: String): Int {
+        var prev = IntArray(b.length + 1) { it }
+        for (i in 1..a.length) {
+            val cur = IntArray(b.length + 1)
+            cur[0] = i
+            for (j in 1..b.length) {
+                cur[j] = minOf(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + if (a[i - 1] == b[j - 1]) 0 else 1)
+            }
+            prev = cur
+        }
+        return prev[b.length]
+    }
+
+    private fun nearestBlock(name: String): String? {
+        val lower = name.lowercase()
+        var best: String? = null
+        var bestDistance = Int.MAX_VALUE
+        for (candidate in tomlNodeTypeOrder) {
+            val limit = if (candidate.length <= 4) 1 else 2
+            val d = editDistance(lower, candidate)
+            if (d <= limit && d < bestDistance) {
+                bestDistance = d
+                best = candidate
+            }
+        }
+        return best
+    }
+
+    // Khối gốc không thuộc danh sách nút sẽ bị bỏ qua im lặng; báo kèm số dòng và gợi ý tên gần đúng
+    private fun checkUnknownBlocks(root: TomlTable) {
+        val known = tomlNodeTypeOrder.toSet() + "toml"
+        for (key in root.keySet()) {
+            if (key in known) continue
+            var line: Int? = null
+            try {
+                if (root.isTable(key)) {
+                    line = root.inputPositionOf(key)?.line()
+                } else if (root.isArray(key)) {
+                    val arr = root.getArray(key)
+                    if (arr == null || arr.size() == 0 || arr.get(0) !is TomlTable) continue
+                    line = arr.inputPositionOf(0)?.line()
+                } else {
+                    continue
+                }
+            } catch (_: Exception) {
+                continue
+            }
+            val hint = nearestBlock(key)
+            val message = if (hint != null) {
+                context.getString(R.string.toml_warn_unknown_block_hint, key, hint)
+            } else {
+                context.getString(R.string.toml_warn_unknown_block, key)
+            }
+            val lineNo = line ?: -1
+            synchronized(this) {
+                warnings.add(if (lineNo > 0) context.getString(R.string.toml_warn_line, lineNo, message) else message)
+            }
         }
     }
 
@@ -112,10 +217,15 @@ class PageConfigReader {
     private fun readTomlFileText(path: String): String {
         if (path.isEmpty()) return ""
         return try {
-            PathAnalysis(context, parentDir).parsePath(path)
-                ?.use { it.bufferedReader(Charsets.UTF_8).readText() }
-                .orEmpty()
+            val stream = PathAnalysis(context, parentDir).parsePath(path)
+            if (stream == null) {
+                warnAt(context.getString(R.string.toml_warn_load_toml_missing, path))
+                ""
+            } else {
+                stream.use { it.bufferedReader(Charsets.UTF_8).readText() }
+            }
         } catch (_: Exception) {
+            warnAt(context.getString(R.string.toml_warn_load_toml_missing, path))
             ""
         }
     }
@@ -387,11 +497,9 @@ class PageConfigReader {
         try {
             val result = Toml.parse(text)
             if (result.hasErrors()) {
-                val message = result.errors().joinToString("\n") { it.toString() }
-                Handler(Looper.getMainLooper()).post {
-                    Toast.makeText(context, "rows-sh: failed to parse toml\n$message", Toast.LENGTH_LONG).show()
-                }
-                Log.e("KrConfig rows-sh", message)
+                addError(context.getString(R.string.toml_error_dynamic, "rows-sh"))
+                result.errors().forEach { addError("   " + formatTomlError(it)) }
+                flushReport(dynamic = true)
                 return
             }
             val tables = ArrayList<TomlTable>()
@@ -405,9 +513,8 @@ class PageConfigReader {
             for (table in tables) textRowToml(rows, table)
             if (rows.isEmpty()) rows.addAll(old)
         } catch (ex: Exception) {
-            Handler(Looper.getMainLooper()).post {
-                Toast.makeText(context, "rows-sh: " + ex.message, Toast.LENGTH_LONG).show()
-            }
+            addError("rows-sh: " + (ex.message ?: ex.javaClass.simpleName))
+            flushReport(dynamic = true)
         }
     }
 
@@ -417,11 +524,9 @@ class PageConfigReader {
         try {
             val result = Toml.parse(text)
             if (result.hasErrors()) {
-                val message = result.errors().joinToString("\n") { it.toString() }
-                Handler(Looper.getMainLooper()).post {
-                    Toast.makeText(context, "params-sh: failed to parse toml\n$message", Toast.LENGTH_LONG).show()
-                }
-                Log.e("KrConfig params-sh", message)
+                addError(context.getString(R.string.toml_error_dynamic, "params-sh"))
+                result.errors().forEach { addError("   " + formatTomlError(it)) }
+                flushReport(dynamic = true)
                 return
             }
             val tables = ArrayList<TomlTable>()
@@ -433,9 +538,8 @@ class PageConfigReader {
             }
             if (params.isNotEmpty()) action.params = params
         } catch (ex: Exception) {
-            Handler(Looper.getMainLooper()).post {
-                Toast.makeText(context, "params-sh: " + ex.message, Toast.LENGTH_LONG).show()
-            }
+            addError("params-sh: " + (ex.message ?: ex.javaClass.simpleName))
+            flushReport(dynamic = true)
         }
     }
 
@@ -473,7 +577,7 @@ class PageConfigReader {
     val menuIcon: ClickableNode? get() = collectedMenuIcon
     val fabIcon: ClickableNode? get() = collectedFabIcon
 
-    private class DeferredEntry(val type: String, val table: TomlTable, val group: GroupNode?, val insertIndex: Int)
+    private class DeferredEntry(val type: String, val table: TomlTable, val group: GroupNode?, val insertIndex: Int, val line: Int = -1)
     private val deferredEntries = ArrayList<DeferredEntry>()
 
     val hasDeferredEntries: Boolean get() = deferredEntries.isNotEmpty()
@@ -602,21 +706,20 @@ class PageConfigReader {
             usedAutoKeys.clear()
             val result = Toml.parse(rawText)
             if (result.hasErrors()) {
-                val message = result.errors().joinToString("\n") { it.toString() }
-                Handler(Looper.getMainLooper()).post {
-                    Toast.makeText(context, "Failed to parse configuration file (toml)\n$message", Toast.LENGTH_LONG).show()
-                }
-                Log.e("KrConfig Fail！", message)
+                result.errors().forEach { addError(formatTomlError(it)) }
+                flushReport()
                 return null
             }
             autoRefresh = parseAutoRefresh(result)
+            checkUnknownBlocks(result)
             val nodes = tomlChildren(result, onNodeReady)
+            currentLine = -1
+            flushReport()
             resolvePendingStates()
             nodes
         } catch (ex: Exception) {
-            Handler(Looper.getMainLooper()).post {
-                Toast.makeText(context, "Failed to parse configuration file\n" + ex.message, Toast.LENGTH_LONG).show()
-            }
+            addError(context.getString(R.string.toml_error_read_failed, ex.message ?: ex.javaClass.simpleName))
+            flushReport()
             Log.e("KrConfig Fail！", "" + ex.message)
             null
         }
@@ -693,10 +796,11 @@ class PageConfigReader {
             }
             if (isLoadAfter(entry.table)) {
                 val targetList = currentGroup?.children ?: result
-                deferredEntries.add(DeferredEntry(entry.type, entry.table, currentGroup, targetList.size))
+                deferredEntries.add(DeferredEntry(entry.type, entry.table, currentGroup, targetList.size, if (entry.line == Int.MAX_VALUE) -1 else entry.line))
                 onNodeReady?.invoke(null, done, total)
                 continue
             }
+            currentLine = if (entry.line == Int.MAX_VALUE) -1 else entry.line
             val node = tomlBuildNode(entry.type, entry.table)
             if (currentGroup != null) {
                 node?.let { currentGroup!!.children.add(it) }
@@ -714,12 +818,15 @@ class PageConfigReader {
         val builtResults = ArrayList<DeferredNodeResult>()
         val insertedCountPerContainer = HashMap<GroupNode?, Int>()
         for (entry in deferredEntries) {
+            currentLine = entry.line
             val node = tomlBuildNode(entry.type, entry.table) ?: continue
             val extra = insertedCountPerContainer[entry.group] ?: 0
             val finalIndex = entry.insertIndex + extra
             insertedCountPerContainer[entry.group] = extra + 1
             builtResults.add(DeferredNodeResult(entry.group, node, finalIndex))
         }
+        currentLine = -1
+        flushReport()
         resolvePendingStates()
         deferredEntries.clear()
         return builtResults
@@ -1099,7 +1206,10 @@ class PageConfigReader {
         tomlGet(table, *TomlKeys.LOCK)?.let { parseLockAttr(it, node) }
         tomlGet(table, *TomlKeys.LOCK_SH)?.let { node.lockShell = it.trim() }
         if (node.setState == null) node.setState = ""
-        if (node.url.isEmpty() && node.urlSh.isEmpty()) return null
+        if (node.url.isEmpty() && node.urlSh.isEmpty()) {
+            warnAt(context.getString(R.string.toml_warn_download_no_url))
+            return null
+        }
 
         for (rowTable in tomlEntries(table, "rows")) {
             textRowToml(node.rows, rowTable)

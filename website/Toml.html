@@ -899,7 +899,7 @@ title = "Advanced settings"
 desc = "Open external config file"
 config = "/sdcard/Tool-Tree/advanced.toml"
 </code></pre>
-<div class="callout tip"><code>config-sh</code> returns <strong>one of two things</strong>: either a .toml file path (output ending with <code>.toml</code>), or inline TOML content. Inline TOML is recognized when the 1st or 2nd non-empty line of the output starts with <code>[[group]]</code> or the reserved marker <code>[[toml]]</code> - see <code>PageConfigSh.looksLikeInlineToml()</code>. Anything else shows an error toast.</div>
+<div class="callout tip"><code>config-sh</code> returns <strong>one of two things</strong>: either a .toml file path (output ending with <code>.toml</code>), or inline TOML content. Inline TOML is recognized when the 1st or 2nd non-empty line of the output starts with <code>[[group]]</code> or the reserved marker <code>[[toml]]</code> - see <code>PageConfigSh.looksLikeInlineToml()</code>. Anything else shows an error dialog.</div>
 </section>
 <section id="action">
 <h2>6. [[action]] - Action (runs a shell script)</h2>
@@ -2325,15 +2325,16 @@ script = "sh $state"
 <li>Groups are flat - never use dotted <code>[[group.action]]</code> nesting (those children are silently ignored). Declare children flat, right after their <code>[[group]]</code>.</li>
 <li><code>[[toml]]</code> is a reserved marker for inline-TOML detection (<code>config-sh</code>) - do not use it as a node table name.</li>
 <li>Use selective refresh via <code>reload = "id1,id2"</code> instead of reloading the entire page after action execution.</li>
+<li>Config problems are shown in one dialog with a single OK button (selectable text, so it can be copied). Syntax errors give <code>Line N, column M</code>; the page is not loaded. Warnings (page still loads) are reported for: an unknown block name such as <code>[[acton]]</code> (a close name is suggested), a <code>[[download]]</code> without <code>url</code>/<code>url-sh</code>, and a <code>load-toml</code> file that does not exist or cannot be read. When <code>load-toml</code>/<code>load-key</code> are used, line numbers refer to the merged content. An invalid <code>rows-sh</code>/<code>params-sh</code> output is reported the same way. The same warning is not repeated on the same screen while the page auto-refreshes.</li>
 </ul>
 </section>
 <section id="changelog">
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
+<li>2026-11-11 - Config problems now open one dialog (OK button only) instead of toasts: syntax errors with line/column, and warnings for unknown block names, <code>[[download]]</code> without a URL and unreadable <code>load-toml</code> files (section 26).</li>
 <li>2026-11-10 - Text row <code>toggle = "spinner"</code> with <code>items</code>: the row shows the current value with an arrow and opens a drop-down to choose another; <code>set</code> receives the chosen value in <code>$state</code> (section 11.7).</li>
 <li>2026-11-10 - New <code>disabled</code> / <code>disabled-sh</code> on clickable nodes (action, picker, switch, page...): dims the item and blocks taps; the shell form can re-enable it (section 3.2).</li>
-<li>2026-11-10 - Group <code>columns</code> grid: a lone card in the last row now stretches to the full row width instead of being padded with an empty cell (section 4.4).</li>
 </ul>
 </section>
 </main>
