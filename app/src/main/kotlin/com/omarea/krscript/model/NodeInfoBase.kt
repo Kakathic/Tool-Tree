@@ -33,4 +33,7 @@ open class NodeInfoBase(val currentPageConfigPath: String) : Serializable {
     var summarySh: String = ""
 
     var loadAfter: Boolean = false
+
+    // Icon widget ở cuối mục (mũi tên, nút chạy, switch, tải xuống): null = kế thừa từ group, false = ẩn, true = hiện
+    var widget: Boolean? = null
 }

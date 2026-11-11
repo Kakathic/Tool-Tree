@@ -724,6 +724,7 @@ script = "..."</code></pre>
 <tr><td class="field-name">lock-sh</td><td>-</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that checks the lock state dynamically (returns <code>"1"</code> = locked)</td></tr>
 <tr><td class="field-name">disabled</td><td>disable</td><td class="field-type">Bool</td><td>true: the item is dimmed and cannot be tapped, long-pressed or triggered by key (no message is shown, unlike <code>lock</code>). The switch of a <code>[[switch]]</code> is disabled too. false (default): normal. Not the same as <code>readonly</code> of <code>[[editor]]</code> (file is read-only) or of a param</td></tr>
 <tr><td class="field-name">disabled-sh</td><td>disable-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that decides dynamically: prints <code>1</code> = dimmed and not clickable, anything else = clickable again. Runs during parse (batched) and again whenever the item is refreshed (e.g. <code>reload</code> of its block); overrides <code>disabled</code></td></tr>
+<tr><td class="field-name">widget</td><td>show-widget</td><td class="field-type">Bool</td><td>(inherit)</td><td>Icon widget at the end of the item (arrow of <code>[[page]]</code>, run/list button of <code>[[action]]</code>, <code>[[switch]]</code> toggle, download icon and progress ring of <code>[[download]]</code>, ...). <code>false</code> hides it; <code>true</code> forces it to show even if the group hides it; not set = follows the <code>widget</code> of its <code>[[group]]</code> (shown when the group does not set it). The item still works when tapped. A hidden switch no longer shows its on/off state, and a hidden download ring no longer shows progress (the progress text in <code>desc</code> is still updated)</td></tr>
 <tr><td class="field-name">min-sdk</td><td>sdk-min</td><td class="field-type">Int</td><td>Minimum Android SDK version</td></tr>
 <tr><td class="field-name">max-sdk</td><td>sdk-max</td><td class="field-type">Int</td><td>Maximum Android SDK version (default 100)</td></tr>
 <tr><td class="field-name">target-sdk</td><td>sdk-target</td><td class="field-type">Int</td><td>Target Android SDK version</td></tr>
@@ -773,6 +774,7 @@ script = "..."</code></pre>
 <tr><td class="field-name">column-width</td><td>col-width</td><td class="field-type">Int (dp)</td><td>0 (160 when <code>columns = true</code>)</td><td>Automatic column count: group width &divide; <code>column-width</code>, clamped to <code>min-columns</code>..<code>max-columns</code>, recalculated when the screen rotates, folds or is resized. Takes priority over a numeric <code>columns</code></td></tr>
 <tr><td class="field-name">min-columns</td><td>min-cols</td><td class="field-type">Int</td><td>1</td><td>Minimum <strong>number of columns</strong> in automatic mode (1-6), even when the screen is narrow</td></tr>
 <tr><td class="field-name">max-columns</td><td>max-cols</td><td class="field-type">Int</td><td>6</td><td>Maximum <strong>number of columns</strong> in automatic mode (1-6), even when the screen is wide</td></tr>
+<tr><td class="field-name">widget</td><td>show-widget</td><td class="field-type">Bool</td><td>(not set)</td><td><code>false</code> hides the icon widget at the end of every entry of the group (arrow, run button, switch, download icon/ring); an entry can override it with its own <code>widget</code> (section <a href="#shared-fields">3.2</a>). Also applies in card/grid groups</td></tr>
 </table>
 </div>
 <h3>4.2. Demo</h3>
@@ -2332,9 +2334,9 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
+<li>2026-11-11 - New <code>widget</code> (alias <code>show-widget</code>) on <code>[[group]]</code> and clickable nodes: <code>widget = false</code> hides the icon widget at the end of the item (arrow, run button, switch, download icon/ring); a group value is inherited by its entries (sections 3.2, 4.1).</li>
 <li>2026-11-11 - Config problems now open one dialog (OK button only) instead of toasts: syntax errors with line/column, and warnings for unknown block names, <code>[[download]]</code> without a URL and unreadable <code>load-toml</code> files (section 26).</li>
 <li>2026-11-10 - Text row <code>toggle = "spinner"</code> with <code>items</code>: the row shows the current value with an arrow and opens a drop-down to choose another; <code>set</code> receives the chosen value in <code>$state</code> (section 11.7).</li>
-<li>2026-11-10 - New <code>disabled</code> / <code>disabled-sh</code> on clickable nodes (action, picker, switch, page...): dims the item and blocks taps; the shell form can re-enable it (section 3.2).</li>
 </ul>
 </section>
 </main>

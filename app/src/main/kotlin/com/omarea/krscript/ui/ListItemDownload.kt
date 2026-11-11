@@ -40,7 +40,7 @@ class ListItemDownload(context: Context, private val config: DownloadNode, card:
         isBusy = true
         cancelAction = onCancel
         widgetView?.visibility = View.GONE
-        ringView?.visibility = View.VISIBLE
+        if (!widgetsHidden) ringView?.visibility = View.VISIBLE
         ringView?.setIndeterminate(true)
     }
 
@@ -71,11 +71,11 @@ class ListItemDownload(context: Context, private val config: DownloadNode, card:
         desc = label
         if (spin) {
             widgetView?.visibility = View.GONE
-            ringView?.visibility = View.VISIBLE
+            if (!widgetsHidden) ringView?.visibility = View.VISIBLE
             ringView?.setIndeterminate(true)
         } else {
             ringView?.visibility = View.GONE
-            widgetView?.visibility = View.VISIBLE
+            if (!widgetsHidden) widgetView?.visibility = View.VISIBLE
         }
     }
 
@@ -90,7 +90,7 @@ class ListItemDownload(context: Context, private val config: DownloadNode, card:
         widgetView?.setImageDrawable(
             context.getDrawable(if (showDoneIcon) R.drawable.download_done else R.drawable.kr_download)
         )
-        widgetView?.visibility = View.VISIBLE
+        if (!widgetsHidden) widgetView?.visibility = View.VISIBLE
     }
 
     companion object {

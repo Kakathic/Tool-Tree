@@ -38,6 +38,7 @@ object TomlKeys {
     val PROGRESS_TRACK_COLOR = arrayOf("progress-track-color", "progress-bg")
     val LINE = arrayOf("line", "divider", "separator")
     val CARD = arrayOf("card", "cards")
+    val WIDGET = arrayOf("widget", "show-widget")
     val CELL = arrayOf("cell")
     val COLUMNS = arrayOf("columns", "cols", "grid")
     val COLUMN_WIDTH = arrayOf("column-width", "col-width")

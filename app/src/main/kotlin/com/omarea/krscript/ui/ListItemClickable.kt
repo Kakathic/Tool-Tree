@@ -32,6 +32,18 @@ open class ListItemClickable(
 
     protected open fun allowLongClick(): Boolean = true
 
+    /** true khi mục bị tắt icon widget (toml `widget = false`, trực tiếp hoặc kế thừa từ group). */
+    var widgetsHidden: Boolean = false
+        private set
+
+    /** Ẩn mũi tên / nút chạy / switch / vòng tải xuống ở cuối mục. Gọi sau khi mục đã dựng xong. */
+    fun hideWidgets() {
+        widgetsHidden = true
+        for (id in intArrayOf(R.id.kr_widget, R.id.kr_switch, R.id.kr_download_ring)) {
+            layout.findViewById<View?>(id)?.visibility = View.GONE
+        }
+    }
+
     fun setOnClickListener(onClickListener: OnClickListener): ListItemClickable {
         this.mOnClickListener = onClickListener
         return this

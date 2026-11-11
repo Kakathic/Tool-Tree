@@ -126,7 +126,7 @@ class PageLayoutRender(private val mContext: Context,
                 if (it.cell.isNotEmpty() && atIndex < 0 && !replacePlaceholder && last != null && last.first == it.cell) {
                     cell = last.second
                 } else {
-                    cell = ListItemGroup(mContext, false, GroupNode("").also { g -> g.compact = parent.compact }, true)
+                    cell = ListItemGroup(mContext, false, GroupNode("").also { g -> g.compact = parent.compact; g.widget = parent.widgetSetting }, true)
                     cell.enableDividers()
                     if (atIndex >= 0) parent.addView(cell, atIndex)
                     else if (replacePlaceholder) parent.addViewBeforePlaceholder(cell)
@@ -172,6 +172,7 @@ class PageLayoutRender(private val mContext: Context,
             if (uiRender != null) {
                 if (uiRender is ListItemClickable) {
                     if (card && parent.compact) uiRender.applyCompactSize()
+                    if ((it.widget ?: parent.widgetSetting) == false) uiRender.hideWidgets()
                     uiRender.setOnClickListener(this.onItemClickListener)
                     uiRender.setOnLongClickListener(this.onItemLongClickListener)
                 }

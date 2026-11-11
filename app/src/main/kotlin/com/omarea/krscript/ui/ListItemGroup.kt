@@ -34,6 +34,9 @@ class ListItemGroup(context: Context,
 
     val compact: Boolean = config.compact
 
+    // Cài đặt widget của group (null = không đặt); các mục con chưa tự đặt sẽ kế thừa
+    val widgetSetting: Boolean? = config.widget
+
     val cardMode: Boolean = !isRootGroup && !isCell && config.card
 
     val gridMode: Boolean = !isRootGroup && !isCell && (config.columns > 1 || columnWidthDp > 0 || config.card)
