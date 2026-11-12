@@ -41,7 +41,12 @@ class OpenPageHelper(private val activity: Activity) {
             if (pageNode.openItemId.isNotEmpty() && component?.className == ActionPage::class.java.name) {
                 putExtra("autoRunItemId", pageNode.openItemId)
             }
-            SwipeBackPreviewCache.capture(activity) {
+            val usesSwipePreview = pageNode.onlineHtmlPage.isEmpty() && pageNode.link.isEmpty() && pageNode.activity.isEmpty()
+            if (usesSwipePreview) {
+                SwipeBackPreviewCache.capture(activity) {
+                    activity.startActivity(this)
+                }
+            } else {
                 activity.startActivity(this)
             }
         }

@@ -309,9 +309,13 @@ class ActionPageOnline : AppCompatActivity() {
                 title = extras.getString("title")
             }
 
-            when {
-                extras.containsKey("config") -> initWebview(extras.getString("config"))
-                extras.containsKey("url") -> initWebview(extras.getString("url"))
+            val target = when {
+                extras.containsKey("config") -> extras.getString("config")
+                extras.containsKey("url") -> extras.getString("url")
+                else -> null
+            }
+            if (target != null) {
+                binding.root.post { if (!isFinishing && !isDestroyed) initWebview(target) }
             }
         }
     }
