@@ -16,7 +16,8 @@ object ActionParamMemory {
         if (!param.remember) return null
         val name = param.name ?: return null
         val spf = context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        return spf.getString(buildKey(action, name), null)
+        val stored = spf.getString(buildKey(action, name), null) ?: return null
+        return if (param.type == "password") ParamSecretCipher.decrypt(stored) else stored
     }
 
     fun save(context: Context, action: ActionNode, actionParamInfos: List<ActionParamInfo>, values: Map<String, String>) {
@@ -28,7 +29,12 @@ object ActionParamMemory {
             for (param in toRemember) {
                 val name = param.name ?: continue
                 val value = values[name] ?: continue
-                putString(buildKey(action, name), value)
+                if (param.type == "password") {
+                    val encrypted = ParamSecretCipher.encrypt(value)
+                    if (encrypted == null) remove(buildKey(action, name)) else putString(buildKey(action, name), encrypted)
+                } else {
+                    putString(buildKey(action, name), value)
+                }
             }
             apply()
         }
