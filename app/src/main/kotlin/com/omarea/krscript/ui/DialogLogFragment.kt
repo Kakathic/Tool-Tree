@@ -73,7 +73,6 @@ class DialogLogFragment : DialogFragment() {
 
     private var running = false
     private var canceled = false
-    private var uiVisible = true
     private var nodeInfo: RunnableNode? = null
     private lateinit var onExit: Runnable
     private lateinit var script: String
@@ -146,7 +145,6 @@ class DialogLogFragment : DialogFragment() {
 
     private fun reattachExecutor(nodeInfo: RunnableNode, handler: MyShellHandler) {
         canceled = false
-        uiVisible = true
 
         binding.shellOutput.movementMethod = LinkMovementMethod.getInstance()
 
@@ -236,7 +234,6 @@ class DialogLogFragment : DialogFragment() {
     private fun openExecutor(nodeInfo: RunnableNode): ShellHandlerBase {
         var forceStopRunnable: Runnable? = null
         canceled = false
-        uiVisible = true
 
         binding.shellOutput.movementMethod = LinkMovementMethod.getInstance()
 
@@ -311,7 +308,6 @@ class DialogLogFragment : DialogFragment() {
         }
 
         binding.btnHide.setOnClickListener {
-            uiVisible = false
             val handler = currentHandler
             handler?.enableNotificationMode(nodeInfo)
             handler?.notificationIdOrNull?.let { id ->
