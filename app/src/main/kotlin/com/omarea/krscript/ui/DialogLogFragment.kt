@@ -1359,14 +1359,6 @@ class DialogLogFragment : DialogFragment() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        dialog?.setOnKeyListener { _, keyCode, event ->
-            if (!uiVisible || !running) return@setOnKeyListener false
-            event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
-        }
-    }
-
     // ---- Swipe right to close (only once the script has finished) ----
 
     private fun allowDismiss() {
