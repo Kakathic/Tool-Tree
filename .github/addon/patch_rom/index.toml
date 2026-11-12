@@ -20,7 +20,10 @@ load-after = true
 icon = "icon.png"
 support = "add_check $PAGE_CONFIG_DIR"
 url-sh = "cat $PAGE_CONFIG_DIR/update"
-script = "installadd $state ${PAGE_CONFIG_DIR%/*}"
+script = """
+installadd "$state" ${PAGE_CONFIG_DIR%/*}
+rm -f "$state"
+"""
 
 [[download.rows]]
 text-sh = "xem https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/.github/addon/patch_rom/changelog.txt"
