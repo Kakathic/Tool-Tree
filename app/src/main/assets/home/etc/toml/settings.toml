@@ -4,6 +4,7 @@ load-key-sh = "langpath"
 [[group]]
 columns = true
 card = true
+widget = false
 [[page]]
 title = "@setting_text_1"
 desc = "@setting_text_2"

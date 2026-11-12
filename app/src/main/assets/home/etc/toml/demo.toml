@@ -4,6 +4,7 @@ load-key-sh = "langpath"
 [[group]]
 columns = true
 card = true
+widget = false
 [[page]]
 title = "@guide_title"
 icon = "{ICON}/guidebook.png"
