@@ -26,6 +26,7 @@ script = "installadd $state ${PAGE_CONFIG_DIR%/*}"
 text-sh = "xem https://raw.githubusercontent.com/Kakathic/Tool-Tree/refs/heads/main/.github/addon/patch_rom/changelog.txt"
 line = true
 copy = true
+margin-top = 8
 
 [[group]]
 [[page]]
