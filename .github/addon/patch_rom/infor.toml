@@ -110,6 +110,6 @@ name = "del_app_patch"
 type = "text"
 desc = "@text_del_file"
 required = true
-max-lines = 6
+max-lines = 10
 placeholder = "VoiceAssist Sogou"
 value-sh = 'glog del_app_patch "BaidulME MIGalleryLockscreen MIService MIUIEmail MIUIVirtualSim MIUIXiaoAiSpeechEngine OS2VipAccount SmartHome XMRemoteController iFlytekIME CarWith MITSMClient MIS MINextpay VoiceAssistAndroidT VoiceTrigger UPTsmService Music MIUIgreenguard MIUIQuickSearchBox MIUIBrowser MiGameCenterSDKService YouTube YTMusic"'
