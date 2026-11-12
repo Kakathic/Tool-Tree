@@ -92,9 +92,8 @@ checktime
 
 [[action.params]]
 name = "cover_data_app"
-type = "text"
 options-sh = "$PAGE_CONFIG_DIR/patch-rom search_apk | sort"
-desc = "@string_text_1: Project/@PTSH"
+desc = "@string_text_1: Project/@PTSH (product/data-app)"
 required = true
 multiple = true
 
@@ -111,5 +110,6 @@ name = "del_app_patch"
 type = "text"
 desc = "@text_del_file"
 required = true
+max-lines = 6
 placeholder = "VoiceAssist Sogou"
 value-sh = 'glog del_app_patch "BaidulME MIGalleryLockscreen MIService MIUIEmail MIUIVirtualSim MIUIXiaoAiSpeechEngine OS2VipAccount SmartHome XMRemoteController iFlytekIME CarWith MITSMClient MIS MINextpay VoiceAssistAndroidT VoiceTrigger UPTsmService Music MIUIgreenguard MIUIQuickSearchBox MIUIBrowser MiGameCenterSDKService YouTube YTMusic"'
