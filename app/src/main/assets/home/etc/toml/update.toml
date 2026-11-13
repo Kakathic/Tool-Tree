@@ -34,13 +34,12 @@ html-height = 100
 [[group]]
 columns = true
 card = true
-
+widget = false
 [[page]]
 title = "@update_text_5"
 icon = "{ICON}/website.png"
 link = "https://Kakathic.github.io/Tool-Tree"
 cell = "a"
-
 [[page]]
 title = "Telegram"
 icon = "{ICON}/telegram.png"

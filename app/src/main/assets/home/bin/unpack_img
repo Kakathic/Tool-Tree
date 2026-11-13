@@ -51,7 +51,7 @@ while getopts ":i:o:a:n:d:p:m:r:h" opt; do
   esac
 done
 
-if [[ -z "$INPUT" || -z "$OUTPUT" ]]; then
+if [[ ! -f "$INPUT" || ! -d "$OUTPUT" ]]; then
   echo "Lack of value:
 -i $INPUT
 -o $OUTPUT" >&2
