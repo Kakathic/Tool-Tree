@@ -28,7 +28,7 @@ echo "$merge_partition_4: $SDH/$PTSH"
 
 if [ "$dang_file" != 3 ];then
 echo
-repack_img -i "$SDH/$PTSH/system" -o "${0%/*}/out" -k $dang_file -d $1 -p 1
+repack_img -i "$SDH/$PTSH/system" -o "$PTSD/out" -k $dang_file -d $1 -p 1
 echo "$save_text $PTSD/out"
 fi
 echo
