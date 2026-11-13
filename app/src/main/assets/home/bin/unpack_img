@@ -301,7 +301,7 @@ if [ "$NODECO" != 1 ] && [ -f "$file_img" ] && [[ ! "$dang_file" =~ ^(unknow|sup
                 cd "${vch%.*}"
                 EXTRACT_UNSAFE_SYMLINKS=1 cpio -d -F "$in_name/$vch" -i 2>&1
                 if [ "$?" != 0 ] || [ ! "$(ls)" ]; then
-                    killtree "$unpack_text_4"
+                    echo "$unpack_text_4"
                 else
                     rm -f "$in_name/$vch"
                 fi
