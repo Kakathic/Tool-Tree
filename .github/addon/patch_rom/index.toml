@@ -634,7 +634,6 @@ while [ $dem_giay -gt 0 ]; do
 done
 echo
 echo "@test_app_text_4"
-echo
 APP_UID=$(pm list packages -U | grep "$package_apk" | awk -F'uid:' '{print $2}')
 logcat -d --uid=$APP_UID -v time
 su -mm -c umount -l "$path_apk" 2>/dev/null
