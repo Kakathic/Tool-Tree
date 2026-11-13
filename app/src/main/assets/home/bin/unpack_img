@@ -51,6 +51,7 @@ while getopts ":i:o:a:n:d:p:m:r:h" opt; do
   esac
 done
 
+# không được dùng -f, -d vì còn phải tạo thư mục
 if [[ -z "$INPUT" || -z "$OUTPUT" ]]; then
   echo "Lack of value:
 -i $INPUT
