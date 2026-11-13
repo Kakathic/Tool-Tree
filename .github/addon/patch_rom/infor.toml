@@ -7,7 +7,6 @@ title = "@project_text: @PTSH"
 [[action]]
 title = "@desc_patch_prop"
 warn = "@desc_patch_prop_long"
-reload = true
 script = "$PAGE_CONFIG_DIR/patch-rom sprop_pris"
 
 [[action.params]]
@@ -16,7 +15,6 @@ label = "@select_text"
 desc = "@string_text_2: vendor, system, system_ext, product"
 value-sh = "$PAGE_CONFIG_DIR/patch-rom gprop_pris"
 items = [ "4|none", "2|log", "3|disable", "1|enforce" ]
-required = true
 
 [[group]]
 [[action]]
@@ -110,6 +108,6 @@ name = "del_app_patch"
 type = "text"
 desc = "@text_del_file"
 required = true
-max-lines = 10
+max-lines = 15
 placeholder = "VoiceAssist Sogou"
 value-sh = 'glog del_app_patch "BaidulME MIGalleryLockscreen MIService MIUIEmail MIUIVirtualSim MIUIXiaoAiSpeechEngine OS2VipAccount SmartHome XMRemoteController iFlytekIME CarWith MITSMClient MIS MINextpay VoiceAssistAndroidT VoiceTrigger UPTsmService Music MIUIgreenguard MIUIQuickSearchBox MIUIBrowser MiGameCenterSDKService YouTube YTMusic"'
