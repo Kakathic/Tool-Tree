@@ -67,7 +67,7 @@ max-lines = 8
 markdown = true
 greeting = "@chat_greeting"
 script = '''
-ai_agent --markdown --progress \
+ai_agent --markdown --progress --api-log-full \
 --memory-file "$HOME/.cache/$CHAT_ID.sql" -p "$MSG"
 '''
 params-shell = "hidden"

@@ -116,21 +116,10 @@ urllib.request.install_opener(_opener)
 
 PROGRESS_MAX_CHARS = 4000  # status line length cap when output is a pipe (effectively no cut)
 # "single": True = old style, one status line per step (each replaces the previous one).
-# "hold": fixed 0.5 s a status line stays visible before a new step or the answer replaces
-# it (the "\r" replacement is otherwise instant). "shown_at": time of the last status write.
-PROGRESS = {"enabled": False, "pending": False, "col0": True, "steps": [], "single": False,
-            "hold": 0.5, "shown_at": 0.0}
+PROGRESS = {"enabled": False, "pending": False, "col0": True, "steps": [], "single": False}
 
 def progress_enabled():
   return PROGRESS["enabled"] and not sys.stdout.isatty()
-
-def _progress_hold():
-  """Wait until the current status line has been visible for PROGRESS["hold"] seconds.
-  Does nothing when no status line is pending, so normal output is never delayed."""
-  if PROGRESS["pending"] and PROGRESS["hold"] > 0:
-    wait = PROGRESS["shown_at"] + PROGRESS["hold"] - time.time()
-    if wait > 0:
-      time.sleep(min(wait, PROGRESS["hold"]))
 
 def _fit(text, limit=None):
   text = " ".join(str(text).split())
@@ -184,12 +173,9 @@ def emit_progress(text, update=None):
     sys.stdout.write("\n")
     PROGRESS["col0"] = True
   limit = max(20, shutil.get_terminal_size((80, 24)).columns - 4) if sys.stdout.isatty() else PROGRESS_MAX_CHARS
-  if " │ " not in text:
-    _progress_hold()  # a new step: let the previous status line be read first
   sys.stdout.write(_render_steps(steps, limit) + "\r")
   sys.stdout.flush()
   PROGRESS["pending"] = True
-  PROGRESS["shown_at"] = time.time()
 
 def _clear_progress():
   """Remove a status line that nothing replaced (program ends, or an error is about to print).
@@ -842,9 +828,9 @@ class Spinner:
 # Toggles take 0|1 on the command line ("--stream" alone means 1). Variables also accept
 # true/false, yes/no and on/off.
 TOGGLE_FLAGS = (
-  "--no-tools", "--eager-tools", "--stream", "--markdown", "--code-exec", "--progress",
+  "--no-tools", "--lazy-tools", "--stream", "--markdown", "--code-exec", "--progress",
   "--progress-single", "--no-label", "--no-memory", "--api-log", "--api-log-full",
-  "--stream-after-tools", "--preload-shell",
+  "--stream-after-tools",
 )
 TRUE_WORDS = ("1", "true", "yes", "on")
 FALSE_WORDS = ("0", "false", "no", "off")
@@ -924,10 +910,9 @@ ENV_HELP_GROUPS = (
   )),
   ("Toggles (0|1, also true/false, yes/no, on/off)", (
     ("AI_NO_TOOLS", "--no-tools", "chat only, no shell/file/web tools"),
-    ("AI_EAGER_TOOLS", "--eager-tools", "send all tools with every request"),
+    ("AI_LAZY_TOOLS", "--lazy-tools", "1 = load tools on demand, run_command always ready (default); 0 = send all tools every request"),
     ("AI_STREAM", "--stream", "show the answer as it is written"),
     ("AI_STREAM_AFTER_TOOLS", "--stream-after-tools", "keep streaming after tools ran (default 0)"),
-    ("AI_PRELOAD_SHELL", "--preload-shell", "always send run_command schema (default 1)"),
     ("AI_MARKDOWN", "--markdown", "allow Markdown in answers"),
     ("AI_CODE_EXEC", "--code-exec", "Gemini only: code execution"),
     ("AI_PROGRESS", "--progress", "status line when stdout is a pipe"),
@@ -1034,7 +1019,7 @@ def parse_args():
     metavar="'Name: value'",
     help="Extra HTTP header (repeatable).",
   )
-  _add_toggle(parser, "--eager-tools", "AI_EAGER_TOOLS", 'Send all tools with every request instead of loading them on demand.')
+  _add_toggle(parser, "--lazy-tools", "AI_LAZY_TOOLS", 'Tools: 1 = load on demand, run_command always ready (default); 0 = send all tools every request.')
   _add_toggle(
     parser, "--api-log-full", "AI_API_LOG_FULL",
     f"Log full request JSON too (large; limit {API_LOG_MAX_BYTES_FULL // (1024 * 1024)} MB instead of {API_LOG_MAX_BYTES // (1024 * 1024)} MB).",
@@ -1042,10 +1027,6 @@ def parse_args():
   _add_toggle(
     parser, "--stream-after-tools", "AI_STREAM_AFTER_TOOLS",
     "With --stream, keep streaming after tools ran (default 0: first round only).",
-  )
-  _add_toggle(
-    parser, "--preload-shell", "AI_PRELOAD_SHELL",
-    "Always send the small run_command schema, saving a request (default 1).",
   )
   _add_toggle(parser, "--api-log", "AI_API_LOG", "Write the API log to ~/.cache/api.log (default on).")
   parser.add_argument(
@@ -1120,7 +1101,7 @@ def parse_args():
   args.max_retries = _resolve_int(parser, args.max_retries, "AI_MAX_RETRIES", DEFAULT_MAX_RETRIES)
   args.max_output_tokens = _resolve_int(parser, args.max_output_tokens, "AI_MAX_OUTPUT_TOKENS", None)
   for name, env in (
-    ("no_tools", "AI_NO_TOOLS"), ("eager_tools", "AI_EAGER_TOOLS"),
+    ("no_tools", "AI_NO_TOOLS"),
     ("stream", "AI_STREAM"), ("markdown", "AI_MARKDOWN"),
     ("code_exec", "AI_CODE_EXEC"), ("progress", "AI_PROGRESS"),
     ("progress_single", "AI_PROGRESS_SINGLE"), ("no_label", "AI_NO_LABEL"),
@@ -1128,7 +1109,7 @@ def parse_args():
     ("stream_after_tools", "AI_STREAM_AFTER_TOOLS"),
   ):
     setattr(args, name, _resolve_toggle(parser, getattr(args, name), env))
-  args.preload_shell = _resolve_toggle(parser, args.preload_shell, "AI_PRELOAD_SHELL", True)
+  args.lazy_tools = _resolve_toggle(parser, args.lazy_tools, "AI_LAZY_TOOLS", True)
   if args.question is not None and args.prompt is not None:
     parser.error(
       "Use either a positional question or --prompt, not both."
@@ -1588,7 +1569,7 @@ def do_web_fetch(url, max_chars=None, start=0, timeout=None):
 # model asks for that group. "loaded" is kept for the session; "groups" (groups the user allowed)
 # and "offer" (allowed but not loaded yet) are recomputed before every request.
 LAZY = {"on": False, "none": False, "loaded": set(), "groups": (), "offer": (),
-        "shell_light": False, "preload_shell": True}
+        "shell_light": False}
 # stream: by default only the first round of a request streams. A round that ends in a tool call
 # is sent twice when it streams (the stream is repeated without streaming to get exact steps), so
 # the rounds after a tool ran are not streamed unless "after_tools" is on.
@@ -1628,7 +1609,7 @@ def _set_web(on):
 def lazy_plan(policy):
   """Decide what the next request carries. Returns (shell_on, files_on): the groups whose
   tools and rules are sent now. Lazy mode offers every group to the AI (it loads them with
-  use_tools, no confirmation); --no-tools offers nothing; --eager-tools sends every enabled
+  use_tools, no confirmation); --no-tools offers nothing; --lazy-tools 0 sends every enabled
   group with every request."""
   LAZY["shell_light"] = False
   if LAZY["none"]:
@@ -1641,7 +1622,7 @@ def lazy_plan(policy):
     return policy.enabled, policy.files_enabled
   # Shell "light": the small run_command schema is always sent, so the first command needs no
   # use_tools request. Running it loads the full shell rules for the next request.
-  LAZY["shell_light"] = bool(LAZY["preload_shell"] and policy.enabled and "shell" not in LAZY["loaded"])
+  LAZY["shell_light"] = bool(policy.enabled and "shell" not in LAZY["loaded"])
   LAZY["groups"] = ("shell", "files", "web")
   LAZY["offer"] = tuple(group for group in LAZY["groups"] if group not in LAZY["loaded"])
   _set_web("web" in LAZY["loaded"] and policy.web_enabled)
@@ -1680,7 +1661,7 @@ def lazy_stub():
 def _tool_locked(name):
   """True when a tool belongs to a group that has not been loaded with use_tools yet."""
   if name == "run_command":
-    return "shell" not in LAZY["loaded"] and not LAZY["preload_shell"]
+    return False  # run_command is always available in lazy mode; its full rules load after the first command
   if name in FILE_TOOL_NAMES:
     return "files" not in LAZY["loaded"]
   if name in ("web_search", "web_fetch"):
@@ -1743,6 +1724,16 @@ def guide_text(topic):
     return MARKDOWN_GUIDE
   return None
 
+CLOCK = {"stamp": None}  # set once per user turn so the system prompt stays identical across its rounds
+
+def environment_line():
+  stamp = CLOCK["stamp"] or time.strftime("%A, %Y-%m-%d %H:%M:%S %z")
+  return (
+    "Environment: you run inside the Tool-Tree Android app, in a terminal-style chat. The app "
+    "supports basic bash commands (use them through run_command when that tool is available). "
+    "Current date and time: " + stamp + "."
+  )
+
 def build_system_instruction(
   instruction,
   language,
@@ -1775,7 +1766,7 @@ def build_system_instruction(
     parts.append(MARKDOWN_STUB if lazy else MARKDOWN_GUIDE)
   else:
     parts.append(plain_text_rule)
-  parts.extend([COLOR_STUB if lazy else COLOR_GUIDE, scope_rule])
+  parts.extend([COLOR_STUB if lazy else COLOR_GUIDE, scope_rule, environment_line()])
   if LAZY["offer"]:
     parts.append(lazy_stub())
   if shell_enabled:
@@ -2046,6 +2037,7 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
       reasoning = ""
       reasoning_all = []
       usage_seen = None
+      served = {}
       saw_call = False
       for raw in response:
         line = raw.decode("utf-8", errors="replace").strip()
@@ -2062,6 +2054,9 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
           raise RuntimeError(ACTIVE_PROVIDER["name"].title() + " stream error: " + str(event["error"]))
         if isinstance(event.get("usage"), dict):
           usage_seen = event["usage"]
+        for key in ("model", "provider"):
+          if isinstance(event.get(key), str) and event[key]:
+            served[key] = event[key]
         choices = event.get("choices") or []
         delta = choices[0].get("delta", {}) if choices else {}
         if delta.get("tool_calls"):
@@ -2082,7 +2077,7 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
       if not answer:
         raise RuntimeError(ACTIVE_PROVIDER["name"].title() + " returned no text.")
       stream_steps = [{"type": "model_output", "content": [{"type": "text", "text": answer}]}]
-      api_log_response_compat(usage_seen, stream_steps, "".join(reasoning_all))
+      api_log_response_compat(usage_seen, stream_steps, "".join(reasoning_all), served, payload.get("model"))
       return answer, stream_steps
     raw_body = response.read().decode("utf-8")
     _stage(status_callback, "processing")
@@ -2112,7 +2107,8 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
   reasoning = message.get("reasoning_content")
   if isinstance(reasoning, str) and reasoning:
     steps[0]["reasoning_content"] = reasoning
-  api_log_response_compat(data.get("usage"), steps)
+  served = {key: data[key] for key in ("model", "provider") if isinstance(data.get(key), str) and data[key]}
+  api_log_response_compat(data.get("usage"), steps, "", served, payload.get("model"))
   return answer, steps
 
 def list_providers(show_websites=False, ui=None):
@@ -3394,15 +3390,35 @@ def api_log_response(data):
   if not API_LOG["path"] or not isinstance(data, dict):
     return
   rows = [f"status {data.get('status') or '?'} · elapsed {_api_elapsed()} · {_usage_line(data.get('usage'))}"]
+  line = _api_served_line("", {"model": data.get("model") if isinstance(data.get("model"), str) else ""})
+  if line:
+    rows.append(line)
   rows += _api_describe_steps(data.get("steps"), data.get("_thought", ""))
   if data.get("_saw_call"):
     rows.append("  note    a function call was detected while streaming; the request is repeated without streaming")
   api_log("RESPONSE", "\n".join(rows))
 
-def api_log_response_compat(usage, steps, reasoning=""):
+def _api_served_line(requested, served):
+  """Which model/provider really answered (the server may route, alias or fall back)."""
+  served = served or {}
+  real = served.get("model")
+  if not real and not served.get("provider"):
+    return ""
+  parts = [f"requested {requested}" if requested else ""]
+  if real:
+    parts.append(f"served {real}" + (" (different from requested)" if requested and real != requested else ""))
+  if served.get("provider"):
+    parts.append(f"provider {served['provider']}")
+  return "model   : " + " · ".join(part for part in parts if part)
+
+def api_log_response_compat(usage, steps, reasoning="", served=None, requested=""):
   if not API_LOG["path"]:
     return
-  rows = [f"elapsed {_api_elapsed()} · {_usage_line(usage)}"] + _api_describe_steps(steps, reasoning)
+  rows = [f"elapsed {_api_elapsed()} · {_usage_line(usage)}"]
+  line = _api_served_line(requested, served)
+  if line:
+    rows.append(line)
+  rows += _api_describe_steps(steps, reasoning)
   api_log("RESPONSE", "\n".join(rows))
 
 def api_log_turn_total():
@@ -4004,7 +4020,6 @@ class StreamPrinter:
   def __call__(self, piece):
     text = self.ansi.feed(piece)
     if not self.started:
-      _progress_hold()
       self.started = True
       if self.header:
         sys.stdout.write(self.header)
@@ -4085,6 +4100,7 @@ def chat_turn(
   policy = policy or ShellPolicy()
   policy.failed_calls = {}
   API_TURN.clear()
+  CLOCK["stamp"] = time.strftime("%A, %Y-%m-%d %H:%M:%S %z")
   generated = []
   working = list(history)
   turn_start = len(working)
@@ -4705,14 +4721,13 @@ def run():
     )
   WEB_SEARCH["enabled"] = False
   WEB_FETCH["enabled"] = False
-  lazy_tools = not args.eager_tools
+  lazy_tools = args.lazy_tools
   LAZY["none"] = bool(args.no_tools)
   if args.provider != "gemini":
     extra_tools, max_out = [], None
   GEMINI_EXTRAS["tools"] = extra_tools
   GEMINI_EXTRAS["max_output_tokens"] = max_out
   LAZY["on"] = lazy_tools
-  LAZY["preload_shell"] = args.preload_shell
   STREAM_OPTS["after_tools"] = args.stream_after_tools
   LAZY["loaded"].clear()
   env_target = os.environ.get("AI_API_LOG", "").strip()
@@ -4906,7 +4921,6 @@ def run():
         printer.finish()
     else:
       answer_out = normalize_ansi(answer, close=True)
-      _progress_hold()
       if PROGRESS["pending"]:
         answer_out = answer_out.lstrip("\r\n")
       PROGRESS["pending"] = False
@@ -5171,7 +5185,6 @@ def run():
       continue
     cli_language = get_cli_language(language)
     answer_out = normalize_ansi(answer, close=True)
-    _progress_hold()
     if PROGRESS["pending"]:
       answer_out = answer_out.lstrip("\r\n")
     PROGRESS["pending"] = False
