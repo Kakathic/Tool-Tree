@@ -2,6 +2,7 @@
 
 HOME="$GITHUB_WORKSPACE"
 
+if [ "$UPAPK" == "true" ]; then
 (
 mkdir -p .github/module/usr
 cp -rf $HOME/.github/list_addon/* .github/module/usr
@@ -22,8 +23,9 @@ find . -exec touch -d "2026-01-01 00:00:00" {} +
 # Nén dữ liệu
 7z a -t7z -mx=9 -mmt=off -mtc=off -mta=off -y ../module.7z .
 )
-
-[ "$UPAPK" == "true" ] || echo 1 > app/src/main/assets/beta
+else
+echo 1 > app/src/main/assets/beta
+fi
 gradle assembleRelease -x lint -x test
 
 VER=$(grep -m1 'versionName ' app/build.gradle | cut -d'"' -f2)
@@ -35,23 +37,15 @@ BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d |
 
 mkdir -p Up Beta assets
 if [ "$UPAPK" == "true" ]; then
-cp -f app/build/outputs/apk/*/*.apk "Up/Tool-Tree.$VER.apk"
-cp -f app/build/outputs/apk/*/*.apk "Tool-Tree-offline.$VER.apk"
+cp -f app/build/outputs/apk/*/*.apk "Tool-Tree-raw.apk"
 (
 mv .github/module.7z assets/module
-zip -q -u "Tool-Tree-offline.$VER.apk" assets/module
-"$BUILD_TOOLS/zipalign" -f 4 "Tool-Tree-offline.$VER.apk" "Tool-Tree-off.apk"
-"$BUILD_TOOLS/apksigner" sign --ks app/Kakathic.jks --ks-pass pass:"$KEY_PASSWORD" --key-pass pass:"$KEY_PASSWORD" --out "Up/Tool-Tree-offline.$VER.apk" "Tool-Tree-off.apk"
+zip -q -u "Tool-Tree-raw.apk" assets/module
+"$BUILD_TOOLS/zipalign" -f 4 "Tool-Tree-raw.apk" "Tool-Tree-aligned.apk"
+"$BUILD_TOOLS/apksigner" sign --ks app/Kakathic.jks --ks-pass pass:"$KEY_PASSWORD" --key-pass pass:"$KEY_PASSWORD" --out "Up/Tool-Tree.$VER.apk" "Tool-Tree-aligned.apk"
 )
 else
 cp -f app/build/outputs/apk/*/*.apk "Beta/Tool-Tree-beta.apk"
-cp -f app/build/outputs/apk/*/*.apk "Tool-Tree-offline-beta.apk"
-(
-mv .github/module.7z assets/module
-zip -q -u "Tool-Tree-offline-beta.apk" assets/module
-"$BUILD_TOOLS/zipalign" -f 4 "Tool-Tree-offline-beta.apk" "Tool-Tree-beta-off.apk"
-"$BUILD_TOOLS/apksigner" sign --ks app/Kakathic.jks --ks-pass pass:"$KEY_PASSWORD" --key-pass pass:"$KEY_PASSWORD" --out "Beta/Tool-Tree-offline-beta.apk" "Tool-Tree-beta-off.apk"
-)
 fi
 ls -l Up Beta
 echo -e "- ![Downloads](https://img.shields.io/github/downloads/Kakathic/Tool-Tree/V$VER/total?label=Downloads&color=%230072F4)\n- See version notes: [Changelog](https://Kakathic.github.io/Tool-Tree/Version.html)" > change.txt
