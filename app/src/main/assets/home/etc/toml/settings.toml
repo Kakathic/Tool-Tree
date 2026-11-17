@@ -67,17 +67,13 @@ max-lines = 8
 markdown = true
 greeting = "@chat_greeting"
 script = '''
-ai_agent --all --any-path --markdown --progress \
---lang "$chatai_lang" --model "$ai_models" \
---provider "$list_provider" --instruction "$chatai_nextrule" \
---thinking "$models_thinking" \
---memory-file "$HOME/.cache/$CHAT_ID.sql" \
---progress-single "$chatai_detail" -p "$MSG"
+ai_agent --markdown --progress \
+--memory-file "$HOME/.cache/$CHAT_ID.sql" -p "$MSG"
 '''
 params-shell = "hidden"
 params-script = '''
-slog list_provider $list_provider
-alog list_ai_models $ai_models
+slog list_provider $AI_PROVIDER
+alog list_ai_models $AI_MODEL
 '''
 
 [[chat.menu]]
@@ -97,7 +93,7 @@ ai_agent --provider "$(glog list_provider)" --list-models
 '''
 
 [[chat.params]]
-name = "chatai_lang"
+name = "AI_LANG"
 title = "@reply_lang_title"
 label = "@permis_text_2"
 placeholder = "en-US"
@@ -105,7 +101,7 @@ type = "text"
 value-sh = 'echo "$LANGUAGE-$COUNTRY"'
 
 [[chat.params]]
-name = "list_provider"
+name = "AI_PROVIDER"
 placeholder = "gemini"
 title = "@select_provider_title"
 label = "Provider"
@@ -113,7 +109,7 @@ items = [ "gemini|Gemini", "openai|Openai", "openrouter|Openrouter", "groq|Groq"
 value-sh = "glog list_provider gemini"
 
 [[chat.params]]
-name = "ai_models"
+name = "AI_MODEL"
 title = "@api_model_title"
 desc = "@api_model_desc"
 editable = true
@@ -122,19 +118,19 @@ options-sh = "glog list_ai_models"
 value = "gemini-3.5-flash-lite"
 
 [[chat.params]]
-name = "chatai_detail"
+name = "AI_PROGRESS_SINGLE"
 label = "@detail_label"
 type = "switch"
 
 [[chat.params]]
-name = "models_thinking"
+name = "AI_THINKING"
 title = "@chatai_think_text"
 label = "@option_text"
 items = [ "auto|@auto_text", "low|@low_text", "medium|@medium_text", "high|@high_text" ]
 value = "auto"
 
 [[chat.params]]
-name = "chatai_nextrule"
+name = "AI_INSTRUCTION"
 title = "@chatai_rule_text"
 placeholder = "@rule_placeholder"
 type = "text"

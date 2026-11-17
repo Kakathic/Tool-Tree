@@ -86,7 +86,7 @@ RUN_COMMAND_TOOL = {
 }
 DATA_DIR = os.path.join(os.path.expanduser("~"), ".cache")
 DEFAULT_LOG_FILE = os.path.join(DATA_DIR, "actions.log")
-# API log (on by default; --no-api-log turns it off): requests, token usage and model thoughts.
+# API log (on by default; --api-log 0 or AI_API_LOG=0 turns it off): requests, token usage and model thoughts.
 # The file is capped at API_LOG_MAX_BYTES; the oldest whole blocks are dropped first.
 DEFAULT_API_LOG_FILE = os.path.join(DATA_DIR, "api.log")
 API_LOG_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
@@ -102,7 +102,7 @@ DISK_PROGRAMS = {"wipefs", "fdisk", "sgdisk", "parted", "fastboot"}
 ACTIVE_SPINNER = {"s": None}
 
 # Progress lines for consumers that are not a terminal (e.g. the Tool-Tree chat reads stdout
-# through a pipe, so the spinner cannot run). Enabled with --progress / GEMINI_CLI_PROGRESS=1.
+# through a pipe, so the spinner cannot run). Enabled with --progress / AI_PROGRESS=1.
 # A status line ends with "\r": a reader that honors carriage returns replaces it with the next
 # output, so it never becomes part of the answer.
 # The status line is cumulative: every step of the current request is kept on the one line
@@ -116,10 +116,21 @@ urllib.request.install_opener(_opener)
 
 PROGRESS_MAX_CHARS = 4000  # status line length cap when output is a pipe (effectively no cut)
 # "single": True = old style, one status line per step (each replaces the previous one).
-PROGRESS = {"enabled": False, "pending": False, "col0": True, "steps": [], "single": False}
+# "hold": fixed 0.5 s a status line stays visible before a new step or the answer replaces
+# it (the "\r" replacement is otherwise instant). "shown_at": time of the last status write.
+PROGRESS = {"enabled": False, "pending": False, "col0": True, "steps": [], "single": False,
+            "hold": 0.5, "shown_at": 0.0}
 
 def progress_enabled():
   return PROGRESS["enabled"] and not sys.stdout.isatty()
+
+def _progress_hold():
+  """Wait until the current status line has been visible for PROGRESS["hold"] seconds.
+  Does nothing when no status line is pending, so normal output is never delayed."""
+  if PROGRESS["pending"] and PROGRESS["hold"] > 0:
+    wait = PROGRESS["shown_at"] + PROGRESS["hold"] - time.time()
+    if wait > 0:
+      time.sleep(min(wait, PROGRESS["hold"]))
 
 def _fit(text, limit=None):
   text = " ".join(str(text).split())
@@ -173,9 +184,12 @@ def emit_progress(text, update=None):
     sys.stdout.write("\n")
     PROGRESS["col0"] = True
   limit = max(20, shutil.get_terminal_size((80, 24)).columns - 4) if sys.stdout.isatty() else PROGRESS_MAX_CHARS
+  if " │ " not in text:
+    _progress_hold()  # a new step: let the previous status line be read first
   sys.stdout.write(_render_steps(steps, limit) + "\r")
   sys.stdout.flush()
   PROGRESS["pending"] = True
+  PROGRESS["shown_at"] = time.time()
 
 def _clear_progress():
   """Remove a status line that nothing replaced (program ends, or an error is about to print).
@@ -212,6 +226,9 @@ def describe_tool_call(step):
     value = arguments.get("pattern") or arguments.get("path") or ""
   elif name == "get_guide":
     value = arguments.get("topic", "")
+  elif name == "use_tools":
+    groups = arguments.get("groups")
+    value = ",".join(str(item) for item in groups) if isinstance(groups, list) else str(groups or "")
   elif name == "web_search":
     value = arguments.get("query", "")
   elif name == "web_fetch":
@@ -239,6 +256,7 @@ PROTECTED_DIRS = {
 }
 MAX_READ_LINES = 1000
 CONTEXT_COMPACT_CHARS = 60000  # compact old tool results of a turn above this size
+OLD_TURNS_COMPACT_CHARS = 20000  # interactive: compact tool results of earlier turns above this size
 OLD_RESULT_KEEP_CHARS = 1500    # results at most this long are never compacted
 MAX_IDENTICAL_FAILURES = 2      # the same failing call is not run a third time
 DEFAULT_READ_LINES = 500
@@ -451,20 +469,13 @@ UI_TEXT = {
     "warning": "Cảnh báo: chưa thể cập nhật bộ nhớ tóm tắt",
     "memory_error": "Không thể xóa bộ nhớ",
     "shell_help": "Bật/tắt khả năng chạy lệnh trên thiết bị.",
-    "shell_usage": "Cách dùng: /shell on|off|auto",
+    "shell_usage": "Cách dùng: /shell on|off",
     "shell_state": "Chạy lệnh: {value}",
     "shell_label": "Chạy lệnh",
-    "run_prompt": "Cho phép chạy lệnh này? [y = có / N = không / a = luôn cho phép]",
-    "run_denied": "Đã từ chối chạy lệnh.",
-    "run_non_tty": "Cần xác nhận nhưng không có terminal; dùng --yes để tự động cho phép.",
     "files_help": "Bật/tắt công cụ đọc, sửa, ghi, tìm file.",
     "files_usage": "Cách dùng: /files on|off",
     "files_state": "Công cụ file: {value}",
     "files_label": "Công cụ file",
-    "apply_prompt": "Cho phép áp dụng thay đổi này? [y = có / N = không / a = luôn cho phép]",
-    "all_help": "Bật hoặc tắt cùng lúc: chạy lệnh, công cụ file, tự động cho phép.",
-    "all_usage": "Cách dùng: /all on|off",
-    "all_state": "Tất cả: {value}",
     "stream_help": "Bật/tắt hiển thị câu trả lời dần dần (streaming).",
     "stream_usage": "Cách dùng: /stream on|off",
     "stream_state": "Phát trực tiếp: {value}",
@@ -472,8 +483,6 @@ UI_TEXT = {
     "provider_label": "Nhà cung cấp",
     "state_on": "bật",
     "state_off": "tắt",
-    "state_ask": "bật (hỏi trước)",
-    "state_auto": "tự động",
     "language_name_vi": "Tiếng Việt",
     "providers_title": "Các nhà cung cấp AI được hỗ trợ",
     "websites_title": "Trang web nhà cung cấp và đăng ký khóa API",
@@ -565,20 +574,13 @@ UI_TEXT = {
     "warning": "Warning: memory summarization was deferred",
     "memory_error": "Cannot clear memory",
     "shell_help": "Turn device command execution on/off.",
-    "shell_usage": "Usage: /shell on|off|auto",
+    "shell_usage": "Usage: /shell on|off",
     "shell_state": "Command execution: {value}",
     "shell_label": "Run commands",
-    "run_prompt": "Allow this command? [y = yes / N = no / a = always]",
-    "run_denied": "Command was denied.",
-    "run_non_tty": "Confirmation needed but no terminal; use --yes to auto-approve.",
     "files_help": "Turn file read/edit/write/search tools on/off.",
     "files_usage": "Usage: /files on|off",
     "files_state": "File tools: {value}",
     "files_label": "File tools",
-    "apply_prompt": "Apply this change? [y = yes / N = no / a = always]",
-    "all_help": "Turn on or off at once: commands, file tools, auto-approve.",
-    "all_usage": "Usage: /all on|off",
-    "all_state": "All: {value}",
     "stream_help": "Turn streamed (gradual) answers on/off.",
     "stream_usage": "Usage: /stream on|off",
     "stream_state": "Streaming: {value}",
@@ -586,8 +588,6 @@ UI_TEXT = {
     "provider_label": "Provider",
     "state_on": "on",
     "state_off": "off",
-    "state_ask": "on (ask)",
-    "state_auto": "auto",
     "language_name_vi": "Vietnamese",
     "providers_title": "Supported AI providers",
     "websites_title": "Provider websites and API-key registration",
@@ -838,220 +838,297 @@ class Spinner:
       sys.stdout.flush()
       self.thread = None
 
+# Every option has an environment variable; a command-line option always wins over it.
+# Toggles take 0|1 on the command line ("--stream" alone means 1). Variables also accept
+# true/false, yes/no and on/off.
+TOGGLE_FLAGS = (
+  "--no-tools", "--eager-tools", "--stream", "--markdown", "--code-exec", "--progress",
+  "--progress-single", "--no-label", "--no-memory", "--api-log", "--api-log-full",
+  "--stream-after-tools", "--preload-shell",
+)
+TRUE_WORDS = ("1", "true", "yes", "on")
+FALSE_WORDS = ("0", "false", "no", "off")
+
+def _toggle_value(text):
+  if text == "1":
+    return True
+  if text == "0":
+    return False
+  raise argparse.ArgumentTypeError("expected 0 or 1")
+
+def _normalize_toggle_argv(argv):
+  """"--stream" without a value means "--stream 1", so a following question stays a question."""
+  result = []
+  for index, token in enumerate(argv):
+    if token == "--":
+      result.extend(argv[index:])
+      break
+    result.append(token)
+    if token in TOGGLE_FLAGS and (index + 1 >= len(argv) or argv[index + 1] not in ("0", "1")):
+      result.append("1")
+  return result
+
+def _add_toggle(parser, flag, env, text):
+  parser.add_argument(
+    flag, nargs="?", const=True, default=None, type=_toggle_value, metavar="0|1",
+    help=text,
+  )
+
+def _env_text(name):
+  return os.environ.get(name, "").strip()
+
+def _env_toggle(parser, name):
+  value = _env_text(name).lower()
+  if not value:
+    return None
+  if value in TRUE_WORDS:
+    return True
+  if value in FALSE_WORDS:
+    return False
+  parser.error(f"{name} must be 0 or 1 (got '{value}').")
+
+def _resolve_toggle(parser, value, env, default=False):
+  if value is not None:
+    return value
+  from_env = _env_toggle(parser, env)
+  return default if from_env is None else from_env
+
+def _resolve_int(parser, value, env, default):
+  if value is not None:
+    return value
+  text = _env_text(env)
+  if not text:
+    return default
+  try:
+    return int(text)
+  except ValueError:
+    parser.error(f"{env} must be a whole number (got '{text}').")
+
+ENV_HELP_GROUPS = (
+  ("Settings", (
+    ("AI_PROVIDER", "--provider", "gemini|openrouter|groq|together|openai|deepseek (default gemini)"),
+    ("AI_MODEL", "--model", "model ID"),
+    ("AI_THINKING", "--thinking", "auto|low|medium|high (default auto)"),
+    ("AI_LANG", "--lang", "output language, e.g. vi, ja, pt-BR (default en)"),
+    ("AI_INSTRUCTION", "--instruction", "system instruction text"),
+    ("AI_INSTRUCTION_FILE", "--instruction-file", "file with the system instruction"),
+    ("AI_TIMEOUT", "--timeout", "API timeout in seconds (default 0 = none)"),
+    ("AI_SHELL_TIMEOUT", "--shell-timeout", "seconds before a command is killed (default 0 = none)"),
+    ("AI_RPM", "--rpm", "max requests per minute (default {RPM}, 0 = no limit)"),
+    ("AI_MAX_RETRIES", "--max-retries", "retries after HTTP 429/503 (default {RETRIES})"),
+    ("AI_MAX_OUTPUT_TOKENS", "--max-output-tokens", "Gemini only: max output tokens"),
+    ("AI_UA_PRESET", "--ua-preset", "default|browser|curl"),
+    ("AI_USER_AGENT", "--user-agent", "User-Agent header"),
+    ("AI_HEADER", "--header", "extra HTTP headers, one 'Name: value' per line"),
+    ("AI_MEMORY_FILE", "--memory-file", "SQLite file for one-shot memory"),
+  )),
+  ("Toggles (0|1, also true/false, yes/no, on/off)", (
+    ("AI_NO_TOOLS", "--no-tools", "chat only, no shell/file/web tools"),
+    ("AI_EAGER_TOOLS", "--eager-tools", "send all tools with every request"),
+    ("AI_STREAM", "--stream", "show the answer as it is written"),
+    ("AI_STREAM_AFTER_TOOLS", "--stream-after-tools", "keep streaming after tools ran (default 0)"),
+    ("AI_PRELOAD_SHELL", "--preload-shell", "always send run_command schema (default 1)"),
+    ("AI_MARKDOWN", "--markdown", "allow Markdown in answers"),
+    ("AI_CODE_EXEC", "--code-exec", "Gemini only: code execution"),
+    ("AI_PROGRESS", "--progress", "status line when stdout is a pipe"),
+    ("AI_PROGRESS_SINGLE", "--progress-single", "1 = keep every step on the line"),
+    ("AI_NO_LABEL", "--no-label", "hide the provider label"),
+    ("AI_NO_MEMORY", "--no-memory", "one-shot mode: ignore saved memory"),
+    ("AI_API_LOG", "--api-log", "0 = off, 1 = on, or a log file path (default on)"),
+    ("AI_API_LOG_FULL", "--api-log-full", "log full request JSON (large)"),
+  )),
+  ("Other (no option)", (
+    ("AI_LOG_FILE", "", "actions log path (default ~/.cache/actions.log)"),
+    ("AI_WEB_ALLOW_PRIVATE", "", "let web_fetch open local/private addresses (0|1)"),
+  )),
+)
+
+def env_help_text():
+  """Full list of environment variables: variable, matching option, meaning."""
+  rows = [("API_KEY", "--api-key", "API key; used before the provider's own variable")]
+  rows += [(info["env"], "", f"{info['label']} API key") for info in PROVIDERS.values()]
+  rows.append(("API_URL", "--base-url", "base URL (providers other than Gemini)"))
+  groups = (("API key and URL", tuple(rows)),) + ENV_HELP_GROUPS
+  width = max(len(var) for _, items in groups for var, _, _ in items)
+  opt_width = max(len(opt) for _, items in groups for _, opt, _ in items)
+  lines = ["Environment variables (an option on the command line always wins):"]
+  for title, items in groups:
+    lines += ["", title + ":"]
+    for var, option, text in items:
+      text = text.replace("{RPM}", str(DEFAULT_RPM)).replace("{RETRIES}", str(DEFAULT_MAX_RETRIES))
+      lines.append(f"  {var.ljust(width)}  {option.ljust(opt_width)}  {text}".rstrip())
+  return "\n".join(lines)
+
+def _help_epilog():
+  return (
+    "Environment variables: every option has one, named AI_ + the option in capitals\n"
+    "(--max-retries -> AI_MAX_RETRIES). Run --help-env to see the full list.\n"
+  )
+
 def parse_args():
   parser = argparse.ArgumentParser(
+    allow_abbrev=False,
+    formatter_class=argparse.RawDescriptionHelpFormatter,
     description=(
       "AI agent - RAM context in chat mode, "
       "persistent context in one-shot mode"
-    )
+    ),
+    epilog=_help_epilog(),
   )
-  parser.add_argument("--provider", choices=tuple(PROVIDERS), default="gemini", help="API provider.")
-  parser.add_argument("--base-url", help="Override the API base URL of the selected provider.")
-  parser.add_argument("--model", help="Model ID; use --list-models to view available models.")
-  parser.add_argument("--list-providers", action="store_true", help="List supported API providers.")
-  parser.add_argument("--list-websites", action="store_true", help="List provider websites and API-key registration pages.")
-  parser.add_argument("--list-models", action="store_true", help="Fetch available models from the selected provider.")
+  parser.add_argument("--provider", choices=tuple(PROVIDERS), default=None, help="API provider (default gemini).")
+  parser.add_argument("--base-url", help="Override the provider base URL.")
+  parser.add_argument("--model", help="Model ID (see --list-models).")
+  parser.add_argument("--help-env", action="store_true", help="Show every environment variable and its option, then exit.")
+  parser.add_argument("--list-providers", action="store_true", help="List providers.")
+  parser.add_argument("--list-websites", action="store_true", help="List provider websites and API-key pages.")
+  parser.add_argument("--list-models", action="store_true", help="List models of the selected provider.")
   parser.add_argument(
     "--thinking",
     choices=THINKING_LEVELS,
-    default="auto",
-    help=(
-      "Thinking effort. Gemini: thinking_level. Other providers: sent "
-      "as reasoning_effort and dropped automatically if the model "
-      "does not accept it."
-    ),
+    default=None,
+    help="Thinking effort (default auto); dropped if the model does not accept it.",
   )
   parser.add_argument(
     "--lang",
-    default="en",
+    default=None,
     metavar="LANG",
-    help=(
-      "Output language: any language name or code, e.g. vi, ja, zh-CN, pt-BR, French "
-      "(default: en). The CLI messages are Vietnamese for vi and English otherwise."
-    ),
+    help="Output language: name or code, e.g. vi, ja, pt-BR (default en).",
   )
-  parser.add_argument("--instruction")
-  parser.add_argument("--instruction-file")
-  parser.add_argument("--api-key")
+  parser.add_argument("--instruction", help="System instruction text.")
+  parser.add_argument("--instruction-file", help="Read the system instruction from a file.")
+  parser.add_argument("--api-key", help="API key.")
   parser.add_argument(
     "--timeout",
     type=int,
-    default=0,
-    help="Seconds to wait for the API (default 0 = no limit).",
+    default=None,
+    help="API timeout in seconds (default 0 = none).",
   )
-  parser.add_argument(
-    "--shell",
-    action="store_true",
-    help="Let the ai agent run shell commands on this device (asks first).",
-  )
-  parser.add_argument(
-    "--files",
-    action="store_true",
-    help=(
-      "Let the ai agent read, edit, write and search files "
-      "(writes ask first)."
-    ),
-  )
-  parser.add_argument(
-    "--all",
-    action="store_true",
-    help=(
-      "Turn on everything at once: --shell, --files and --yes "
-      "(no confirmation prompts). DANGEROUS."
-    ),
-  )
-  parser.add_argument(
-    "--stream",
-    action="store_true",
-    help="Show the answer gradually as the ai agent writes it.",
-  )
-  parser.add_argument(
-    "--markdown",
-    action="store_true",
-    help=(
-      "Allow Markdown in answers: replaces the plain-text instruction with a list of the "
-      "Markdown syntax the viewer supports (also: GEMINI_CLI_MARKDOWN=1)."
-    ),
-  )
-  parser.add_argument(
-    "--search",
-    action="store_true",
-    help="Web search for every provider, including Gemini (also: GEMINI_CLI_SEARCH=1; turned on "
-    "automatically by --all): a web_search tool (DuckDuckGo, no API key) plus a web_fetch "
-    "tool that reads a page; needs --shell or --files. Gemini's built-in Google Search "
-    "tool is not used.",
-  )
-  parser.add_argument(
-    "--code-exec",
-    action="store_true",
-    help="Gemini only: enable the built-in code execution sandbox "
-    "(also: GEMINI_CLI_CODE_EXEC=1).",
-  )
-  parser.add_argument(
-    "--no-web",
-    action="store_true",
-    help="With --all, do not turn on web_search / web_fetch automatically "
-    "(also: GEMINI_CLI_NO_WEB=1).",
-  )
+  _add_toggle(parser, "--no-tools", "AI_NO_TOOLS", 'Chat only: no shell, file or web tools.')
+  _add_toggle(parser, "--stream", "AI_STREAM", 'Show the answer as it is written.')
+  _add_toggle(parser, "--markdown", "AI_MARKDOWN", 'Allow Markdown in answers.')
+  _add_toggle(parser, "--code-exec", "AI_CODE_EXEC", 'Gemini only: built-in code execution.')
   parser.add_argument(
     "--max-output-tokens",
     type=int,
     default=None,
     metavar="N",
-    help="Gemini only: maximum output tokens per response, sent as max_output_tokens "
-    "(also: GEMINI_CLI_MAX_OUTPUT_TOKENS). Default: the server's default.",
+    help="Gemini only: max output tokens per response.",
   )
+  _add_toggle(parser, "--progress-single", "AI_PROGRESS_SINGLE", '--progress: 1 = keep every step on the line; 0 = current step only (default).')
+  _add_toggle(parser, "--progress", "AI_PROGRESS", 'Print a status line of what the AI is doing when stdout is a pipe.')
+  _add_toggle(parser, "--no-label", "AI_NO_LABEL", "Hide the provider label before answers.")
   parser.add_argument(
-    "--progress-single",
+    "--ua-preset",
+    choices=("default", "browser", "curl"),
     default=None,
-    metavar="0|1",
-    help=(
-      "1 = cumulative status line that keeps every step until the answer arrives. "
-      "0 or omitted = status line shows only the current step (each step replaces the previous "
-      "one) (also: GEMINI_CLI_PROGRESS_SINGLE=1). Only affects --progress output."
-    ),
+    help="User-Agent preset (overridden by --user-agent).",
   )
   parser.add_argument(
-    "--progress",
-    action="store_true",
-    help=(
-      "When stdout is not a terminal (e.g. read through a pipe), print what the AI is doing "
-      "(waiting, running a command, reading a file) as one status line ending with a carriage "
-      "return, which the next output replaces (also: GEMINI_CLI_PROGRESS=1)."
-    ),
+    "--user-agent",
+    help="Override the User-Agent header.",
   )
   parser.add_argument(
-    "--no-label",
-    action="store_true",
-    help="Do not print the provider label (for example 'Google Gemini ❯') before answers.",
-  )
-  parser.add_argument(
-    "--yes",
-    action="store_true",
-    help=(
-      "With --shell or --files: run commands and write files "
-      "without asking. DANGEROUS."
-    ),
-  )
-  parser.add_argument(
-    "--allow-path",
+    "--header",
     action="append",
     default=[],
-    metavar="DIR",
-    help=(
-      "Extra directory the file tools may use (repeatable). "
-      "By default they are limited to the start directory."
-    ),
+    metavar="'Name: value'",
+    help="Extra HTTP header (repeatable).",
   )
-  parser.add_argument(
-    "--any-path",
-    action="store_true",
-    help="Let the file tools use any path. Not covered by --all.",
+  _add_toggle(parser, "--eager-tools", "AI_EAGER_TOOLS", 'Send all tools with every request instead of loading them on demand.')
+  _add_toggle(
+    parser, "--api-log-full", "AI_API_LOG_FULL",
+    f"Log full request JSON too (large; limit {API_LOG_MAX_BYTES_FULL // (1024 * 1024)} MB instead of {API_LOG_MAX_BYTES // (1024 * 1024)} MB).",
   )
-  parser.add_argument(
-    "--api-log-full",
-    action="store_true",
-    help=(
-      "Also write the complete request JSON (large; may contain file contents, including the system "
-      f"prompt). While on, the API log limit is {API_LOG_MAX_BYTES_FULL // (1024 * 1024)} MB instead of "
-      f"{API_LOG_MAX_BYTES // (1024 * 1024)} MB."
-    ),
+  _add_toggle(
+    parser, "--stream-after-tools", "AI_STREAM_AFTER_TOOLS",
+    "With --stream, keep streaming after tools ran (default 0: first round only).",
   )
+  _add_toggle(
+    parser, "--preload-shell", "AI_PRELOAD_SHELL",
+    "Always send the small run_command schema, saving a request (default 1).",
+  )
+  _add_toggle(parser, "--api-log", "AI_API_LOG", "Write the API log to ~/.cache/api.log (default on).")
   parser.add_argument(
     "--rpm",
     type=int,
-    default=DEFAULT_RPM,
-    help=(
-      "Max requests per minute; the script waits to stay under it "
-      f"(default {DEFAULT_RPM}, 0 = no limit)."
-    ),
+    default=None,
+    help=f"Max requests per minute (default {DEFAULT_RPM}, 0 = no limit).",
   )
   parser.add_argument(
     "--max-retries",
     type=int,
-    default=DEFAULT_MAX_RETRIES,
-    help=(
-      "Retries after HTTP 429/503, waiting as the server asks "
-      f"(default {DEFAULT_MAX_RETRIES}, 0 = never retry)."
-    ),
+    default=None,
+    help=f"Retries after HTTP 429/503 (default {DEFAULT_MAX_RETRIES}, 0 = never).",
   )
   parser.add_argument(
     "--shell-timeout",
     type=int,
-    default=DEFAULT_SHELL_TIMEOUT,
+    default=None,
     help="Seconds before a command is killed (default 0 = no limit).",
   )
   parser.add_argument(
     "--memory-file",
-    help="Path to the SQLite database used by one-shot mode.",
+    help="SQLite file for one-shot memory.",
   )
-  parser.add_argument(
-    "--no-memory",
-    action="store_true",
-    help="Do not load or send saved memory/history in one-shot mode.",
-  )
+  _add_toggle(parser, "--no-memory", "AI_NO_MEMORY", 'One-shot mode: ignore saved memory.')
   parser.add_argument(
     "--clear-memory",
     action="store_true",
-    help="Clear persistent one-shot memory and exit.",
+    help="Clear one-shot memory and exit.",
   )
   parser.add_argument(
     "--check-api-key",
     action="store_true",
-    help="Check API key validity and access to the selected model.",
+    help="Check the API key and model, then exit.",
   )
   parser.add_argument(
     "question",
     nargs="?",
-    help="Ask one question and exit after receiving the answer.",
+    help="Ask one question and exit.",
   )
   parser.add_argument(
     "-p",
     "--prompt",
     dest="prompt",
-    help="Ask one question and exit after receiving the answer.",
+    help="Same as the positional question.",
   )
-  args = parser.parse_args()
+  args = parser.parse_args(_normalize_toggle_argv(sys.argv[1:]))
+  if args.help_env:
+    print(env_help_text())
+    sys.exit(0)
+  # Command-line option first, then the environment variable, then the default.
+  args.provider = args.provider or _env_text("AI_PROVIDER").lower() or "gemini"
+  if args.provider not in PROVIDERS:
+    parser.error(f"AI_PROVIDER must be one of: {', '.join(PROVIDERS)} (got '{args.provider}').")
+  args.thinking = args.thinking or _env_text("AI_THINKING").lower() or "auto"
+  if args.thinking not in THINKING_LEVELS:
+    parser.error(f"AI_THINKING must be one of: {', '.join(THINKING_LEVELS)} (got '{args.thinking}').")
+  args.ua_preset = args.ua_preset or _env_text("AI_UA_PRESET").lower() or "default"
+  if args.ua_preset not in ("default", "browser", "curl"):
+    parser.error(f"AI_UA_PRESET must be one of: default, browser, curl (got '{args.ua_preset}').")
+  args.lang = args.lang or _env_text("AI_LANG") or "en"
+  args.model = args.model or _env_text("AI_MODEL") or None
+  args.user_agent = args.user_agent or _env_text("AI_USER_AGENT") or None
+  if not args.header:
+    args.header = [line.strip() for line in os.environ.get("AI_HEADER", "").splitlines() if line.strip()]
+  if args.instruction is None and args.instruction_file is None:
+    args.instruction = _env_text("AI_INSTRUCTION") or None
+    args.instruction_file = _env_text("AI_INSTRUCTION_FILE") or None
+  args.timeout = _resolve_int(parser, args.timeout, "AI_TIMEOUT", 0)
+  args.shell_timeout = _resolve_int(parser, args.shell_timeout, "AI_SHELL_TIMEOUT", DEFAULT_SHELL_TIMEOUT)
+  args.rpm = _resolve_int(parser, args.rpm, "AI_RPM", DEFAULT_RPM)
+  args.max_retries = _resolve_int(parser, args.max_retries, "AI_MAX_RETRIES", DEFAULT_MAX_RETRIES)
+  args.max_output_tokens = _resolve_int(parser, args.max_output_tokens, "AI_MAX_OUTPUT_TOKENS", None)
+  for name, env in (
+    ("no_tools", "AI_NO_TOOLS"), ("eager_tools", "AI_EAGER_TOOLS"),
+    ("stream", "AI_STREAM"), ("markdown", "AI_MARKDOWN"),
+    ("code_exec", "AI_CODE_EXEC"), ("progress", "AI_PROGRESS"),
+    ("progress_single", "AI_PROGRESS_SINGLE"), ("no_label", "AI_NO_LABEL"),
+    ("no_memory", "AI_NO_MEMORY"), ("api_log_full", "AI_API_LOG_FULL"),
+    ("stream_after_tools", "AI_STREAM_AFTER_TOOLS"),
+  ):
+    setattr(args, name, _resolve_toggle(parser, getattr(args, name), env))
+  args.preload_shell = _resolve_toggle(parser, args.preload_shell, "AI_PRELOAD_SHELL", True)
   if args.question is not None and args.prompt is not None:
     parser.error(
       "Use either a positional question or --prompt, not both."
@@ -1068,12 +1145,6 @@ def parse_args():
     parser.error(
       "--clear-memory cannot be combined with --check-api-key."
     )
-  if args.all:
-    args.shell = True
-    args.files = True
-    args.yes = True
-  if args.yes and not (args.shell or args.files):
-    parser.error("--yes requires --shell or --files.")
   if args.rpm < 0 or args.max_retries < 0:
     parser.error("--rpm and --max-retries cannot be negative.")
   if args.max_output_tokens is not None and args.max_output_tokens < 1:
@@ -1193,12 +1264,12 @@ WEB_FETCH_TOOL = {
 
 def _check_web_url(url):
   """Return a problem text when url is not a public http/https address, else an empty string.
-  GEMINI_CLI_WEB_ALLOW_PRIVATE=1 allows local/private addresses (e.g. a dev server, or a VPN
+  AI_WEB_ALLOW_PRIVATE=1 allows local/private addresses (e.g. a dev server, or a VPN
   that gives out fake IPs)."""
   parts = urllib.parse.urlsplit(url)
   if parts.scheme not in ("http", "https") or not parts.hostname:
     return "Only http:// and https:// URLs are supported."
-  if os.environ.get("GEMINI_CLI_WEB_ALLOW_PRIVATE", "").strip().lower() in ("1", "true", "yes", "on"):
+  if os.environ.get("AI_WEB_ALLOW_PRIVATE", "").strip().lower() in ("1", "true", "yes", "on"):
     return ""
   try:
     port = parts.port or (443 if parts.scheme == "https" else 80)
@@ -1512,6 +1583,144 @@ def do_web_fetch(url, max_chars=None, start=0, timeout=None):
     result["title"] = title
   return result
 
+# Lazy tool loading: a request starts with only the basic instruction plus one small use_tools
+# tool. The detailed rules and schemas of a tool group (shell, files) are sent only after the
+# model asks for that group. "loaded" is kept for the session; "groups" (groups the user allowed)
+# and "offer" (allowed but not loaded yet) are recomputed before every request.
+LAZY = {"on": False, "none": False, "loaded": set(), "groups": (), "offer": (),
+        "shell_light": False, "preload_shell": True}
+# stream: by default only the first round of a request streams. A round that ends in a tool call
+# is sent twice when it streams (the stream is repeated without streaming to get exact steps), so
+# the rounds after a tool ran are not streamed unless "after_tools" is on.
+STREAM_OPTS = {"after_tools": False}
+TOOL_GROUP_HELP = {
+  "shell": "shell (run commands on the device)",
+  "files": "files (read, edit, write and search files)",
+  "web": "web (search the internet and read web pages)",
+}
+
+def use_tools_tool():
+  return {
+    "type": "function",
+    "name": "use_tools",
+    "description": (
+      "Load device tool groups (not sent by default, to save tokens). Call it once with "
+      "every group you need; their tools and rules are available from the next request. "
+      "Groups that are already loaded are ignored."
+    ),
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "groups": {
+          "type": "array",
+          "items": {"type": "string", "enum": list(LAZY["offer"] or LAZY["groups"])},
+          "description": "Groups to load.",
+        }
+      },
+      "required": ["groups"],
+    },
+  }
+
+def _set_web(on):
+  WEB_SEARCH["enabled"] = bool(on)
+  WEB_FETCH["enabled"] = bool(on)
+
+def lazy_plan(policy):
+  """Decide what the next request carries. Returns (shell_on, files_on): the groups whose
+  tools and rules are sent now. Lazy mode offers every group to the AI (it loads them with
+  use_tools, no confirmation); --no-tools offers nothing; --eager-tools sends every enabled
+  group with every request."""
+  LAZY["shell_light"] = False
+  if LAZY["none"]:
+    LAZY["groups"] = LAZY["offer"] = ()
+    _set_web(False)
+    return False, False
+  if not LAZY["on"]:
+    LAZY["groups"] = LAZY["offer"] = ()
+    _set_web(policy.web_enabled)
+    return policy.enabled, policy.files_enabled
+  # Shell "light": the small run_command schema is always sent, so the first command needs no
+  # use_tools request. Running it loads the full shell rules for the next request.
+  LAZY["shell_light"] = bool(LAZY["preload_shell"] and policy.enabled and "shell" not in LAZY["loaded"])
+  LAZY["groups"] = ("shell", "files", "web")
+  LAZY["offer"] = tuple(group for group in LAZY["groups"] if group not in LAZY["loaded"])
+  _set_web("web" in LAZY["loaded"] and policy.web_enabled)
+  return (
+    policy.enabled and "shell" in LAZY["loaded"],
+    policy.files_enabled and "files" in LAZY["loaded"],
+  )
+
+def lazy_stub():
+  light = LAZY["shell_light"]
+  groups = [group for group in LAZY["offer"] if not (light and group == "shell")]
+  intro = ""
+  if light:
+    intro = (
+      "run_command is available now (avoid destructive actions unless asked; never expose "
+      "secrets); its detailed rules load after the first command. "
+    )
+  if not groups:
+    return intro.strip()
+  if groups == ["web"]:
+    # Only web is left: a one-line reminder, not the full explanation, on every request.
+    return intro + (
+      "Web tools (web_search, web_fetch) are not loaded; to search the internet or read a "
+      "page, first call use_tools with groups [\"web\"]."
+    )
+  return intro + (
+    ("Other device tools exist" if light else "Device tools exist")
+    + " but are not loaded, to save tokens: "
+    + "; ".join(TOOL_GROUP_HELP[group] for group in groups)
+    + ". Answer plain questions directly. When the request needs them, first call use_tools "
+    "with the groups required, then use the loaded tools. If use_tools is refused, the user "
+    "turned that group off (/shell off or /files off); tell them so. Never say you cannot run "
+    "commands, access files or search the web without trying."
+  )
+
+def _tool_locked(name):
+  """True when a tool belongs to a group that has not been loaded with use_tools yet."""
+  if name == "run_command":
+    return "shell" not in LAZY["loaded"] and not LAZY["preload_shell"]
+  if name in FILE_TOOL_NAMES:
+    return "files" not in LAZY["loaded"]
+  if name in ("web_search", "web_fetch"):
+    return "web" not in LAZY["loaded"]
+  if name == "get_guide":
+    return not (LAZY["loaded"] & {"shell", "files"})
+  return False
+
+def do_use_tools(arguments, policy, ui):
+  wanted = arguments.get("groups")
+  if isinstance(wanted, str):
+    wanted = [wanted]
+  if not isinstance(wanted, list) or not wanted:
+    return {"error": "groups is required. Available: " + (", ".join(LAZY["groups"]) or "none")}
+  loaded, refused = [], []
+  for group in (str(item) for item in wanted):
+    if group not in TOOL_GROUP_HELP:
+      refused.append(group)
+      continue
+    approved = {
+      "shell": policy.enabled,
+      "files": policy.files_enabled,
+      "web": policy.web_enabled,
+    }[group]
+    if approved:
+      LAZY["loaded"].add(group)
+      loaded.append(group)
+    else:
+      refused.append(group)
+  if not loaded:
+    return {"error": "Not available (turned off by the user or unknown): " + ", ".join(refused)}
+  result = {
+    "loaded": loaded,
+    "message": "Loaded. The tools of these groups and their rules are available from now on; "
+    "continue the task by calling them.",
+  }
+  if refused:
+    result["refused"] = refused
+  return result
+
 def guide_topics():
   return ["color"] + (["markdown"] if ALLOW_MARKDOWN else [])
 
@@ -1540,7 +1749,10 @@ def build_system_instruction(
   memory_summary=None,
   shell_enabled=False,
   files_enabled=False,
+  raw=False,
 ):
+  if raw:  # internal calls (memory summary): the instruction alone, no formatting/scope/tool rules
+    return instruction
   language_rule = (
     f"Always reply in {language} (name or BCP-47 tag), whatever language the user writes in. "
     "Keep code identifiers, commands, API/library names and technical terms unchanged. "
@@ -1564,18 +1776,19 @@ def build_system_instruction(
   else:
     parts.append(plain_text_rule)
   parts.extend([COLOR_STUB if lazy else COLOR_GUIDE, scope_rule])
+  if LAZY["offer"]:
+    parts.append(lazy_stub())
   if shell_enabled:
     parts.append(
       "Tool run_command on the user's device. Run only needed commands; for a given path "
       "inspect only it (no ls/find/wc on parents or unrelated dirs); prefer read-only. Check "
       "exit codes: nonzero is a failure. Avoid unrelated side effects and destructive actions "
-      "(delete, format, bulk change, overwrite) unless asked. Never expose secrets. If a "
-      "command is denied, do not retry it in another form."
+      "(delete, format, bulk change, overwrite) unless asked. Never expose secrets."
     )
   if files_enabled:
-    parts.append(
+    parts.append((
       "Tools: read_file, edit_file, write_file, search_files. Read each file fully once (large "
-      "limit, all needed files in one round) before editing; old_text must be copied exactly. "
+      "limit) before editing; old_text must be copied exactly. "
       "One edit_file call per file with all edits; if old_text is not found or ambiguous, "
       "re-read only the affected lines and resend the full edits list. Work only inside the "
       "named path; do not list/search parents, siblings or cwd unless required (e.g. resolving "
@@ -1583,9 +1796,8 @@ def build_system_instruction(
       "what is needed and preserve behavior, structure, interfaces, naming, encoding, line "
       "endings, language and format; check directly dependent code. Never overwrite user data "
       "or reveal secrets. "
-      + ("Use search_files instead of shell grep/find. " if shell_enabled else "")
-      + "If a change is denied, do not retry it in another form."
-    )
+      + ("Use search_files instead of shell grep/find." if shell_enabled else "")
+    ).rstrip())
   if shell_enabled or files_enabled:
     batch = (
       "Group independent operations into the fewest tool calls; run dependent ones "
@@ -1604,11 +1816,11 @@ def build_system_instruction(
         + " run sequentially in order. "
       )
     batch += (
-      "Never batch in a way that hides errors, weakens safety or bypasses confirmation. "
+      "Never batch in a way that hides errors, or weakens safety. "
       "Keep output concise. Retry only plausibly temporary failures or with a specific fix, "
-      "bounded, never denied or destructive actions. On failure inspect the actual result, "
-      "fix if safe and in scope, or explain cause and state. Never claim success without "
-      "evidence."
+      "bounded; never retry a blocked or refused action in another form, and never retry "
+      "destructive ones. On failure inspect the actual result, fix if safe and in scope, or "
+      "explain cause and state."
     )
     parts.append(batch)
     if files_enabled:
@@ -1651,7 +1863,7 @@ def build_system_instruction(
         "every minor edit when a focused check is sufficient. "
       )
     verify += (
-      "Never claim a check was performed if it was not. When the last tool results "
+      "Never claim success or a check without evidence. When the last tool results "
       "need no further action, write the final report in that same response without "
       "another tool call. "
     )
@@ -1686,6 +1898,8 @@ def build_system_instruction(
     )
   if shell_enabled:
     parts.append("Dir: " + os.getcwd() + ". System: " + platform.system() + ".")
+  elif files_enabled:
+    parts.append("Dir: " + os.getcwd() + ".")  # relative paths of the file tools start here
   if memory_summary:
     parts.append(
       "Persistent conversation memory (use as background context; prefer newer messages "
@@ -1740,13 +1954,15 @@ def _compatible_messages(history, instruction):
   return messages
 
 def _compatible_tools(shell_enabled, files_enabled):
-  tools = ([RUN_COMMAND_TOOL] if shell_enabled else []) + (FILE_TOOLS if files_enabled else [])
+  tools = ([RUN_COMMAND_TOOL] if (shell_enabled or LAZY["shell_light"]) else []) + (FILE_TOOLS if files_enabled else [])
   if shell_enabled or files_enabled:
     tools = tools + [guide_tool()]
-    if WEB_SEARCH["enabled"]:
-      tools = tools + [WEB_SEARCH_TOOL]
-    if WEB_FETCH["enabled"]:
-      tools = tools + [WEB_FETCH_TOOL]
+  if WEB_SEARCH["enabled"]:
+    tools = tools + [WEB_SEARCH_TOOL]
+  if WEB_FETCH["enabled"]:
+    tools = tools + [WEB_FETCH_TOOL]
+  if LAZY["offer"]:  # nothing left to load: do not send use_tools
+    tools = tools + [use_tools_tool()]
   return [{"type": "function", "function": {"name": tool["name"], "description": tool["description"], "parameters": tool["parameters"]}} for tool in tools]
 
 def _compatible_urlopen(request, timeout, status_callback=None):
@@ -1776,9 +1992,9 @@ def _compatible_urlopen(request, timeout, status_callback=None):
     except NETWORK_ERRORS as exc:
       raise _net_error(exc, provider) from exc
 
-def call_compatible_api(api_key, model, history, instruction, language, thinking, timeout, memory_summary=None, shell_enabled=False, files_enabled=False, stream_callback=None, status_callback=None):
-  system_instruction = build_system_instruction(instruction, language, memory_summary, shell_enabled, files_enabled)
-  payload = {"model": model, "messages": _compatible_messages(history, system_instruction), "stream": bool(stream_callback and not (shell_enabled or files_enabled))}
+def call_compatible_api(api_key, model, history, instruction, language, thinking, timeout, memory_summary=None, shell_enabled=False, files_enabled=False, stream_callback=None, status_callback=None, raw_instruction=False):
+  system_instruction = build_system_instruction(instruction, language, memory_summary, shell_enabled, files_enabled, raw=raw_instruction)
+  payload = {"model": model, "messages": _compatible_messages(history, system_instruction), "stream": bool(stream_callback and not (shell_enabled or files_enabled or WEB_SEARCH["enabled"] or WEB_FETCH["enabled"]))}
   thinking_key = (ACTIVE_PROVIDER["name"], model)
   if thinking != "auto" and thinking_key not in THINKING_UNSUPPORTED:
     payload["reasoning_effort"] = thinking
@@ -1811,7 +2027,14 @@ def call_compatible_api(api_key, model, history, instruction, language, thinking
       raise
   try:
     _stage(status_callback, "receiving")
-    return _compatible_read(opened, payload, stream_callback, status_callback)
+    result = _compatible_read(opened, payload, stream_callback, status_callback)
+    if result is None:
+      # The model answered with a tool call (e.g. use_tools) while streaming: ask again
+      # without streaming so the call arrives complete.
+      payload["stream"] = False
+      opened = _compatible_urlopen(build_request(), timeout, status_callback)
+      result = _compatible_read(opened, payload, None, status_callback)
+    return result
   except NETWORK_ERRORS as exc:
     raise _net_error(exc, PROVIDERS[ACTIVE_PROVIDER["name"]]["label"]) from exc
 
@@ -1823,6 +2046,7 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
       reasoning = ""
       reasoning_all = []
       usage_seen = None
+      saw_call = False
       for raw in response:
         line = raw.decode("utf-8", errors="replace").strip()
         if not line.startswith("data:"):
@@ -1840,6 +2064,8 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
           usage_seen = event["usage"]
         choices = event.get("choices") or []
         delta = choices[0].get("delta", {}) if choices else {}
+        if delta.get("tool_calls"):
+          saw_call = True
         piece = delta.get("content")
         if isinstance(piece, str) and piece:
           pieces.append(piece)
@@ -1850,6 +2076,8 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
             reasoning_all.append(part)
             reasoning = (reasoning + part)[-600:]
             _live_line(status_callback, "thinking_stage", reasoning, live_state)
+      if saw_call:
+        return None
       answer = "".join(pieces).strip()
       if not answer:
         raise RuntimeError(ACTIVE_PROVIDER["name"].title() + " returned no text.")
@@ -2496,10 +2724,11 @@ def call_gemini(
   stream_callback=None,
   status_callback=None,
   use_extras=True,
+  raw_instruction=False,
 ):
   if ACTIVE_PROVIDER["name"] != "gemini":
     effective_instruction = system_instruction_override if system_instruction_override is not None else instruction
-    return call_compatible_api(api_key, model, history, effective_instruction, language, thinking, timeout, memory_summary, shell_enabled, files_enabled, stream_callback, status_callback)
+    return call_compatible_api(api_key, model, history, effective_instruction, language, thinking, timeout, memory_summary, shell_enabled, files_enabled, stream_callback, status_callback, raw_instruction=raw_instruction)
   payload = {
     "model": model,
     "input": history,
@@ -2513,20 +2742,23 @@ def call_gemini(
         memory_summary,
         shell_enabled,
         files_enabled,
+        raw=raw_instruction,
       )
     ),
   }
   tools = []
-  if shell_enabled:
+  if shell_enabled or LAZY["shell_light"]:
     tools.append(RUN_COMMAND_TOOL)
   if files_enabled:
     tools.extend(FILE_TOOLS)
   if shell_enabled or files_enabled:
     tools.append(guide_tool())
-    if WEB_SEARCH["enabled"]:
-      tools.append(WEB_SEARCH_TOOL)
-    if WEB_FETCH["enabled"]:
-      tools.append(WEB_FETCH_TOOL)
+  if WEB_SEARCH["enabled"]:
+    tools.append(WEB_SEARCH_TOOL)
+  if WEB_FETCH["enabled"]:
+    tools.append(WEB_FETCH_TOOL)
+  if LAZY["offer"]:  # nothing left to load: do not send use_tools
+    tools.append(use_tools_tool())
   if use_extras:
     tools = tools + [{"type": name} for name in GEMINI_EXTRAS["tools"]]
   if tools:
@@ -2583,6 +2815,8 @@ def call_gemini(
       files_enabled=files_enabled,
       stream_callback=None,
       status_callback=status_callback,
+      use_extras=use_extras,
+      raw_instruction=raw_instruction,
     )
   if data.get("status") in ("failed", "cancelled"):
     raise RuntimeError(
@@ -2612,17 +2846,13 @@ def call_gemini(
 class ShellPolicy:
   """Per-run settings for command execution."""
 
-  def __init__(self, enabled=False, auto_approve=False,
-               timeout=DEFAULT_SHELL_TIMEOUT,
-               files_enabled=False,
-               allowed_roots=None,
-               log_path=None):
-    self.allowed_roots = allowed_roots
+  def __init__(self, enabled=True, timeout=DEFAULT_SHELL_TIMEOUT,
+               files_enabled=True, log_path=None, web_enabled=True):
     self.log_path = log_path
     self.last_decision = "n/a"
     self.files_enabled = files_enabled
+    self.web_enabled = web_enabled
     self.enabled = enabled
-    self.auto_approve = auto_approve
     self.timeout = timeout
     self.command_count = 0
     self.edited = []  # files changed during this turn, printed after the answer
@@ -2919,22 +3149,6 @@ def check_command_guard(command, depth=0):
       if _protected_target(target, home, prefix):
         return f"recursive delete of '{target}'"
   return None
-
-def check_path_allowed(path, policy):
-  """Return an error dict if the path is outside the allowed roots."""
-  roots = policy.allowed_roots
-  if roots is None:
-    return None
-  real = os.path.realpath(path)
-  for root in roots:
-    if real == root or real.startswith(root.rstrip(os.sep) + os.sep):
-      return None
-  return {
-    "error": (
-      f"Path is outside the allowed directories: {path}. "
-      f"Allowed: {', '.join(roots)}"
-    )
-  }
 
 LOG_TEXT = {
   "vi": {
@@ -3271,51 +3485,6 @@ def _log_result(result):
       summary[key] = value
   return summary
 
-def _confirm_action(preview, policy, ui, prompt_key="run_prompt"):
-  """Show a preview and ask the user. Returns True if allowed."""
-  if policy.auto_approve:
-    policy.last_decision = "auto"
-    return True
-  if not (sys.stdin.isatty() and sys.stderr.isatty()):
-    print(COLORS.error(ui["run_non_tty"]), file=sys.stderr)
-    policy.last_decision = "denied-no-tty"
-    return False
-  print(f"\n{COLORS.value(preview)}", file=sys.stderr)
-  try:
-    reply = input(
-      f"{COLORS.spinner(ui[prompt_key])} "
-    ).strip().lower()
-  except (EOFError, KeyboardInterrupt):
-    print(file=sys.stderr)
-    policy.last_decision = "denied"
-    return False
-  if reply in ("a", "always"):
-    policy.auto_approve = True
-    policy.last_decision = "approved-always"
-    return True
-  approved = reply in ("y", "yes")
-  policy.last_decision = "approved" if approved else "denied"
-  return approved
-
-def confirm_action(preview, policy, ui, prompt_key="run_prompt"):
-  """Pause the spinner while the user is being asked."""
-  spinner = ACTIVE_SPINNER["s"]
-  paused = bool(
-    spinner is not None
-    and spinner.thread is not None
-    and not policy.auto_approve
-  )
-  if paused:
-    spinner.stop()
-  try:
-    return _confirm_action(preview, policy, ui, prompt_key)
-  finally:
-    if paused:
-      spinner.start()
-
-def confirm_command(command, policy, ui):
-  return confirm_action("$ " + command, policy, ui, "run_prompt")
-
 def _resolve(path):
   return os.path.abspath(os.path.expanduser(str(path or "")))
 
@@ -3331,19 +3500,6 @@ def _backup(path):
   if os.path.exists(path):
     shutil.copy2(path, path + ".bak")
 
-def _diff_preview(old, new, path, max_lines=60):
-  diff = list(difflib.unified_diff(
-    old.splitlines(),
-    new.splitlines(),
-    fromfile=path,
-    tofile=path + " (new)",
-    lineterm="",
-    n=2,
-  ))
-  if len(diff) > max_lines:
-    extra = len(diff) - max_lines
-    diff = diff[:max_lines] + [f"... ({extra} more diff lines)"]
-  return "\n".join(diff) or "(no textual change)"
 
 def _syntax_check(path, text):
   """Quick parse check for a few file types; None if not applicable."""
@@ -3447,9 +3603,6 @@ def print_edited_files(policy, ui):
 
 def tool_read_file(args, policy):
   path = _resolve(args.get("path"))
-  denied = check_path_allowed(path, policy)
-  if denied:
-    return denied
   if not os.path.isfile(path):
     return {"error": f"Not a file: {path}"}
   try:
@@ -3511,9 +3664,6 @@ def _nearest_lines(text, old, limit=3):
 
 def tool_edit_file(args, policy, ui):
   path = _resolve(args.get("path"))
-  denied = check_path_allowed(path, policy)
-  if denied:
-    return denied
   edits = args.get("edits")
   if not edits:
     edits = [{
@@ -3574,10 +3724,7 @@ def tool_edit_file(args, policy, ui):
     replacements += count if replace_all else 1
   if updated == text:
     return {"error": "old_text and new_text are identical; the file would not change."}
-  preview = f"Edit {path}\n" + _diff_preview(text, updated, path)
-  if not confirm_action(preview, policy, ui, "apply_prompt"):
-    print(COLORS.error(ui["run_denied"]), file=sys.stderr)
-    return {"error": "The user denied this change."}
+  policy.last_decision = "auto"
   try:
     _backup(path)
     _write_text(path, updated)
@@ -3594,9 +3741,6 @@ def tool_write_file(args, policy, ui):
   content = args.get("content")
   if not args.get("path") or not isinstance(content, str):
     return {"error": "path and content (string) are required."}
-  denied = check_path_allowed(path, policy)
-  if denied:
-    return denied
   if os.path.isdir(path):
     return {"error": f"Path is a directory: {path}"}
   existed = os.path.isfile(path)
@@ -3607,15 +3751,7 @@ def tool_write_file(args, policy, ui):
       original_text = old
     except (OSError, UnicodeDecodeError):
       old = ""
-    preview = f"Overwrite {path}\n" + _diff_preview(old, content, path)
-  else:
-    head = "\n".join(content.splitlines()[:15])
-    preview = (
-      f"Create {path} ({len(content)} characters)\n{head}"
-    )
-  if not confirm_action(preview, policy, ui, "apply_prompt"):
-    print(COLORS.error(ui["run_denied"]), file=sys.stderr)
-    return {"error": "The user denied this change."}
+  policy.last_decision = "auto"
   try:
     directory = os.path.dirname(path)
     if directory:
@@ -3634,9 +3770,6 @@ def tool_search_files(args, policy):
   if not pattern:
     return {"error": "pattern is required."}
   root = _resolve(args.get("path") or ".")
-  denied = check_path_allowed(root, policy)
-  if denied:
-    return denied
   single_file = os.path.isfile(root)
   if not single_file and not os.path.isdir(root):
     return {"error": f"Not a directory: {root}"}
@@ -3685,8 +3818,6 @@ def tool_search_files(args, policy):
         if include and not single_file and not fnmatch.fnmatch(name, include):
           continue
         try:
-          if check_path_allowed(full, policy):
-            continue
           if os.path.getsize(full) > 2000000:
             continue
           with open(full, "rb") as probe:
@@ -3721,7 +3852,7 @@ PARALLEL_WORKERS = 4
 def _is_read_only(step, policy):
   name = str(step.get("name") or "")
   if name in ("web_fetch", "web_search"):
-    return bool((WEB_FETCH["enabled"] or WEB_SEARCH["enabled"]) and (policy.enabled or policy.files_enabled))
+    return bool(WEB_FETCH["enabled"] or WEB_SEARCH["enabled"])
   return bool(policy.files_enabled) and name in READ_ONLY_TOOLS
 
 def run_read_calls_parallel(group, policy, ui):
@@ -3765,7 +3896,18 @@ def run_tool_call(step, policy, ui):
         "write into several smaller edit_file/edits calls or shorter commands."
       )
     }
+  elif LAZY["on"] and _tool_locked(name):
+    result = {
+      "error": (
+        "This tool group is not loaded yet. Call use_tools first with the group you need "
+        "(shell for run_command, files for the file tools, web for web_search/web_fetch), then repeat this call."
+      )
+    }
+  elif name == "use_tools" and LAZY["on"]:
+    result = do_use_tools(arguments, policy, ui)
   elif name == "run_command" and policy.enabled:
+    if LAZY["on"]:
+      LAZY["loaded"].add("shell")  # the full shell rules are sent from the next request
     command = str(arguments.get("command", "")).strip()
     reason = check_command_guard(command) if command else None
     if not command:
@@ -3782,7 +3924,8 @@ def run_tool_call(step, policy, ui):
           "was not run; do not retry it in another form."
         )
       }
-    elif confirm_command(command, policy, ui):
+    else:
+      policy.last_decision = "auto"
       policy.command_count += 1
       command_number = policy.command_count
       live = LiveLog(
@@ -3796,16 +3939,13 @@ def run_tool_call(step, policy, ui):
         print(COLORS.label(live.label_full), flush=True)
         result = execute_command(command, policy.timeout)
       result["command_number"] = command_number
-    else:
-      result = {"error": "The user denied this command."}
-      print(COLORS.error(ui["run_denied"]), file=sys.stderr)
-  elif name == "web_search" and WEB_SEARCH["enabled"] and (policy.enabled or policy.files_enabled):
+  elif name == "web_search" and WEB_SEARCH["enabled"]:
     query = str(arguments.get("query", "")).strip()
     result = (
       do_web_search(query, arguments.get("max_results"))
       if query else {"error": "query is required"}
     )
-  elif name == "web_fetch" and WEB_FETCH["enabled"] and (policy.enabled or policy.files_enabled):
+  elif name == "web_fetch" and WEB_FETCH["enabled"]:
     url = str(arguments.get("url", "")).strip()
     result = (
       do_web_fetch(url, arguments.get("max_chars"), arguments.get("start"))
@@ -3864,6 +4004,7 @@ class StreamPrinter:
   def __call__(self, piece):
     text = self.ansi.feed(piece)
     if not self.started:
+      _progress_hold()
       self.started = True
       if self.header:
         sys.stdout.write(self.header)
@@ -3952,6 +4093,8 @@ def chat_turn(
   WHO["label"] = who
   last_detail = ""
   first_round = True
+  round_index = 0
+  stream_state = {"text": False}
   while True:
     # Status text: who is answering; after a tool ran, that the result is being sent back
     if spinner_text and ui:
@@ -3973,6 +4116,7 @@ def chat_turn(
     def on_text(piece, spinner=spinner):
       if spinner:
         spinner.stop()
+      stream_state["text"] = True
       stream_out(piece)
 
     def status(text, spinner=spinner, base=round_text):
@@ -3982,6 +4126,10 @@ def chat_turn(
           emit_progress(text or base)
 
     animating = bool(spinner and spinner.thread)
+    shell_now, files_now = lazy_plan(policy)
+    stream_now = stream_out is not None and (round_index == 0 or STREAM_OPTS["after_tools"])
+    round_index += 1
+    stream_state["text"] = False
     try:
       answer, steps = call_gemini(
         api_key=api_key,
@@ -3992,14 +4140,18 @@ def chat_turn(
         thinking=thinking,
         timeout=timeout,
         memory_summary=memory_summary,
-        shell_enabled=policy.enabled,
-        files_enabled=policy.files_enabled,
-        stream_callback=on_text if stream_out else None,
+        shell_enabled=shell_now,
+        files_enabled=files_now,
+        stream_callback=on_text if stream_now else None,
         status_callback=status if (animating or progress_enabled()) else None,
       )
       generated.extend(steps)
       calls = [step for step in steps if isinstance(step, dict) and step.get("type") == "function_call"]
       if not calls:
+        # An earlier round already printed text through the stream, so the printer decides how
+        # the answer is shown: print this (non-streamed) final answer through it too.
+        if stream_out is not None and answer and not stream_state["text"] and getattr(stream_out, "started", False):
+          on_text(answer)
         api_log_turn_total()
         return answer, generated
       results = []
@@ -4044,11 +4196,13 @@ def chat_turn(
       if spinner:
         spinner.stop()
       ACTIVE_SPINNER["s"] = None
+      LAZY["groups"] = LAZY["offer"] = ()  # other requests (memory summary) carry no tools
+      LAZY["shell_light"] = False
 
 def get_memory_path(args):
   configured_path = (
     args.memory_file
-    or os.environ.get("GEMINI_CLI_MEMORY_FILE")
+    or os.environ.get("AI_MEMORY_FILE")
   )
   if configured_path:
     return os.path.abspath(
@@ -4057,7 +4211,7 @@ def get_memory_path(args):
   new_path = os.path.join(DATA_DIR, "memory.sqlite3")
   old_path = os.path.join(
     tempfile.gettempdir(),
-    "gemini_cli_memory.sqlite3",
+    "ai_memory.sqlite3",
   )
   if not os.path.exists(new_path) and os.path.exists(old_path):
     try:
@@ -4407,6 +4561,7 @@ def _summarize_memory_chunk(
     thinking="low",
     timeout=timeout,
     use_extras=False,
+    raw_instruction=True,
   )
   if len(answer) > MAX_SUMMARY_CHARS:
     compact_prompt = (
@@ -4416,16 +4571,16 @@ def _summarize_memory_chunk(
       "project decisions, important paths, constraints, "
       "and unresolved tasks. Remove repetition and obsolete "
       "details. Do not invent facts. "
-      "Return only the compact summary.\n\n"
-      + answer
+      "Return only the compact summary."
     )
+    # The summary is sent once (as the user message); the instruction holds only the command.
     answer, _ = call_gemini(
       api_key=api_key,
       model=model,
       history=[
         {
           "type": "user_input",
-          "content": compact_prompt,
+          "content": answer,
         }
       ],
       instruction=compact_prompt,
@@ -4433,6 +4588,7 @@ def _summarize_memory_chunk(
       thinking="low",
       timeout=timeout,
       use_extras=False,
+      raw_instruction=True,
     )
   if len(answer) > MAX_SUMMARY_CHARS:
     raise RuntimeError(
@@ -4458,9 +4614,8 @@ def show_help(cli_language):
     ("/thinking auto|low|medium|high", ui["thinking_help"]),
     ("/lang <language>", ui["lang_help"]),
     ("/instruction <text>", ui["instruction_help"]),
-    ("/shell on|off|auto", ui["shell_help"]),
+    ("/shell on|off", ui["shell_help"]),
     ("/files on|off", ui["files_help"]),
-    ("/all on|off", ui["all_help"]),
     ("/stream on|off", ui["stream_help"]),
     ("/clear", ui["clear_help"]),
     ("/exit", ui["exit_help"]),
@@ -4471,6 +4626,17 @@ def show_help(cli_language):
       f"  {COLORS.help(command)}\n"
       f"      {description}\n"
     )
+
+def compact_old_turns(history, limit=OLD_TURNS_COMPACT_CHARS):
+  """Shrink large tool results of earlier turns (the newest turn is kept whole), so they are
+  not resent in full with every later request. The model can run the tool again if needed."""
+  user_positions = [
+    index for index, item in enumerate(history)
+    if isinstance(item, dict) and item.get("type") == "user_input"
+  ]
+  if len(user_positions) < 2:
+    return history
+  return compact_working(history, 0, user_positions[-1], limit=limit)
 
 def trim_history(history, limit=INTERACTIVE_HISTORY_CHARS):
   """Drop the oldest whole turns so the RAM history stays bounded."""
@@ -4495,35 +4661,42 @@ def trim_history(history, limit=INTERACTIVE_HISTORY_CHARS):
     sizes.pop(0)
   return [item for t in turns for item in t]
 
+UA_PRESETS = {
+  "default": USER_AGENT,
+  "browser": WEB_USER_AGENT,
+  "curl": "curl/8.5.0",
+}
+
+def apply_custom_headers(args):
+  """Apply --ua-preset, --user-agent and --header to the default urllib opener.
+  Headers set per request (Authorization, Content-Type, ...) still take priority."""
+  headers = {"User-Agent": args.user_agent or UA_PRESETS[args.ua_preset]}
+  for item in args.header:
+    name, sep, value = item.partition(":")
+    if not sep or not name.strip():
+      raise ValueError(f"Invalid --header (use 'Name: value'): {item}")
+    headers[name.strip()] = value.strip()
+  _opener.addheaders = list(headers.items())
+
 def run():
   global ALLOW_MARKDOWN
   args = parse_args()
-  PROGRESS["single"] = not (
-    str(args.progress_single).strip() == "1"
-    or os.environ.get("GEMINI_CLI_PROGRESS_SINGLE", "").strip() == "1"
-  )
-  PROGRESS["enabled"] = bool(args.progress) or (
-    os.environ.get("GEMINI_CLI_PROGRESS", "").strip().lower() in ("1", "true", "yes", "on")
-  )
-  ALLOW_MARKDOWN = bool(args.markdown) or (
-    os.environ.get("GEMINI_CLI_MARKDOWN", "").strip().lower() in ("1", "true", "yes", "on")
-  )
-  def _env_on(name):
-    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+  try:
+    apply_custom_headers(args)
+  except ValueError as exc:
+    print(COLORS.error(str(exc)), file=sys.stderr)
+    return 2
+  PROGRESS["single"] = not args.progress_single
+  PROGRESS["enabled"] = args.progress
+  ALLOW_MARKDOWN = args.markdown
 
   # Web access always goes through the tool's own web_search / web_fetch (DuckDuckGo), for every
   # provider. Gemini's built-in google_search is no longer used.
   extra_tools = []
-  if args.code_exec or _env_on("GEMINI_CLI_CODE_EXEC"):
+  if args.code_exec:
     extra_tools.append("code_execution")
-  explicit_search = bool(args.search or _env_on("GEMINI_CLI_SEARCH"))
-  explicit_other = bool(args.code_exec or _env_on("GEMINI_CLI_CODE_EXEC"))
+  explicit_other = bool(args.code_exec)
   max_out = args.max_output_tokens
-  if max_out is None:
-    try:
-      max_out = int(os.environ.get("GEMINI_CLI_MAX_OUTPUT_TOKENS", "") or 0) or None
-    except ValueError:
-      max_out = None
   if args.provider != "gemini" and (explicit_other or max_out):
     print(
       "Warning: --code-exec and --max-output-tokens only work with "
@@ -4532,27 +4705,26 @@ def run():
     )
   WEB_SEARCH["enabled"] = False
   WEB_FETCH["enabled"] = False
-  web_wanted = explicit_search or (args.all and not (args.no_web or _env_on("GEMINI_CLI_NO_WEB")))
-  if web_wanted and (args.shell or args.files):
-    WEB_SEARCH["enabled"] = True
-    WEB_FETCH["enabled"] = True
-  elif explicit_search:
-    print(
-      "Warning: --search needs --shell or --files; web search is off.",
-      file=sys.stderr,
-    )
+  lazy_tools = not args.eager_tools
+  LAZY["none"] = bool(args.no_tools)
   if args.provider != "gemini":
     extra_tools, max_out = [], None
   GEMINI_EXTRAS["tools"] = extra_tools
   GEMINI_EXTRAS["max_output_tokens"] = max_out
-  env_target = os.environ.get("GEMINI_CLI_API_LOG", "").strip()
-  # On by default in ~/.cache/api.log; GEMINI_CLI_API_LOG=0/false/no/off turns it off.
+  LAZY["on"] = lazy_tools
+  LAZY["preload_shell"] = args.preload_shell
+  STREAM_OPTS["after_tools"] = args.stream_after_tools
+  LAZY["loaded"].clear()
+  env_target = os.environ.get("AI_API_LOG", "").strip()
+  if args.api_log is False:
+    env_target = "0"
+  elif args.api_log is True and env_target.lower() in ("0", "false", "no", "off"):
+    env_target = "1"
+  # On by default in ~/.cache/api.log; AI_API_LOG=0/false/no/off turns it off.
   if env_target.lower() not in ("0", "false", "no", "off"):
     api_log_target = "" if env_target.lower() in ("", "1", "true", "yes", "on") else env_target
     API_LOG["path"] = os.path.abspath(os.path.expanduser(api_log_target or DEFAULT_API_LOG_FILE))
-  API_LOG["full"] = bool(args.api_log_full) or (
-    os.environ.get("GEMINI_CLI_API_LOG_FULL", "").strip().lower() in ("1", "true", "yes", "on")
-  )
+  API_LOG["full"] = args.api_log_full
   question = (
     args.prompt
     if args.prompt is not None
@@ -4623,38 +4795,26 @@ def run():
   model = args.model
   thinking = args.thinking
   policy = ShellPolicy(
-    enabled=args.shell,
-    auto_approve=args.yes,
     timeout=args.shell_timeout,
-    files_enabled=args.files,
-    allowed_roots=(
-      None
-      if args.any_path
-      else [os.path.realpath(os.getcwd())]
-      + [
-        os.path.realpath(os.path.expanduser(item))
-        for item in args.allow_path
-      ]
-    ),
     log_path=os.path.abspath(
       os.path.expanduser(
-        os.environ.get("GEMINI_CLI_LOG_FILE") or DEFAULT_LOG_FILE
+        os.environ.get("AI_LOG_FILE") or DEFAULT_LOG_FILE
       )
     ),
   )
 
-  ACTION_LOG["path"] = policy.log_path if (policy.enabled or policy.files_enabled) else None
+  ACTION_LOG["path"] = None if LAZY["none"] else policy.log_path
 
   def current_ui():
     return ACTIVE_UI["ui"] or UI_TEXT["en"]
 
   def shell_status():
-    if not policy.enabled:
-      return current_ui()["state_off"]
-    return current_ui()["state_auto" if policy.auto_approve else "state_ask"]
+    on = policy.enabled and not LAZY["none"]
+    return current_ui()["state_on" if on else "state_off"]
 
   def files_status():
-    return current_ui()["state_on" if policy.files_enabled else "state_off"]
+    on = policy.files_enabled and not LAZY["none"]
+    return current_ui()["state_on" if on else "state_off"]
 
   streaming = args.stream
 
@@ -4746,6 +4906,7 @@ def run():
         printer.finish()
     else:
       answer_out = normalize_ansi(answer, close=True)
+      _progress_hold()
       if PROGRESS["pending"]:
         answer_out = answer_out.lstrip("\r\n")
       PROGRESS["pending"] = False
@@ -4791,7 +4952,7 @@ def run():
     (
       ui["log_label"],
       policy.log_path
-      if (policy.log_path and (policy.enabled or policy.files_enabled))
+      if (policy.log_path and not LAZY["none"] and (policy.enabled or policy.files_enabled))
       else ui["state_off"],
     ),
   )
@@ -4832,6 +4993,7 @@ def run():
       continue
     if command == "/clear":
       history = []
+      LAZY["loaded"].clear()
       print(COLORS.value(UI_TEXT[get_cli_language(language)]["clear_done"]))
       continue
     if command.startswith("/thinking"):
@@ -4869,24 +5031,6 @@ def run():
         )
       )
       continue
-    if command.startswith("/all"):
-      cli_language = get_cli_language(language)
-      ui = UI_TEXT[cli_language]
-      parts = message.split()
-      choice = parts[1].lower() if len(parts) == 2 else ""
-      if choice not in ("on", "off"):
-        print(COLORS.error(ui["all_usage"]))
-        continue
-      flag = choice == "on"
-      policy.enabled = flag
-      policy.files_enabled = flag
-      policy.auto_approve = flag
-      ACTION_LOG["path"] = policy.log_path if flag else None
-      web_flag = flag and not (args.no_web or _env_on("GEMINI_CLI_NO_WEB"))
-      WEB_SEARCH["enabled"] = web_flag
-      WEB_FETCH["enabled"] = web_flag
-      print(COLORS.value(ui["all_state"].format(value=choice)))
-      continue
     if command.startswith("/stream"):
       cli_language = get_cli_language(language)
       ui = UI_TEXT[cli_language]
@@ -4911,6 +5055,8 @@ def run():
         print(COLORS.error(ui["files_usage"]))
         continue
       policy.files_enabled = choice == "on"
+      if choice == "off":
+        LAZY["loaded"].discard("files")
       print(
         COLORS.value(
           ui["files_state"].format(value=files_status())
@@ -4924,13 +5070,9 @@ def run():
       choice = parts[1].lower() if len(parts) == 2 else ""
       if choice == "on":
         policy.enabled = True
-        policy.auto_approve = False
-      elif choice == "auto":
-        policy.enabled = True
-        policy.auto_approve = True
       elif choice == "off":
         policy.enabled = False
-        policy.auto_approve = False
+        LAZY["loaded"].discard("shell")
       else:
         print(COLORS.error(ui["shell_usage"]))
         continue
@@ -4995,6 +5137,7 @@ def run():
         "content": message,
       })
       history.extend(generated_steps)
+      history = compact_old_turns(history)
       history = trim_history(history)
     except KeyboardInterrupt:
       history.append({"type": "user_input", "content": message})
@@ -5028,6 +5171,7 @@ def run():
       continue
     cli_language = get_cli_language(language)
     answer_out = normalize_ansi(answer, close=True)
+    _progress_hold()
     if PROGRESS["pending"]:
       answer_out = answer_out.lstrip("\r\n")
     PROGRESS["pending"] = False
