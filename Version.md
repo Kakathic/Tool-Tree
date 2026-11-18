@@ -1,5 +1,13 @@
 ### Changelog
 
+**Version: 1.6.3 (18-11-2026)**
+
++ Minor update
++ Fixed AI agent
++ Fixed interface
++ The official version will be installed offline
++ The beta version will be installed online
+
 **Version: 1.6.2 (12-11-2026)**
 
 + Add security to the API key
