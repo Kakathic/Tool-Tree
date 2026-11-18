@@ -311,6 +311,16 @@
         <item name="android:orientation">vertical</item>
         <item name="android:padding">12dp</item>
     </style>
+
+    <style name="dialogRootInset">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+    </style>
     
     <style name="dialogRootSmall">
         <item name="android:layout_width">match_parent</item>
