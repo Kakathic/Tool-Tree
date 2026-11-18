@@ -11,8 +11,6 @@ get = "glog Tset"
 set = "slog Tset $state"
 
 [[group]]
-columns = true
-card = true
 [[switch]]
 title = "@project_text_7"
 icon = "{ICON}/icon_off.png"
@@ -29,7 +27,6 @@ auto-restart = true
 get = "glog Toff"
 set = "slog Toff $state"
 
-[[group]]
 [[action]]
 title = "@project_text_12"
 icon = "{ICON}/cpu.png"

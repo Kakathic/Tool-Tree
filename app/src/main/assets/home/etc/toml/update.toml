@@ -39,12 +39,10 @@ widget = false
 title = "@update_text_5"
 icon = "{ICON}/website.png"
 link = "https://Kakathic.github.io/Tool-Tree"
-cell = "a"
 [[page]]
 title = "Telegram"
 icon = "{ICON}/telegram.png"
 link = "https://t.me/tooltree"
-cell = "b"
 
 [[group]]
 [[download]]
