@@ -9,7 +9,6 @@ import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.graphics.PixelFormat
-import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.util.TypedValue
 import android.view.View
@@ -21,14 +20,12 @@ import androidx.core.graphics.ColorUtils
 /**
  * Phối màu widget theo màu chính của icon, kiểu "Phát sáng nhẹ" (giống demo HTML kiểu 6):
  * - Mũi tên: màu chính của icon, quầng sáng ôm theo hình mũi tên (drop-shadow 0 0 5px, độ đậm 75%).
- * - Switch: khi bật, track màu chính, quầng sáng quanh track (box-shadow 0 0 10px, độ đậm 55%).
+ * - Switch: khi bật, track màu chính, không có quầng sáng.
  */
 object WidgetTintHelper {
 
     private const val ARROW_GLOW_ALPHA = 0.75f
     private const val ARROW_GLOW_SIGMA_DP = 2.5f   // CSS blur 5px = độ lệch chuẩn 2.5
-    private const val TRACK_GLOW_ALPHA = 0.55f
-    private const val TRACK_GLOW_SIGMA_DP = 5f     // CSS blur 10px = độ lệch chuẩn 5
 
     fun applyTint(context: Context, widgetView: ImageView?, iconDrawable: Drawable?) {
         widgetView ?: return
@@ -58,13 +55,6 @@ object WidgetTintHelper {
 
         updateTrackTint()
         switchView.setOnCheckedChangeListener { _, _ -> updateTrackTint() }
-
-        switchView.background = TrackGlowDrawable(
-            switchView, onColor, TRACK_GLOW_ALPHA,
-            TRACK_GLOW_SIGMA_DP * context.resources.displayMetrics.density,
-            10 * context.resources.displayMetrics.density
-        )
-        allowGlowOverflow(switchView)
     }
 
     /** Cho phép quầng sáng tràn ra ngoài khung view (tối đa 4 cấp cha bên trong item). */
@@ -279,53 +269,6 @@ object WidgetTintHelper {
                 rebuild(src, b.width(), b.height())
             }
             cache?.let { canvas.drawBitmap(it, b.left + offX, b.top + offY, colorPaint) }
-        }
-    }
-
-    /** Quầng sáng quanh track của Switch khi bật (giống box-shadow của CSS), nằm dưới track. */
-    private class TrackGlowDrawable(
-        private val view: Switch,
-        color: Int,
-        alpha: Float,
-        sigmaPx: Float,
-        private val cornerPx: Float
-    ) : BaseGlowDrawable(color, alpha, sigmaPx) {
-
-        private var cache: Bitmap? = null
-        private var cacheW = 0
-        private var cacheH = 0
-        private var offX = 0f
-        private var offY = 0f
-
-        private fun rebuild(w: Int, h: Int) {
-            cache = null
-            cacheW = w
-            cacheH = h
-            if (w <= 0 || h <= 0) return
-
-            val bmp = try {
-                Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-            } catch (e: Exception) {
-                return
-            }
-            val radius = Math.min(cornerPx, Math.min(w, h) / 2f)
-            Canvas(bmp).drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()), radius, radius, Paint(Paint.ANTI_ALIAS_FLAG))
-
-            val off = IntArray(2)
-            cache = bmp.extractAlpha(blurPaint, off)
-            offX = off[0].toFloat()
-            offY = off[1].toFloat()
-            bmp.recycle()
-        }
-
-        override fun draw(canvas: Canvas) {
-            if (!view.isChecked) return
-            val track = view.trackDrawable?.bounds ?: return
-            if (track.width() <= 0 || track.height() <= 0) return
-            if (cache == null || cacheW != track.width() || cacheH != track.height()) {
-                rebuild(track.width(), track.height())
-            }
-            cache?.let { canvas.drawBitmap(it, track.left + offX, track.top + offY, colorPaint) }
         }
     }
 }

@@ -5,18 +5,17 @@ load-key-sh = "langpath"
 columns = true
 card = true
 widget = false
+title-below = true
 [[page]]
 title = "@setting_text_1"
 desc = "@setting_text_2"
 icon = "{ICON}/info.png"
 config = "{HOME}/etc/toml/update.toml"
-cell = "a"
 [[page]]
 title = "@setting_text_7"
 desc = "@setting_text_8"
 icon = "{ICON}/feature.png"
 config = "{HOME}/etc/toml/feature.toml"
-cell = "b"
 
 [[group]]
 [[page]]

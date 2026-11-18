@@ -2,6 +2,10 @@
 load-key-sh = "langpath"
 
 [[group]]
+columns = true
+card = true
+widget = false
+title-below = true
 [[page]]
 title = "@text_addon_manage"
 desc = "@text_addon_manage_desc"
