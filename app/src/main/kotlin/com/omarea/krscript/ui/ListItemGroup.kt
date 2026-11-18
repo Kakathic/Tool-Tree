@@ -37,6 +37,9 @@ class ListItemGroup(context: Context,
     // Cài đặt widget của group (null = không đặt); các mục con chưa tự đặt sẽ kế thừa
     val widgetSetting: Boolean? = config.widget
 
+    // Cài đặt vị trí tiêu đề của group (null = không đặt); các thẻ con chưa tự đặt sẽ kế thừa
+    val titleBelowSetting: Boolean? = config.titleBelow
+
     val cardMode: Boolean = !isRootGroup && !isCell && config.card
 
     val gridMode: Boolean = !isRootGroup && !isCell && (config.columns > 1 || columnWidthDp > 0 || config.card)
@@ -124,7 +127,7 @@ class ListItemGroup(context: Context,
         override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     }
 
-    // Xếp lại con vào lưới: thẻ chia đều từng hàng; hàng cuối còn lẻ thì thẻ giãn full hàng, không chèn ô trống
+    // Xếp lại con vào lưới: thẻ chia đều từng hàng; hàng còn lẻ thì thẻ giãn full hàng (card = true thì chèn ô trống để thẻ giữ nguyên bề rộng cột)
     private fun relayoutGrid() {
         val content = layout.findViewById<ViewGroup>(android.R.id.content)
         val density = context.resources.displayMetrics.density
@@ -133,6 +136,7 @@ class ListItemGroup(context: Context,
         val cols = if (columnWidthDp > 0) columns.coerceAtMost(cellCount.coerceAtLeast(1)) else columns
         content.removeAllViews()
         var row: LinearLayout? = null
+        val gridRows = ArrayList<LinearLayout>()
         for (child in children) {
             val view = child.getView()
             (view.parent as? ViewGroup)?.removeView(view)
@@ -151,6 +155,7 @@ class ListItemGroup(context: Context,
                         if (content.childCount > 0) topMargin = gap
                     })
                     row = current
+                    gridRows.add(current)
                 }
                 current.addView(view, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
                     if (current.childCount > 0) marginStart = gap
@@ -161,6 +166,13 @@ class ListItemGroup(context: Context,
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     if (content.childCount > 0) topMargin = gap
                 })
+            }
+        }
+        if (cardMode) {
+            for (r in gridRows) {
+                while (r.childCount < cols) {
+                    r.addView(View(context), LinearLayout.LayoutParams(0, 0, 1f).apply { marginStart = gap })
+                }
             }
         }
     }

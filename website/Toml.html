@@ -725,6 +725,7 @@ script = "..."</code></pre>
 <tr><td class="field-name">disabled</td><td>disable</td><td class="field-type">Bool</td><td>true: the item is dimmed and cannot be tapped, long-pressed or triggered by key (no message is shown, unlike <code>lock</code>). The switch of a <code>[[switch]]</code> is disabled too. false (default): normal. Not the same as <code>readonly</code> of <code>[[editor]]</code> (file is read-only) or of a param</td></tr>
 <tr><td class="field-name">disabled-sh</td><td>disable-sh</td><td class="field-type">String</td><td><span class="badge shell">shell</span> Script that decides dynamically: prints <code>1</code> = dimmed and not clickable, anything else = clickable again. Runs during parse (batched) and again whenever the item is refreshed (e.g. <code>reload</code> of its block); overrides <code>disabled</code></td></tr>
 <tr><td class="field-name">widget</td><td>show-widget</td><td class="field-type">Bool</td><td>(inherit)</td><td>Icon widget at the end of the item (arrow of <code>[[page]]</code>, run/list button of <code>[[action]]</code>, <code>[[switch]]</code> toggle, download icon and progress ring of <code>[[download]]</code>, ...). <code>false</code> hides it; <code>true</code> forces it to show even if the group hides it; not set = follows the <code>widget</code> of its <code>[[group]]</code> (shown when the group does not set it). The item still works when tapped. A hidden switch no longer shows its on/off state, and a hidden download ring no longer shows progress (the progress text in <code>desc</code> is still updated)</td></tr>
+<tr><td class="field-name">title-below</td><td>title-bottom</td><td class="field-type">Bool</td><td>(inherit)</td><td>Only for entries drawn as a card (inside a <code>[[group]]</code> with <code>card</code>, <code>columns</code> or <code>column-width</code>). <code>true</code> moves the title under the icon row (icon on the left, widget on the right, then the title, then <code>desc</code>); <code>false</code> keeps the title next to the icon even if the group moves it. Not set = follows the <code>title-below</code> of its <code>[[group]]</code> (title next to the icon when the group does not set it). An entry without an icon keeps its title beside the (empty) icon slot, since there is nothing to go under. Ignored in normal list items (section <a href="#group-card">4.5</a>)</td></tr>
 <tr><td class="field-name">min-sdk</td><td>sdk-min</td><td class="field-type">Int</td><td>Minimum Android SDK version</td></tr>
 <tr><td class="field-name">max-sdk</td><td>sdk-max</td><td class="field-type">Int</td><td>Maximum Android SDK version (default 100)</td></tr>
 <tr><td class="field-name">target-sdk</td><td>sdk-target</td><td class="field-type">Int</td><td>Target Android SDK version</td></tr>
@@ -775,6 +776,7 @@ script = "..."</code></pre>
 <tr><td class="field-name">min-columns</td><td>min-cols</td><td class="field-type">Int</td><td>1</td><td>Minimum <strong>number of columns</strong> in automatic mode (1-6), even when the screen is narrow</td></tr>
 <tr><td class="field-name">max-columns</td><td>max-cols</td><td class="field-type">Int</td><td>6</td><td>Maximum <strong>number of columns</strong> in automatic mode (1-6), even when the screen is wide</td></tr>
 <tr><td class="field-name">widget</td><td>show-widget</td><td class="field-type">Bool</td><td>(not set)</td><td><code>false</code> hides the icon widget at the end of every entry of the group (arrow, run button, switch, download icon/ring); an entry can override it with its own <code>widget</code> (section <a href="#shared-fields">3.2</a>). Also applies in card/grid groups</td></tr>
+<tr><td class="field-name">title-below</td><td>title-bottom</td><td class="field-type">Bool</td><td>(not set)</td><td><code>true</code> moves the title of every card of the group under the icon (section <a href="#group-card">4.5</a>); an entry can override it with its own <code>title-below</code>. Default (not set / <code>false</code>) keeps the title next to the icon. Only affects cards, not the normal one-frame list</td></tr>
 </table>
 </div>
 <h3>4.2. Demo</h3>
@@ -877,7 +879,29 @@ cell = "b"                 # card 2 (B1 + B2 stacked)
 title = "B2"
 cell = "b"
 </code></pre>
+<p>In card mode the last row is <strong>not stretched</strong>: when it has fewer cards than columns (for example 3 cards in 2 columns), the leftover card keeps the width of one column and the rest of the row stays empty. (Grids without <code>card = true</code> still stretch the last row, section <a href="#group-grid">4.4</a>.)</p>
 <div class="callout tip">Rules: <code>[[text]]</code> entries are not cards and take a full row. Entries with an empty <code>cell</code> always get their own card, and only <strong>adjacent</strong> entries are merged. Each card is a small group with its own blur, so a group with very many cards costs a bit more than a normal group.</div>
+<p>By default the title sits <strong>next to the icon</strong>: <code>[icon] Title [widget]</code>. With <code>title-below = true</code> on the group (or on a single entry) the title moves under the icon row:</p>
+<pre><code>[ Icon ]            [ widget ]
+Title
+Desc
+</code></pre>
+<pre><code>[[group]]
+title = "Tools"
+card = true
+columns = 2
+title-below = true         # every card: title under the icon
+
+[[action]]
+title = "Clean"
+icon = "clean.png"
+
+[[action]]
+title = "Boost"
+icon = "boost.png"
+title-below = false        # this card keeps the title beside the icon
+</code></pre>
+<div class="callout tip"><code>title-below</code> needs an icon: an entry without an icon keeps the normal layout. It also works for cards of a <code>columns</code> / <code>column-width</code> grid (section <a href="#group-grid">4.4</a>) and for entries merged with <code>cell</code>.</div>
 </section>
 <section id="page">
 <h2>5. [[page]] - Sub-page</h2>
@@ -1349,7 +1373,8 @@ text = "Temp: 41 C"
 <tr><td class="field-name">align</td><td>-</td><td class="field-type">String</td><td>normal</td><td><code>normal</code>/<code>center</code>/<code>right</code>. Rows sharing the same line are grouped by <code>align</code> into up to 3 zones (left/center/right, <strong>max 4 rows each</strong>) and pinned accordingly - see <a href="#text-rows">section 11.5</a></td></tr>
 <tr><td class="field-name">link</td><td>href</td><td class="field-type">String</td><td>""</td><td>URL to open on click</td></tr>
 <tr><td class="field-name">activity</td><td>a, intent</td><td class="field-type">String</td><td>""</td><td>Intent to open on click</td></tr>
-<tr><td class="field-name">copy</td><td>-</td><td class="field-type">Bool</td><td>false</td><td>Allow the user to long-press and select/copy text. Applies to the WHOLE <code>[[text.rows]]</code> block at once (all rows share one text view) - setting it on <strong>any single row</strong> turns on selection for the entire block</td></tr>
+<tr><td class="field-name">copy</td><td>-</td><td class="field-type">Bool</td><td>false</td><td>Allow the user to long-press and select/copy text. Applies to the WHOLE <code>[[text.rows]]</code> block at once (all rows share one text view) - setting it on <strong>any single row</strong> turns on selection for the entire block. To copy only one row, use <code>copy-row</code></td></tr>
+<tr><td class="field-name">copy-row</td><td>row-copy</td><td class="field-type">Bool</td><td>false</td><td>Long-press this row to copy its whole text to the clipboard; a "Copy successful" toast is shown. Only the pressed row is copied, and only rows with <code>copy-row = true</code> react - the other rows of the same block are not copied. A row that also has <code>link</code>, <code>activity</code> or <code>on-click</code> keeps its normal tap action; the long-press only copies. Can be combined with <code>copy</code> in the same block (a long-press on a <code>copy-row</code> row copies the row, elsewhere it selects text)</td></tr>
 <tr><td class="field-name">reset</td><td>-</td><td class="field-type">Int|String</td><td>-1</td><td>Row index (0-based, within the same <code>[[text.rows]]</code> list) to refresh when THIS row is clicked - re-runs that row's dynamic <code>sh</code>/<code>icon-sh</code>/<code>progress-sh</code> and, when applicable, its <code>photo-sh</code>. Combine with <code>script</code> to run a script first, then refresh the target row. Also accepts <code>"self"</code>/<code>"this"</code> (= refresh THIS row itself) and <code>"all"</code> (= rebind the whole rows list from scratch). See <a href="#text-rows">section 11.6</a></td></tr>
 <tr><td class="field-name">photo</td><td>photo-path</td><td class="field-type">String</td><td>""</td><td>Large image (own line, separate from text)</td></tr>
 <tr><td class="field-name">photo-sh</td><td>-</td><td class="field-type">String</td><td>""</td><td><span class="badge shell">shell</span> Script that produces the row's photo path dynamically. Re-runs every time the rows are re-rendered (batched with text-sh/icon-sh, NOT cached - unlike node-level photo-sh); overrides <code>photo</code></td></tr>
@@ -2334,9 +2359,9 @@ script = "sh $state"
 <h2>27. Changelog - recently added fields</h2>
 <p>Only the 3 most recent TOML changes are kept here, for quick reference when upgrading an existing config.</p>
 <ul>
-<li>2026-11-11 - New <code>widget</code> (alias <code>show-widget</code>) on <code>[[group]]</code> and clickable nodes: <code>widget = false</code> hides the icon widget at the end of the item (arrow, run button, switch, download icon/ring); a group value is inherited by its entries (sections 3.2, 4.1).</li>
-<li>2026-11-11 - Config problems now open one dialog (OK button only) instead of toasts: syntax errors with line/column, and warnings for unknown block names, <code>[[download]]</code> without a URL and unreadable <code>load-toml</code> files (section 26).</li>
-<li>2026-11-10 - Text row <code>toggle = "spinner"</code> with <code>items</code>: the row shows the current value with an arrow and opens a drop-down to choose another; <code>set</code> receives the chosen value in <code>$state</code> (section 11.7).</li>
+<li>2026-11-18 - <code>[[group]]</code> with <code>card = true</code>: a last row with fewer cards than columns is no longer stretched to the full width; the leftover card keeps one column width (section 4.5).</li>
+<li>2026-11-18 - New <code>title-below</code> (alias <code>title-bottom</code>) on <code>[[group]]</code> and clickable nodes: in card / grid mode <code>title-below = true</code> moves the title under the icon instead of beside it; a group value is inherited by its entries (sections 3.2, 4.1, 4.5).</li>
+<li>2026-11-18 - New text row field <code>copy-row</code> (alias <code>row-copy</code>): long-press the row to copy only that row's text, with a "Copy successful" toast; <code>copy</code> keeps its old whole-block text selection (section 11).</li>
 </ul>
 </section>
 </main>

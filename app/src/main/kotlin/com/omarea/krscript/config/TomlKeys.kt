@@ -39,6 +39,8 @@ object TomlKeys {
     val LINE = arrayOf("line", "divider", "separator")
     val CARD = arrayOf("card", "cards")
     val WIDGET = arrayOf("widget", "show-widget")
+    val COPY_ROW = arrayOf("copy-row", "row-copy")
+    val TITLE_BELOW = arrayOf("title-below", "title-bottom")
     val CELL = arrayOf("cell")
     val COLUMNS = arrayOf("columns", "cols", "grid")
     val COLUMN_WIDTH = arrayOf("column-width", "col-width")

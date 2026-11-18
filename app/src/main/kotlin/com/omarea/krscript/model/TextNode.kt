@@ -28,6 +28,7 @@ class TextNode(currentPageConfigPath: String) : NodeInfoBase(currentPageConfigPa
         internal var breakRow: Boolean = false
         internal var line: Boolean = false
         internal var copy: Boolean = false
+        internal var copyRow: Boolean = false
         internal var align: Layout.Alignment = Layout.Alignment.ALIGN_NORMAL
         internal var link: String = ""
         internal var activity: String = ""

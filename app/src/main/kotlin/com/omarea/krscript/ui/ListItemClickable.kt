@@ -6,6 +6,7 @@ import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import com.tool.tree.R
 import com.omarea.krscript.config.IconPathAnalysis
@@ -28,6 +29,9 @@ open class ListItemClickable(
     
     protected var iconDrawable: Drawable? = null
 
+    private var titleBelow = false
+    private var titleSpacer: View? = null
+
     private val analyzer = IconPathAnalysis()
 
     protected open fun allowLongClick(): Boolean = true
@@ -41,6 +45,37 @@ open class ListItemClickable(
         widgetsHidden = true
         for (id in intArrayOf(R.id.kr_widget, R.id.kr_switch, R.id.kr_download_ring)) {
             layout.findViewById<View?>(id)?.visibility = View.GONE
+        }
+    }
+
+    /** Thẻ card: đưa tiêu đề xuống dưới hàng icon + widget. Chỉ có tác dụng khi mục có icon, không có icon thì tiêu đề giữ cạnh icon. */
+    fun setTitleBelow(enabled: Boolean) {
+        titleBelow = enabled
+        applyTitleBelow()
+    }
+
+    private fun applyTitleBelow() {
+        if (!card) return
+        val title = titleView ?: return
+        val header = iconView?.parent as? LinearLayout ?: return
+        val body = header.parent as? LinearLayout ?: return
+        val below = titleBelow && iconView?.visibility == View.VISIBLE
+        if (below && title.parent === header) {
+            val index = header.indexOfChild(title)
+            header.removeView(title)
+            val spacer = View(context)
+            header.addView(spacer, index, LinearLayout.LayoutParams(0, 0, 1f))
+            titleSpacer = spacer
+            val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            lp.topMargin = (6 * context.resources.displayMetrics.density).toInt()
+            body.addView(title, body.indexOfChild(header) + 1, lp)
+        } else if (!below && title.parent === body) {
+            body.removeView(title)
+            val spacer = titleSpacer
+            val index = if (spacer != null) header.indexOfChild(spacer) else header.indexOfChild(iconView) + 1
+            if (spacer != null) header.removeView(spacer)
+            titleSpacer = null
+            header.addView(title, index.coerceAtLeast(0), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         }
     }
 
@@ -116,6 +151,7 @@ open class ListItemClickable(
                 }
             }
         }
+        applyTitleBelow()
 
         extraIconView?.let { view ->
             view.visibility = View.GONE

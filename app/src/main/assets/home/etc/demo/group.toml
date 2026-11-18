@@ -143,3 +143,25 @@ script = 'echo "@grp_031"'
 title = "@grp_033"
 desc = "@grp_028"
 script = 'echo "@grp_033"'
+
+[[group]]
+title = "#10 @grp_036"
+card = true
+columns = 2
+title-below = true
+[[action]]
+title = "@grp_027"
+desc = "@grp_028"
+icon = "{ICON}/info.png"
+script = 'echo "@grp_027"'
+[[action]]
+title = "@grp_029"
+desc = "@grp_028"
+icon = "{ICON}/info.png"
+script = 'echo "@grp_029"'
+[[action]]
+title = "@grp_031"
+desc = "@grp_037"
+icon = "{ICON}/info.png"
+title-below = false
+script = 'echo "@grp_031"'

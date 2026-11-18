@@ -36,4 +36,7 @@ open class NodeInfoBase(val currentPageConfigPath: String) : Serializable {
 
     // Icon widget ở cuối mục (mũi tên, nút chạy, switch, tải xuống): null = kế thừa từ group, false = ẩn, true = hiện
     var widget: Boolean? = null
+
+    // Tiêu đề của thẻ card nằm dưới icon: null = kế thừa từ group, true = xuống dưới icon, false = cạnh icon
+    var titleBelow: Boolean? = null
 }

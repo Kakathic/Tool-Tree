@@ -10,6 +10,9 @@ auto-restart = true
 get = "glog Tset"
 set = "slog Tset $state"
 
+[[group]]
+columns = true
+card = true
 [[switch]]
 title = "@project_text_7"
 icon = "{ICON}/icon_off.png"

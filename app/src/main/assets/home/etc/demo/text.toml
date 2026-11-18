@@ -170,6 +170,23 @@ confirm-text = "@txt_045"
 underline = true
 break = true
 
+[[group]]
+title = "#8 @txt_047"
+[[text]]
+[[text.rows]]
+text = "@txt_048"
+copy-row = true
+break = true
+[[text.rows]]
+text = "@txt_049"
+break = true
+[[text.rows]]
+text = "@txt_050"
+link = "https://example.com"
+copy-row = true
+underline = true
+break = true
+
 [[end]]
 
 [[text]]

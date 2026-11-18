@@ -247,6 +247,75 @@ object RowsRenderHelper {
         return DynamicResults(textMap, iconMap, photoMap, progressMap, bgMap, nodeBg)
     }
 
+    private val longPressConsumed = WeakHashMap<TextView, Boolean>()
+
+    // copy: bôi đen chọn chữ (cả khối). copy-row: nhấn giữ chỉ sao chép row nằm đúng vị trí chạm, các row còn lại không phản ứng
+    private fun bindRowLongPressCopy(rowsView: TextView, rows: List<TextNode.TextRow>, allowSelect: Boolean) {
+        longPressConsumed.remove(rowsView)
+        if (rows.none { it.copyRow }) {
+            rowsView.setOnTouchListener(null)
+            rowsView.isHapticFeedbackEnabled = allowSelect
+            rowsView.setOnLongClickListener(if (allowSelect) null else View.OnLongClickListener { true })
+            return
+        }
+        val touch = floatArrayOf(-1f, -1f)
+        rowsView.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
+                touch[0] = event.x
+                touch[1] = event.y
+            }
+            false
+        }
+        rowsView.setOnLongClickListener {
+            val copied = copyRowAtTouch(rowsView, rows, touch[0], touch[1])
+            if (copied) longPressConsumed[rowsView] = true
+            rowsView.isHapticFeedbackEnabled = copied || allowSelect
+            copied || !allowSelect
+        }
+    }
+
+    private fun charOffsetAt(widget: TextView, touchX: Float, touchY: Float): Int {
+        val layout = widget.layout ?: return -1
+        val x = touchX.toInt() - widget.totalPaddingLeft + widget.scrollX
+        val y = touchY.toInt() - widget.totalPaddingTop + widget.scrollY
+        val line = layout.getLineForVertical(y)
+        if (x < layout.getLineLeft(line) || x > layout.getLineRight(line)) return -1
+        val lineStart = layout.getLineStart(line)
+        val lineEnd = layout.getLineEnd(line)
+        if (lineEnd <= lineStart) return -1
+        val approx = layout.getOffsetForHorizontal(line, x.toFloat())
+        for (off in (approx - 1).coerceAtLeast(lineStart)..approx.coerceAtMost(lineEnd - 1)) {
+            val left = layout.getPrimaryHorizontal(off)
+            val right = layout.getPrimaryHorizontal(off + 1)
+            if (x >= minOf(left, right) && x < maxOf(left, right)) return off
+        }
+        return -1
+    }
+
+    private fun copyRowAtTouch(rowsView: TextView, rows: List<TextNode.TextRow>, touchX: Float, touchY: Float): Boolean {
+        val offset = charOffsetAt(rowsView, touchX, touchY)
+        if (offset < 0) return false
+        val state = rowsView.tag as? RowsRenderState ?: return false
+        val rowIndex = state.rowRanges.entries.firstOrNull { (_, r) -> offset >= r[0] && offset < r[1] }?.key ?: return false
+        if (rows.getOrNull(rowIndex)?.copyRow != true) return false
+        val range = state.rowRanges[rowIndex] ?: return false
+        val text = rowsView.text
+        if (range[0] < 0 || range[1] > text.length || range[0] >= range[1]) return false
+        val content = text.subSequence(range[0], range[1]).toString()
+            .trim { it.isWhitespace() || it == '​' || it == '￼' }
+        if (content.isEmpty()) return false
+        val context = rowsView.context
+        val ok = try {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("text", content))
+            true
+        } catch (ex: Exception) {
+            false
+        }
+        Toast.makeText(context, if (ok) R.string.copy_success else R.string.copy_fail, Toast.LENGTH_SHORT).show()
+        return ok
+    }
+
     private fun estimateAvailableWidth(rowsView: TextView): Int {
         val measured = rowsView.width
         if (measured > 0) {
@@ -293,14 +362,7 @@ object RowsRenderHelper {
         val allowCopy = rows.any { it.copy }
         rowsView.setTextIsSelectable(allowCopy)
         rowsView.movementMethod = BoundedLinkMovementMethod.instance
-
-        if (allowCopy) {
-            rowsView.isHapticFeedbackEnabled = true
-            rowsView.setOnLongClickListener(null)
-        } else {
-            rowsView.isHapticFeedbackEnabled = false
-            rowsView.setOnLongClickListener { true }
-        }
+        bindRowLongPressCopy(rowsView, rows, allowCopy)
 
         val rowRanges = HashMap<Int, IntArray>()
         val zoneGroupRows = HashSet<Int>()
@@ -1408,6 +1470,14 @@ object RowsRenderHelper {
         }
 
         override fun onTouchEvent(widget: TextView, buffer: Spannable, event: MotionEvent): Boolean {
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                longPressConsumed.remove(widget)
+            } else if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL) {
+                if (longPressConsumed.remove(widget) == true) {
+                    android.text.Selection.removeSelection(buffer)
+                    return true
+                }
+            }
             if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_UP) {
                 val layout = widget.layout
                 if (layout != null) {

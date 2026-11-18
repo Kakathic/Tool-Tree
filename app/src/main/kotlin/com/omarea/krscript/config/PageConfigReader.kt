@@ -880,6 +880,7 @@ class PageConfigReader {
         tomlGet(table, *TomlKeys.KEY)?.let { nodeInfoBase.key = it.trim() }
         tomlGet(table, *TomlKeys.CELL)?.let { nodeInfoBase.cell = it.trim() }
         tomlGet(table, *TomlKeys.WIDGET)?.let { nodeInfoBase.widget = tomlTruthy(it, "widget", "show-widget", "on", "yes") }
+        tomlGet(table, *TomlKeys.TITLE_BELOW)?.let { nodeInfoBase.titleBelow = tomlTruthy(it, "title-below", "title-bottom") }
         if (readTexts) {
             tomlGet(table, *TomlKeys.TITLE_SH)?.let {
                 nodeInfoBase.titleSh = it
@@ -1016,6 +1017,7 @@ class PageConfigReader {
         tomlGet(table, *TomlKeys.LINE)?.let { group.line = tomlTruthy(it, "line", "divider", "separator") }
         tomlGet(table, *TomlKeys.CARD)?.let { group.card = tomlTruthy(it, "card", "cards") }
         tomlGet(table, *TomlKeys.WIDGET)?.let { group.widget = tomlTruthy(it, "widget", "show-widget", "on", "yes") }
+        tomlGet(table, *TomlKeys.TITLE_BELOW)?.let { group.titleBelow = tomlTruthy(it, "title-below", "title-bottom") }
         var autoColumns = false
         tomlGet(table, *TomlKeys.COLUMNS)?.let { raw ->
             val v = raw.trim().lowercase(getDefault())
@@ -1467,6 +1469,7 @@ class PageConfigReader {
         tomlGet(table, "break")?.let { row.breakRow = tomlTruthy(it, "break") }
         tomlGet(table, *TomlKeys.LINE)?.let { row.line = tomlTruthy(it, "line", "divider", "separator") }
         tomlGet(table, "copy")?.let { row.copy = tomlTruthy(it, "copy") }
+        tomlGet(table, *TomlKeys.COPY_ROW)?.let { row.copyRow = tomlTruthy(it, "copy-row", "row-copy") }
         tomlGet(table, *TomlKeys.LINK)?.let { row.link = it }
         tomlGet(table, *TomlKeys.INTENT)?.let { row.activity = it }
         tomlGet(table, *TomlKeys.PHOTO)?.let { row.photo = it.trim() }
