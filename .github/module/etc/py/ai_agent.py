@@ -51,7 +51,7 @@ PROVIDERS = {
   "gemini": {"label": "Google Gemini", "env": "GEMINI_API_KEY", "base_url": "https://generativelanguage.googleapis.com/v1beta", "default_model": DEFAULT_MODEL, "key_url": "https://aistudio.google.com/app/apikey", "website": "https://ai.google.dev/gemini-api/docs"},
   "openrouter": {"label": "OpenRouter", "env": "OPENROUTER_API_KEY", "base_url": "https://openrouter.ai/api/v1", "default_model": OPENROUTER_DEFAULT_MODEL, "key_url": "https://openrouter.ai/settings/keys", "website": "https://openrouter.ai/docs"},
   "groq": {"label": "Groq", "env": "GROQ_API_KEY", "base_url": "https://api.groq.com/openai/v1", "default_model": "openai/gpt-oss-120b", "key_url": "https://console.groq.com/keys", "website": "https://console.groq.com/docs"},
-  "together": {"label": "Together AI", "env": "TOGETHER_API_KEY", "base_url": "https://api.together.ai/v1", "default_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "key_url": "https://api.together.ai/settings/api-keys", "website": "https://docs.together.ai"},
+  "together": {"label": "Together AI", "env": "TOGETHER_API_KEY", "base_url": "https://api.together.ai/v1", "default_model": "moonshotai/Kimi-K3", "key_url": "https://api.together.ai/settings/api-keys", "website": "https://docs.together.ai"},
   "openai": {"label": "OpenAI", "env": "OPENAI_API_KEY", "base_url": "https://api.openai.com/v1", "default_model": "gpt-4.1-mini", "key_url": "https://platform.openai.com/api-keys", "website": "https://platform.openai.com/docs"},
   "deepseek": {"label": "DeepSeek", "env": "DEEPSEEK_API_KEY", "base_url": "https://api.deepseek.com", "default_model": "deepseek-flash", "key_url": "https://platform.deepseek.com/api_keys", "website": "https://api-docs.deepseek.com/"},
 }
@@ -1904,8 +1904,19 @@ def build_system_instruction(
 def _image_input_content(text):
   """Convert local image paths in user text to OpenAI-compatible image input."""
   text = str(text or "")
-  if ACTIVE_PROVIDER["name"] not in ("openai", "openrouter", "groq", "together", "gemini"):
+  if ACTIVE_PROVIDER["name"] not in ("openai", "openrouter", "groq", "together", "gemini", "deepseek"):
     return text
+  # Groq Chat Completions currently requires messages[*].content to be a
+  # string. Do not embed base64 image data: it causes both a schema error
+  # (content must be a string) and, for large images, a 413/TPM error.
+  # The local path remains in the text so the model knows an image was
+  # referenced; use a vision-capable provider for actually viewing it.
+  if ACTIVE_PROVIDER["name"] == "groq":
+    return text
+  # Together AI and DeepSeek accept this OpenAI-compatible multimodal
+  # format only with vision-capable models. Their default models are set
+  # separately above; an explicitly selected text-only model may still
+  # return HTTP 400 from the provider.
   # Accept absolute paths (including Android shared-storage paths) and ~/ paths.
   path_pattern = re.compile(r"(?<![^\s\"'])(~/[^\s\"']+|/(?:storage|sdcard|data)/[^\s\"']+)")
   parts = [{"type": "text", "text": text}]
@@ -1950,7 +1961,13 @@ def _gemini_image_input(history):
       if part.get("type") == "text":
         gemini_parts.append({"type": "text", "text": part.get("text", "")})
       elif part.get("type") == "image_url":
-        gemini_parts.append({"type": "image", "image_url": part["image_url"]["url"]})
+        # Gemini Interactions API expects base64 data and MIME type,
+        # not the OpenAI-compatible image_url field.
+        data_url = part.get("image_url", {}).get("url", "")
+        if data_url.startswith("data:") and ";base64," in data_url:
+          header, encoded = data_url.split(",", 1)
+          mime = header[5:].split(";", 1)[0] or "application/octet-stream"
+          gemini_parts.append({"type": "image", "data": encoded, "mime_type": mime})
     converted.append(dict(item, content=gemini_parts))
   return converted
 
