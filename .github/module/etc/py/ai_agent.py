@@ -30,6 +30,8 @@ import math
 import collections
 import atexit
 import hashlib
+import base64
+import mimetypes
 import socket
 import ipaddress
 import zlib
@@ -1899,6 +1901,70 @@ def build_system_instruction(
     )
   return "\n\n".join(parts)
 
+def _image_input_content(text):
+  """Convert local image paths in user text to OpenAI-compatible image input."""
+  text = str(text or "")
+  if ACTIVE_PROVIDER["name"] not in ("openai", "openrouter", "groq", "together", "gemini"):
+    return text
+  # Accept absolute paths (including Android shared-storage paths) and ~/ paths.
+  path_pattern = re.compile(r"(?<![^\s\"'])(~/[^\s\"']+|/(?:storage|sdcard|data)/[^\s\"']+)")
+  parts = [{"type": "text", "text": text}]
+  added = set()
+  for match in path_pattern.finditer(text):
+    raw_path = match.group(1).rstrip(",.;:!?)]}")
+    path = os.path.expanduser(raw_path)
+    if path in added or not os.path.isfile(path):
+      continue
+    mime, _ = mimetypes.guess_type(path)
+    if not mime or not mime.startswith("image/"):
+      continue
+    try:
+      with open(path, "rb") as image_file:
+        encoded = base64.b64encode(image_file.read()).decode("ascii")
+    except OSError:
+      continue
+    parts.append({
+      "type": "image_url",
+      "image_url": {"url": f"data:{mime};base64,{encoded}"},
+    })
+    added.add(path)
+  return parts if len(parts) > 1 else text
+
+def _gemini_image_input(history):
+  """Add local images to Gemini Interactions API user_input items."""
+  converted = []
+  for item in history:
+    if not isinstance(item, dict) or item.get("type") != "user_input":
+      converted.append(item)
+      continue
+    content = item.get("content", "")
+    if not isinstance(content, str):
+      converted.append(item)
+      continue
+    parts = _image_input_content(content) if ACTIVE_PROVIDER["name"] == "gemini" else content
+    if not isinstance(parts, list):
+      converted.append(item)
+      continue
+    gemini_parts = []
+    for part in parts:
+      if part.get("type") == "text":
+        gemini_parts.append({"type": "text", "text": part.get("text", "")})
+      elif part.get("type") == "image_url":
+        gemini_parts.append({"type": "image", "image_url": part["image_url"]["url"]})
+    converted.append(dict(item, content=gemini_parts))
+  return converted
+
+def _reasoning_effort_supported(provider, model):
+  """Return whether this endpoint/model should receive reasoning_effort."""
+  name = (provider or "").lower()
+  model_id = (model or "").lower()
+  if name == "openai":
+    return model_id.startswith(("o1", "o3", "o4", "gpt-5"))
+  if name == "openrouter":
+    # OpenRouter forwards this only for known reasoning families.
+    return any(token in model_id for token in ("/o1", "/o3", "/o4", "gpt-5", "reasoning", "thinking"))
+  return False
+
 def _compatible_messages(history, instruction):
   messages = [{"role": "system", "content": instruction}]
   for item in history:
@@ -1906,7 +1972,7 @@ def _compatible_messages(history, instruction):
       continue
     kind = item.get("type")
     if kind == "user_input":
-      messages.append({"role": "user", "content": str(item.get("content", ""))})
+      messages.append({"role": "user", "content": _image_input_content(item.get("content", ""))})
     elif kind == "model_output":
       text_parts = [part.get("text", "") for part in item.get("content", []) if isinstance(part, dict) and part.get("type") == "text"]
       if text_parts:
@@ -1987,7 +2053,8 @@ def call_compatible_api(api_key, model, history, instruction, language, thinking
   system_instruction = build_system_instruction(instruction, language, memory_summary, shell_enabled, files_enabled, raw=raw_instruction)
   payload = {"model": model, "messages": _compatible_messages(history, system_instruction), "stream": bool(stream_callback and not (shell_enabled or files_enabled or WEB_SEARCH["enabled"] or WEB_FETCH["enabled"]))}
   thinking_key = (ACTIVE_PROVIDER["name"], model)
-  if thinking != "auto" and thinking_key not in THINKING_UNSUPPORTED:
+  if (thinking != "auto" and thinking_key not in THINKING_UNSUPPORTED
+      and _reasoning_effort_supported(ACTIVE_PROVIDER["name"], model)):
     payload["reasoning_effort"] = thinking
   tools = _compatible_tools(shell_enabled, files_enabled)
   if tools:
@@ -2727,7 +2794,7 @@ def call_gemini(
     return call_compatible_api(api_key, model, history, effective_instruction, language, thinking, timeout, memory_summary, shell_enabled, files_enabled, stream_callback, status_callback, raw_instruction=raw_instruction)
   payload = {
     "model": model,
-    "input": history,
+    "input": _gemini_image_input(history),
     "store": False,
     "system_instruction": (
       system_instruction_override
