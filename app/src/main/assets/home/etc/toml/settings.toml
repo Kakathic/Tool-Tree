@@ -86,6 +86,13 @@ rm -f "$HOME/.cache/api.log" 2>/dev/null
 '''
 
 [[chat.menu]]
+title = "@cleanup_models_title"
+silent = true
+script = '''
+glog list_ai_models "gemini-3.5-flash-lite"
+'''
+
+[[chat.menu]]
 title = "@model_list_title"
 script = '''
 ai_agent --provider "$(glog list_provider)" --list-models
