@@ -122,6 +122,12 @@ label = "@detail_label"
 type = "switch"
 
 [[chat.params]]
+name = "AI_STREAM"
+title = "@ai_stream_title"
+label = "@ai_stream_label"
+type = "switch"
+
+[[chat.params]]
 name = "AI_THINKING"
 title = "@chatai_think_text"
 label = "@option_text"
