@@ -53,6 +53,7 @@ PROVIDERS = {
   "groq": {"label": "Groq", "env": "GROQ_API_KEY", "base_url": "https://api.groq.com/openai/v1", "default_model": "openai/gpt-oss-120b", "key_url": "https://console.groq.com/keys", "website": "https://console.groq.com/docs"},
   "together": {"label": "Together AI", "env": "TOGETHER_API_KEY", "base_url": "https://api.together.ai/v1", "default_model": "moonshotai/Kimi-K3", "key_url": "https://api.together.ai/settings/api-keys", "website": "https://docs.together.ai"},
   "openai": {"label": "OpenAI", "env": "OPENAI_API_KEY", "base_url": "https://api.openai.com/v1", "default_model": "gpt-4.1-mini", "key_url": "https://platform.openai.com/api-keys", "website": "https://platform.openai.com/docs"},
+  "codex": {"label": "OpenAI Codex (Responses)", "env": "OPENAI_API_KEY", "base_url": "https://api.openai.com/v1", "default_model": "gpt-5-codex", "key_url": "https://platform.openai.com/api-keys", "website": "https://platform.openai.com/docs/api-reference/responses"},
   "deepseek": {"label": "DeepSeek", "env": "DEEPSEEK_API_KEY", "base_url": "https://api.deepseek.com", "default_model": "deepseek-flash", "key_url": "https://platform.deepseek.com/api_keys", "website": "https://api-docs.deepseek.com/"},
 }
 ACTIVE_PROVIDER = {"name": "gemini", "base_url": ""}
@@ -933,7 +934,12 @@ ENV_HELP_GROUPS = (
 def env_help_text():
   """Full list of environment variables: variable, matching option, meaning."""
   rows = [("API_KEY", "--api-key", "API key; used before the provider's own variable")]
-  rows += [(info["env"], "", f"{info['label']} API key") for info in PROVIDERS.values()]
+  seen_env = set()
+  for info in PROVIDERS.values():
+    if info["env"] in seen_env:
+      continue
+    seen_env.add(info["env"])
+    rows.append((info["env"], "", f"{info['label']} API key"))
   rows.append(("API_URL", "--base-url", "base URL (providers other than Gemini)"))
   groups = (("API key and URL", tuple(rows)),) + ENV_HELP_GROUPS
   width = max(len(var) for _, items in groups for var, _, _ in items)
@@ -1904,7 +1910,7 @@ def build_system_instruction(
 def _image_input_content(text):
   """Convert local image paths in user text to OpenAI-compatible image input."""
   text = str(text or "")
-  if ACTIVE_PROVIDER["name"] not in ("openai", "openrouter", "groq", "together", "gemini", "deepseek"):
+  if ACTIVE_PROVIDER["name"] not in ("openai", "codex", "openrouter", "groq", "together", "gemini", "deepseek"):
     return text
   # Groq Chat Completions currently requires messages[*].content to be a
   # string. Do not embed base64 image data: it causes both a schema error
@@ -2068,12 +2074,24 @@ def _compatible_urlopen(request, timeout, status_callback=None):
 
 def call_compatible_api(api_key, model, history, instruction, language, thinking, timeout, memory_summary=None, shell_enabled=False, files_enabled=False, stream_callback=None, status_callback=None, raw_instruction=False):
   system_instruction = build_system_instruction(instruction, language, memory_summary, shell_enabled, files_enabled, raw=raw_instruction)
-  payload = {"model": model, "messages": _compatible_messages(history, system_instruction), "stream": bool(stream_callback and not (shell_enabled or files_enabled or WEB_SEARCH["enabled"] or WEB_FETCH["enabled"]))}
+  use_responses = ACTIVE_PROVIDER["name"] == "codex"
+  messages = _compatible_messages(history, system_instruction)
+  if use_responses:
+    # Responses API uses `instructions` + `input`; do not duplicate the
+    # system message because it is carried by `instructions`.
+    response_input = messages[1:] if messages and messages[0].get("role") == "system" else messages
+    payload = {"model": model, "instructions": system_instruction,
+               "input": response_input,
+               "stream": bool(stream_callback and not (shell_enabled or files_enabled or WEB_SEARCH["enabled"] or WEB_FETCH["enabled"]))}
+  else:
+    payload = {"model": model, "messages": messages, "stream": bool(stream_callback and not (shell_enabled or files_enabled or WEB_SEARCH["enabled"] or WEB_FETCH["enabled"]))}
   thinking_key = (ACTIVE_PROVIDER["name"], model)
   if (thinking != "auto" and thinking_key not in THINKING_UNSUPPORTED
       and _reasoning_effort_supported(ACTIVE_PROVIDER["name"], model)):
     payload["reasoning_effort"] = thinking
   tools = _compatible_tools(shell_enabled, files_enabled)
+  if use_responses:
+    tools = [item.get("function", {}) | {"type": "function"} for item in tools]
   if tools:
     payload["tools"] = tools
     payload["tool_choice"] = "auto"
@@ -2087,7 +2105,7 @@ def call_compatible_api(api_key, model, history, instruction, language, thinking
 
   def build_request():
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    return urllib.request.Request(ACTIVE_PROVIDER["base_url"] + "/chat/completions", data=body, headers=headers, method="POST")
+    return urllib.request.Request(ACTIVE_PROVIDER["base_url"] + ("/responses" if use_responses else "/chat/completions"), data=body, headers=headers, method="POST")
 
   try:
     opened = _compatible_urlopen(build_request(), timeout, status_callback)
@@ -2143,6 +2161,20 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
             served[key] = event[key]
         choices = event.get("choices") or []
         delta = choices[0].get("delta", {}) if choices else {}
+        # Responses API emits typed events instead of Chat Completions choices.
+        if ACTIVE_PROVIDER["name"] == "codex":
+          if event.get("type") == "response.output_text.delta":
+            piece = event.get("delta", "")
+            if isinstance(piece, str) and piece:
+              pieces.append(piece)
+              stream_callback(piece)
+          elif event.get("type") == "response.output_item.added" and (event.get("item") or {}).get("type") == "function_call":
+            saw_call = True
+          if event.get("type") == "response.completed":
+            response_data = event.get("response") or {}
+            usage_seen = response_data.get("usage") or usage_seen
+            served["model"] = response_data.get("model", served.get("model", payload.get("model")))
+          continue
         if delta.get("tool_calls"):
           saw_call = True
         piece = delta.get("content")
@@ -2166,6 +2198,30 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
     raw_body = response.read().decode("utf-8")
     _stage(status_callback, "processing")
     data = json.loads(raw_body)
+  if ACTIVE_PROVIDER["name"] == "codex":
+    steps = []
+    answer_parts = []
+    for item in data.get("output", []) or []:
+      item_type = item.get("type")
+      if item_type == "message":
+        for content in item.get("content", []) or []:
+          if content.get("type") in ("output_text", "text") and content.get("text"):
+            answer_parts.append(content["text"])
+      elif item_type == "function_call":
+        raw_args = item.get("arguments") or "{}"
+        try:
+          arguments = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+        except json.JSONDecodeError:
+          arguments = {}
+        steps.append({"type": "function_call", "id": item.get("call_id") or item.get("id"), "name": item.get("name", ""), "arguments": arguments})
+    answer = "\n".join(answer_parts).strip()
+    if answer:
+      steps.insert(0, {"type": "model_output", "content": [{"type": "text", "text": answer}]})
+    if not steps:
+      raise RuntimeError("Codex returned neither text nor tool calls: " + json.dumps(data, ensure_ascii=False)[:1200])
+    served = {"model": data["model"]} if isinstance(data.get("model"), str) else {}
+    api_log_response_compat(data.get("usage"), steps, "", served, payload.get("model"))
+    return answer, steps
   choices = data.get("choices") or []
   if not choices:
     raise RuntimeError(ACTIVE_PROVIDER["name"].title() + " returned no choices: " + json.dumps(data, ensure_ascii=False)[:1200])
@@ -2198,10 +2254,15 @@ def _compatible_read(opened, payload, stream_callback, status_callback=None):
 def list_providers(show_websites=False, ui=None):
   ui = ui or UI_TEXT["en"]
   print(ui["providers_title"] if not show_websites else ui["websites_title"])
+  shown_urls = set()
   for key, item in PROVIDERS.items():
     if show_websites:
       registration = item["key_url"]
-      print(f"\n  {item['label']}: {registration}")
+      if registration in shown_urls:
+        continue
+      shown_urls.add(registration)
+      labels = [other["label"] for other in PROVIDERS.values() if other["key_url"] == registration]
+      print(f"\n  {' / '.join(labels)}: {registration}")
     else:
       print(f"  {key:<12} {item['label']}")
 

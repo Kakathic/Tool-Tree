@@ -104,7 +104,7 @@ name = "AI_PROVIDER"
 placeholder = "gemini"
 title = "@select_provider_title"
 label = "Provider"
-items = [ "gemini|Gemini", "openai|Openai", "openrouter|Openrouter", "groq|Groq", "together|Together", "deepseek|Deepseek" ]
+items = [ "gemini|Gemini", "openai|Openai", "codex|Codex", "openrouter|Openrouter", "groq|Groq", "together|Together", "deepseek|Deepseek" ]
 value-sh = "glog list_provider gemini"
 
 [[chat.params]]
