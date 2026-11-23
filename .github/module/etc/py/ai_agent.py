@@ -2077,9 +2077,38 @@ def call_compatible_api(api_key, model, history, instruction, language, thinking
   use_responses = ACTIVE_PROVIDER["name"] == "codex"
   messages = _compatible_messages(history, system_instruction)
   if use_responses:
-    # Responses API uses `instructions` + `input`; do not duplicate the
-    # system message because it is carried by `instructions`.
-    response_input = messages[1:] if messages and messages[0].get("role") == "system" else messages
+    # Responses API uses typed function_call/function_call_output items, not
+    # Chat Completions' tool_calls/tool messages. In particular, an assistant
+    # tool-call message must not have `content: null`: Responses rejects it.
+    response_input = []
+    for message in messages:
+      role = message.get("role")
+      if role == "system":
+        continue
+      if role == "assistant" and message.get("tool_calls"):
+        content = message.get("content")
+        if content:
+          response_input.append({"role": "assistant", "content": content})
+        for tool_call in message["tool_calls"]:
+          function = tool_call.get("function") or {}
+          response_input.append({
+            "type": "function_call",
+            "call_id": str(tool_call.get("id") or "call_missing_id"),
+            "name": function.get("name", ""),
+            "arguments": function.get("arguments", "{}"),
+          })
+      elif role == "tool":
+        response_input.append({
+          "type": "function_call_output",
+          "call_id": str(message.get("tool_call_id") or "call_missing_id"),
+          "output": message.get("content") or "",
+        })
+      else:
+        # Responses requires message content to be a string or an array.
+        content = message.get("content")
+        if content is None:
+          content = ""
+        response_input.append({"role": role, "content": content})
     payload = {"model": model, "instructions": system_instruction,
                "input": response_input,
                "stream": bool(stream_callback and not (shell_enabled or files_enabled or WEB_SEARCH["enabled"] or WEB_FETCH["enabled"]))}
