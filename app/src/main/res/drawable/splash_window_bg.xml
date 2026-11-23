@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nền cửa sổ lúc mới mở app (Android 7 đến 11; từ Android 12 hệ thống dùng windowSplashScreen* trong values-v31).
+     Nền phẳng cùng màu cửa sổ của app, logo robot nằm giữa. SplashActivity đổi sang theme thật ngay khi chạy nên không ảnh hưởng gì phía sau. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_bg" />
+    <item
+        android:width="240dp"
+        android:height="240dp"
+        android:drawable="@drawable/ic_launcher_foreground"
+        android:gravity="center" />
+</layer-list>

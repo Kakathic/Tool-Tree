@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+: màn hình khởi động của hệ thống dùng nền và logo bên dưới. Logo là lớp trước của adaptive icon (đã thu 66% nên nằm gọn trong vòng tròn che của splash). -->
+    <style name="AppTheme.Starting" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/splash_window_bg</item>
+        <item name="android:statusBarColor">@color/splash_bg</item>
+        <item name="android:navigationBarColor">@color/splash_bg</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

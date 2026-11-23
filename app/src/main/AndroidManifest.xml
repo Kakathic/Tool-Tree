@@ -71,6 +71,7 @@
         </activity>
         <activity
             android:name=".SplashActivity"
+            android:theme="@style/AppTheme.Starting"
             android:configChanges="keyboardHidden|orientation|layoutDirection|screenLayout|colorMode|fontScale|smallestScreenSize|density|keyboard|screenSize|touchscreen"
             android:exported="true">
             <intent-filter>

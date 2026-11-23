@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lớp trước của adaptive icon: robot xanh, thân xanh xám, vạch văn bản và bút chì. Vẽ trên hệ 256x256, thu về 66% quanh tâm để nằm gọn trong vùng nhìn thấy (kể cả khung tròn). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="256"
+    android:viewportHeight="256">
+    <group
+        android:pivotX="128"
+        android:pivotY="128"
+        android:scaleX="0.66"
+        android:scaleY="0.66">
+        <path
+            android:fillColor="#FF4A5D7F"
+            android:pathData="M40,122H216V202A20,20 0 0 1 196,222H60A20,20 0 0 1 40,202Z" />
+        <path
+            android:fillColor="#FF394D70"
+            android:pathData="M40,122H216V143.75H40Z" />
+        <path
+            android:fillColor="#FF00F17D"
+            android:pathData="M66.24,41.26L98.51,65.99L75.99,87.01L46.76,60.74Z" />
+        <path
+            android:fillColor="#FF00F17D"
+            android:pathData="M189.76,41.26L157.49,65.99L180.01,87.01L209.24,60.74Z" />
+        <path
+            android:fillColor="#FF00F17D"
+            android:pathData="M40,122A88,88 0 0 1 216,122Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M82,88.8a15,15 0 1 0 30,0a15,15 0 1 0 -30,0ZM144,88.8a15,15 0 1 0 30,0a15,15 0 1 0 -30,0Z" />
+        <path
+            android:fillColor="#FF97FF47"
+            android:pathData="M66.24,41.26A14.3,14.3 0 1 0 46.76,60.74Z" />
+        <path
+            android:fillColor="#FF97FF47"
+            android:pathData="M189.76,41.26A14.3,14.3 0 1 1 209.24,60.74Z" />
+        <path
+            android:fillColor="#FF394D70"
+            android:pathData="M73.4,183H135.6A8.9,8.9 0 0 1 135.6,200.75H73.4A8.9,8.9 0 0 1 73.4,183Z" />
+        <path
+            android:fillColor="#FFFFE609"
+            android:pathData="M133,186Q133,184.5 134.06,183.44L172.88,144.62Q175,142.5 177.17,144.57L189.08,155.93Q191.25,158 189.19,160.18L152.81,198.57Q150.75,200.75 147.75,200.75L138.55,200.75Q136.25,200.75 134.62,199.12L134.62,199.12Q133,197.5 133,195.2Z" />
+        <path
+            android:fillColor="#FFFFA30B"
+            android:pathData="M173.04,144.77Q175,142.5 177.17,144.57L189.08,155.93Q191.25,158 189.32,160.29L183.25,167.5L167,151.75Z" />
+    </group>
+</vector>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Nền màn hình khởi động của hệ thống (trước SplashActivity): trùng nền cửa sổ sáng của app. Bản tối nằm trong values-night. -->
+    <color name="splash_bg">@color/window_bg_light</color>
+</resources>

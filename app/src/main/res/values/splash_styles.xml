@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Theme riêng cho SplashActivity trong Manifest: chỉ để có màn hình khởi động lúc mới mở app. -->
+    <style name="AppTheme.Starting" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/splash_window_bg</item>
+        <item name="android:statusBarColor">@color/splash_bg</item>
+        <item name="android:navigationBarColor">@color/splash_bg</item>
+    </style>
+</resources>

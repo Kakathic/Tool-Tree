@@ -53,7 +53,7 @@ PROVIDERS = {
   "groq": {"label": "Groq", "env": "GROQ_API_KEY", "base_url": "https://api.groq.com/openai/v1", "default_model": "openai/gpt-oss-120b", "key_url": "https://console.groq.com/keys", "website": "https://console.groq.com/docs"},
   "together": {"label": "Together AI", "env": "TOGETHER_API_KEY", "base_url": "https://api.together.ai/v1", "default_model": "moonshotai/Kimi-K3", "key_url": "https://api.together.ai/settings/api-keys", "website": "https://docs.together.ai"},
   "openai": {"label": "OpenAI", "env": "OPENAI_API_KEY", "base_url": "https://api.openai.com/v1", "default_model": "gpt-4.1-mini", "key_url": "https://platform.openai.com/api-keys", "website": "https://platform.openai.com/docs"},
-  "codex": {"label": "OpenAI Codex (Responses)", "env": "OPENAI_API_KEY", "base_url": "https://api.openai.com/v1", "default_model": "gpt-5-codex", "key_url": "https://platform.openai.com/api-keys", "website": "https://platform.openai.com/docs/api-reference/responses"},
+  "codex": {"label": "OpenAI Codex", "env": "OPENAI_API_KEY", "base_url": "https://api.openai.com/v1", "default_model": "gpt-5-codex", "key_url": "https://platform.openai.com/api-keys", "website": "https://platform.openai.com/docs/api-reference/responses"},
   "deepseek": {"label": "DeepSeek", "env": "DEEPSEEK_API_KEY", "base_url": "https://api.deepseek.com", "default_model": "deepseek-flash", "key_url": "https://platform.deepseek.com/api_keys", "website": "https://api-docs.deepseek.com/"},
 }
 ACTIVE_PROVIDER = {"name": "gemini", "base_url": ""}
