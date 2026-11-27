@@ -65,8 +65,8 @@ THINKING_UNSUPPORTED = set()
 RECENT_CONTEXT_CHARS = 12000
 SUMMARY_CHUNK_CHARS = 8000
 MAX_SUMMARY_CHARS = 6000
-DEFAULT_SHELL_TIMEOUT = 0  # 0 = no time limit for commands
-MAX_COMMAND_OUTPUT_CHARS = 8000
+DEFAULT_SHELL_TIMEOUT = None  # AI chọn timeout theo từng lệnh; killtree vẫn là lớp bảo vệ khi có timeout
+MAX_COMMAND_OUTPUT_CHARS = 250000
 RUN_COMMAND_TOOL = {
   "type": "function",
   "name": "run_command",
@@ -74,7 +74,9 @@ RUN_COMMAND_TOOL = {
     "Run a shell command on the user's device and return its exit "
     "code, stdout and stderr. Use it to inspect or change files, "
     "check system state, or run programs. Prefer short, "
-    "non-interactive commands."
+    "non-interactive commands. If a command may hang, pass the optional timeout in seconds; "
+    "omit timeout only for finite build, compile or unpack operations expected to run longer. "
+    "On timeout, killtree terminates the command and its entire descendant process tree."
   ),
   "parameters": {
     "type": "object",
@@ -82,6 +84,11 @@ RUN_COMMAND_TOOL = {
       "command": {
         "type": "string",
         "description": "The shell command to run.",
+      },
+      "timeout": {
+        "type": ["integer", "null"],
+        "minimum": 1,
+        "description": "Optional maximum duration in seconds. Use for commands that could hang; omit for finite build/compile/unpack tasks expected to run longer.",
       }
     },
     "required": ["command"],
@@ -99,7 +106,7 @@ API_LOG_TEXT_LIMIT = 3000
 API_LOG = {"path": None, "full": False, "last_system": None, "t0": None}
 API_TURN = {}
 API_LOG_LOCK = threading.Lock()
-INTERACTIVE_HISTORY_CHARS = 60000
+INTERACTIVE_HISTORY_CHARS = 180000
 POWER_PROGRAMS = {"reboot", "shutdown", "poweroff", "halt"}
 DISK_PROGRAMS = {"wipefs", "fdisk", "sgdisk", "parted", "fastboot"}
 ACTIVE_SPINNER = {"s": None}
@@ -243,13 +250,13 @@ PROTECTED_DIRS = {
   "/usr", "/bin", "/sbin", "/home", "/root", "/proc", "/dev",
   "/mnt", "/opt", "/var", "/lib", "/boot",
 }
-MAX_READ_LINES = 1000
-CONTEXT_COMPACT_CHARS = 60000  # compact old tool results of a turn above this size
-OLD_TURNS_COMPACT_CHARS = 20000  # interactive: compact tool results of earlier turns above this size
+MAX_READ_LINES = 10000
+CONTEXT_COMPACT_CHARS = 180000  # compact old tool results of a turn above this size
+OLD_TURNS_COMPACT_CHARS = 60000  # interactive: compact tool results of earlier turns above this size
 OLD_RESULT_KEEP_CHARS = 1500    # results at most this long are never compacted
 MAX_IDENTICAL_FAILURES = 2      # the same failing call is not run a third time
 DEFAULT_READ_LINES = 500
-MAX_READ_CHARS = 40000
+MAX_READ_CHARS = 250000
 MAX_SEARCH_RESULTS = 100
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".svn"}
 FILE_TOOLS = [
@@ -257,7 +264,7 @@ FILE_TOOLS = [
     "type": "function",
     "name": "read_file",
     "description": (
-      "Read a text file and return numbered lines (up to about 40000 "
+      "Read a text file and return numbered lines (up to about 250000 "
       "characters per call). Read the whole range you need in one call "
       "with a large limit; use offset only when the result says more follows."
     ),
@@ -902,7 +909,6 @@ ENV_HELP_GROUPS = (
     ("AI_INSTRUCTION", "--instruction", "system instruction text"),
     ("AI_INSTRUCTION_FILE", "--instruction-file", "file with the system instruction"),
     ("AI_TIMEOUT", "--timeout", "API timeout in seconds (default 0 = none)"),
-    ("AI_SHELL_TIMEOUT", "--shell-timeout", "seconds before a command is killed (default 0 = none)"),
     ("AI_RPM", "--rpm", "max requests per minute (default {RPM}, 0 = no limit)"),
     ("AI_MAX_RETRIES", "--max-retries", "retries after HTTP 429/503 (default {RETRIES})"),
     ("AI_MAX_OUTPUT_TOKENS", "--max-output-tokens", "Gemini only: max output tokens"),
@@ -1050,12 +1056,6 @@ def parse_args():
     help=f"Retries after HTTP 429/503 (default {DEFAULT_MAX_RETRIES}, 0 = never).",
   )
   parser.add_argument(
-    "--shell-timeout",
-    type=int,
-    default=None,
-    help="Seconds before a command is killed (default 0 = no limit).",
-  )
-  parser.add_argument(
     "--memory-file",
     help="SQLite file for one-shot memory.",
   )
@@ -1104,7 +1104,6 @@ def parse_args():
     args.instruction = _env_text("AI_INSTRUCTION") or None
     args.instruction_file = _env_text("AI_INSTRUCTION_FILE") or None
   args.timeout = _resolve_int(parser, args.timeout, "AI_TIMEOUT", 0)
-  args.shell_timeout = _resolve_int(parser, args.shell_timeout, "AI_SHELL_TIMEOUT", DEFAULT_SHELL_TIMEOUT)
   args.rpm = _resolve_int(parser, args.rpm, "AI_RPM", DEFAULT_RPM)
   args.max_retries = _resolve_int(parser, args.max_retries, "AI_MAX_RETRIES", DEFAULT_MAX_RETRIES)
   args.max_output_tokens = _resolve_int(parser, args.max_output_tokens, "AI_MAX_OUTPUT_TOKENS", None)
@@ -1138,8 +1137,6 @@ def parse_args():
     parser.error("--rpm and --max-retries cannot be negative.")
   if args.max_output_tokens is not None and args.max_output_tokens < 1:
     parser.error("--max-output-tokens must be a positive number.")
-  if args.shell_timeout < 0:
-    parser.error("--shell-timeout cannot be negative (0 = no limit).")
   env_base_url = os.environ.get("API_URL", "").strip() if args.provider != "gemini" else ""
   args.base_url = (args.base_url or env_base_url or PROVIDERS[args.provider]["base_url"]).rstrip("/")
   args.model = args.model or PROVIDERS[args.provider]["default_model"]
@@ -1782,7 +1779,11 @@ def build_system_instruction(
       "Tool run_command on the user's device. Run only needed commands; for a given path "
       "inspect only it (no ls/find/wc on parents or unrelated dirs); prefer read-only. Check "
       "exit codes: nonzero is a failure. Avoid unrelated side effects and destructive actions "
-      "(delete, format, bulk change, overwrite) unless asked. Never expose secrets."
+      "(delete, format, bulk change, overwrite) unless asked. Never expose secrets. "
+      "For run_command, decide timeout per call: use a positive timeout for reads, tests, "
+      "network and anything that may wait; omit it for finite build/compile/unpack operations "
+      "that may legitimately take longer. Never use timeout 0. A timeout invokes killtree, "
+      "which kills the command and all descendants, including escaped child processes."
     )
   if files_enabled:
     parts.append((
@@ -3048,18 +3049,59 @@ def _clip(text, limit=MAX_COMMAND_OUTPUT_CHARS):
     + text[-half:]
   )
 
+def _process_children():
+  """Return a best-effort {ppid: [pid]} map from /proc without external commands."""
+  children = collections.defaultdict(list)
+  try:
+    entries = os.listdir("/proc")
+  except OSError:
+    return children
+  for entry in entries:
+    if not entry.isdigit():
+      continue
+    try:
+      with open(os.path.join("/proc", entry, "stat"), encoding="ascii") as f:
+        stat = f.read()
+      # comm may contain spaces/parentheses; fields after the final ')' are stable.
+      fields = stat.rsplit(")", 1)[-1].split()
+      ppid = int(fields[1])
+      children[ppid].append(int(entry))
+    except (OSError, ValueError, IndexError):
+      continue
+  return children
+
+def killtree(pid, sig=signal.SIGKILL):
+  """Kill pid and descendants, including descendants that escaped the process group."""
+  children = _process_children()
+  pending = [int(pid)]
+  seen = set()
+  order = []
+  while pending:
+    current = pending.pop()
+    if current in seen:
+      continue
+    seen.add(current)
+    order.append(current)
+    pending.extend(children.get(current, ()))
+  # Children first, then the root; avoid killing this agent accidentally.
+  for current in reversed(order):
+    if current == os.getpid():
+      continue
+    try:
+      os.kill(current, sig)
+    except (ProcessLookupError, PermissionError, OSError):
+      pass
+  return len(order)
+
 def _kill_group(proc):
-  """Kill the command's whole process group, children included."""
+  """Kill the process group and recursively kill every descendant."""
+  killtree(proc.pid, signal.SIGKILL)
   try:
     if hasattr(os, "killpg"):
       os.killpg(proc.pid, signal.SIGKILL)
-    else:
-      proc.kill()
-  except OSError:
-    try:
-      proc.kill()
-    except OSError:
-      pass
+  except (OSError, ValueError):
+    pass
+
 
 def _collect_after_kill(proc):
   """Read what is left; never wait long on pipes held by orphans."""
@@ -3683,8 +3725,28 @@ def _read_text(path):
     return file.read()
 
 def _write_text(path, text):
-  with open(path, "w", encoding="utf-8", newline="") as file:
-    file.write(text)
+  """Write atomically so a failed/interrupted write cannot truncate the file."""
+  directory = os.path.dirname(path) or "."
+  mode = None
+  try:
+    mode = os.stat(path).st_mode & 0o777
+  except OSError:
+    pass
+  fd, temporary = tempfile.mkstemp(prefix=".ai-agent-", dir=directory, text=True)
+  try:
+    with os.fdopen(fd, "w", encoding="utf-8", newline="") as file:
+      file.write(text)
+      file.flush()
+      os.fsync(file.fileno())
+    if mode is not None:
+      os.chmod(temporary, mode)
+    os.replace(temporary, path)
+  except BaseException:
+    try:
+      os.unlink(temporary)
+    except OSError:
+      pass
+    raise
 
 def _backup(path):
   if os.path.exists(path):
@@ -3704,6 +3766,13 @@ def _syntax_check(path, text):
   except (SyntaxError, ValueError) as exc:
     return f"{type(exc).__name__}: {exc}"
   return "ok"
+
+def _validate_before_write(path, text):
+  """Reject invalid source/data before touching the original file."""
+  check = _syntax_check(path, text)
+  if check and check != "ok":
+    return {"error": f"Refusing to write invalid {os.path.splitext(path)[1].lower() or 'file'}: {check}"}
+  return None
 
 def _verified_result(path, expected, result, original=None):
   """Read the file back from disk; restore the backup if it differs.
@@ -3914,6 +3983,9 @@ def tool_edit_file(args, policy, ui):
     replacements += count if replace_all else 1
   if updated == text:
     return {"error": "old_text and new_text are identical; the file would not change."}
+  validation_error = _validate_before_write(path, updated)
+  if validation_error:
+    return validation_error
   policy.last_decision = "auto"
   try:
     _backup(path)
@@ -3941,6 +4013,9 @@ def tool_write_file(args, policy, ui):
       original_text = old
     except (OSError, UnicodeDecodeError):
       old = ""
+  validation_error = _validate_before_write(path, content)
+  if validation_error:
+    return validation_error
   policy.last_decision = "auto"
   try:
     directory = os.path.dirname(path)
@@ -4099,9 +4174,21 @@ def run_tool_call(step, policy, ui):
     if LAZY["on"]:
       LAZY["loaded"].add("shell")  # the full shell rules are sent from the next request
     command = str(arguments.get("command", "")).strip()
+    requested_timeout = arguments.get("timeout")
+    if requested_timeout is None or requested_timeout == "":
+      command_timeout = None
+    else:
+      try:
+        command_timeout = int(requested_timeout)
+      except (TypeError, ValueError):
+        command_timeout = -1
     reason = check_command_guard(command) if command else None
     if not command:
       result = {"error": "Empty command."}
+    elif command_timeout == 0 or command_timeout < -1:
+      result = {"error": "timeout must be omitted or a positive number of seconds."}
+    elif command_timeout == -1:
+      result = {"error": "timeout must be an integer number of seconds."}
     elif reason:
       policy.last_decision = "blocked"
       print(
@@ -4124,10 +4211,10 @@ def run_tool_call(step, policy, ui):
       )
       if live.available():
         live.start()
-        result = execute_command(command, policy.timeout, live.feed)
+        result = execute_command(command, command_timeout, live.feed)
       else:
         print(COLORS.label(live.label_full), flush=True)
-        result = execute_command(command, policy.timeout)
+        result = execute_command(command, command_timeout)
       result["command_number"] = command_number
   elif name == "web_search" and WEB_SEARCH["enabled"]:
     query = str(arguments.get("query", "")).strip()
@@ -4984,7 +5071,7 @@ def run():
   model = args.model
   thinking = args.thinking
   policy = ShellPolicy(
-    timeout=args.shell_timeout,
+    timeout=DEFAULT_SHELL_TIMEOUT,
     log_path=os.path.abspath(
       os.path.expanduser(
         os.environ.get("AI_LOG_FILE") or DEFAULT_LOG_FILE
